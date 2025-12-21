@@ -23,7 +23,9 @@ Book Vault is a web-based application designed to organize, search, and stream p
   - Book descriptions
 - **Rich Media**: Cover photo display for all books
 - **Series Detection**: Automatically detect and group related books in a series
+- **User Lists**: Create custom lists to organize books ("Want to Listen", "Favorites", etc.)
 - **AWS Deployment**: Designed for cloud deployment on AWS infrastructure
+- **Mobile Ready**: API-first design supports future iOS app development
 
 ## Data Source
 

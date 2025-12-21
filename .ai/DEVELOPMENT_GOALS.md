@@ -93,19 +93,45 @@ Create a polished, user-friendly web application for personal audiobook library 
 
 **Tasks**:
 - [ ] Add playback position persistence
-- [ ] Implement bookmarking system
+- [ ] Implement user lists ("Want to Listen", "Favorites")
 - [ ] Add favorites/ratings
 - [ ] Create playlist functionality
 - [ ] Implement "continue listening" feature
-- [ ] Add download capabilities
 - [ ] Performance optimization
+- [ ] API versioning for stability
 - [ ] User testing and feedback
 
 **Success Criteria**:
-- Feature-complete application
+- Feature-complete web application
 - Smooth user experience
 - Fast performance
+- API ready for mobile clients
 - Happy user!
+
+---
+
+### Phase 6: iOS App Development (Future)
+**Goal**: Build bare-bones iOS app for mobile access
+
+**Tasks**:
+- [ ] Design iOS app architecture (Swift vs React Native)
+- [ ] Set up Xcode project
+- [ ] Implement API client with JWT authentication
+- [ ] Build browsing UI (authors, series, narrators)
+- [ ] Implement search interface
+- [ ] Create book detail view
+- [ ] Build audio player with background support
+- [ ] Implement user lists (add/remove books)
+- [ ] Add playback position sync
+- [ ] Test on various iOS devices
+- [ ] Submit to App Store (if desired)
+
+**Success Criteria**:
+- Browse and search books on iPhone/iPad
+- Add books to custom lists
+- Stream audio with basic controls
+- Playback position syncs with web app
+- Smooth, native iOS experience
 
 ---
 
@@ -120,13 +146,16 @@ The application should feel fast. Optimize for quick load times and responsive i
 ### 3. Data Integrity
 Never modify source audiobook files. The Libation directory is read-only from the application's perspective.
 
-### 4. Maintainability
+### 4. API-First Design
+Design all features as API endpoints first. This ensures both web and future mobile apps can use the same backend.
+
+### 5. Maintainability
 Write clean, documented code. Future AI agents (and humans) should easily understand the codebase.
 
-### 5. AI-First Development
+### 6. AI-First Development
 Leverage AI assistance throughout the development process. Document decisions and context for continuity.
 
-### 6. User-Centric Design
+### 7. User-Centric Design
 The interface should be intuitive and enjoyable to use, not just functional.
 
 ---

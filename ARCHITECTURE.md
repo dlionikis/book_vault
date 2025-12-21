@@ -9,30 +9,31 @@ This document outlines the technical architecture for the Book Vault audiobook l
 ### High-Level Architecture
 
 ```
-┌─────────────────┐
-│   Web Browser   │
-│   (Frontend)    │
-└────────┬────────┘
-         │ HTTPS
-         ▼
-┌─────────────────┐
-│  Load Balancer  │
-│   (AWS ALB)     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐       ┌──────────────┐
-│  Web Server/    │◄─────►│   Database   │
-│  Application    │       │  (Metadata)  │
-│    (ECS/EC2)    │       └──────────────┘
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   File Storage  │
-│  (S3 or Local)  │
-│  Audio + Images │
-└─────────────────┘
+┌─────────────────┐         ┌─────────────────┐
+│   Web Browser   │         │   iOS App       │
+│   (Frontend)    │         │   (Future)      │
+└────────┬────────┘         └────────┬────────┘
+         │ HTTPS                     │ HTTPS
+         └───────────┬───────────────┘
+                     ▼
+         ┌─────────────────┐
+         │  Load Balancer  │
+         │   (AWS ALB)     │
+         └────────┬────────┘
+                  │
+                  ▼
+         ┌─────────────────┐       ┌──────────────┐
+         │  API Server     │◄─────►│   Database   │
+         │  + Web App      │       │  (Metadata)  │
+         │   (ECS/EC2)     │       └──────────────┘
+         └────────┬────────┘
+                  │
+                  ▼
+         ┌─────────────────┐
+         │   File Storage  │
+         │  (S3 or Local)  │
+         │  Audio + Images │
+         └─────────────────┘
 ```
 
 ## Technology Stack Recommendations
@@ -45,14 +46,17 @@ This document outlines the technical architecture for the Book Vault audiobook l
   - API routes for backend logic
   - Built-in optimization
   - Great developer experience
+  - **Mobile-ready**: API routes can serve both web and future iOS app
   
 **Backend**
 - **Runtime**: Node.js 20+
-- **Framework**: Next.js API Routes or Express.js
+- **Framework**: Next.js API Routes (API-first design)
 - **Language**: TypeScript
   - Type safety
   - Better tooling
   - Easier maintenance
+  - Shared types can be used in future Swift/React Native client
+- **API Design**: RESTful JSON API that serves both web and mobile clients
 
 **Database**
 - **Primary**: PostgreSQL (AWS RDS)
@@ -68,8 +72,10 @@ This document outlines the technical architecture for the Book Vault audiobook l
 - **CDN**: CloudFront for fast delivery
 
 **Authentication**
-- **Library**: NextAuth.js or Passport.js
-- **Storage**: Secure cookies + database sessions
+- **Library**: NextAuth.js with JWT tokens (mobile-compatible)
+- **Web**: Secure cookies for session management
+- **Mobile**: JWT tokens in Authorization headers
+- **Storage**: Database sessions + token refresh mechanism
 
 **Search**
 - **Engine**: PostgreSQL full-text search or Elasticsearch
@@ -277,6 +283,32 @@ CREATE TABLE user_progress (
 CREATE INDEX idx_user_progress_user ON user_progress (user_id, last_played DESC);
 ```
 
+#### User Lists Table (For iOS App - Future)
+```sql
+-- User's custom lists ("Want to Listen", "Favorites", etc.)
+CREATE TABLE user_lists (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Books in user lists
+CREATE TABLE user_list_books (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  list_id UUID REFERENCES user_lists(id) ON DELETE CASCADE,
+  book_id UUID REFERENCES books(id) ON DELETE CASCADE,
+  added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  position INTEGER, -- For custom ordering
+  UNIQUE(list_id, book_id)
+);
+
+CREATE INDEX idx_user_lists_user ON user_lists (user_id);
+CREATE INDEX idx_user_list_books_list ON user_list_books (list_id, position);
+```
+
 ## Application Structure
 
 ### Directory Structure
@@ -412,7 +444,7 @@ ORDER BY ts_rank(...) DESC;
 
 ### 4. Authentication
 
-**NextAuth.js Configuration**:
+**NextAuth.js Configuration with JWT for Mobile**:
 
 ```typescript
 // src/app/api/auth/[...nextauth]/route.ts
@@ -433,8 +465,50 @@ export const authOptions = {
       }
     })
   ],
+  session: {
+    strategy: "jwt", // JWT for mobile compatibility
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  jwt: {
+    secret: process.env.NEXTAUTH_SECRET,
+  },
   // ... additional config
 };
+```
+
+### 5. API Endpoints (Mobile-Ready)
+
+**Core API routes that serve both web and mobile:**
+
+```typescript
+// API structure
+/api/
+  auth/
+    [...nextauth]          # Authentication (web + mobile)
+    token/refresh          # JWT refresh endpoint
+  books/
+    GET    /               # List books with pagination
+    GET    /:id            # Get single book
+    GET    /:id/stream     # Stream audio file (range requests)
+  search/
+    GET    /               # Search books
+  browse/
+    authors/               # List authors
+    series/                # List series  
+    narrators/             # List narrators
+    categories/            # List categories
+  user/
+    lists/                 # User's custom lists (for iOS)
+      GET    /             # Get all lists
+      POST   /             # Create new list
+      GET    /:id          # Get list with books
+      PUT    /:id          # Update list
+      DELETE /:id          # Delete list
+      POST   /:id/books    # Add book to list
+      DELETE /:id/books/:bookId  # Remove book from list
+    progress/              # Playback progress
+      GET    /             # Get user's progress
+      PUT    /:bookId      # Update progress for book
 ```
 
 ## AWS Deployment Architecture
@@ -568,17 +642,81 @@ export const authOptions = {
    - Automated tests on PR
    - Deploy on merge to main
 
+## Mobile App Considerations (Future iOS App)
+
+### API-First Design
+
+The architecture is designed with a future iOS app in mind:
+
+1. **RESTful JSON API**: All endpoints return JSON, consumable by any client
+2. **JWT Authentication**: Mobile-friendly token-based auth
+3. **Range Request Support**: Audio streaming works on iOS
+4. **CORS Configuration**: Allow mobile app origins
+5. **Versioned API**: `/api/v1/` for future compatibility
+
+### iOS App Features (Planned)
+
+**Browsing**
+- Browse books by author, series, narrator, category
+- Search functionality
+- View book details with cover art
+
+**User Lists**
+- Create custom lists ("Want to Listen", "Favorites", etc.)
+- Add/remove books from lists
+- Reorder books within lists
+
+**Audio Playback**
+- Stream audio from server
+- Playback controls (play, pause, seek, speed)
+- Remember playback position
+- Background audio support
+- AirPlay support
+
+### iOS Implementation Notes
+
+**Technology Options:**
+- **Native Swift + SwiftUI**: Best performance and iOS integration
+- **React Native**: Reuse TypeScript knowledge, faster development
+
+**Audio Streaming:**
+- Use AVPlayer with remote URL
+- Implement range request support
+- Handle background audio properly
+- Support interruptions (calls, etc.)
+
+**Offline Support (Future):**
+- Download books for offline listening
+- Sync playback position when online
+- Cache cover images
+
+**API Client:**
+- Generate TypeScript types from backend
+- Use OpenAPI/Swagger for API documentation
+- Shared type definitions ensure consistency
+
+### Backend Requirements for Mobile
+
+1. **API Endpoints**: All functionality exposed via REST API
+2. **Authentication**: JWT tokens with refresh mechanism
+3. **File Streaming**: Support HTTP range requests for seeking
+4. **User Lists**: Database schema and endpoints for custom lists
+5. **Progress Sync**: Track and sync playback position
+6. **Pagination**: Efficient data loading for large collections
+7. **CORS**: Properly configured for mobile requests
+
 ## Next Steps
 
-1. Set up Next.js project
+1. Set up Next.js project with API-first architecture
 2. Configure TypeScript and ESLint
 3. Set up PostgreSQL locally
-4. Create database schema
+4. Create database schema (including user lists tables)
 5. Build import script
-6. Develop core API endpoints
+6. Develop core API endpoints (mobile-ready)
 7. Build frontend components
-8. Implement authentication
+8. Implement JWT-based authentication
 9. Deploy to AWS
+10. (Future) Develop iOS app
 
 ---
 

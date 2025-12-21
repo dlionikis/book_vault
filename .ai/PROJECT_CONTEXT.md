@@ -61,6 +61,12 @@ The current state is a directory of folders on an external drive (`/Volumes/BeeD
    - Maintain playback position
    - Support basic controls (play, pause, seek, speed)
 
+7. **iOS App (Future)**
+   - Bare-bones mobile app for browsing
+   - Add books/series to user lists
+   - Mobile audio playback
+   - Sync playback position with web app
+
 ### Non-Functional Requirements
 
 1. **Deployment**: AWS-hosted
@@ -151,7 +157,9 @@ Key fields used from `.metadata.json`:
 - Database for metadata indexing
 - Compute for application logic
 - CDN for static assets and cover images
-- Authentication mechanism
+- Authentication mechanism (JWT for mobile compatibility)
+- API-first design to support future iOS app
+- CORS configuration for mobile clients
 
 ## Current State
 
@@ -192,6 +200,7 @@ Key fields used from `.metadata.json`:
 3. Should we support user bookmarks/progress tracking?
 4. Should we implement a rating/favorite system?
 5. What level of audio player sophistication is needed?
+6. Should API be versioned for mobile app compatibility?
 
 ---
 
