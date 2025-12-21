@@ -1,0 +1,139 @@
+# General
+.DS_Store
+.env
+.env.local
+.env.*.local
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Dependencies
+node_modules/
+jspm_packages/
+bower_components/
+vendor/
+.pnp
+.pnp.js
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+venv/
+env/
+ENV/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Build outputs
+dist/
+build/
+*.js.map
+*.d.ts.map
+.next/
+out/
+.nuxt
+.cache
+.parcel-cache
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# AWS / Cloud
+.aws-sam/
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Secrets
+secrets/
+*.pem
+*.key
+*.cert
+*.crt
+config/secrets.*
+credentials
+
+# Testing
+coverage/
+.nyc_output
+
+# Audio files (don't commit the actual audiobook library)
+# The application reads from /Volumes/BeeDrive/Libation/
+*.mp3
+*.m4a
+*.m4b
+*.aax
+*.aa
+
+# Large data files
+*.zip
+*.tar.gz
+*.rar
+
+# Keep AI context files
+!.ai/
