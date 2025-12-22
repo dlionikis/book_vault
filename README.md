@@ -53,21 +53,23 @@ Each book's `.metadata.json` file contains:
 
 ## Technology Stack
 
-**To Be Determined**: This project will be developed using an AI-first approach. Technology stack decisions will be made collaboratively with AI assistance based on:
+### Current Implementation
 
-- Scalability requirements
-- AWS integration capabilities
-- Development velocity
-- Maintainability
+- **Framework**: Next.js 14.2.35 (App Router)
+- **Language**: TypeScript 5.7.2
+- **Database**: PostgreSQL 15 (Docker)
+- **ORM**: Prisma 5.22.0
+- **Styling**: Tailwind CSS 3.4.15
+- **Authentication**: NextAuth.js 4.24.10 (configured, not yet implemented)
+- **Deployment**: Local development (AWS deployment planned)
 
-Likely candidates include:
+### Development Tools
 
-- **Backend**: Node.js/Express, Python/FastAPI, or Go
-- **Frontend**: React, Vue, or Next.js
-- **Database**: PostgreSQL or DynamoDB
-- **Storage**: S3 for media files
-- **Authentication**: AWS Cognito or custom JWT
-- **Deployment**: ECS, Lambda, or EC2
+- **Linting**: ESLint 8.57.1 with Next.js config
+- **Formatting**: Prettier 3.4.2
+- **Git Hooks**: Husky + lint-staged
+- **Type Safety**: TypeScript with strict mode
+- **Security**: npm audit, pre-commit hooks
 
 ## Development Approach
 
@@ -80,13 +82,103 @@ This is an **AI-first development project**, meaning:
 
 ## Project Status
 
-🚀 **Status**: Initial Setup Phase
+🚀 **Status**: Active Development
 
-Current focus: Project scaffolding and requirements documentation
+### ✅ Completed (Phase 1-3)
+
+- Database schema and data import from Libation
+- Full-featured web UI with browse and search
+- Book detail pages with metadata and customer reviews
+- Author, narrator, series, and category pages
+- Sort functionality (by title, author, narrator, series)
+- Responsive design with Tailwind CSS
+- API routes for all entities
+- Code quality tools (ESLint, Prettier, Husky)
+
+### 🚧 In Progress
+
+- Audio player implementation
+- Pagination controls
+- User authentication
+
+### 📋 Planned
+
+- User progress tracking
+- Custom book lists
+- AWS deployment
+- iOS mobile app
 
 ## Getting Started
 
-_(To be added as development progresses)_
+### Prerequisites
+
+- Node.js 18+
+- Docker (for PostgreSQL)
+- Libation audiobook directory
+
+### Installation
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/dlionikis/book_vault.git
+   cd book_vault
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+3. **Start PostgreSQL**
+
+   ```bash
+   docker run --name book-vault-db -e POSTGRES_PASSWORD=yourpassword \
+     -e POSTGRES_DB=book_vault -p 5433:5432 -d postgres:15
+   ```
+
+4. **Configure environment**
+
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your database connection and Libation path
+   ```
+
+5. **Set up database**
+
+   ```bash
+   npm run db:migrate
+   npm run db:generate
+   ```
+
+6. **Import audiobooks**
+
+   ```bash
+   npm run import
+   ```
+
+7. **Start development server**
+
+   ```bash
+   npm run dev
+   ```
+
+8. **Open application**
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+### Available Commands
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+npm run format       # Format code with Prettier
+npm run type-check   # Check TypeScript types
+npm run validate     # Run all checks (format, lint, types)
+npm run import       # Import audiobooks from Libation
+```
 
 ## License
 
