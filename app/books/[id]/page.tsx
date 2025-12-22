@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Book } from '@/lib/types';
+import BackButton from '@/components/BackButton';
 
 async function getBook(id: string): Promise<Book | null> {
   try {
@@ -45,12 +46,7 @@ export default async function BookDetailPage({ params }: { params: { id: string 
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Link href="/" className="text-blue-600 hover:text-blue-800 flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Library
-          </Link>
+          <BackButton />
         </div>
       </header>
 
@@ -88,10 +84,14 @@ export default async function BookDetailPage({ params }: { params: { id: string 
               {book.series.length > 0 && (
                 <div className="mb-4">
                   {book.series.map((s, idx) => (
-                    <p key={idx} className="text-lg text-blue-600 font-medium">
+                    <Link 
+                      key={idx}
+                      href={`/series/${s.id}`}
+                      className="block text-lg text-blue-600 hover:text-blue-800 font-medium hover:underline"
+                    >
                       {s.title}
                       {s.sequence && ` #${s.sequence}`}
-                    </p>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -100,8 +100,18 @@ export default async function BookDetailPage({ params }: { params: { id: string 
               {book.authors.length > 0 && (
                 <div className="mb-4">
                   <span className="text-gray-600">By </span>
-                  <span className="text-lg font-medium text-gray-900">
-                    {book.authors.map(a => a.name).join(', ')}
+                  <span className="text-lg font-medium">
+                    {book.authors.map((a, idx) => (
+                      <span key={a.id}>
+                        {idx > 0 && ', '}
+                        <Link 
+                          href={`/authors/${a.id}`}
+                          className="text-gray-900 hover:text-blue-600 hover:underline"
+                        >
+                          {a.name}
+                        </Link>
+                      </span>
+                    ))}
                   </span>
                 </div>
               )}
@@ -110,8 +120,18 @@ export default async function BookDetailPage({ params }: { params: { id: string 
               {book.narrators.length > 0 && (
                 <div className="mb-6">
                   <span className="text-gray-600">Narrated by </span>
-                  <span className="text-gray-900">
-                    {book.narrators.map(n => n.name).join(', ')}
+                  <span>
+                    {book.narrators.map((n, idx) => (
+                      <span key={n.id}>
+                        {idx > 0 && ', '}
+                        <Link 
+                          href={`/narrators/${n.id}`}
+                          className="text-gray-900 hover:text-blue-600 hover:underline"
+                        >
+                          {n.name}
+                        </Link>
+                      </span>
+                    ))}
                   </span>
                 </div>
               )}
@@ -150,12 +170,13 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                   <h3 className="text-sm font-semibold text-gray-600 uppercase mb-2">Categories</h3>
                   <div className="flex flex-wrap gap-2">
                     {book.categories.map((cat) => (
-                      <span
+                      <Link
                         key={cat.id}
-                        className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
+                        href={`/categories/${cat.id}`}
+                        className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full hover:bg-blue-100 hover:text-blue-700 transition-colors"
                       >
                         {cat.name}
-                      </span>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -184,6 +205,109 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
+                  </div>
+                </div>
+              )}
+
+              {/* Customer Reviews */}
+              {book.metadata?.customer_reviews && book.metadata.customer_reviews.length > 0 && (
+                <div className="mt-8">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                    Customer Reviews ({book.metadata.customer_reviews.length})
+                  </h3>
+                  <div className="space-y-6">
+                    {book.metadata.customer_reviews.map((review) => (
+                      <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
+                        {/* Review Header */}
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{review.title}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-sm text-gray-600">{review.author_name}</span>
+                              <span className="text-gray-400">•</span>
+                              <span className="text-sm text-gray-500">
+                                {new Date(review.submission_date).toLocaleDateString('en-US', { 
+                                  year: 'numeric', 
+                                  month: 'long', 
+                                  day: 'numeric' 
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Rating Stars */}
+                        <div className="flex gap-4 mb-3 text-sm">
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-600">Overall:</span>
+                            <div className="flex">
+                              {[...Array(5)].map((_, i) => (
+                                <svg
+                                  key={i}
+                                  className={`w-4 h-4 ${
+                                    i < review.ratings.overall_rating
+                                      ? 'text-yellow-400 fill-current'
+                                      : 'text-gray-300'
+                                  }`}
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
+                              <span className="ml-1 text-gray-700">{review.ratings.overall_rating}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-600">Story:</span>
+                            <div className="flex">
+                              {[...Array(5)].map((_, i) => (
+                                <svg
+                                  key={i}
+                                  className={`w-4 h-4 ${
+                                    i < review.ratings.story_rating
+                                      ? 'text-yellow-400 fill-current'
+                                      : 'text-gray-300'
+                                  }`}
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
+                              <span className="ml-1 text-gray-700">{review.ratings.story_rating}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-600">Performance:</span>
+                            <div className="flex">
+                              {[...Array(5)].map((_, i) => (
+                                <svg
+                                  key={i}
+                                  className={`w-4 h-4 ${
+                                    i < review.ratings.performance_rating
+                                      ? 'text-yellow-400 fill-current'
+                                      : 'text-gray-300'
+                                  }`}
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
+                              <span className="ml-1 text-gray-700">{review.ratings.performance_rating}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Review Body */}
+                        <p className="text-gray-700 leading-relaxed">{review.body}</p>
+
+                        {/* Helpful Votes */}
+                        {(review.review_content_scores.num_helpful_votes > 0 || review.review_content_scores.num_unhelpful_votes > 0) && (
+                          <div className="mt-3 text-sm text-gray-500">
+                            {review.review_content_scores.num_helpful_votes} people found this helpful
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

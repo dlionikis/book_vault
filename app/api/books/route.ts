@@ -10,6 +10,16 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const skip = (page - 1) * limit;
+    const sort = searchParams.get('sort') || 'title';
+
+    // Build orderBy based on sort parameter
+    let orderBy: any = { title: 'asc' };
+    
+    // For author/narrator/series, we'll sort after fetching
+    // Only use database ordering for title
+    if (sort === 'title') {
+      orderBy = { title: 'asc' };
+    }
 
     // Fetch books with their relationships
     const [books, total] = await Promise.all([
@@ -21,27 +31,40 @@ export async function GET(request: NextRequest) {
             include: {
               author: true,
             },
+            orderBy: {
+              author: {
+                name: 'asc'
+              }
+            }
           },
           narrators: {
             include: {
               narrator: true,
             },
+            orderBy: {
+              narrator: {
+                name: 'asc'
+              }
+            }
           },
           series: {
             include: {
               series: true,
             },
+            orderBy: {
+              series: {
+                title: 'asc'
+              }
+            }
           },
         },
-        orderBy: {
-          title: 'asc',
-        },
+        orderBy,
       }),
       prisma.book.count(),
     ]);
 
     // Transform the response to be more user-friendly
-    const transformedBooks = books.map(book => ({
+    let transformedBooks = books.map(book => ({
       id: book.id,
       asin: book.asin,
       title: book.title,
@@ -51,24 +74,37 @@ export async function GET(request: NextRequest) {
       publisher: book.publisher,
       coverUrl: getCoverUrl(book.coverUrl),
       audioUrl: getAudioUrl(book.audioUrl),
-      authors: book.authors.map(ba => ({
-        id: ba.author.id,
-        name: ba.author.name,
-        asin: ba.author.asin,
-      })),
-      narrators: book.narrators.map(bn => ({
-        id: bn.narrator.id,
-        name: bn.narrator.name,
-        asin: bn.narrator.asin,
-      })),
+      authors: book.authors.map(ba => ba.author),
+      narrators: book.narrators.map(bn => bn.narrator),
       series: book.series.map(bs => ({
         id: bs.series.id,
         title: bs.series.title,
         asin: bs.series.asin,
         sequence: bs.sequence,
       })),
-      createdAt: book.createdAt,
+      createdAt: book.createdAt.toISOString(),
     }));
+
+    // Apply client-side sorting for author/narrator/series
+    if (sort === 'author') {
+      transformedBooks.sort((a, b) => {
+        const aAuthor = a.authors[0]?.name || '';
+        const bAuthor = b.authors[0]?.name || '';
+        return aAuthor.localeCompare(bAuthor);
+      });
+    } else if (sort === 'narrator') {
+      transformedBooks.sort((a, b) => {
+        const aNarrator = a.narrators[0]?.name || '';
+        const bNarrator = b.narrators[0]?.name || '';
+        return aNarrator.localeCompare(bNarrator);
+      });
+    } else if (sort === 'series') {
+      transformedBooks.sort((a, b) => {
+        const aSeries = a.series[0]?.title || '';
+        const bSeries = b.series[0]?.title || '';
+        return aSeries.localeCompare(bSeries);
+      });
+    }
 
     return NextResponse.json({
       books: transformedBooks,
