@@ -76,7 +76,7 @@ model Narrator {
 model Series {
   id        String       @id @default(uuid())
   asin      String?      @unique
-  title     String
+  title     String       @unique
   createdAt DateTime     @default(now()) @map("created_at")
 
   books     BookSeries[]
