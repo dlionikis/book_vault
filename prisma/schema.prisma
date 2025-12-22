@@ -1,0 +1,199 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String         @map("password_hash")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  
+  progress      UserProgress[]
+  lists         UserList[]
+
+  @@map("users")
+}
+
+model Book {
+  id                String      @id @default(uuid())
+  asin              String      @unique
+  title             String
+  description       String?
+  publisherSummary  String?     @map("publisher_summary") @db.Text
+  runtimeMinutes    Int?        @map("runtime_minutes")
+  releaseDate       DateTime?   @map("release_date")
+  publisher         String?
+  coverUrl          String?     @map("cover_url")
+  audioUrl          String?     @map("audio_url")
+  metadata          Json?       // Store full metadata JSON
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  authors           BookAuthor[]
+  narrators         BookNarrator[]
+  series            BookSeries[]
+  categories        BookCategory[]
+  progress          UserProgress[]
+  listBooks         UserListBook[]
+
+  @@index([title])
+  @@map("books")
+}
+
+model Author {
+  id        String       @id @default(uuid())
+  asin      String?      @unique
+  name      String       @unique
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  books     BookAuthor[]
+
+  @@index([name])
+  @@map("authors")
+}
+
+model Narrator {
+  id        String         @id @default(uuid())
+  asin      String?        @unique
+  name      String         @unique
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  books     BookNarrator[]
+
+  @@index([name])
+  @@map("narrators")
+}
+
+model Series {
+  id        String       @id @default(uuid())
+  asin      String?      @unique
+  title     String
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  books     BookSeries[]
+
+  @@index([title])
+  @@map("series")
+}
+
+model Category {
+  id        String         @id @default(uuid())
+  name      String
+  parentId  String?        @map("parent_id")
+  level     Int
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  parent    Category?      @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[]     @relation("CategoryHierarchy")
+  books     BookCategory[]
+
+  @@unique([name, parentId])
+  @@index([name])
+  @@index([parentId])
+  @@map("categories")
+}
+
+// Join Tables
+
+model BookAuthor {
+  bookId   String @map("book_id")
+  authorId String @map("author_id")
+
+  book     Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, authorId])
+  @@map("book_authors")
+}
+
+model BookNarrator {
+  bookId     String   @map("book_id")
+  narratorId String   @map("narrator_id")
+
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  narrator   Narrator @relation(fields: [narratorId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, narratorId])
+  @@map("book_narrators")
+}
+
+model BookSeries {
+  bookId   String  @map("book_id")
+  seriesId String  @map("series_id")
+  sequence String?
+
+  book     Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  series   Series  @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, seriesId])
+  @@index([seriesId, sequence])
+  @@map("book_series")
+}
+
+model BookCategory {
+  bookId     String   @map("book_id")
+  categoryId String   @map("category_id")
+
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([bookId, categoryId])
+  @@map("book_categories")
+}
+
+// User Features
+
+model UserProgress {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  bookId          String   @map("book_id")
+  positionSeconds Int      @default(0) @map("position_seconds")
+  completed       Boolean  @default(false)
+  lastPlayed      DateTime @default(now()) @map("last_played")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book            Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([userId, lastPlayed(sort: Desc)])
+  @@map("user_progress")
+}
+
+model UserList {
+  id          String         @id @default(uuid())
+  userId      String         @map("user_id")
+  name        String
+  description String?
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  books       UserListBook[]
+
+  @@index([userId])
+  @@map("user_lists")
+}
+
+model UserListBook {
+  id        String   @id @default(uuid())
+  listId    String   @map("list_id")
+  bookId    String   @map("book_id")
+  addedAt   DateTime @default(now()) @map("added_at")
+  position  Int?     // For custom ordering
+
+  list      UserList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, bookId])
+  @@index([listId, position])
+  @@map("user_list_books")
+}
