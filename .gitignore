@@ -130,6 +130,9 @@ coverage/
 *.aax
 *.aa
 
+# Test data directory with sample books
+test-data/
+
 # Large data files
 *.zip
 *.tar.gz
