@@ -59,19 +59,19 @@ export default async function BookDetailPage({ params }: { params: { id: string 
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="md:flex">
             {/* Cover Image */}
-            <div className="md:w-1/3 lg:w-1/4 bg-gray-200 flex-shrink-0">
+            <div className="md:w-1/3 lg:w-1/4 flex-shrink-0">
               {book.coverUrl ? (
-                <div className="relative aspect-[2/3] md:h-full">
+                <div className="relative aspect-[2/3] w-full max-h-[600px]">
                   <Image
                     src={book.coverUrl}
                     alt={`Cover of ${book.title}`}
                     fill
-                    className="object-cover"
+                    className="object-contain"
                     priority
                   />
                 </div>
               ) : (
-                <div className="aspect-[2/3] md:h-full flex items-center justify-center text-gray-400">
+                <div className="aspect-[2/3] w-full max-h-[600px] bg-gray-200 flex items-center justify-center text-gray-400">
                   <svg className="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
