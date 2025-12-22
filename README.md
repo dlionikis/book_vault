@@ -31,7 +31,6 @@ Book Vault is a web-based application designed to organize, search, and stream p
 
 The application reads audiobook data from a Libation export directory structure:
 
-- **Location**: `/Volumes/BeeDrive/Libation/`
 - **Structure**: Each folder represents one book and contains:
   - Audio file(s) (`.mp3`)
   - Metadata file (`.metadata.json`)
