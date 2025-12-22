@@ -186,6 +186,9 @@ async function importBook(
     }
   }
 
+  // Store relative paths from test-data directory
+  const relativeFolderPath = path.relative(LIBATION_PATH, folderPath);
+
   // Create book with all relationships
   await prisma.book.create({
     data: {
@@ -195,8 +198,8 @@ async function importBook(
       runtimeMinutes: metadata.runtime_length_min,
       releaseDate: releaseDate,
       publisher: metadata.publisher,
-      coverUrl: coverFile ? path.join(folderPath, coverFile) : null,
-      audioUrl: audioFile ? path.join(folderPath, audioFile) : null,
+      coverUrl: coverFile ? path.join(relativeFolderPath, coverFile) : null,
+      audioUrl: audioFile ? path.join(relativeFolderPath, audioFile) : null,
       metadata: metadata as any, // Store full metadata as JSON
       authors: {
         create: authorIds.map(authorId => ({

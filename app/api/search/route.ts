@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { getCoverUrl, getAudioUrl } from '@/lib/media';
 
 const prisma = new PrismaClient();
 
@@ -173,8 +174,8 @@ export async function GET(request: NextRequest) {
       runtimeMinutes: book.runtimeMinutes,
       releaseDate: book.releaseDate,
       publisher: book.publisher,
-      coverUrl: book.coverUrl,
-      audioUrl: book.audioUrl,
+      coverUrl: getCoverUrl(book.coverUrl),
+      audioUrl: getAudioUrl(book.audioUrl),
       authors: book.authors.map(ba => ({
         id: ba.author.id,
         name: ba.author.name,
