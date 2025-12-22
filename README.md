@@ -141,8 +141,26 @@ This is an **AI-first development project**, meaning:
 
    ```bash
    cp .env.example .env.local
-   # Edit .env.local with your database connection and Libation path
+   # Edit .env.local with your settings:
+   # - DATABASE_URL: Database connection string
+   # - MEDIA_DATA_PATH: Path to your audiobook files (default: test-data)
+   # - LIBATION_PATH: Source directory for import (optional)
    ```
+
+   **Media Path Options:**
+
+   ```bash
+   # Option 1: Use small test dataset (default)
+   MEDIA_DATA_PATH="test-data"
+
+   # Option 2: Point to your full Libation library
+   MEDIA_DATA_PATH="/Volumes/BeeDrive/Libation"
+
+   # Option 3: Use custom directory
+   MEDIA_DATA_PATH="/path/to/audiobooks"
+   ```
+
+   See [docs/MEDIA_CONFIGURATION.md](docs/MEDIA_CONFIGURATION.md) for details.
 
 5. **Set up database**
 

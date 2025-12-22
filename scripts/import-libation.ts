@@ -4,8 +4,9 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Use test-data directory by default, or LIBATION_PATH from env
-const LIBATION_PATH = process.env.LIBATION_PATH || path.join(process.cwd(), 'test-data');
+// Use LIBATION_PATH from env, or fall back to MEDIA_DATA_PATH, or default to test-data
+const LIBATION_PATH =
+  process.env.LIBATION_PATH || process.env.MEDIA_DATA_PATH || path.join(process.cwd(), 'test-data');
 
 interface LibationMetadata {
   asin: string;
@@ -190,7 +191,7 @@ async function importBook(
     }
   }
 
-  // Store relative paths from test-data directory
+  // Store relative paths from media data directory
   const relativeFolderPath = path.relative(LIBATION_PATH, folderPath);
 
   // Create book with all relationships
