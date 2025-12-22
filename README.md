@@ -194,8 +194,25 @@ npm run lint         # Run ESLint
 npm run format       # Format code with Prettier
 npm run type-check   # Check TypeScript types
 npm run validate     # Run all checks (format, lint, types)
+npm run test         # Run test suite
 npm run import       # Import audiobooks from Libation
+npm run db:migrate   # Run database migrations
+npm run db:generate  # Generate Prisma client
 ```
+
+### Database Management
+
+**Reset database and reimport:**
+
+```bash
+# Reset the database (clears all data)
+npx prisma migrate reset --skip-seed --force
+
+# Reimport all books
+npm run import
+```
+
+**Note:** The import script automatically uses the path configured in your `.env.local` file (`LIBATION_PATH` or `MEDIA_DATA_PATH`).
 
 ## License
 

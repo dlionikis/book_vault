@@ -1,8 +1,9 @@
+import 'dotenv/config';
 import fs from 'fs/promises';
 import path from 'path';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+export const prisma = new PrismaClient();
 
 // Use LIBATION_PATH from env, or fall back to MEDIA_DATA_PATH, or default to test-data
 const LIBATION_PATH =
@@ -24,7 +25,7 @@ interface LibationMetadata {
   publisher?: string;
 }
 
-async function importBooks() {
+export async function importBooks() {
   console.log(`📚 Scanning directory: ${LIBATION_PATH}\n`);
 
   try {
@@ -83,7 +84,7 @@ async function importBooks() {
   }
 }
 
-async function importBook(
+export async function importBook(
   metadata: LibationMetadata,
   folderPath: string,
   audioFile?: string,
@@ -102,28 +103,50 @@ async function importBook(
   // Process authors
   const authorIds: string[] = [];
   for (const authorData of metadata.authors || []) {
-    const author = await prisma.author.upsert({
-      where: { name: authorData.name },
-      update: {},
-      create: {
-        name: authorData.name,
-        asin: authorData.asin,
-      },
-    });
+    // Try to find existing author by ASIN first, then by name
+    let author = authorData.asin
+      ? await prisma.author.findUnique({ where: { asin: authorData.asin } })
+      : null;
+
+    if (!author) {
+      author = await prisma.author.findUnique({ where: { name: authorData.name } });
+    }
+
+    // If not found, create new author
+    if (!author) {
+      author = await prisma.author.create({
+        data: {
+          name: authorData.name,
+          asin: authorData.asin,
+        },
+      });
+    }
+
     authorIds.push(author.id);
   }
 
   // Process narrators
   const narratorIds: string[] = [];
   for (const narratorData of metadata.narrators || []) {
-    const narrator = await prisma.narrator.upsert({
-      where: { name: narratorData.name },
-      update: {},
-      create: {
-        name: narratorData.name,
-        asin: narratorData.asin,
-      },
-    });
+    // Try to find existing narrator by ASIN first, then by name
+    let narrator = narratorData.asin
+      ? await prisma.narrator.findUnique({ where: { asin: narratorData.asin } })
+      : null;
+
+    if (!narrator) {
+      narrator = await prisma.narrator.findUnique({ where: { name: narratorData.name } });
+    }
+
+    // If not found, create new narrator
+    if (!narrator) {
+      narrator = await prisma.narrator.create({
+        data: {
+          name: narratorData.name,
+          asin: narratorData.asin,
+        },
+      });
+    }
+
     narratorIds.push(narrator.id);
   }
 
@@ -181,6 +204,9 @@ async function importBook(
     }
   }
 
+  // Deduplicate category IDs to avoid constraint violations
+  const uniqueCategoryIds = [...new Set(categoryIds)];
+
   // Parse release date
   let releaseDate: Date | null = null;
   if (metadata.release_date) {
@@ -223,7 +249,7 @@ async function importBook(
         })),
       },
       categories: {
-        create: categoryIds.map((categoryId) => ({
+        create: uniqueCategoryIds.map((categoryId) => ({
           category: { connect: { id: categoryId } },
         })),
       },
@@ -231,15 +257,17 @@ async function importBook(
   });
 }
 
-// Run the import
-importBooks()
-  .then(() => {
-    console.log('\n✨ Import complete!');
-  })
-  .catch((error) => {
-    console.error('\n💥 Import failed:', error);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Run the import only if this file is executed directly (not imported)
+if (require.main === module) {
+  importBooks()
+    .then(() => {
+      console.log('\n✨ Import complete!');
+    })
+    .catch((error) => {
+      console.error('\n💥 Import failed:', error);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

@@ -9,12 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial project setup
-- Git repository initialization
-- Project documentation structure
-- AI context files for agent assistance
-- Architecture documentation
-- Technology stack recommendations
+- Configurable media data path via `MEDIA_DATA_PATH` environment variable
+- Media path utility functions (`lib/media.ts`)
+- Path validation for secure file access
+- Comprehensive media configuration documentation (`docs/MEDIA_CONFIGURATION.md`)
+- Security verification documentation (`docs/MEDIA_SECURITY_VERIFICATION.md`)
+- Import script test suite with 21 tests covering edge cases
+- Automatic environment variable loading with dotenv
+
+### Changed
+
+- Import script now uses ASIN-first lookup for authors/narrators to handle name variations
+- Import script deduplicates category IDs to prevent constraint violations
+- Import script properly handles authors with multiple ASINs or null ASINs
+- Image API routes now use configurable media path
+- Jest configuration updated to include scripts directory in coverage
+
+### Fixed
+
+- Author import conflicts when same person has different name spellings (e.g., "Michael Manning" vs "Michael G. Manning")
+- Author import conflicts when same person has multiple ASINs
+- Narrator import issues with null ASINs
+- Category constraint violations from duplicate category assignments
+- Import script now loads environment variables from .env.local automatically
+
+### Security
+
+- Verified all file operations are read-only (no write/modify/delete)
+- Added path validation to prevent directory traversal attacks
+- Documented security measures for production deployment
 
 ## [0.1.0] - 2025-12-21
 
