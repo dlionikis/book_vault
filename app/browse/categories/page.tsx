@@ -12,7 +12,7 @@ interface CategoryWithCount {
 async function getCategories(): Promise<CategoryWithCount[]> {
   try {
     const res = await fetch('http://localhost:3000/api/browse/categories', {
-      next: { revalidate: 0 }
+      next: { revalidate: 0 },
     });
 
     if (!res.ok) {
@@ -36,7 +36,7 @@ export default async function BrowseCategoriesPage() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <BackButton />
-          
+
           <h1 className="text-3xl font-bold text-gray-900">Browse by Category</h1>
           <p className="text-gray-600 mt-2">
             {categories.length} {categories.length === 1 ? 'category' : 'categories'}
@@ -58,9 +58,7 @@ export default async function BrowseCategoriesPage() {
                   {category.name}
                 </h3>
                 {category.parentName && (
-                  <p className="text-xs text-gray-500 mb-2">
-                    in {category.parentName}
-                  </p>
+                  <p className="text-xs text-gray-500 mb-2">in {category.parentName}</p>
                 )}
                 <p className="text-sm text-gray-600">
                   {category.bookCount} {category.bookCount === 1 ? 'book' : 'books'}
@@ -84,9 +82,7 @@ export default async function BrowseCategoriesPage() {
               />
             </svg>
             <h3 className="mt-4 text-lg font-medium text-gray-900">No categories found</h3>
-            <p className="mt-2 text-gray-500">
-              Add some audiobooks to see categories here
-            </p>
+            <p className="mt-2 text-gray-500">Add some audiobooks to see categories here</p>
           </div>
         )}
       </main>

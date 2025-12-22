@@ -28,7 +28,7 @@ async function importBooks() {
 
   try {
     const entries = await fs.readdir(LIBATION_PATH, { withFileTypes: true });
-    const folders = entries.filter(entry => entry.isDirectory());
+    const folders = entries.filter((entry) => entry.isDirectory());
 
     console.log(`Found ${folders.length} folders to process\n`);
 
@@ -42,7 +42,7 @@ async function importBooks() {
         const files = await fs.readdir(folderPath);
 
         // Find metadata file
-        const metadataFile = files.find(f => f.endsWith('.metadata.json'));
+        const metadataFile = files.find((f) => f.endsWith('.metadata.json'));
         if (!metadataFile) {
           console.log(`⚠️  No metadata file in: ${folder.name}`);
           skipped++;
@@ -55,8 +55,8 @@ async function importBooks() {
         const metadata: LibationMetadata = JSON.parse(metadataContent);
 
         // Find audio and cover files
-        const audioFile = files.find(f => f.endsWith('.mp3'));
-        const coverFile = files.find(f => f.endsWith('.jpg'));
+        const audioFile = files.find((f) => f.endsWith('.mp3'));
+        const coverFile = files.find((f) => f.endsWith('.jpg'));
 
         // Import to database
         await importBook(metadata, folderPath, audioFile, coverFile);
@@ -64,7 +64,10 @@ async function importBooks() {
         console.log(`✅ Imported: ${metadata.title}`);
         imported++;
       } catch (error) {
-        console.error(`❌ Error importing ${folder.name}:`, error instanceof Error ? error.message : error);
+        console.error(
+          `❌ Error importing ${folder.name}:`,
+          error instanceof Error ? error.message : error
+        );
         errors++;
       }
     }
@@ -144,18 +147,19 @@ async function importBook(
   const categoryIds: string[] = [];
   for (const categoryLadder of metadata.category_ladders || []) {
     let parentId: string | null = null;
-    
+
     for (let i = 0; i < categoryLadder.ladder.length; i++) {
       const catData = categoryLadder.ladder[i];
-      
+
       // Try to find existing category
-      let category = await prisma.category.findFirst({
-        where: {
-          name: catData.name,
-          parentId: parentId,
-        },
-      });
-      
+      let category: { id: string; name: string; parentId: string | null; level: number } | null =
+        await prisma.category.findFirst({
+          where: {
+            name: catData.name,
+            parentId: parentId,
+          },
+        });
+
       // Create if not found
       if (!category) {
         category = await prisma.category.create({
@@ -166,12 +170,12 @@ async function importBook(
           },
         });
       }
-      
+
       // Only add the leaf category to the book
       if (i === categoryLadder.ladder.length - 1) {
         categoryIds.push(category.id);
       }
-      
+
       parentId = category.id;
     }
   }
@@ -202,12 +206,12 @@ async function importBook(
       audioUrl: audioFile ? path.join(relativeFolderPath, audioFile) : null,
       metadata: metadata as any, // Store full metadata as JSON
       authors: {
-        create: authorIds.map(authorId => ({
+        create: authorIds.map((authorId) => ({
           author: { connect: { id: authorId } },
         })),
       },
       narrators: {
-        create: narratorIds.map(narratorId => ({
+        create: narratorIds.map((narratorId) => ({
           narrator: { connect: { id: narratorId } },
         })),
       },
@@ -218,7 +222,7 @@ async function importBook(
         })),
       },
       categories: {
-        create: categoryIds.map(categoryId => ({
+        create: categoryIds.map((categoryId) => ({
           category: { connect: { id: categoryId } },
         })),
       },

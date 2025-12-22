@@ -30,6 +30,7 @@ Book Vault is a web-based application designed to organize, search, and stream p
 ## Data Source
 
 The application reads audiobook data from a Libation export directory structure:
+
 - **Location**: `/Volumes/BeeDrive/Libation/`
 - **Structure**: Each folder represents one book and contains:
   - Audio file(s) (`.mp3`)
@@ -40,6 +41,7 @@ The application reads audiobook data from a Libation export directory structure:
 ### Metadata Structure
 
 Each book's `.metadata.json` file contains:
+
 - `title`: Book title
 - `asin`: Amazon Standard Identification Number
 - `authors`: Array of author objects with name and ASIN
@@ -52,12 +54,14 @@ Each book's `.metadata.json` file contains:
 ## Technology Stack
 
 **To Be Determined**: This project will be developed using an AI-first approach. Technology stack decisions will be made collaboratively with AI assistance based on:
+
 - Scalability requirements
 - AWS integration capabilities
 - Development velocity
 - Maintainability
 
 Likely candidates include:
+
 - **Backend**: Node.js/Express, Python/FastAPI, or Go
 - **Frontend**: React, Vue, or Next.js
 - **Database**: PostgreSQL or DynamoDB
@@ -68,6 +72,7 @@ Likely candidates include:
 ## Development Approach
 
 This is an **AI-first development project**, meaning:
+
 1. AI agents will assist with all development phases
 2. Context and goals are documented for AI reference
 3. Architecture decisions are made collaboratively

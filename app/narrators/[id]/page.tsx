@@ -10,7 +10,7 @@ interface NarratorWithBooks extends Narrator {
 async function getNarrator(id: string): Promise<NarratorWithBooks | null> {
   try {
     const res = await fetch(`http://localhost:3000/api/narrators/${id}`, {
-      next: { revalidate: 0 }
+      next: { revalidate: 0 },
     });
 
     if (!res.ok) {
@@ -39,10 +39,8 @@ export default async function NarratorPage({ params }: { params: { id: string } 
 
         {/* Narrator Header */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            {narrator.name}
-          </h1>
-          
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{narrator.name}</h1>
+
           <div className="text-gray-600 text-lg">
             {narrator.books.length} {narrator.books.length === 1 ? 'book' : 'books'}
           </div>

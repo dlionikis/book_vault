@@ -5,6 +5,7 @@ This document outlines the next steps now that core functionality is complete.
 ## Current Status ✅
 
 ### Completed (Phases 1-3)
+
 - [x] Git repository initialized
 - [x] Project documentation complete
 - [x] Architecture designed
@@ -25,6 +26,7 @@ This document outlines the next steps now that core functionality is complete.
 - [x] **Clickable categories on book pages**
 
 ### Current Features Working
+
 - Browse all books with sorting options
 - Search across books, authors, narrators, series
 - View series with books in sequence order
@@ -44,30 +46,28 @@ This document outlines the next steps now that core functionality is complete.
 Create audio player component and streaming endpoint:
 
 **Backend: Audio Streaming API**
+
 ```typescript
 // app/api/audio/[...path]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createReadStream, statSync } from 'fs';
 import { join } from 'path';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
   const filePath = join(process.env.AUDIO_PATH || 'test-data', ...params.path);
-  
+
   try {
     const stat = statSync(filePath);
     const range = request.headers.get('range');
-    
+
     if (range) {
       // Support range requests for seeking
       const parts = range.replace(/bytes=/, '').split('-');
       const start = parseInt(parts[0], 10);
       const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
-      
+
       const stream = createReadStream(filePath, { start, end });
-      
+
       return new NextResponse(stream as any, {
         status: 206,
         headers: {
@@ -78,7 +78,7 @@ export async function GET(
         },
       });
     }
-    
+
     const stream = createReadStream(filePath);
     return new NextResponse(stream as any, {
       headers: {
@@ -93,6 +93,7 @@ export async function GET(
 ```
 
 **Frontend: Audio Player Component**
+
 ```typescript
 // components/AudioPlayer.tsx
 'use client';
@@ -151,7 +152,7 @@ export default function AudioPlayer({ audioUrl, title, author, bookId }: AudioPl
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
       />
-      
+
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center gap-4">
           <button
@@ -160,12 +161,12 @@ export default function AudioPlayer({ audioUrl, title, author, bookId }: AudioPl
           >
             {isPlaying ? '⏸' : '▶️'}
           </button>
-          
+
           <div className="flex-1">
             <div className="font-medium text-gray-900">{title}</div>
             <div className="text-sm text-gray-600">{author}</div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">{formatTime(currentTime)}</span>
             <input
@@ -226,7 +227,7 @@ export default function Pagination({ currentPage, totalPages, total }: Paginatio
       <div className="text-sm text-gray-600">
         Showing page {currentPage} of {totalPages} ({total} books)
       </div>
-      
+
       <div className="flex gap-2">
         <button
           onClick={() => goToPage(currentPage - 1)}
@@ -235,7 +236,7 @@ export default function Pagination({ currentPage, totalPages, total }: Paginatio
         >
           Previous
         </button>
-        
+
         <button
           onClick={() => goToPage(currentPage + 1)}
           disabled={currentPage === totalPages}
@@ -267,7 +268,7 @@ const prisma = new PrismaClient();
 // Save progress
 export async function POST(request: NextRequest) {
   const { bookId, userId, position, duration } = await request.json();
-  
+
   const progress = await prisma.userProgress.upsert({
     where: {
       userId_bookId: { userId, bookId },
@@ -285,7 +286,7 @@ export async function POST(request: NextRequest) {
       completed: false,
     },
   });
-  
+
   return NextResponse.json(progress);
 }
 
@@ -293,17 +294,17 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const userId = request.nextUrl.searchParams.get('userId');
   const bookId = request.nextUrl.searchParams.get('bookId');
-  
+
   if (!userId || !bookId) {
     return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
   }
-  
+
   const progress = await prisma.userProgress.findUnique({
     where: {
       userId_bookId: { userId, bookId },
     },
   });
-  
+
   return NextResponse.json(progress || { position: 0 });
 }
 ```
@@ -327,12 +328,14 @@ Create auth configuration and login pages. For personal use, can start with simp
 **Priority: LOW** - Nice to have
 
 Create endpoints for managing custom lists:
+
 - "Want to Listen"
-- "Favorites"  
+- "Favorites"
 - "Currently Listening"
 - Custom lists
 
 API endpoints:
+
 - POST /api/lists - Create list
 - GET /api/lists - Get user's lists
 - POST /api/lists/[id]/books - Add book to list
@@ -343,6 +346,7 @@ API endpoints:
 ### 1. Media File Management
 
 Decide on file storage strategy:
+
 - **Option A**: Keep files on external drive, serve locally
 - **Option B**: Upload to S3, serve from there
 - **Option C**: Hybrid - local dev, S3 for production
@@ -360,6 +364,7 @@ Update media utility functions based on decision.
 ### 3. Enhanced Search
 
 Add filters to search:
+
 - By category
 - By narrator
 - By series
@@ -378,6 +383,7 @@ Add filters to search:
 ### 1. AWS Deployment
 
 **Infrastructure Setup**:
+
 ```
 - RDS PostgreSQL (production database)
 - S3 buckets (audio files, cover images)
@@ -388,6 +394,7 @@ Add filters to search:
 ```
 
 **Deployment Steps**:
+
 1. Create S3 upload script for audio files
 2. Set up RDS instance
 3. Configure environment variables
@@ -399,6 +406,7 @@ Add filters to search:
 ### 2. iOS App Development
 
 Once API is stable:
+
 - SwiftUI app
 - Shared authentication
 - Offline download support
@@ -408,6 +416,7 @@ Once API is stable:
 ## Current API Endpoints ✅
 
 All functional and tested:
+
 - `GET /api/books` - List books with pagination and sorting
 - `GET /api/books/[id]` - Single book details
 - `GET /api/series/[id]` - Series with books in order
@@ -426,6 +435,7 @@ All functional and tested:
 **Start with Audio Player** - This is the core feature that makes it an audiobook app. Once playback works, everything else is enhancement.
 
 Steps:
+
 1. Create audio streaming endpoint (`/api/audio/[...path]`)
 2. Build AudioPlayer component with basic controls
 3. Add to book detail page
@@ -442,6 +452,7 @@ Once audio works, move to pagination UI, then authentication, then deployment.
 Before proceeding to deployment, test these features:
 
 ### Core Functionality ✅
+
 - [x] Home page loads with all books
 - [x] Sort by title, author, narrator, series
 - [x] Search works across entities
@@ -453,6 +464,7 @@ Before proceeding to deployment, test these features:
 - [x] Images load correctly
 
 ### Audio Features ⏳
+
 - [ ] Audio streaming endpoint works
 - [ ] Audio player controls work (play/pause)
 - [ ] Seeking works in audio
@@ -461,12 +473,14 @@ Before proceeding to deployment, test these features:
 - [ ] Audio works on mobile browsers
 
 ### User Features ⏳
+
 - [ ] Authentication works
 - [ ] User can create lists
 - [ ] User can add/remove books from lists
 - [ ] Lists persist across sessions
 
 ### Performance ⏳
+
 - [ ] Pages load quickly
 - [ ] Images are optimized
 - [ ] Audio streams without buffering
@@ -477,6 +491,7 @@ Before proceeding to deployment, test these features:
 ## Environment Variables Reference
 
 Current `.env` file:
+
 ```
 DATABASE_URL="postgresql://postgres:postgres@localhost:5433/book_vault?schema=public"
 AUDIO_PATH="/Users/demetri/projects/book_vault/test-data"
@@ -485,6 +500,7 @@ NEXTAUTH_URL="http://localhost:3000"
 ```
 
 For production, add:
+
 ```
 AWS_REGION="us-east-1"
 AWS_S3_BUCKET="book-vault-audio"
@@ -567,6 +583,7 @@ book_vault/
 ## Key Decisions & Rationale
 
 ### Technology Choices
+
 - **Next.js 14**: Full-stack framework, great DX, easy deployment
 - **TypeScript**: Type safety, better tooling
 - **PostgreSQL**: Robust, proven, good for relational data
@@ -574,12 +591,14 @@ book_vault/
 - **Tailwind CSS**: Rapid UI development, consistent styling
 
 ### Architecture Patterns
+
 - **API-First**: All data through API for iOS app compatibility
 - **Server Components**: Better performance, less client JS
 - **Client Components**: Only where interactivity needed (player, forms)
 - **Mixed Sorting**: Database where possible, client-side for complex relations
 
 ### File Organization
+
 - **test-data/**: Git-ignored sample data for development
 - **Separate APIs**: Clean separation of concerns
 - **Reusable Components**: DRY principle, consistent UI
@@ -589,6 +608,7 @@ book_vault/
 ## Success Metrics
 
 ### Current Achievement 🎉
+
 - ✅ 11 books imported with full metadata
 - ✅ All API endpoints functional
 - ✅ Complete browsing and search experience
@@ -600,6 +620,7 @@ book_vault/
 - ✅ Clickable categories for navigation
 
 ### Next Milestones
+
 - 🎯 Audio playback working
 - 🎯 Progress tracking functional
 - 🎯 Pagination UI complete
@@ -613,41 +634,43 @@ book_vault/
 **Next Priority**: Audio Player Implementation
 
 **Recent Updates**:
+
 - Added customer review display on book detail pages
 - Made category tags clickable
 - Fixed various navigation bugs
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '20');
-  const skip = (page - 1) * limit;
+const searchParams = request.nextUrl.searchParams;
+const page = parseInt(searchParams.get('page') || '1');
+const limit = parseInt(searchParams.get('limit') || '20');
+const skip = (page - 1) \* limit;
 
-  const [books, total] = await Promise.all([
-    prisma.book.findMany({
-      skip,
-      take: limit,
-      include: {
-        authors: { include: { author: true } },
-        narrators: { include: { narrator: true } },
-        series: { include: { series: true } },
-      },
-      orderBy: { title: 'asc' },
-    }),
-    prisma.book.count(),
-  ]);
+const [books, total] = await Promise.all([
+prisma.book.findMany({
+skip,
+take: limit,
+include: {
+authors: { include: { author: true } },
+narrators: { include: { narrator: true } },
+series: { include: { series: true } },
+},
+orderBy: { title: 'asc' },
+}),
+prisma.book.count(),
+]);
 
-  return NextResponse.json({
-    books,
-    pagination: {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    },
-  });
+return NextResponse.json({
+books,
+pagination: {
+page,
+limit,
+total,
+pages: Math.ceil(total / limit),
+},
+});
 }
-```
+
+````
 
 **Test it**: `http://localhost:3000/api/books`
 
@@ -684,13 +707,14 @@ export async function GET(
 
   return NextResponse.json(book);
 }
-```
+````
 
 ### 3. Create Search Endpoint
 
 ### 3. Configure Prisma Schema
 
 Create `prisma/schema.prisma` based on the database schema in `ARCHITECTURE.md`:
+
 - Users table
 - Books table
 - Authors, Narrators, Series, Categories tables
@@ -699,6 +723,7 @@ Create `prisma/schema.prisma` based on the database schema in `ARCHITECTURE.md`:
 ### 4. Build the Import Script
 
 Create `scripts/import-libation.ts` to:
+
 - Scan `/Volumes/BeeDrive/Libation/` directory
 - Parse JSON metadata files
 - Populate database
@@ -709,6 +734,7 @@ Test with a small subset of books first!
 ### 5. Create Basic API Routes
 
 Start with:
+
 - `app/api/books/route.ts` - List all books
 - `app/api/books/[id]/route.ts` - Get single book
 - `app/api/search/route.ts` - Search functionality
@@ -717,6 +743,7 @@ Start with:
 ### 6. Build Core UI Components
 
 Create in `components/`:
+
 - `BookCard.tsx` - Display book with cover
 - `BookGrid.tsx` - Grid layout of books
 - `SearchBar.tsx` - Search input
@@ -726,6 +753,7 @@ Create in `components/`:
 ### 7. Create Main Pages
 
 Build pages in `app/`:
+
 - `app/page.tsx` - Home/dashboard
 - `app/browse/authors/page.tsx` - Browse by author
 - `app/browse/series/page.tsx` - Browse by series
@@ -748,7 +776,7 @@ services:
       POSTGRES_USER: bookadmin
       POSTGRES_PASSWORD: dev_password_change_in_production
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -769,25 +797,25 @@ const LIBATION_PATH = process.env.LIBATION_PATH || '/Volumes/BeeDrive/Libation';
 
 async function importBooks() {
   const folders = await fs.readdir(LIBATION_PATH);
-  
+
   for (const folder of folders) {
     if (folder.startsWith('.')) continue;
-    
+
     try {
       const folderPath = path.join(LIBATION_PATH, folder);
       const files = await fs.readdir(folderPath);
-      
+
       // Find metadata file
-      const metadataFile = files.find(f => f.endsWith('.metadata.json'));
+      const metadataFile = files.find((f) => f.endsWith('.metadata.json'));
       if (!metadataFile) continue;
-      
+
       // Read and parse metadata
       const metadataPath = path.join(folderPath, metadataFile);
       const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8'));
-      
+
       // Import book to database
       await importBook(metadata, folderPath);
-      
+
       console.log(`Imported: ${metadata.title}`);
     } catch (error) {
       console.error(`Error importing ${folder}:`, error);
@@ -874,6 +902,7 @@ npm run build
 ## Success Criteria for Phase 1
 
 You'll know Phase 1 is complete when:
+
 - ✅ Next.js app is running
 - ✅ Database is set up and migrations work
 - ✅ Import script successfully imports all books

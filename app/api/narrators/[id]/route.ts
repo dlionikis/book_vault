@@ -4,20 +4,14 @@ import { getCoverUrl, getAudioUrl } from '@/lib/media';
 
 const prisma = new PrismaClient();
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const narrator = await prisma.narrator.findUnique({
       where: { id: params.id },
     });
 
     if (!narrator) {
-      return NextResponse.json(
-        { error: 'Narrator not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Narrator not found' }, { status: 404 });
     }
 
     // Get books by this narrator with their relationships
@@ -28,26 +22,26 @@ export async function GET(
           include: {
             authors: {
               include: {
-                author: true
-              }
+                author: true,
+              },
             },
             narrators: {
               include: {
-                narrator: true
-              }
+                narrator: true,
+              },
             },
             series: {
               include: {
                 series: true,
-              }
+              },
             },
-          }
-        }
+          },
+        },
       },
     });
 
     // Transform book data to include full URLs and proper structure
-    const booksWithUrls = bookNarratorEntries.map(entry => {
+    const booksWithUrls = bookNarratorEntries.map((entry) => {
       const book = entry.book;
       return {
         id: book.id,
@@ -60,9 +54,9 @@ export async function GET(
         publisher: book.publisher,
         coverUrl: getCoverUrl(book.coverUrl),
         audioUrl: getAudioUrl(book.audioUrl),
-        authors: book.authors.map(ba => ba.author),
-        narrators: book.narrators.map(bn => bn.narrator),
-        series: book.series.map(bs => ({
+        authors: book.authors.map((ba) => ba.author),
+        narrators: book.narrators.map((bn) => bn.narrator),
+        series: book.series.map((bs) => ({
           id: bs.series.id,
           title: bs.series.title,
           asin: bs.series.asin,
@@ -74,13 +68,10 @@ export async function GET(
 
     return NextResponse.json({
       ...narrator,
-      books: booksWithUrls
+      books: booksWithUrls,
     });
   } catch (error) {
     console.error('Error fetching narrator:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -41,14 +41,16 @@ This document outlines the technical architecture for the Book Vault audiobook l
 ### Option 1: Modern JavaScript Stack (Recommended)
 
 **Frontend**
+
 - **Framework**: Next.js 14+ (React)
   - Server-side rendering for fast initial loads
   - API routes for backend logic
   - Built-in optimization
   - Great developer experience
   - **Mobile-ready**: API routes can serve both web and future iOS app
-  
+
 **Backend**
+
 - **Runtime**: Node.js 20+
 - **Framework**: Next.js API Routes (API-first design)
 - **Language**: TypeScript
@@ -59,30 +61,35 @@ This document outlines the technical architecture for the Book Vault audiobook l
 - **API Design**: RESTful JSON API that serves both web and mobile clients
 
 **Database**
+
 - **Primary**: PostgreSQL (AWS RDS)
   - Robust full-text search
   - JSON support for metadata
   - ACID compliance
   - Proven scalability
-  
+
 **Storage**
+
 - **Media**: AWS S3
   - Audio files
   - Cover images
 - **CDN**: CloudFront for fast delivery
 
 **Authentication**
+
 - **Library**: NextAuth.js with JWT tokens (mobile-compatible)
 - **Web**: Secure cookies for session management
 - **Mobile**: JWT tokens in Authorization headers
 - **Storage**: Database sessions + token refresh mechanism
 
 **Search**
+
 - **Engine**: PostgreSQL full-text search or Elasticsearch
   - Initially PostgreSQL (simpler)
   - Upgrade to Elasticsearch if needed
 
 **Pros**:
+
 - Modern, widely-supported stack
 - Excellent ecosystem and tooling
 - Great for AI-assisted development
@@ -90,6 +97,7 @@ This document outlines the technical architecture for the Book Vault audiobook l
 - Next.js handles many concerns out-of-the-box
 
 **Cons**:
+
 - Node.js can be memory-intensive for large file operations
 - May need worker processes for background jobs
 
@@ -103,12 +111,14 @@ This document outlines the technical architecture for the Book Vault audiobook l
 **ORM**: SQLAlchemy
 
 **Pros**:
+
 - Excellent for data processing
 - Great ML/AI integration if needed
 - Fast API development with FastAPI
 - Strong typing with Pydantic
 
 **Cons**:
+
 - Two languages to maintain
 - Slightly more complex deployment
 
@@ -121,12 +131,14 @@ This document outlines the technical architecture for the Book Vault audiobook l
 **Database**: PostgreSQL
 
 **Pros**:
+
 - Extremely fast and efficient
 - Excellent for file streaming
 - Small binary size
 - Great concurrency
 
 **Cons**:
+
 - Smaller ecosystem
 - Steeper learning curve
 - Less familiar for web development
@@ -149,6 +161,7 @@ This document outlines the technical architecture for the Book Vault audiobook l
 ### Database Schema
 
 #### Users Table
+
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -160,6 +173,7 @@ CREATE TABLE users (
 ```
 
 #### Books Table
+
 ```sql
 CREATE TABLE books (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -183,6 +197,7 @@ CREATE INDEX idx_books_metadata ON books USING GIN (metadata);
 ```
 
 #### Authors Table
+
 ```sql
 CREATE TABLE authors (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -195,6 +210,7 @@ CREATE INDEX idx_authors_name ON authors (name);
 ```
 
 #### Narrators Table
+
 ```sql
 CREATE TABLE narrators (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -207,6 +223,7 @@ CREATE INDEX idx_narrators_name ON narrators (name);
 ```
 
 #### Series Table
+
 ```sql
 CREATE TABLE series (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -219,6 +236,7 @@ CREATE INDEX idx_series_title ON series (title);
 ```
 
 #### Categories Table
+
 ```sql
 CREATE TABLE categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -269,6 +287,7 @@ CREATE TABLE book_categories (
 ```
 
 #### User Progress Table (Future)
+
 ```sql
 CREATE TABLE user_progress (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -284,6 +303,7 @@ CREATE INDEX idx_user_progress_user ON user_progress (user_id, last_played DESC)
 ```
 
 #### User Lists Table (For iOS App - Future)
+
 ```sql
 -- User's custom lists ("Want to Listen", "Favorites", etc.)
 CREATE TABLE user_lists (
@@ -372,6 +392,7 @@ book_vault/
 **Purpose**: Parse Libation directory and populate database
 
 **Process**:
+
 1. Scan `/Volumes/BeeDrive/Libation/` directory
 2. For each folder:
    - Read `.metadata.json` file
@@ -392,7 +413,7 @@ book_vault/
 export async function GET(request: Request) {
   const range = request.headers.get('range');
   const fileSize = await getFileSize(audioPath);
-  
+
   if (range) {
     const [start, end] = parseRange(range, fileSize);
     return new Response(createReadStream(audioPath, { start, end }), {
@@ -405,7 +426,7 @@ export async function GET(request: Request) {
       },
     });
   }
-  
+
   return streamFullFile(audioPath);
 }
 ```
@@ -415,13 +436,13 @@ export async function GET(request: Request) {
 **PostgreSQL Full-Text Search**:
 
 ```sql
-SELECT 
+SELECT
   b.*,
-  ts_rank(to_tsvector('english', b.title || ' ' || b.description), 
+  ts_rank(to_tsvector('english', b.title || ' ' || b.description),
           to_tsquery('english', $1)) as rank
 FROM books b
-WHERE 
-  to_tsvector('english', b.title || ' ' || b.description) 
+WHERE
+  to_tsvector('english', b.title || ' ' || b.description)
   @@ to_tsquery('english', $1)
 ORDER BY rank DESC
 LIMIT 50;
@@ -436,8 +457,8 @@ LEFT JOIN book_authors ba ON b.id = ba.book_id
 LEFT JOIN authors a ON ba.author_id = a.id
 LEFT JOIN book_narrators bn ON b.id = bn.book_id
 LEFT JOIN narrators n ON bn.narrator_id = n.id
-WHERE 
-  to_tsvector('english', b.title || ' ' || b.description || ' ' || 
+WHERE
+  to_tsvector('english', b.title || ' ' || b.description || ' ' ||
               a.name || ' ' || n.name) @@ to_tsquery('english', $1)
 ORDER BY ts_rank(...) DESC;
 ```
@@ -455,18 +476,18 @@ export const authOptions = {
   providers: [
     CredentialsProvider({
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         // Verify against database
         const user = await verifyUser(credentials);
         return user || null;
-      }
-    })
+      },
+    }),
   ],
   session: {
-    strategy: "jwt", // JWT for mobile compatibility
+    strategy: 'jwt', // JWT for mobile compatibility
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   jwt: {
@@ -494,7 +515,7 @@ export const authOptions = {
     GET    /               # Search books
   browse/
     authors/               # List authors
-    series/                # List series  
+    series/                # List series
     narrators/             # List narrators
     categories/            # List categories
   user/
@@ -552,16 +573,19 @@ export const authOptions = {
 ### Deployment Strategy
 
 **Development**:
+
 - Local Docker environment
 - Local PostgreSQL
 - Files on external drive
 
 **Staging** (optional):
+
 - Smaller ECS instance
 - Smaller RDS instance
 - Subset of data for testing
 
 **Production**:
+
 - ECS Fargate with auto-scaling
 - RDS Multi-AZ
 - Full data set on S3
@@ -657,16 +681,19 @@ The architecture is designed with a future iOS app in mind:
 ### iOS App Features (Planned)
 
 **Browsing**
+
 - Browse books by author, series, narrator, category
 - Search functionality
 - View book details with cover art
 
 **User Lists**
+
 - Create custom lists ("Want to Listen", "Favorites", etc.)
 - Add/remove books from lists
 - Reorder books within lists
 
 **Audio Playback**
+
 - Stream audio from server
 - Playback controls (play, pause, seek, speed)
 - Remember playback position
@@ -676,21 +703,25 @@ The architecture is designed with a future iOS app in mind:
 ### iOS Implementation Notes
 
 **Technology Options:**
+
 - **Native Swift + SwiftUI**: Best performance and iOS integration
 - **React Native**: Reuse TypeScript knowledge, faster development
 
 **Audio Streaming:**
+
 - Use AVPlayer with remote URL
 - Implement range request support
 - Handle background audio properly
 - Support interruptions (calls, etc.)
 
 **Offline Support (Future):**
+
 - Download books for offline listening
 - Sync playback position when online
 - Cache cover images
 
 **API Client:**
+
 - Generate TypeScript types from backend
 - Use OpenAPI/Swagger for API documentation
 - Shared type definitions ensure consistency

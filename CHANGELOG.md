@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Initial project setup
 - Git repository initialization
 - Project documentation structure
@@ -18,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2025-12-21
 
 ### Added
+
 - Project inception
 - Basic project structure
 - Core documentation:
@@ -30,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Git repository with proper .gitignore
 
 ### Context
+
 - Analyzed Libation audiobook directory structure
 - Identified key metadata fields and relationships
 - Documented series detection requirements

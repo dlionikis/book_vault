@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     // Build orderBy based on sort parameter
     let orderBy: any = { title: 'asc' };
-    
+
     // For author/narrator/series, we'll sort after fetching
     // Only use database ordering for title
     if (sort === 'title') {
@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
             },
             orderBy: {
               author: {
-                name: 'asc'
-              }
-            }
+                name: 'asc',
+              },
+            },
           },
           narrators: {
             include: {
@@ -43,9 +43,9 @@ export async function GET(request: NextRequest) {
             },
             orderBy: {
               narrator: {
-                name: 'asc'
-              }
-            }
+                name: 'asc',
+              },
+            },
           },
           series: {
             include: {
@@ -53,9 +53,9 @@ export async function GET(request: NextRequest) {
             },
             orderBy: {
               series: {
-                title: 'asc'
-              }
-            }
+                title: 'asc',
+              },
+            },
           },
         },
         orderBy,
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Transform the response to be more user-friendly
-    let transformedBooks = books.map(book => ({
+    let transformedBooks = books.map((book) => ({
       id: book.id,
       asin: book.asin,
       title: book.title,
@@ -74,9 +74,9 @@ export async function GET(request: NextRequest) {
       publisher: book.publisher,
       coverUrl: getCoverUrl(book.coverUrl),
       audioUrl: getAudioUrl(book.audioUrl),
-      authors: book.authors.map(ba => ba.author),
-      narrators: book.narrators.map(bn => bn.narrator),
-      series: book.series.map(bs => ({
+      authors: book.authors.map((ba) => ba.author),
+      narrators: book.narrators.map((bn) => bn.narrator),
+      series: book.series.map((bs) => ({
         id: bs.series.id,
         title: bs.series.title,
         asin: bs.series.asin,
@@ -117,10 +117,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching books:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch books' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch books' }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }

@@ -7,9 +7,11 @@ Create a polished, user-friendly web application for personal audiobook library 
 ## Development Phases
 
 ### Phase 1: Foundation ✅ COMPLETE
+
 **Goal**: Establish project structure and technical foundation
 
 **Tasks**:
+
 - [x] Initialize Git repository
 - [x] Create project documentation
 - [x] Analyze source data structure
@@ -19,6 +21,7 @@ Create a polished, user-friendly web application for personal audiobook library 
 - [x] Create project scaffolding
 
 **Success Criteria**:
+
 - ✅ Clear architectural decisions documented
 - ✅ Development environment ready
 - ✅ Tech stack selected and justified
@@ -30,9 +33,11 @@ Create a polished, user-friendly web application for personal audiobook library 
 ---
 
 ### Phase 2: Backend Core ✅ COMPLETE
+
 **Goal**: Build the data layer and API
 
 **Tasks**:
+
 - [x] Design database schema
 - [x] Implement metadata parser for JSON files
 - [x] Build data import/indexing system
@@ -43,6 +48,7 @@ Create a polished, user-friendly web application for personal audiobook library 
 - [ ] Add authentication system
 
 **Success Criteria**:
+
 - ✅ All books successfully indexed
 - ✅ API can serve book data
 - ✅ Search returns accurate results
@@ -55,9 +61,11 @@ Create a polished, user-friendly web application for personal audiobook library 
 ---
 
 ### Phase 3: Frontend Development ✅ COMPLETE
+
 **Goal**: Create an intuitive user interface
 
 **Tasks**:
+
 - [x] Design UI/UX with Tailwind CSS
 - [x] Build browsing views (author, series, narrator, category)
 - [x] Create search interface
@@ -72,6 +80,7 @@ Create a polished, user-friendly web application for personal audiobook library 
 - [ ] Add cover image gallery views
 
 **Success Criteria**:
+
 - ✅ Clean, intuitive interface
 - ✅ Fast navigation between views
 - ✅ Responsive on mobile and desktop
@@ -85,9 +94,11 @@ Create a polished, user-friendly web application for personal audiobook library 
 ---
 
 ### Phase 4: Enhancement & Features (Current)
+
 **Goal**: Add audio playback and user features
 
 **Tasks**:
+
 - [ ] Build audio player component (HTML5 or custom)
 - [ ] Implement audio streaming endpoint
 - [ ] Add playback position persistence
@@ -100,6 +111,7 @@ Create a polished, user-friendly web application for personal audiobook library 
 - [ ] Create playlist functionality
 
 **Success Criteria**:
+
 - Audio playback works smoothly
 - Users can resume where they left off
 - Custom lists work properly
@@ -109,9 +121,11 @@ Create a polished, user-friendly web application for personal audiobook library 
 ---
 
 ### Phase 5: AWS Deployment
+
 **Goal**: Deploy to production on AWS
 
 **Tasks**:
+
 - [ ] Set up AWS infrastructure
 - [ ] Configure S3 for audio files and images
 - [ ] Deploy application (ECS/Lambda/EC2)
@@ -123,6 +137,7 @@ Create a polished, user-friendly web application for personal audiobook library 
 - [ ] Set up automated backups
 
 **Success Criteria**:
+
 - Application accessible via HTTPS
 - Fast load times
 - Reliable uptime
@@ -131,9 +146,11 @@ Create a polished, user-friendly web application for personal audiobook library 
 ---
 
 ### Phase 6: Polish & iOS App
+
 **Goal**: Finalize and extend to mobile
 
 **Tasks**:
+
 - [ ] Performance optimization
 - [ ] Add loading states and error handling
 - [ ] Implement advanced search filters
@@ -144,6 +161,7 @@ Create a polished, user-friendly web application for personal audiobook library 
 - [ ] Dark mode support
 
 **Success Criteria**:
+
 - Polished user experience
 - iOS app working with same backend
 - Fast and responsive across all devices
@@ -155,6 +173,7 @@ Create a polished, user-friendly web application for personal audiobook library 
 - [ ] User testing and feedback
 
 **Success Criteria**:
+
 - Feature-complete web application
 - Smooth user experience
 - Fast performance
@@ -164,9 +183,11 @@ Create a polished, user-friendly web application for personal audiobook library 
 ---
 
 ### Phase 6: iOS App Development (Future)
+
 **Goal**: Build bare-bones iOS app for mobile access
 
 **Tasks**:
+
 - [ ] Design iOS app architecture (Swift vs React Native)
 - [ ] Set up Xcode project
 - [ ] Implement API client with JWT authentication
@@ -180,6 +201,7 @@ Create a polished, user-friendly web application for personal audiobook library 
 - [ ] Submit to App Store (if desired)
 
 **Success Criteria**:
+
 - Browse and search books on iPhone/iPad
 - Add books to custom lists
 - Stream audio with basic controls
@@ -191,24 +213,31 @@ Create a polished, user-friendly web application for personal audiobook library 
 ## Key Design Principles
 
 ### 1. Simplicity First
+
 Start with core functionality and add features incrementally. Avoid over-engineering.
 
 ### 2. Performance Matters
+
 The application should feel fast. Optimize for quick load times and responsive interactions.
 
 ### 3. Data Integrity
+
 Never modify source audiobook files. The Libation directory is read-only from the application's perspective.
 
 ### 4. API-First Design
+
 Design all features as API endpoints first. This ensures both web and future mobile apps can use the same backend.
 
 ### 5. Maintainability
+
 Write clean, documented code. Future AI agents (and humans) should easily understand the codebase.
 
 ### 6. AI-First Development
+
 Leverage AI assistance throughout the development process. Document decisions and context for continuity.
 
 ### 7. User-Centric Design
+
 The interface should be intuitive and enjoyable to use, not just functional.
 
 ---
@@ -216,18 +245,21 @@ The interface should be intuitive and enjoyable to use, not just functional.
 ## Technical Goals
 
 ### Code Quality
+
 - **Testing**: Unit tests for core functionality, integration tests for API
 - **Documentation**: Clear README, inline comments, API documentation
 - **Standards**: Follow language-specific best practices and style guides
 - **Version Control**: Meaningful commit messages, feature branches
 
 ### Performance Targets
+
 - **Page Load**: < 2 seconds initial load
 - **Search**: < 500ms for search results
 - **Audio Start**: < 1 second to start playback
 - **Navigation**: Instant feel for UI interactions
 
 ### Security
+
 - Secure password storage (bcrypt/Argon2)
 - HTTPS everywhere
 - Secure session management
@@ -235,6 +267,7 @@ The interface should be intuitive and enjoyable to use, not just functional.
 - Regular dependency updates
 
 ### Scalability
+
 - Support 1000+ books without performance degradation
 - Efficient database queries
 - Proper indexing
@@ -245,6 +278,7 @@ The interface should be intuitive and enjoyable to use, not just functional.
 ## Success Metrics
 
 ### User Experience
+
 - ✅ Can find any book in < 10 seconds
 - ✅ Can start listening in < 3 clicks
 - ✅ Series books are properly ordered
@@ -252,6 +286,7 @@ The interface should be intuitive and enjoyable to use, not just functional.
 - ✅ Audio plays without interruption
 
 ### Technical
+
 - ✅ 99.9% uptime
 - ✅ All tests passing
 - ✅ Security audit clean
@@ -263,32 +298,35 @@ The interface should be intuitive and enjoyable to use, not just functional.
 ## Open Questions & Decisions Needed
 
 ### Data Strategy
+
 - [ ] **Decision**: Keep audio files on external drive or sync to S3?
-  - *Consideration*: Cost vs. accessibility
-  - *Recommendation*: TBD based on cost analysis
+  - _Consideration_: Cost vs. accessibility
+  - _Recommendation_: TBD based on cost analysis
 
 ### Technology Stack
+
 - [ ] **Decision**: Backend framework?
-  - *Options*: Node.js/Express, Python/FastAPI, Go
-  - *Recommendation*: TBD based on team preferences
+  - _Options_: Node.js/Express, Python/FastAPI, Go
+  - _Recommendation_: TBD based on team preferences
 
 - [ ] **Decision**: Frontend framework?
-  - *Options*: React, Vue, Next.js, SvelteKit
-  - *Recommendation*: TBD based on requirements
+  - _Options_: React, Vue, Next.js, SvelteKit
+  - _Recommendation_: TBD based on requirements
 
 - [ ] **Decision**: Database?
-  - *Options*: PostgreSQL, DynamoDB
-  - *Recommendation*: TBD based on query patterns
+  - _Options_: PostgreSQL, DynamoDB
+  - _Recommendation_: TBD based on query patterns
 
 ### Features
+
 - [ ] **Decision**: Support multiple users?
-  - *Initial Answer*: No, but design to allow future expansion
+  - _Initial Answer_: No, but design to allow future expansion
 
 - [ ] **Decision**: Mobile app vs. responsive web?
-  - *Initial Answer*: Responsive web first, mobile app later if needed
+  - _Initial Answer_: Responsive web first, mobile app later if needed
 
 - [ ] **Decision**: Offline capability?
-  - *Initial Answer*: Not required initially
+  - _Initial Answer_: Not required initially
 
 ---
 
@@ -306,6 +344,7 @@ When working on this project, AI agents should:
 6. **Stay Focused**: Complete one phase/task before moving to the next
 
 ### Recommended Commit Message Format
+
 ```
 <type>(<scope>): <subject>
 
@@ -317,6 +356,7 @@ When working on this project, AI agents should:
 Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 Example:
+
 ```
 feat(parser): add JSON metadata parser
 
@@ -333,10 +373,12 @@ Closes #1
 ## Resources & References
 
 ### Libation
+
 - **GitHub**: https://github.com/rmcrackan/Libation
 - **Purpose**: Open-source Audible audiobook manager and downloader
 
 ### AWS Services (Potential)
+
 - **S3**: Media storage
 - **CloudFront**: CDN
 - **ECS/Lambda**: Compute

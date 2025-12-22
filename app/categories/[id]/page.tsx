@@ -14,7 +14,7 @@ interface CategoryWithBooks {
 async function getCategory(id: string): Promise<CategoryWithBooks | null> {
   try {
     const res = await fetch(`http://localhost:3000/api/categories/${id}`, {
-      next: { revalidate: 0 }
+      next: { revalidate: 0 },
     });
 
     if (!res.ok) {
@@ -43,16 +43,12 @@ export default async function CategoryPage({ params }: { params: { id: string } 
 
         {/* Category Header */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            {category.name}
-          </h1>
-          
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{category.name}</h1>
+
           {category.parentName && (
-            <p className="text-lg text-gray-600 mb-2">
-              in {category.parentName}
-            </p>
+            <p className="text-lg text-gray-600 mb-2">in {category.parentName}</p>
           )}
-          
+
           <div className="text-gray-600 text-lg">
             {category.books.length} {category.books.length === 1 ? 'book' : 'books'}
           </div>
@@ -60,9 +56,7 @@ export default async function CategoryPage({ params }: { params: { id: string } 
 
         {/* Books in Category */}
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-            Books in {category.name}
-          </h2>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Books in {category.name}</h2>
           {category.books.length > 0 ? (
             <BookGrid books={category.books} />
           ) : (

@@ -19,7 +19,7 @@ export async function GET() {
     });
 
     // Transform to include book count
-    const transformedAuthors = authors.map(author => ({
+    const transformedAuthors = authors.map((author) => ({
       id: author.id,
       name: author.name,
       asin: author.asin,
@@ -32,10 +32,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error fetching authors:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch authors' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch authors' }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }

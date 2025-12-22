@@ -1,6 +1,7 @@
 # Book Vault - Project Context
 
 ## Purpose
+
 This document provides comprehensive context for AI agents working on the Book Vault project. It serves as persistent memory across sessions to maintain continuity and understanding.
 
 ## Project Genesis
@@ -78,12 +79,15 @@ The current state is a directory of folders on an external drive (`/Volumes/BeeD
 ## Data Structure
 
 ### Source Data Location
+
 - **Primary Path**: `/Volumes/BeeDrive/Libation/`
 - **Structure**: One folder per book
 - **Folder Naming**: `{Book Title} [{ASIN}]`
 
 ### Files per Book
+
 Each book folder contains:
+
 - `{BookTitle}.metadata.json` - Complete metadata
 - `{BookTitle}.mp3` - Audio file (single file, processed by Libation)
 - `{BookTitle}.jpg` - Cover image
@@ -139,6 +143,7 @@ Key fields used from `.metadata.json`:
 ## Technical Considerations
 
 ### Data Access Patterns
+
 1. Initial scan and index of all books (one-time or periodic)
 2. Quick filtering and sorting operations
 3. Full-text search across descriptions
@@ -146,6 +151,7 @@ Key fields used from `.metadata.json`:
 5. Author/narrator aggregation
 
 ### Key Challenges
+
 1. **Data Volume**: Potentially large number of books (500-1000+)
 2. **Media Streaming**: Efficient audio file delivery
 3. **Search Performance**: Fast full-text search
@@ -153,6 +159,7 @@ Key fields used from `.metadata.json`:
 5. **Category Hierarchy**: Handling nested category structures
 
 ### AWS Deployment Considerations
+
 - Storage for audio files (likely S3)
 - Database for metadata indexing
 - Compute for application logic
@@ -164,15 +171,18 @@ Key fields used from `.metadata.json`:
 ## Current State
 
 ### Completed
+
 - ✅ Git repository initialized
 - ✅ Project scaffolding begun
 - ✅ Data structure analyzed
 - ✅ Requirements documented
 
 ### In Progress
+
 - 🔄 AI context documentation
 
 ### To Do
+
 - ⏳ Technology stack selection
 - ⏳ Architecture design
 - ⏳ Backend implementation

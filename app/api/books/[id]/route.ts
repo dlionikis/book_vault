@@ -4,10 +4,7 @@ import { getCoverUrl, getAudioUrl } from '@/lib/media';
 
 const prisma = new PrismaClient();
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const book = await prisma.book.findUnique({
       where: { id: params.id },
@@ -40,10 +37,7 @@ export async function GET(
     });
 
     if (!book) {
-      return NextResponse.json(
-        { error: 'Book not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
     // Transform the response
@@ -58,23 +52,23 @@ export async function GET(
       publisher: book.publisher,
       coverUrl: getCoverUrl(book.coverUrl),
       audioUrl: getAudioUrl(book.audioUrl),
-      authors: book.authors.map(ba => ({
+      authors: book.authors.map((ba) => ({
         id: ba.author.id,
         name: ba.author.name,
         asin: ba.author.asin,
       })),
-      narrators: book.narrators.map(bn => ({
+      narrators: book.narrators.map((bn) => ({
         id: bn.narrator.id,
         name: bn.narrator.name,
         asin: bn.narrator.asin,
       })),
-      series: book.series.map(bs => ({
+      series: book.series.map((bs) => ({
         id: bs.series.id,
         title: bs.series.title,
         asin: bs.series.asin,
         sequence: bs.sequence,
       })),
-      categories: book.categories.map(bc => ({
+      categories: book.categories.map((bc) => ({
         id: bc.category.id,
         name: bc.category.name,
         level: bc.category.level,
@@ -87,10 +81,7 @@ export async function GET(
     return NextResponse.json(transformedBook);
   } catch (error) {
     console.error('Error fetching book:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch book' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch book' }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }

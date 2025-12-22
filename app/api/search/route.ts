@@ -13,10 +13,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     if (!query) {
-      return NextResponse.json(
-        { error: 'Search query is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Search query is required' }, { status: 400 });
     }
 
     // Search across multiple fields
@@ -166,7 +163,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Transform the response
-    const transformedBooks = books.map(book => ({
+    const transformedBooks = books.map((book) => ({
       id: book.id,
       asin: book.asin,
       title: book.title,
@@ -176,17 +173,17 @@ export async function GET(request: NextRequest) {
       publisher: book.publisher,
       coverUrl: getCoverUrl(book.coverUrl),
       audioUrl: getAudioUrl(book.audioUrl),
-      authors: book.authors.map(ba => ({
+      authors: book.authors.map((ba) => ({
         id: ba.author.id,
         name: ba.author.name,
         asin: ba.author.asin,
       })),
-      narrators: book.narrators.map(bn => ({
+      narrators: book.narrators.map((bn) => ({
         id: bn.narrator.id,
         name: bn.narrator.name,
         asin: bn.narrator.asin,
       })),
-      series: book.series.map(bs => ({
+      series: book.series.map((bs) => ({
         id: bs.series.id,
         title: bs.series.title,
         asin: bs.series.asin,
@@ -207,10 +204,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error searching books:', error);
-    return NextResponse.json(
-      { error: 'Failed to search books' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to search books' }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }

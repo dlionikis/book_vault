@@ -38,6 +38,7 @@ This project is developed with significant AI assistance. When contributing, ple
 **Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 **Examples**:
+
 - `feat(api): add book search endpoint`
 - `fix(player): resolve audio seeking issue`
 - `docs(readme): update setup instructions`

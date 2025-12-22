@@ -10,7 +10,7 @@ interface AuthorWithBooks extends Author {
 async function getAuthor(id: string): Promise<AuthorWithBooks | null> {
   try {
     const res = await fetch(`http://localhost:3000/api/authors/${id}`, {
-      next: { revalidate: 0 }
+      next: { revalidate: 0 },
     });
 
     if (!res.ok) {
@@ -39,10 +39,8 @@ export default async function AuthorPage({ params }: { params: { id: string } })
 
         {/* Author Header */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            {author.name}
-          </h1>
-          
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{author.name}</h1>
+
           <div className="text-gray-600 text-lg">
             {author.books.length} {author.books.length === 1 ? 'book' : 'books'}
           </div>
@@ -50,9 +48,7 @@ export default async function AuthorPage({ params }: { params: { id: string } })
 
         {/* Books by Author */}
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-            Books by {author.name}
-          </h2>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Books by {author.name}</h2>
           {author.books.length > 0 ? (
             <BookGrid books={author.books} />
           ) : (

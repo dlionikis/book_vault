@@ -13,7 +13,7 @@ async function searchBooks(query: string): Promise<SearchResponse | null> {
 
   try {
     const res = await fetch(`http://localhost:3000/api/search?q=${encodeURIComponent(query)}`, {
-      next: { revalidate: 0 }
+      next: { revalidate: 0 },
     });
 
     if (!res.ok) {
@@ -23,7 +23,7 @@ async function searchBooks(query: string): Promise<SearchResponse | null> {
     const data = await res.json();
     return {
       books: data.books || [],
-      query: data.query || query
+      query: data.query || query,
     };
   } catch (error) {
     console.error('Error searching books:', error);
@@ -43,9 +43,9 @@ export default async function SearchPage({ searchParams }: { searchParams: { q?:
           <div className="flex items-center justify-between mb-4">
             <BackButton />
           </div>
-          
+
           <h1 className="text-3xl font-bold text-gray-900 mb-4">Search Audiobooks</h1>
-          
+
           <SearchBar />
         </div>
       </header>
@@ -76,7 +76,7 @@ export default async function SearchPage({ searchParams }: { searchParams: { q?:
           <div>
             <div className="mb-6">
               <h2 className="text-2xl font-semibold text-gray-900">
-                Search results for "{query}"
+                Search results for &ldquo;{query}&rdquo;
               </h2>
               <p className="text-gray-600 mt-1">
                 {results.books.length} {results.books.length === 1 ? 'book' : 'books'} found
@@ -101,7 +101,7 @@ export default async function SearchPage({ searchParams }: { searchParams: { q?:
             </svg>
             <h3 className="mt-4 text-lg font-medium text-gray-900">No results found</h3>
             <p className="mt-2 text-gray-500">
-              No audiobooks found for "{query}". Try a different search term.
+              No audiobooks found for &ldquo;{query}&rdquo;. Try a different search term.
             </p>
           </div>
         )}

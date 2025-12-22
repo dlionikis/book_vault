@@ -9,11 +9,11 @@ async function getBook(id: string): Promise<Book | null> {
     const res = await fetch(`http://localhost:3000/api/books/${id}`, {
       cache: 'no-store',
     });
-    
+
     if (!res.ok) {
       return null;
     }
-    
+
     return res.json();
   } catch (error) {
     console.error('Error fetching book:', error);
@@ -69,7 +69,12 @@ export default async function BookDetailPage({ params }: { params: { id: string 
               ) : (
                 <div className="aspect-[2/3] w-full max-h-[600px] bg-gray-200 flex items-center justify-center text-gray-400">
                   <svg className="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                    />
                   </svg>
                 </div>
               )}
@@ -84,7 +89,7 @@ export default async function BookDetailPage({ params }: { params: { id: string 
               {book.series.length > 0 && (
                 <div className="mb-4">
                   {book.series.map((s, idx) => (
-                    <Link 
+                    <Link
                       key={idx}
                       href={`/series/${s.id}`}
                       className="block text-lg text-blue-600 hover:text-blue-800 font-medium hover:underline"
@@ -104,7 +109,7 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                     {book.authors.map((a, idx) => (
                       <span key={a.id}>
                         {idx > 0 && ', '}
-                        <Link 
+                        <Link
                           href={`/authors/${a.id}`}
                           className="text-gray-900 hover:text-blue-600 hover:underline"
                         >
@@ -124,7 +129,7 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                     {book.narrators.map((n, idx) => (
                       <span key={n.id}>
                         {idx > 0 && ', '}
-                        <Link 
+                        <Link
                           href={`/narrators/${n.id}`}
                           className="text-gray-900 hover:text-blue-600 hover:underline"
                         >
@@ -186,7 +191,7 @@ export default async function BookDetailPage({ params }: { params: { id: string 
               {book.publisherSummary && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">About this audiobook</h3>
-                  <div 
+                  <div
                     className="text-gray-700 leading-relaxed prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{ __html: book.publisherSummary }}
                   />
@@ -202,8 +207,18 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                   </div>
                   <div className="h-12 bg-gray-200 rounded flex items-center justify-center text-gray-500">
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -217,7 +232,10 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                   </h3>
                   <div className="space-y-6">
                     {book.metadata.customer_reviews.map((review) => (
-                      <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
+                      <div
+                        key={review.id}
+                        className="border-b border-gray-200 pb-6 last:border-b-0"
+                      >
                         {/* Review Header */}
                         <div className="flex items-start justify-between mb-2">
                           <div>
@@ -226,10 +244,10 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                               <span className="text-sm text-gray-600">{review.author_name}</span>
                               <span className="text-gray-400">•</span>
                               <span className="text-sm text-gray-500">
-                                {new Date(review.submission_date).toLocaleDateString('en-US', { 
-                                  year: 'numeric', 
-                                  month: 'long', 
-                                  day: 'numeric' 
+                                {new Date(review.submission_date).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
                                 })}
                               </span>
                             </div>
@@ -254,7 +272,9 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                 </svg>
                               ))}
-                              <span className="ml-1 text-gray-700">{review.ratings.overall_rating}</span>
+                              <span className="ml-1 text-gray-700">
+                                {review.ratings.overall_rating}
+                              </span>
                             </div>
                           </div>
                           <div className="flex items-center gap-1">
@@ -273,7 +293,9 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                 </svg>
                               ))}
-                              <span className="ml-1 text-gray-700">{review.ratings.story_rating}</span>
+                              <span className="ml-1 text-gray-700">
+                                {review.ratings.story_rating}
+                              </span>
                             </div>
                           </div>
                           <div className="flex items-center gap-1">
@@ -292,7 +314,9 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                 </svg>
                               ))}
-                              <span className="ml-1 text-gray-700">{review.ratings.performance_rating}</span>
+                              <span className="ml-1 text-gray-700">
+                                {review.ratings.performance_rating}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -301,9 +325,11 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                         <p className="text-gray-700 leading-relaxed">{review.body}</p>
 
                         {/* Helpful Votes */}
-                        {(review.review_content_scores.num_helpful_votes > 0 || review.review_content_scores.num_unhelpful_votes > 0) && (
+                        {(review.review_content_scores.num_helpful_votes > 0 ||
+                          review.review_content_scores.num_unhelpful_votes > 0) && (
                           <div className="mt-3 text-sm text-gray-500">
-                            {review.review_content_scores.num_helpful_votes} people found this helpful
+                            {review.review_content_scores.num_helpful_votes} people found this
+                            helpful
                           </div>
                         )}
                       </div>

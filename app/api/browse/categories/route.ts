@@ -20,7 +20,7 @@ export async function GET() {
     });
 
     // Transform to include book count and parent name
-    const transformedCategories = categories.map(category => ({
+    const transformedCategories = categories.map((category) => ({
       id: category.id,
       name: category.name,
       level: category.level,
@@ -34,10 +34,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error fetching categories:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch categories' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }

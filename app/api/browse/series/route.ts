@@ -22,7 +22,7 @@ export async function GET() {
     });
 
     // Transform to include book count
-    const transformedSeries = series.map(s => ({
+    const transformedSeries = series.map((s) => ({
       id: s.id,
       title: s.title,
       asin: s.asin,
@@ -35,10 +35,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error fetching series:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch series' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch series' }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }

@@ -10,7 +10,7 @@ interface SeriesWithBooks extends Series {
 async function getSeries(id: string): Promise<SeriesWithBooks | null> {
   try {
     const res = await fetch(`http://localhost:3000/api/series/${id}`, {
-      next: { revalidate: 0 }
+      next: { revalidate: 0 },
     });
 
     if (!res.ok) {
@@ -39,10 +39,8 @@ export default async function SeriesPage({ params }: { params: { id: string } })
 
         {/* Series Header */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            {series.name}
-          </h1>
-          
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">{series.title}</h1>
+
           <div className="text-gray-600 text-lg">
             {series.books.length} {series.books.length === 1 ? 'book' : 'books'} in this series
           </div>
@@ -50,9 +48,7 @@ export default async function SeriesPage({ params }: { params: { id: string } })
 
         {/* Books in Series */}
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-            Books in Series Order
-          </h2>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Books in Series Order</h2>
           {series.books.length > 0 ? (
             <BookGrid books={series.books} />
           ) : (

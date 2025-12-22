@@ -11,7 +11,7 @@ interface AuthorWithCount {
 async function getAuthors(): Promise<AuthorWithCount[]> {
   try {
     const res = await fetch('http://localhost:3000/api/browse/authors', {
-      next: { revalidate: 0 }
+      next: { revalidate: 0 },
     });
 
     if (!res.ok) {
@@ -35,7 +35,7 @@ export default async function BrowseAuthorsPage() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <BackButton />
-          
+
           <h1 className="text-3xl font-bold text-gray-900">Browse by Author</h1>
           <p className="text-gray-600 mt-2">
             {authors.length} {authors.length === 1 ? 'author' : 'authors'}
@@ -78,9 +78,7 @@ export default async function BrowseAuthorsPage() {
               />
             </svg>
             <h3 className="mt-4 text-lg font-medium text-gray-900">No authors found</h3>
-            <p className="mt-2 text-gray-500">
-              Add some audiobooks to see authors here
-            </p>
+            <p className="mt-2 text-gray-500">Add some audiobooks to see authors here</p>
           </div>
         )}
       </main>

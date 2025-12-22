@@ -19,7 +19,7 @@ export async function GET() {
     });
 
     // Transform to include book count
-    const transformedNarrators = narrators.map(narrator => ({
+    const transformedNarrators = narrators.map((narrator) => ({
       id: narrator.id,
       name: narrator.name,
       asin: narrator.asin,
@@ -32,10 +32,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error fetching narrators:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch narrators' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch narrators' }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }
