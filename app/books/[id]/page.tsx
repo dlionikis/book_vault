@@ -165,9 +165,10 @@ export default async function BookDetailPage({ params }: { params: { id: string 
               {book.publisherSummary && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">About this audiobook</h3>
-                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {book.publisherSummary}
-                  </p>
+                  <div 
+                    className="text-gray-700 leading-relaxed prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: book.publisherSummary }}
+                  />
                 </div>
               )}
 
