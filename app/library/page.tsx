@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
 import AddToLibraryButton from '@/components/AddToLibraryButton';
-import ProgressBadge from '@/components/ProgressBadge';
+import ProgressStatus from '@/components/ProgressStatus';
 
 const prisma = new PrismaClient();
 
@@ -258,9 +258,9 @@ export default async function LibraryPage() {
                     </p>
                   )}
 
-                  {/* Progress Badge */}
+                  {/* Progress Status */}
                   <div className="mb-3">
-                    <ProgressBadge
+                    <ProgressStatus
                       bookId={book.id}
                       initialProgress={{
                         positionSeconds: book.progress.positionSeconds,
