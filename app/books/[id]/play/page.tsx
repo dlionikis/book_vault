@@ -248,6 +248,7 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
               title={book.title}
               author={book.authors.map((a) => a.name).join(', ')}
               bookId={book.id}
+              coverUrl={book.coverUrl}
             />
           </div>
         </div>

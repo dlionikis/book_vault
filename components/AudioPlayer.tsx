@@ -7,6 +7,7 @@ interface AudioPlayerProps {
   title: string;
   author: string;
   bookId: string;
+  coverUrl?: string;
   initialPosition?: number;
   onTimeUpdate?: (time: number) => void;
   onAudioRef?: (ref: HTMLAudioElement | null) => void;
@@ -17,6 +18,7 @@ export default function AudioPlayer({
   title,
   author,
   bookId,
+  coverUrl,
   initialPosition = 0,
   onTimeUpdate,
   onAudioRef,
@@ -181,6 +183,105 @@ export default function AudioPlayer({
       onTimeUpdate(currentTime);
     }
   }, [currentTime, onTimeUpdate]);
+
+  // Media Session API for lock screen and notification controls
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      // Set metadata for lock screen / notification display
+      const artwork = coverUrl
+        ? [
+            { src: coverUrl, sizes: '96x96', type: 'image/jpeg' },
+            { src: coverUrl, sizes: '128x128', type: 'image/jpeg' },
+            { src: coverUrl, sizes: '192x192', type: 'image/jpeg' },
+            { src: coverUrl, sizes: '256x256', type: 'image/jpeg' },
+            { src: coverUrl, sizes: '384x384', type: 'image/jpeg' },
+            { src: coverUrl, sizes: '512x512', type: 'image/jpeg' },
+          ]
+        : [];
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: title,
+        artist: author,
+        album: 'Book Vault',
+        artwork: artwork,
+      });
+
+      // Set up action handlers for media controls
+      navigator.mediaSession.setActionHandler('play', () => {
+        if (audioRef.current) {
+          audioRef.current.play();
+          setIsPlaying(true);
+        }
+      });
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          setIsPlaying(false);
+          // Save progress when pausing from lock screen
+          if (Math.abs(currentTime - lastSavedPosition) >= 1) {
+            saveProgress(currentTime);
+          }
+        }
+      });
+
+      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        const seekOffset = details.seekOffset || 15;
+        skip(-seekOffset);
+      });
+
+      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        const seekOffset = details.seekOffset || 30;
+        skip(seekOffset);
+      });
+
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (audioRef.current && details.seekTime !== undefined) {
+          audioRef.current.currentTime = details.seekTime;
+          setCurrentTime(details.seekTime);
+        }
+      });
+
+      // Update playback state
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+
+      // Update position state for scrubbing support
+      if (audioRef.current && duration > 0) {
+        try {
+          navigator.mediaSession.setPositionState({
+            duration: duration,
+            playbackRate: playbackRate,
+            position: currentTime,
+          });
+        } catch (error) {
+          // Some browsers don't support all position state features
+          console.debug('Position state not supported:', error);
+        }
+      }
+    }
+
+    // Cleanup function
+    return () => {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = null;
+        navigator.mediaSession.setActionHandler('play', null);
+        navigator.mediaSession.setActionHandler('pause', null);
+        navigator.mediaSession.setActionHandler('seekbackward', null);
+        navigator.mediaSession.setActionHandler('seekforward', null);
+        navigator.mediaSession.setActionHandler('seekto', null);
+      }
+    };
+  }, [
+    title,
+    author,
+    coverUrl,
+    isPlaying,
+    currentTime,
+    duration,
+    playbackRate,
+    currentTime,
+    lastSavedPosition,
+  ]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">

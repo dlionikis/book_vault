@@ -54,6 +54,7 @@ This document outlines the next steps now that core functionality is complete.
 - Progress tracking with automatic position saving
 - Manual progress controls (mark as finished, reset)
 - Continue listening carousel on home page
+- Media Session API for lock screen controls
 
 ## Immediate Next Steps - Phase 4: Enhancement & Features
 
@@ -195,6 +196,14 @@ Add filters to search:
 - Improve touch targets
 - Add mobile-specific layouts
 - Test audio player on iOS/Android
+- **Media Session API** ✅ - Lock screen controls and notification controls (completed)
+- **Progressive Web App (PWA) Support** 🎯 - Make app installable on mobile devices
+  - Add Web App Manifest (`manifest.json`)
+  - Configure app icons and splash screens
+  - Implement Service Worker for offline support
+  - Enable "Add to Home Screen" functionality
+  - Better background audio on Android
+  - App-like experience without app store
 
 ## Long Term Goals (Next Month)
 

@@ -9,9 +9,16 @@ interface PlaybackClientProps {
   title: string;
   author: string;
   bookId: string;
+  coverUrl?: string;
 }
 
-export default function PlaybackClient({ audioUrl, title, author, bookId }: PlaybackClientProps) {
+export default function PlaybackClient({
+  audioUrl,
+  title,
+  author,
+  bookId,
+  coverUrl,
+}: PlaybackClientProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [initialPosition, setInitialPosition] = useState<number | undefined>(undefined);
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
@@ -82,6 +89,7 @@ export default function PlaybackClient({ audioUrl, title, author, bookId }: Play
         title={title}
         author={author}
         bookId={bookId}
+        coverUrl={coverUrl}
         initialPosition={initialPosition}
         onTimeUpdate={handleTimeUpdate}
         onAudioRef={handleAudioRef}
