@@ -118,6 +118,9 @@ secrets/
 config/secrets.*
 credentials
 
+# Local HTTPS certificates
+.certs/
+
 # Testing
 coverage/
 .nyc_output
