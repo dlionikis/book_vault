@@ -24,6 +24,10 @@ This document outlines the next steps now that core functionality is complete.
 - [x] **Sort functionality (Title, Author, Narrator, Series)**
 - [x] **Customer reviews displayed on book pages**
 - [x] **Clickable categories on book pages**
+- [x] **Pagination UI controls with prev/next buttons**
+- [x] **Audio player with playback controls (PR #7)**
+- [x] **Chapter navigation with real-time highlighting (PR #7)**
+- [x] **Dark mode support across all pages (PR #8)**
 
 ### Current Features Working
 
@@ -36,227 +40,26 @@ This document outlines the next steps now that core functionality is complete.
 - Clean UI with Tailwind CSS
 - Customer reviews with star ratings on book pages
 - Clickable category tags for easy navigation
+- Pagination with prev/next navigation
+- Audio playback with seeking and volume control
+- Chapter-by-chapter navigation with real-time highlighting
+- Dark mode toggle with system preference support
+- Theme persistence across sessions
 
 ## Immediate Next Steps - Phase 4: Enhancement & Features
 
-### 1. Audio Player Implementation 🎵
+### ✅ Completed in Phase 4
 
-**Priority: HIGH** - Core functionality needed for audiobook playback
+- [x] **Audio Player Implementation** (PR #7) - Custom HTML5 player with seeking, volume control
+- [x] **Chapter Navigation** (PR #7) - Interactive chapter list with real-time highlighting
+- [x] **Pagination UI** - Prev/next buttons on all list pages
+- [x] **Dark Mode** (PR #8) - Full theme toggle with system preference support
 
-Create audio player component and streaming endpoint:
-
-**Backend: Audio Streaming API**
-
-```typescript
-// app/api/audio/[...path]/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { createReadStream, statSync } from 'fs';
-import { join } from 'path';
-
-export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
-  const filePath = join(process.env.AUDIO_PATH || 'test-data', ...params.path);
-
-  try {
-    const stat = statSync(filePath);
-    const range = request.headers.get('range');
-
-    if (range) {
-      // Support range requests for seeking
-      const parts = range.replace(/bytes=/, '').split('-');
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
-
-      const stream = createReadStream(filePath, { start, end });
-
-      return new NextResponse(stream as any, {
-        status: 206,
-        headers: {
-          'Content-Range': `bytes ${start}-${end}/${stat.size}`,
-          'Accept-Ranges': 'bytes',
-          'Content-Length': (end - start + 1).toString(),
-          'Content-Type': 'audio/mpeg',
-        },
-      });
-    }
-
-    const stream = createReadStream(filePath);
-    return new NextResponse(stream as any, {
-      headers: {
-        'Content-Type': 'audio/mpeg',
-        'Content-Length': stat.size.toString(),
-      },
-    });
-  } catch (error) {
-    return NextResponse.json({ error: 'File not found' }, { status: 404 });
-  }
-}
-```
-
-**Frontend: Audio Player Component**
-
-```typescript
-// components/AudioPlayer.tsx
-'use client';
-
-import { useState, useRef, useEffect } from 'react';
-
-interface AudioPlayerProps {
-  audioUrl: string;
-  title: string;
-  author: string;
-  bookId: string;
-}
-
-export default function AudioPlayer({ audioUrl, title, author, bookId }: AudioPlayerProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const audioRef = useRef<HTMLAudioElement>(null);
-
-  const togglePlay = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-      // TODO: Save progress to API
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4">
-      <audio
-        ref={audioRef}
-        src={audioUrl}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-      />
-
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={togglePlay}
-            className="w-12 h-12 flex items-center justify-center bg-blue-600 text-white rounded-full hover:bg-blue-700"
-          >
-            {isPlaying ? '⏸' : '▶️'}
-          </button>
-
-          <div className="flex-1">
-            <div className="font-medium text-gray-900">{title}</div>
-            <div className="text-sm text-gray-600">{author}</div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">{formatTime(currentTime)}</span>
-            <input
-              type="range"
-              min="0"
-              max={duration || 0}
-              value={currentTime}
-              onChange={(e) => {
-                const time = parseFloat(e.target.value);
-                setCurrentTime(time);
-                if (audioRef.current) {
-                  audioRef.current.currentTime = time;
-                }
-              }}
-              className="w-64"
-            />
-            <span className="text-sm text-gray-600">{formatTime(duration)}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-```
-
-**Usage**: Add to book detail page
-
-### 2. Pagination UI Controls
-
-**Priority: MEDIUM** - API already supports pagination, just needs UI
-
-Add prev/next buttons to home page:
-
-```typescript
-// components/Pagination.tsx
-'use client';
-
-import { useRouter, useSearchParams } from 'next/navigation';
-
-interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  total: number;
-}
-
-export default function Pagination({ currentPage, totalPages, total }: PaginationProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const goToPage = (page: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('page', page.toString());
-    router.push(`/?${params.toString()}`);
-  };
-
-  return (
-    <div className="flex items-center justify-between mt-8">
-      <div className="text-sm text-gray-600">
-        Showing page {currentPage} of {totalPages} ({total} books)
-      </div>
-
-      <div className="flex gap-2">
-        <button
-          onClick={() => goToPage(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-        >
-          Previous
-        </button>
-
-        <button
-          onClick={() => goToPage(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-4 py-2 bg-white border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  );
-}
-```
-
-Update home page to use pagination and pass page parameter to API.
-
-### 3. User Progress Tracking
+### 1. User Progress Tracking 📊
 
 **Priority: HIGH** - Essential for audiobook app
 
-Create API endpoints and UI for saving/loading playback position:
+Create API endpoints and database schema for saving/loading playback position:
 
 ```typescript
 // app/api/progress/route.ts
@@ -311,21 +114,20 @@ export async function GET(request: NextRequest) {
 
 Update AudioPlayer to save/load progress automatically.
 
-### 4. Authentication with NextAuth.js
+### 2. Authentication with NextAuth.js 🔐
 
-**Priority: MEDIUM** - Needed before multi-device sync
+**Priority: HIGH** - Needed before multi-device sync and progress tracking
 
-Install and configure NextAuth.js:
+NextAuth.js is already configured but not enabled. Enable authentication:
 
-```bash
-npm install next-auth @auth/prisma-adapter
-```
+- Add login/register UI
+- Enable protected routes
+- Add session management
+- Configure user roles
 
-Create auth configuration and login pages. For personal use, can start with simple email/password or magic link authentication.
+### 3. User Lists Feature 📚
 
-### 5. User Lists Feature
-
-**Priority: LOW** - Nice to have
+**Priority: MEDIUM** - Nice to have
 
 Create endpoints for managing custom lists:
 
