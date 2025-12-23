@@ -2,11 +2,21 @@ import { render, screen } from '@testing-library/react';
 import BookDetailPage from '@/app/books/[id]/page';
 import { PrismaClient } from '@prisma/client';
 import { notFound } from 'next/navigation';
+import { getServerSession } from 'next-auth';
 
 // Mock Prisma Client
 jest.mock('@prisma/client', () => {
   const mockPrismaClient = {
     book: {
+      findUnique: jest.fn(),
+    },
+    userList: {
+      findFirst: jest.fn(),
+    },
+    userListBook: {
+      findFirst: jest.fn(),
+    },
+    userProgress: {
       findUnique: jest.fn(),
     },
     $disconnect: jest.fn(),
@@ -24,6 +34,16 @@ jest.mock('next/navigation', () => ({
   }),
 }));
 
+// Mock next-auth
+jest.mock('next-auth', () => ({
+  getServerSession: jest.fn(),
+}));
+
+// Mock auth config
+jest.mock('@/lib/auth', () => ({
+  authOptions: {},
+}));
+
 // Mock components
 jest.mock('@/components/BackButton', () => {
   return function MockBackButton() {
@@ -34,6 +54,12 @@ jest.mock('@/components/BackButton', () => {
 jest.mock('@/components/AddToLibraryButton', () => {
   return function MockAddToLibraryButton() {
     return <button data-testid="add-to-library">Add to Library</button>;
+  };
+});
+
+jest.mock('@/components/ProgressControls', () => {
+  return function MockProgressControls() {
+    return <div data-testid="progress-controls">Progress Controls</div>;
   };
 });
 
@@ -54,6 +80,14 @@ describe('Book Detail Page', () => {
     (notFound as jest.Mock).mockImplementation(() => {
       throw new Error('Not Found');
     });
+
+    // Mock getServerSession to return no session by default
+    (getServerSession as jest.Mock).mockResolvedValue(null);
+
+    // Mock userList and userListBook queries to return null by default (not in library)
+    mockPrisma.userList.findFirst.mockResolvedValue(null);
+    mockPrisma.userListBook.findFirst.mockResolvedValue(null);
+    mockPrisma.userProgress.findUnique.mockResolvedValue(null);
   });
 
   it('renders book details from database', async () => {

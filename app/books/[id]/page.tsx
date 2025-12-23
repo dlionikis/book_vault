@@ -4,8 +4,11 @@ import { notFound } from 'next/navigation';
 import { Book } from '@/lib/types';
 import BackButton from '@/components/BackButton';
 import AddToLibraryButton from '@/components/AddToLibraryButton';
+import ProgressControls from '@/components/ProgressControls';
 import { PrismaClient } from '@prisma/client';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 const prisma = new PrismaClient();
 
@@ -102,6 +105,42 @@ export default async function BookDetailPage({ params }: { params: { id: string 
 
   if (!book) {
     notFound();
+  }
+
+  // Check if book is in user's library and get progress
+  const session = await getServerSession(authOptions);
+  let isInLibrary = false;
+  let userProgress = null;
+
+  if (session?.user?.id) {
+    const library = await prisma.userList.findFirst({
+      where: {
+        userId: session.user.id,
+        name: 'My Library',
+      },
+    });
+
+    if (library) {
+      const libraryBook = await prisma.userListBook.findFirst({
+        where: {
+          listId: library.id,
+          bookId: book.id,
+        },
+      });
+      isInLibrary = !!libraryBook;
+    }
+
+    // Get user progress if in library
+    if (isInLibrary) {
+      userProgress = await prisma.userProgress.findUnique({
+        where: {
+          userId_bookId: {
+            userId: session.user.id,
+            bookId: book.id,
+          },
+        },
+      });
+    }
   }
 
   return (
@@ -215,6 +254,23 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                   size="large"
                 />
               </div>
+
+              {/* Progress Controls (only if in library) */}
+              {isInLibrary && (
+                <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    Listening Progress
+                  </h3>
+                  <ProgressControls
+                    bookId={book.id}
+                    initialProgress={{
+                      positionSeconds: userProgress?.positionSeconds ?? 0,
+                      completed: userProgress?.completed ?? false,
+                      totalSeconds: book.runtimeMinutes ? book.runtimeMinutes * 60 : undefined,
+                    }}
+                  />
+                </div>
+              )}
 
               {/* Metadata Grid */}
               <div className="grid grid-cols-2 gap-4 mb-6 pb-6 border-b dark:border-gray-700">

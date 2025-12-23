@@ -7,6 +7,7 @@ interface AudioPlayerProps {
   title: string;
   author: string;
   bookId: string;
+  initialPosition?: number;
   onTimeUpdate?: (time: number) => void;
   onAudioRef?: (ref: HTMLAudioElement | null) => void;
 }
@@ -16,22 +17,76 @@ export default function AudioPlayer({
   title,
   author,
   bookId,
+  initialPosition = 0,
   onTimeUpdate,
   onAudioRef,
 }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentTime, setCurrentTime] = useState(initialPosition);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [lastSavedPosition, setLastSavedPosition] = useState(initialPosition);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Save progress to API
+  const saveProgress = async (positionSeconds: number) => {
+    try {
+      await fetch('/api/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookId,
+          positionSeconds: Math.floor(positionSeconds),
+        }),
+      });
+      setLastSavedPosition(positionSeconds);
+    } catch (error) {
+      console.error('Error saving progress:', error);
+    }
+  };
+
+  // Auto-save progress every 10 seconds
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const interval = setInterval(() => {
+      // Only save if position changed by more than 5 seconds since last save
+      if (Math.abs(currentTime - lastSavedPosition) >= 5) {
+        saveProgress(currentTime);
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, currentTime, lastSavedPosition, bookId]);
+
+  // Save progress when audio is paused or component unmounts
+  useEffect(() => {
+    return () => {
+      // Save final position on unmount
+      if (currentTime > 0 && Math.abs(currentTime - lastSavedPosition) >= 1) {
+        saveProgress(currentTime);
+      }
+    };
+  }, [currentTime, lastSavedPosition]);
+
+  // Set initial position when audio loads
+  useEffect(() => {
+    if (audioRef.current && initialPosition > 0) {
+      audioRef.current.currentTime = initialPosition;
+    }
+  }, [initialPosition]);
 
   // Play/Pause toggle
   const togglePlay = () => {
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
+        // Save progress when pausing
+        if (Math.abs(currentTime - lastSavedPosition) >= 1) {
+          saveProgress(currentTime);
+        }
       } else {
         audioRef.current.play();
       }
@@ -43,7 +98,6 @@ export default function AudioPlayer({
   const handleTimeUpdate = () => {
     if (audioRef.current) {
       setCurrentTime(audioRef.current.currentTime);
-      // TODO: Save progress to API periodically
     }
   };
 
