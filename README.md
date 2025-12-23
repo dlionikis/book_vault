@@ -70,6 +70,28 @@ Each book's `.metadata.json` file contains:
 - **Type Safety**: TypeScript with strict mode
 - **Security**: npm audit, pre-commit hooks
 
+## Documentation
+
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+### Core Documentation
+
+- **[Architecture](docs/architecture.md)** - System design, data models, and technical architecture
+- **[Development Roadmap](docs/development-roadmap.md)** - Feature roadmap, TODO items, and next steps
+- **[Testing Guide](docs/testing.md)** - Testing strategy, running tests, and coverage reports
+- **[Contributing](CONTRIBUTING.md)** - Guidelines for contributing to the project
+
+### Setup & Configuration
+
+- **[Project Setup](docs/project-setup.md)** - Initial setup steps and configuration
+- **[Media Configuration](docs/media-configuration.md)** - Configuring media data paths and file locations
+- **[Security](docs/security.md)** - Security measures, linting, and code quality
+
+### Technical Details
+
+- **[Media Security Verification](docs/media-security.md)** - Analysis of file access patterns and security measures
+- **[Changelog](CHANGELOG.md)** - Version history and release notes
+
 ## Development Approach
 
 This is an **AI-first development project**, meaning:
