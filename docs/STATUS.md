@@ -2,9 +2,21 @@
 
 ## Current State
 
-Book Vault is a functional personal audiobook library with comprehensive browsing, search, and playback capabilities. The application is ready for local use and testing.
+Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing.
 
 ### Recent Accomplishments (December 23, 2025)
+
+#### PR #11: User Progress Tracking (Merged)
+
+- Implemented comprehensive progress tracking system
+- Three progress states: not started, in progress, finished
+- Automatic position saving during playback (5-second intervals)
+- Manual status controls on book detail pages
+- ProgressStatus component (display-only for library page)
+- ProgressControls component (interactive controls for book detail page)
+- Continue listening carousel on home page
+- Session-based authentication protection
+- 17 new tests, all passing (171 total tests)
 
 #### PR #7: Dedicated Playback Page (Merged)
 
@@ -36,12 +48,15 @@ Book Vault is a functional personal audiobook library with comprehensive browsin
 
 ### Test Coverage
 
-- **98 total tests** - All passing ✅
+- **171 total tests** - All passing ✅
 - AudioPlayer: 22 tests
 - Pagination: 21 tests
 - Import script: 21 tests
 - Audio metadata extraction: 6 tests
 - API routes: 28 tests
+- Progress tracking: 17 tests
+- Page components: 26 tests
+- Other components: 30 tests
 
 ## Current Features
 
@@ -54,6 +69,10 @@ Book Vault is a functional personal audiobook library with comprehensive browsin
 - ✅ Audio playback with seek, speed control, volume
 - ✅ Chapter navigation with real-time highlighting
 - ✅ Dark mode with theme toggle
+- ✅ User authentication with session management
+- ✅ Progress tracking with automatic position saving
+- ✅ Continue listening carousel
+- ✅ Manual progress controls (mark as finished, reset)
 - ✅ Responsive design (mobile-ready)
 
 ### Technical Features
@@ -77,19 +96,7 @@ All major functionality is working as expected. Minor improvements and feature a
 
 ### High Priority
 
-1. **User Authentication** (NextAuth.js already configured)
-   - Enable authentication on all routes
-   - Add user registration flow
-   - Implement session management
-   - Add user-specific features (bookmarks, progress tracking)
-
-2. **Playback Progress Tracking**
-   - Save playback position per user
-   - Resume playback from last position
-   - Store in database with user_id, book_id, position, timestamp
-   - Add "Continue Listening" section on home page
-
-3. **User Lists/Collections**
+1. **User Lists/Collections**
    - "Want to Listen" list
    - "Favorites" list
    - Custom user-created lists

@@ -29,6 +29,7 @@ This document outlines the next steps now that core functionality is complete.
 - [x] **Chapter navigation with real-time highlighting (PR #7)**
 - [x] **Dark mode support across all pages (PR #8)**
 - [x] **User authentication system with NextAuth.js (PR #9)**
+- [x] **User progress tracking for audiobooks (PR #11)**
 
 ### Current Features Working
 
@@ -50,6 +51,9 @@ This document outlines the next steps now that core functionality is complete.
 - Protected routes with middleware
 - User settings page with password reset
 - Admin user creation via CLI
+- Progress tracking with automatic position saving
+- Manual progress controls (mark as finished, reset)
+- Continue listening carousel on home page
 
 ## Immediate Next Steps - Phase 4: Enhancement & Features
 
@@ -60,8 +64,11 @@ This document outlines the next steps now that core functionality is complete.
 - [x] **Pagination UI** - Prev/next buttons on all list pages
 - [x] **Dark Mode** (PR #8) - Full theme toggle with system preference support
 - [x] **User Authentication** (PR #9) - NextAuth.js with JWT sessions, login/logout, protected routes, settings page
+- [x] **User Progress Tracking** (PR #11) - Automatic position saving, manual status controls, continue listening carousel
 
-### 1. User Progress Tracking 📊
+### ~~1. User Progress Tracking 📊~~ ✅ COMPLETED
+
+**Status: COMPLETED** - PR #11 merged
 
 **Priority: HIGH** - Essential for audiobook app
 
@@ -134,9 +141,9 @@ Authentication system fully implemented:
 - ✅ Test user auto-seeding (`npm run db:seed`)
 - ✅ Comprehensive test coverage (20 tests)
 
-### 3. User Lists Feature 📚
+### 1. User Lists Feature 📚
 
-**Priority: MEDIUM** - Nice to have
+**Priority: HIGH** - Next major feature
 
 Create endpoints for managing custom lists:
 
