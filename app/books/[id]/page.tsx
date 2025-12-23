@@ -147,25 +147,27 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                 {book.runtimeMinutes && (
                   <div>
                     <p className="text-sm text-gray-600">Length</p>
-                    <p className="font-medium">{formatRuntime(book.runtimeMinutes)}</p>
+                    <p className="font-medium text-gray-900">
+                      {formatRuntime(book.runtimeMinutes)}
+                    </p>
                   </div>
                 )}
                 {book.releaseDate && (
                   <div>
                     <p className="text-sm text-gray-600">Release Date</p>
-                    <p className="font-medium">{formatDate(book.releaseDate)}</p>
+                    <p className="font-medium text-gray-900">{formatDate(book.releaseDate)}</p>
                   </div>
                 )}
                 {book.publisher && (
                   <div>
                     <p className="text-sm text-gray-600">Publisher</p>
-                    <p className="font-medium">{book.publisher}</p>
+                    <p className="font-medium text-gray-900">{book.publisher}</p>
                   </div>
                 )}
                 {book.asin && (
                   <div>
                     <p className="text-sm text-gray-600">ASIN</p>
-                    <p className="font-medium">{book.asin}</p>
+                    <p className="font-medium text-gray-900">{book.asin}</p>
                   </div>
                 )}
               </div>
