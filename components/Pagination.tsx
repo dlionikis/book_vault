@@ -73,8 +73,8 @@ export default function Pagination({
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-gray-200">
-      <div className="text-sm text-gray-600">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+      <div className="text-sm text-gray-600 dark:text-gray-400">
         Showing page {currentPage} of {totalPages} ({total.toLocaleString()} {itemName})
       </div>
 
@@ -85,8 +85,8 @@ export default function Pagination({
           disabled={currentPage === 1}
           className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
             currentPage === 1
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-blue-500 hover:text-blue-600'
+              ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400'
           }`}
           aria-label="Previous page"
         >
@@ -105,7 +105,10 @@ export default function Pagination({
           {pageNumbers.map((page, index) => {
             if (page === 'ellipsis') {
               return (
-                <span key={`ellipsis-${index}`} className="px-3 py-2 text-gray-400">
+                <span
+                  key={`ellipsis-${index}`}
+                  className="px-3 py-2 text-gray-400 dark:text-gray-600"
+                >
                   ...
                 </span>
               );
@@ -121,7 +124,7 @@ export default function Pagination({
                 className={`min-w-[40px] px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-blue-500 hover:text-blue-600'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400'
                 }`}
                 aria-label={`Go to page ${pageNum}`}
                 aria-current={isActive ? 'page' : undefined}
@@ -143,8 +146,8 @@ export default function Pagination({
           disabled={currentPage === totalPages}
           className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
             currentPage === totalPages
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-blue-500 hover:text-blue-600'
+              ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400'
           }`}
           aria-label="Next page"
         >

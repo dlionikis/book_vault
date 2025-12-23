@@ -38,13 +38,17 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
 
   if (!book.audioUrl) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">No Audio Available</h1>
-          <p className="text-gray-600 mb-6">This book does not have an audio file.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            No Audio Available
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            This book does not have an audio file.
+          </p>
           <Link
             href={`/books/${book.id}`}
-            className="text-blue-600 hover:text-blue-800 hover:underline"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline"
           >
             ← Back to book details
           </Link>
@@ -54,14 +58,14 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-32">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 pb-32">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
+      <header className="bg-white dark:bg-gray-900 shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <Link
               href={`/books/${book.id}`}
-              className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -82,7 +86,7 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Book Info Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-lg p-6 sticky top-24">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 sticky top-24">
               {/* Cover Image */}
               {book.coverUrl ? (
                 <div className="relative aspect-[2/3] w-full mb-4">
@@ -95,7 +99,7 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
                   />
                 </div>
               ) : (
-                <div className="aspect-[2/3] w-full mb-4 bg-gray-200 flex items-center justify-center text-gray-400 rounded-lg">
+                <div className="aspect-[2/3] w-full mb-4 bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400 dark:text-gray-500 rounded-lg">
                   <svg className="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
@@ -108,7 +112,9 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
               )}
 
               {/* Title */}
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">{book.title}</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                {book.title}
+              </h1>
 
               {/* Series */}
               {book.series.length > 0 && (
@@ -117,7 +123,7 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
                     <Link
                       key={idx}
                       href={`/series/${s.id}`}
-                      className="text-blue-600 hover:text-blue-800 text-sm hover:underline"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm hover:underline"
                     >
                       {s.title}
                       {s.sequence && ` #${s.sequence}`}
@@ -129,14 +135,14 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
               {/* Authors */}
               {book.authors.length > 0 && (
                 <div className="mb-3">
-                  <span className="text-sm text-gray-600">By </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">By </span>
                   <span className="text-sm">
                     {book.authors.map((a, idx) => (
                       <span key={a.id}>
                         {idx > 0 && ', '}
                         <Link
                           href={`/authors/${a.id}`}
-                          className="text-gray-900 hover:text-blue-600 hover:underline"
+                          className="text-gray-900 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
                         >
                           {a.name}
                         </Link>
@@ -149,14 +155,14 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
               {/* Narrators */}
               {book.narrators.length > 0 && (
                 <div className="mb-4">
-                  <span className="text-sm text-gray-600">Narrated by </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Narrated by </span>
                   <span className="text-sm">
                     {book.narrators.map((n, idx) => (
                       <span key={n.id}>
                         {idx > 0 && ', '}
                         <Link
                           href={`/narrators/${n.id}`}
-                          className="text-gray-900 hover:text-blue-600 hover:underline"
+                          className="text-gray-900 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
                         >
                           {n.name}
                         </Link>
@@ -168,7 +174,7 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
 
               {/* Runtime */}
               {book.runtimeMinutes && (
-                <div className="text-sm text-gray-600 mb-2">
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                   <span className="font-medium">Length:</span> {formatRuntime(book.runtimeMinutes)}
                 </div>
               )}
