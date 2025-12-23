@@ -42,11 +42,28 @@ model Book {
   narrators         BookNarrator[]
   series            BookSeries[]
   categories        BookCategory[]
+  chapters          Chapter[]
   progress          UserProgress[]
   listBooks         UserListBook[]
 
   @@index([title])
   @@map("books")
+}
+
+model Chapter {
+  id          String  @id @default(uuid())
+  bookId      String  @map("book_id")
+  chapterNumber Int   @map("chapter_number")
+  title       String
+  startTime   Float   @map("start_time") // Start time in seconds
+  endTime     Float   @map("end_time")   // End time in seconds
+  duration    Float   // Duration in seconds
+  
+  book        Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, chapterNumber])
+  @@index([bookId])
+  @@map("chapters")
 }
 
 model Author {
