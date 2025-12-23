@@ -21,10 +21,10 @@ export const config = {
     /*
      * Match all request paths except:
      * - /auth/* (login, register pages)
-     * - /api/auth/* (NextAuth API routes)
+     * - /api/* (all API routes)
      * - /_next/* (Next.js internals)
      * - /favicon.ico, /robots.txt (static files)
      */
-    '/((?!auth|api/auth|_next|favicon.ico|robots.txt).*)',
+    '/((?!api|auth|_next|favicon.ico|robots.txt).*)',
   ],
 };
