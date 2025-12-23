@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Dedicated Playback Page** (`/books/[id]/play`)
+  - Full-screen playback interface with room for future enhancements
+  - Book information sidebar with cover, title, authors, narrators
+  - Placeholder for chapter navigation UI
+  - Clean separation of playback from book detail page
 - **Chapter Metadata Extraction**
   - Database schema for storing chapter information (Chapter model)
   - Audio metadata extraction utility using ffprobe
@@ -40,8 +45,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Audio URLs now use `/api/audio/` endpoint instead of `/api/images/` for streaming support
-- Book detail pages now display AudioPlayer component when audioUrl is available
+- Book detail page now displays "Play Book" button instead of embedded player
+- AudioPlayer moved from book detail to dedicated playback page
+- Playback interface now has dedicated space for future enhancements
+
+### Added
+
 - All API endpoints now support pagination via `page` and `limit` query parameters (default: 20 items per page)
 - Home page, search page, and all detail pages now accept page parameter
 - Import script now uses ASIN-first lookup for authors/narrators to handle name variations

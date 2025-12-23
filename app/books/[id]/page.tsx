@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Book } from '@/lib/types';
 import BackButton from '@/components/BackButton';
-import AudioPlayer from '@/components/AudioPlayer';
 
 async function getBook(id: string): Promise<Book | null> {
   try {
@@ -343,14 +342,43 @@ export default async function BookDetailPage({ params }: { params: { id: string 
         </div>
       </main>
 
-      {/* Audio Player - Fixed at bottom */}
+      {/* Play Button - Fixed at bottom */}
       {book.audioUrl && (
-        <AudioPlayer
-          audioUrl={book.audioUrl}
-          title={book.title}
-          author={book.authors.map((a) => a.name).join(', ')}
-          bookId={book.id}
-        />
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="hidden sm:block">
+                  {book.coverUrl && (
+                    <div className="relative w-12 h-12">
+                      <Image
+                        src={book.coverUrl}
+                        alt={book.title}
+                        fill
+                        className="object-cover rounded"
+                      />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900">{book.title}</div>
+                  <div className="text-sm text-gray-600">
+                    {book.authors.map((a) => a.name).join(', ')}
+                  </div>
+                </div>
+              </div>
+              <Link
+                href={`/books/${book.id}/play`}
+                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors font-medium"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                Play Book
+              </Link>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
