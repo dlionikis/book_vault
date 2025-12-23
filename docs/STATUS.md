@@ -6,6 +6,18 @@ Book Vault is a functional personal audiobook library with comprehensive browsin
 
 ### Recent Accomplishments (December 23, 2025)
 
+#### PR #12: Media Session API & HTTPS Development (Merged)
+
+- Implemented Media Session API for mobile lock screen controls
+- Lock screen metadata display (title, author, cover art)
+- Playback controls from lock screen (play, pause, skip forward/backward)
+- Position tracking and scrubbing support
+- Added HTTPS development server setup with mkcert
+- Custom server.js for local HTTPS testing
+- Network access configuration for mobile device testing
+- Continue Listening button for quick resume access
+- Graceful degradation for unsupported browsers
+
 #### PR #11: User Progress Tracking (Merged)
 
 - Implemented comprehensive progress tracking system
@@ -72,7 +84,10 @@ Book Vault is a functional personal audiobook library with comprehensive browsin
 - ✅ User authentication with session management
 - ✅ Progress tracking with automatic position saving
 - ✅ Continue listening carousel
+- ✅ Continue listening button for quick resume
 - ✅ Manual progress controls (mark as finished, reset)
+- ✅ Media Session API for mobile lock screen controls
+- ✅ HTTPS development server for mobile testing
 - ✅ Responsive design (mobile-ready)
 
 ### Technical Features
