@@ -4,20 +4,117 @@ import SearchBar from '@/components/SearchBar';
 import SortDropdown from '@/components/SortDropdown';
 import Pagination from '@/components/Pagination';
 import Link from 'next/link';
-import { getBaseUrl } from '@/lib/api-url';
+import { PrismaClient } from '@prisma/client';
+import { getCoverUrl, getAudioUrl } from '@/lib/media';
+
+const prisma = new PrismaClient();
 
 async function getBooks(page?: string, sort?: string): Promise<BooksResponse> {
-  const pageParam = page ? `page=${page}` : 'page=1';
-  const sortParam = sort ? `&sort=${sort}` : '';
-  const res = await fetch(`${getBaseUrl()}/api/books?${pageParam}&limit=20${sortParam}`, {
-    cache: 'no-store',
-  });
+  const pageNum = parseInt(page || '1');
+  const limit = 20;
+  const skip = (pageNum - 1) * limit;
+  const sortBy = sort || 'title';
 
-  if (!res.ok) {
-    throw new Error('Failed to fetch books');
+  // Build orderBy based on sort parameter
+  let orderBy: any = { title: 'asc' };
+  if (sortBy === 'title') {
+    orderBy = { title: 'asc' };
   }
 
-  return res.json();
+  // Fetch books with their relationships
+  const [books, total] = await Promise.all([
+    prisma.book.findMany({
+      skip,
+      take: limit,
+      include: {
+        authors: {
+          include: {
+            author: true,
+          },
+          orderBy: {
+            author: {
+              name: 'asc',
+            },
+          },
+        },
+        narrators: {
+          include: {
+            narrator: true,
+          },
+          orderBy: {
+            narrator: {
+              name: 'asc',
+            },
+          },
+        },
+        series: {
+          include: {
+            series: true,
+          },
+          orderBy: {
+            series: {
+              title: 'asc',
+            },
+          },
+        },
+      },
+      orderBy,
+    }),
+    prisma.book.count(),
+  ]);
+
+  // Transform the response
+  let transformedBooks = books.map((book) => ({
+    id: book.id,
+    asin: book.asin,
+    title: book.title,
+    publisherSummary: book.publisherSummary,
+    runtimeMinutes: book.runtimeMinutes,
+    releaseDate: book.releaseDate,
+    publisher: book.publisher,
+    coverUrl: getCoverUrl(book.coverUrl),
+    audioUrl: getAudioUrl(book.audioUrl),
+    authors: book.authors.map((ba) => ba.author),
+    narrators: book.narrators.map((bn) => bn.narrator),
+    series: book.series.map((bs) => ({
+      id: bs.series.id,
+      title: bs.series.title,
+      asin: bs.series.asin,
+      sequence: bs.sequence,
+    })),
+    createdAt: book.createdAt.toISOString(),
+  }));
+
+  // Apply client-side sorting for author/narrator/series
+  if (sortBy === 'author') {
+    transformedBooks.sort((a, b) => {
+      const aAuthor = a.authors[0]?.name || '';
+      const bAuthor = b.authors[0]?.name || '';
+      return aAuthor.localeCompare(bAuthor);
+    });
+  } else if (sortBy === 'narrator') {
+    transformedBooks.sort((a, b) => {
+      const aNarrator = a.narrators[0]?.name || '';
+      const bNarrator = b.narrators[0]?.name || '';
+      return aNarrator.localeCompare(bNarrator);
+    });
+  } else if (sortBy === 'series') {
+    transformedBooks.sort((a, b) => {
+      const aSeries = a.series[0]?.title || '';
+      const bSeries = b.series[0]?.title || '';
+      return aSeries.localeCompare(bSeries);
+    });
+  }
+
+  return {
+    books: transformedBooks,
+    pagination: {
+      page: pageNum,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  };
 }
 
 export default async function Home({

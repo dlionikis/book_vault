@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
-import { getBaseUrl } from '@/lib/api-url';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 interface AuthorWithCount {
   id: string;
@@ -11,16 +13,25 @@ interface AuthorWithCount {
 
 async function getAuthors(): Promise<AuthorWithCount[]> {
   try {
-    const res = await fetch(`${getBaseUrl()}/api/browse/authors`, {
-      next: { revalidate: 0 },
+    const authors = await prisma.author.findMany({
+      include: {
+        books: {
+          include: {
+            book: true,
+          },
+        },
+      },
+      orderBy: {
+        name: 'asc',
+      },
     });
 
-    if (!res.ok) {
-      return [];
-    }
-
-    const data = await res.json();
-    return data.authors || [];
+    return authors.map((author) => ({
+      id: author.id,
+      name: author.name,
+      asin: author.asin,
+      bookCount: author.books.length,
+    }));
   } catch (error) {
     console.error('Error fetching authors:', error);
     return [];

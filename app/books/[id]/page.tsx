@@ -3,19 +3,81 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Book } from '@/lib/types';
 import BackButton from '@/components/BackButton';
-import { getBaseUrl } from '@/lib/api-url';
+import AddToLibraryButton from '@/components/AddToLibraryButton';
+import { PrismaClient } from '@prisma/client';
+import { getCoverUrl, getAudioUrl } from '@/lib/media';
+
+const prisma = new PrismaClient();
 
 async function getBook(id: string): Promise<Book | null> {
   try {
-    const res = await fetch(`${getBaseUrl()}/api/books/${id}`, {
-      cache: 'no-store',
+    const book = await prisma.book.findUnique({
+      where: { id },
+      include: {
+        authors: {
+          include: {
+            author: true,
+          },
+          orderBy: {
+            author: {
+              name: 'asc',
+            },
+          },
+        },
+        narrators: {
+          include: {
+            narrator: true,
+          },
+          orderBy: {
+            narrator: {
+              name: 'asc',
+            },
+          },
+        },
+        series: {
+          include: {
+            series: true,
+          },
+          orderBy: {
+            series: {
+              title: 'asc',
+            },
+          },
+        },
+        categories: {
+          include: {
+            category: true,
+          },
+        },
+      },
     });
 
-    if (!res.ok) {
+    if (!book) {
       return null;
     }
 
-    return res.json();
+    return {
+      id: book.id,
+      asin: book.asin,
+      title: book.title,
+      publisherSummary: book.publisherSummary,
+      runtimeMinutes: book.runtimeMinutes,
+      releaseDate: book.releaseDate,
+      publisher: book.publisher,
+      coverUrl: getCoverUrl(book.coverUrl),
+      audioUrl: getAudioUrl(book.audioUrl),
+      authors: book.authors.map((ba) => ba.author),
+      narrators: book.narrators.map((bn) => bn.narrator),
+      series: book.series.map((bs) => ({
+        id: bs.series.id,
+        title: bs.series.title,
+        asin: bs.series.asin,
+        sequence: bs.sequence,
+      })),
+      categories: book.categories.map((bc) => bc.category),
+      metadata: book.metadata as any,
+      createdAt: book.createdAt.toISOString(),
+    };
   } catch (error) {
     console.error('Error fetching book:', error);
     return null;
@@ -143,6 +205,16 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                   </span>
                 </div>
               )}
+
+              {/* Add to Library Button */}
+              <div className="mb-6">
+                <AddToLibraryButton
+                  bookId={book.id}
+                  seriesId={book.series[0]?.id}
+                  showSeriesOption={book.series.length > 0}
+                  size="large"
+                />
+              </div>
 
               {/* Metadata Grid */}
               <div className="grid grid-cols-2 gap-4 mb-6 pb-6 border-b dark:border-gray-700">

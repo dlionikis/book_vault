@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
-import { getBaseUrl } from '@/lib/api-url';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 interface SeriesWithCount {
   id: string;
@@ -11,16 +13,25 @@ interface SeriesWithCount {
 
 async function getSeries(): Promise<SeriesWithCount[]> {
   try {
-    const res = await fetch(`${getBaseUrl()}/api/browse/series`, {
-      next: { revalidate: 0 },
+    const seriesList = await prisma.series.findMany({
+      include: {
+        books: {
+          include: {
+            book: true,
+          },
+        },
+      },
+      orderBy: {
+        title: 'asc',
+      },
     });
 
-    if (!res.ok) {
-      return [];
-    }
-
-    const data = await res.json();
-    return data.series || [];
+    return seriesList.map((series) => ({
+      id: series.id,
+      title: series.title,
+      asin: series.asin,
+      bookCount: series.books.length,
+    }));
   } catch (error) {
     console.error('Error fetching series:', error);
     return [];
