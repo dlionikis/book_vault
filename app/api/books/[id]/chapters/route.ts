@@ -1,0 +1,90 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { extractChapters } from '@/lib/audio-metadata';
+import { getAbsoluteMediaPath } from '@/lib/media';
+import path from 'path';
+
+const prisma = new PrismaClient();
+
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    // Get book with audioUrl
+    const book = await prisma.book.findUnique({
+      where: { id: params.id },
+      select: {
+        id: true,
+        audioUrl: true,
+        chapters: {
+          orderBy: { chapterNumber: 'asc' },
+        },
+      },
+    });
+
+    if (!book) {
+      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    }
+
+    if (!book.audioUrl) {
+      return NextResponse.json({ error: 'No audio file for this book' }, { status: 404 });
+    }
+
+    // If chapters already exist in database, return them
+    if (book.chapters.length > 0) {
+      return NextResponse.json({
+        chapters: book.chapters,
+        source: 'database',
+      });
+    }
+
+    // Otherwise, extract from audio file and save to database
+    const mediaPath = getAbsoluteMediaPath();
+    const audioFilePath = path.join(mediaPath, book.audioUrl);
+
+    // Extract chapters from audio file
+    const extractedChapters = await extractChapters(audioFilePath);
+
+    if (extractedChapters.length === 0) {
+      return NextResponse.json({
+        chapters: [],
+        source: 'none',
+        message: 'No chapters found in audio file',
+      });
+    }
+
+    // Save chapters to database
+    await prisma.$transaction(
+      extractedChapters.map((chapter) =>
+        prisma.chapter.create({
+          data: {
+            bookId: book.id,
+            chapterNumber: chapter.chapterNumber,
+            title: chapter.title,
+            startTime: chapter.startTime,
+            endTime: chapter.endTime,
+            duration: chapter.duration,
+          },
+        })
+      )
+    );
+
+    // Fetch the saved chapters
+    const savedChapters = await prisma.chapter.findMany({
+      where: { bookId: book.id },
+      orderBy: { chapterNumber: 'asc' },
+    });
+
+    return NextResponse.json({
+      chapters: savedChapters,
+      source: 'extracted',
+    });
+  } catch (error) {
+    console.error('Error getting chapters:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to get chapters',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}

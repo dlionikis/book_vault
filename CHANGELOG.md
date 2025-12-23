@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Chapter Metadata Extraction**
+  - Database schema for storing chapter information (Chapter model)
+  - Audio metadata extraction utility using ffprobe
+  - Automatic chapter parsing from MP3 files with cuesheet support
+  - API endpoint `/api/books/[id]/chapters` to retrieve chapters
+  - Caches extracted chapters in database for performance
+  - 6 comprehensive tests for audio metadata extraction
 - **Audio Player** with full playback controls
   - Play/pause controls with visual feedback
   - Seek bar for jumping to specific positions
