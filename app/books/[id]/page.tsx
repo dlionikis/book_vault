@@ -3,11 +3,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Book } from '@/lib/types';
 import BackButton from '@/components/BackButton';
-import AudioPlayer from '@/components/AudioPlayer';
+import { getBaseUrl } from '@/lib/api-url';
 
 async function getBook(id: string): Promise<Book | null> {
   try {
-    const res = await fetch(`http://localhost:3000/api/books/${id}`, {
+    const res = await fetch(`${getBaseUrl()}/api/books/${id}`, {
       cache: 'no-store',
     });
 
@@ -199,32 +199,6 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                 </div>
               )}
 
-              {/* Audio Player Placeholder */}
-              {book.audioUrl && (
-                <div className="mt-8 p-4 bg-gray-100 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">Audio Player</span>
-                    <span className="text-xs text-gray-500">Coming soon</span>
-                  </div>
-                  <div className="h-12 bg-gray-200 rounded flex items-center justify-center text-gray-500">
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              )}
-
               {/* Customer Reviews */}
               {book.metadata?.customer_reviews && book.metadata.customer_reviews.length > 0 && (
                 <div className="mt-8">
@@ -343,14 +317,43 @@ export default async function BookDetailPage({ params }: { params: { id: string 
         </div>
       </main>
 
-      {/* Audio Player - Fixed at bottom */}
+      {/* Play Button - Fixed at bottom */}
       {book.audioUrl && (
-        <AudioPlayer
-          audioUrl={book.audioUrl}
-          title={book.title}
-          author={book.authors.map((a) => a.name).join(', ')}
-          bookId={book.id}
-        />
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="hidden sm:block">
+                  {book.coverUrl && (
+                    <div className="relative w-12 h-12">
+                      <Image
+                        src={book.coverUrl}
+                        alt={book.title}
+                        fill
+                        className="object-cover rounded"
+                      />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900">{book.title}</div>
+                  <div className="text-sm text-gray-600">
+                    {book.authors.map((a) => a.name).join(', ')}
+                  </div>
+                </div>
+              </div>
+              <Link
+                href={`/books/${book.id}/play`}
+                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors font-medium"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                Play Book
+              </Link>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
+import { getBaseUrl } from '@/lib/api-url';
 
 interface SeriesWithCount {
   id: string;
@@ -10,7 +11,7 @@ interface SeriesWithCount {
 
 async function getSeries(): Promise<SeriesWithCount[]> {
   try {
-    const res = await fetch('http://localhost:3000/api/browse/series', {
+    const res = await fetch(`${getBaseUrl()}/api/browse/series`, {
       next: { revalidate: 0 },
     });
 

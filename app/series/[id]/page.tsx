@@ -3,6 +3,7 @@ import { Book, Series } from '@/lib/types';
 import BookGrid from '@/components/BookGrid';
 import BackButton from '@/components/BackButton';
 import Pagination from '@/components/Pagination';
+import { getBaseUrl } from '@/lib/api-url';
 
 interface SeriesWithBooks extends Series {
   books: Book[];
@@ -17,7 +18,7 @@ interface SeriesWithBooks extends Series {
 async function getSeries(id: string, page?: string): Promise<SeriesWithBooks | null> {
   try {
     const pageParam = page ? `?page=${page}` : '';
-    const res = await fetch(`http://localhost:3000/api/series/${id}${pageParam}`, {
+    const res = await fetch(`${getBaseUrl()}/api/series/${id}${pageParam}`, {
       next: { revalidate: 0 },
     });
 
