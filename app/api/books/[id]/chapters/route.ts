@@ -51,21 +51,36 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       });
     }
 
-    // Save chapters to database
-    await prisma.$transaction(
-      extractedChapters.map((chapter) =>
-        prisma.chapter.create({
-          data: {
-            bookId: book.id,
-            chapterNumber: chapter.chapterNumber,
-            title: chapter.title,
-            startTime: chapter.startTime,
-            endTime: chapter.endTime,
-            duration: chapter.duration,
-          },
-        })
-      )
-    );
+    // Save chapters to database (with duplicate check in case of race condition)
+    try {
+      await prisma.$transaction(
+        extractedChapters.map((chapter) =>
+          prisma.chapter.create({
+            data: {
+              bookId: book.id,
+              chapterNumber: chapter.chapterNumber,
+              title: chapter.title,
+              startTime: chapter.startTime,
+              endTime: chapter.endTime,
+              duration: chapter.duration,
+            },
+          })
+        )
+      );
+    } catch (dbError: any) {
+      // If we hit a unique constraint error, chapters were already created by another request
+      if (dbError.code === 'P2002') {
+        const existingChapters = await prisma.chapter.findMany({
+          where: { bookId: book.id },
+          orderBy: { chapterNumber: 'asc' },
+        });
+        return NextResponse.json({
+          chapters: existingChapters,
+          source: 'database',
+        });
+      }
+      throw dbError;
+    }
 
     // Fetch the saved chapters
     const savedChapters = await prisma.chapter.findMany({
