@@ -2,11 +2,13 @@ import { BooksResponse } from '@/lib/types';
 import BookGrid from '@/components/BookGrid';
 import SearchBar from '@/components/SearchBar';
 import SortDropdown from '@/components/SortDropdown';
+import Pagination from '@/components/Pagination';
 import Link from 'next/link';
 
-async function getBooks(sort?: string): Promise<BooksResponse> {
+async function getBooks(page?: string, sort?: string): Promise<BooksResponse> {
+  const pageParam = page ? `page=${page}` : 'page=1';
   const sortParam = sort ? `&sort=${sort}` : '';
-  const res = await fetch(`http://localhost:3000/api/books?limit=20${sortParam}`, {
+  const res = await fetch(`http://localhost:3000/api/books?${pageParam}&limit=20${sortParam}`, {
     cache: 'no-store',
   });
 
@@ -17,9 +19,13 @@ async function getBooks(sort?: string): Promise<BooksResponse> {
   return res.json();
 }
 
-export default async function Home({ searchParams }: { searchParams: Promise<{ sort?: string }> }) {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; sort?: string }>;
+}) {
   const params = await searchParams;
-  const data = await getBooks(params.sort);
+  const data = await getBooks(params.page, params.sort);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -102,6 +108,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
           <SortDropdown />
         </div>
         <BookGrid books={data.books} />
+        <Pagination
+          currentPage={data.pagination.page}
+          totalPages={data.pagination.pages}
+          total={data.pagination.total}
+          itemName="books"
+        />
       </main>
     </div>
   );

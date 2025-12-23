@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Pagination component with smart page number display and ellipsis
+- Pagination support across all list/detail pages (home, search, authors, narrators, series, categories)
+- 21 comprehensive pagination tests covering navigation, accessibility, and edge cases
 - Configurable media data path via `MEDIA_DATA_PATH` environment variable
 - Media path utility functions (`lib/media.ts`)
 - Path validation for secure file access
@@ -19,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- All API endpoints now support pagination via `page` and `limit` query parameters (default: 20 items per page)
+- Home page, search page, and all detail pages now accept page parameter
 - Import script now uses ASIN-first lookup for authors/narrators to handle name variations
 - Import script deduplicates category IDs to prevent constraint violations
 - Import script properly handles authors with multiple ASINs or null ASINs

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { Book } from '@/lib/types';
 import BookGrid from '@/components/BookGrid';
 import BackButton from '@/components/BackButton';
+import Pagination from '@/components/Pagination';
 
 interface CategoryWithBooks {
   id: string;
@@ -9,11 +10,18 @@ interface CategoryWithBooks {
   level: number;
   parentName?: string | null;
   books: Book[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
-async function getCategory(id: string): Promise<CategoryWithBooks | null> {
+async function getCategory(id: string, page?: string): Promise<CategoryWithBooks | null> {
   try {
-    const res = await fetch(`http://localhost:3000/api/categories/${id}`, {
+    const pageParam = page ? `?page=${page}` : '';
+    const res = await fetch(`http://localhost:3000/api/categories/${id}${pageParam}`, {
       next: { revalidate: 0 },
     });
 
@@ -28,8 +36,15 @@ async function getCategory(id: string): Promise<CategoryWithBooks | null> {
   }
 }
 
-export default async function CategoryPage({ params }: { params: { id: string } }) {
-  const category = await getCategory(params.id);
+export default async function CategoryPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const sp = await searchParams;
+  const category = await getCategory(params.id, sp.page);
 
   if (!category) {
     notFound();
@@ -58,7 +73,15 @@ export default async function CategoryPage({ params }: { params: { id: string } 
         <div className="mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Books in {category.name}</h2>
           {category.books.length > 0 ? (
-            <BookGrid books={category.books} />
+            <>
+              <BookGrid books={category.books} />
+              <Pagination
+                currentPage={category.pagination.page}
+                totalPages={category.pagination.pages}
+                total={category.pagination.total}
+                itemName="books"
+              />
+            </>
           ) : (
             <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
               No books found in this category

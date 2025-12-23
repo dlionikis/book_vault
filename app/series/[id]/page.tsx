@@ -2,14 +2,22 @@ import { notFound } from 'next/navigation';
 import { Book, Series } from '@/lib/types';
 import BookGrid from '@/components/BookGrid';
 import BackButton from '@/components/BackButton';
+import Pagination from '@/components/Pagination';
 
 interface SeriesWithBooks extends Series {
   books: Book[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
-async function getSeries(id: string): Promise<SeriesWithBooks | null> {
+async function getSeries(id: string, page?: string): Promise<SeriesWithBooks | null> {
   try {
-    const res = await fetch(`http://localhost:3000/api/series/${id}`, {
+    const pageParam = page ? `?page=${page}` : '';
+    const res = await fetch(`http://localhost:3000/api/series/${id}${pageParam}`, {
       next: { revalidate: 0 },
     });
 
@@ -24,8 +32,15 @@ async function getSeries(id: string): Promise<SeriesWithBooks | null> {
   }
 }
 
-export default async function SeriesPage({ params }: { params: { id: string } }) {
-  const series = await getSeries(params.id);
+export default async function SeriesPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const sp = await searchParams;
+  const series = await getSeries(params.id, sp.page);
 
   if (!series) {
     notFound();
@@ -50,7 +65,15 @@ export default async function SeriesPage({ params }: { params: { id: string } })
         <div className="mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Books in Series Order</h2>
           {series.books.length > 0 ? (
-            <BookGrid books={series.books} />
+            <>
+              <BookGrid books={series.books} />
+              <Pagination
+                currentPage={series.pagination.page}
+                totalPages={series.pagination.pages}
+                total={series.pagination.total}
+                itemName="books"
+              />
+            </>
           ) : (
             <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
               No books found in this series
