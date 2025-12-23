@@ -181,6 +181,7 @@ Full-text search must work across all these fields.
 - Test core business logic
 - Test data parsing
 - Test utility functions
+- Run: `npm test`
 
 ### Integration Tests
 
@@ -194,6 +195,16 @@ Full-text search must work across all these fields.
 - Test authentication
 - Test search functionality
 - Test audio playback
+
+### Dark Mode Testing
+
+- Test all pages in both light and dark modes
+- Verify theme persistence across page navigation
+- Check system preference detection
+- Ensure proper contrast for readability
+- Test theme toggle functionality
+
+**Current Status**: 98 tests passing (December 23, 2025)
 
 ## Debugging Tips
 
