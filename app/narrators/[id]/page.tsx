@@ -48,23 +48,23 @@ export default async function NarratorPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Navigation */}
         <BackButton />
 
         {/* Narrator Header */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">{narrator.name}</h1>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">{narrator.name}</h1>
 
-          <div className="text-gray-600 text-lg">
+          <div className="text-gray-600 dark:text-gray-400 text-lg">
             {narrator.books.length} {narrator.books.length === 1 ? 'book' : 'books'}
           </div>
         </div>
 
         {/* Books by Narrator */}
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
             Books narrated by {narrator.name}
           </h2>
           {narrator.books.length > 0 ? (
@@ -78,7 +78,7 @@ export default async function NarratorPage({
               />
             </>
           ) : (
-            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">
               No books found for this narrator
             </div>
           )}

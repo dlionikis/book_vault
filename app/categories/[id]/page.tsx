@@ -52,27 +52,31 @@ export default async function CategoryPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Navigation */}
         <BackButton />
 
         {/* Category Header */}
-        <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">{category.name}</h1>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">{category.name}</h1>
 
           {category.parentName && (
-            <p className="text-lg text-gray-600 mb-2">in {category.parentName}</p>
+            <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">
+              in {category.parentName}
+            </p>
           )}
 
-          <div className="text-gray-600 text-lg">
+          <div className="text-gray-600 dark:text-gray-400 text-lg">
             {category.books.length} {category.books.length === 1 ? 'book' : 'books'}
           </div>
         </div>
 
         {/* Books in Category */}
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Books in {category.name}</h2>
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+            Books in {category.name}
+          </h2>
           {category.books.length > 0 ? (
             <>
               <BookGrid books={category.books} />
@@ -84,7 +88,7 @@ export default async function CategoryPage({
               />
             </>
           ) : (
-            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">
               No books found in this category
             </div>
           )}
