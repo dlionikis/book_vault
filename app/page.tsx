@@ -4,6 +4,7 @@ import SearchBar from '@/components/SearchBar';
 import SortDropdown from '@/components/SortDropdown';
 import Pagination from '@/components/Pagination';
 import ContinueListening from '@/components/ContinueListening';
+import ContinueListeningButton from '@/components/ContinueListeningButton';
 import Link from 'next/link';
 import { PrismaClient } from '@prisma/client';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
@@ -132,6 +133,9 @@ export default async function Home({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <SearchBar />
       </div>
+
+      {/* Quick Continue Button - Shows most recent book */}
+      <ContinueListeningButton />
 
       {/* Browse Navigation */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
