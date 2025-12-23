@@ -2,6 +2,7 @@ import 'dotenv/config';
 import fs from 'fs/promises';
 import path from 'path';
 import { PrismaClient } from '@prisma/client';
+import { seedTestUser } from './seed-test-user';
 
 export const prisma = new PrismaClient();
 
@@ -259,15 +260,20 @@ export async function importBook(
 
 // Run the import only if this file is executed directly (not imported)
 if (require.main === module) {
-  importBooks()
-    .then(() => {
+  (async () => {
+    try {
+      // First, seed the test user
+      await seedTestUser();
+
+      // Then import books
+      await importBooks();
+
       console.log('\n✨ Import complete!');
-    })
-    .catch((error) => {
+    } catch (error) {
       console.error('\n💥 Import failed:', error);
       process.exit(1);
-    })
-    .finally(async () => {
+    } finally {
       await prisma.$disconnect();
-    });
+    }
+  })();
 }

@@ -200,19 +200,31 @@ This is an **AI-first development project**, meaning:
    npm run db:generate
    ```
 
-6. **Import audiobooks**
+6. **Seed test user (optional but recommended for development)**
+
+   ```bash
+   npm run db:seed
+   ```
+
+   This creates a test user with:
+   - Email: `test@example.com`
+   - Password: `password123`
+
+7. **Import audiobooks**
 
    ```bash
    npm run import
    ```
 
-7. **Start development server**
+   Note: The import script automatically creates the test user if it doesn't exist.
+
+8. **Start development server**
 
    ```bash
    npm run dev
    ```
 
-8. **Open application**
+9. **Open application**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ### Available Commands
