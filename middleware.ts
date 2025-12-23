@@ -20,11 +20,12 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except:
-     * - /auth/* (login, register pages)
+     * - /auth/login (login page allowed)
      * - /api/* (all API routes)
      * - /_next/* (Next.js internals)
      * - /favicon.ico, /robots.txt (static files)
+     * Note: /auth/register is intentionally protected (admin-only user creation)
      */
-    '/((?!api|auth|_next|favicon.ico|robots.txt).*)',
+    '/((?!api|auth/login|_next|favicon.ico|robots.txt).*)',
   ],
 };
