@@ -9,10 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Chapter Navigation** on playback page
+  - Interactive chapter list with click-to-jump functionality
+  - Real-time current chapter highlighting during playback
+  - Chapter number, title, start time, and duration display
+  - Scrollable list for audiobooks with many chapters
+  - Loading and empty states
 - **Dedicated Playback Page** (`/books/[id]/play`)
-  - Full-screen playback interface with room for future enhancements
+  - Full-screen playback interface with integrated chapter navigation
   - Book information sidebar with cover, title, authors, narrators
-  - Placeholder for chapter navigation UI
+  - Chapter list with real-time tracking
   - Clean separation of playback from book detail page
 - **Chapter Metadata Extraction**
   - Database schema for storing chapter information (Chapter model)
@@ -20,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic chapter parsing from MP3 files with cuesheet support
   - API endpoint `/api/books/[id]/chapters` to retrieve chapters
   - Caches extracted chapters in database for performance
+  - Race condition handling for concurrent chapter extraction requests
   - 6 comprehensive tests for audio metadata extraction
 - **Audio Player** with full playback controls
   - Play/pause controls with visual feedback
@@ -46,8 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Book detail page now displays "Play Book" button instead of embedded player
-- AudioPlayer moved from book detail to dedicated playback page
-- Playback interface now has dedicated space for future enhancements
+- AudioPlayer moved from book detail to dedicated playback page with integrated chapter navigation
+- AudioPlayer component updated with callback props for time tracking and audio element exposure
+- Improved text contrast for metadata values (length, release date, publisher, ASIN) on book detail page
+- Playback interface now has dedicated space with functional chapter navigation
 
 ### Added
 
