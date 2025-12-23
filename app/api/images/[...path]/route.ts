@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
+import { getAbsoluteMediaPath, validateMediaPath } from '@/lib/media';
 
 export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
   try {
     // Reconstruct the file path
-    const filePath = path.join(process.cwd(), 'test-data', ...params.path);
+    const mediaDir = getAbsoluteMediaPath();
+    const filePath = path.join(mediaDir, ...params.path);
 
-    // Security: ensure the path is within test-data directory
-    const testDataDir = path.join(process.cwd(), 'test-data');
-    const resolvedPath = path.resolve(filePath);
-    if (!resolvedPath.startsWith(testDataDir)) {
+    // Security: ensure the path is within media directory
+    if (!validateMediaPath(filePath)) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 403 });
     }
 

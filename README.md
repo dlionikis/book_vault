@@ -141,8 +141,26 @@ This is an **AI-first development project**, meaning:
 
    ```bash
    cp .env.example .env.local
-   # Edit .env.local with your database connection and Libation path
+   # Edit .env.local with your settings:
+   # - DATABASE_URL: Database connection string
+   # - MEDIA_DATA_PATH: Path to your audiobook files (default: test-data)
+   # - LIBATION_PATH: Source directory for import (optional)
    ```
+
+   **Media Path Options:**
+
+   ```bash
+   # Option 1: Use small test dataset (default)
+   MEDIA_DATA_PATH="test-data"
+
+   # Option 2: Point to your full Libation library
+   MEDIA_DATA_PATH="/Volumes/BeeDrive/Libation"
+
+   # Option 3: Use custom directory
+   MEDIA_DATA_PATH="/path/to/audiobooks"
+   ```
+
+   See [docs/MEDIA_CONFIGURATION.md](docs/MEDIA_CONFIGURATION.md) for details.
 
 5. **Set up database**
 
@@ -176,8 +194,25 @@ npm run lint         # Run ESLint
 npm run format       # Format code with Prettier
 npm run type-check   # Check TypeScript types
 npm run validate     # Run all checks (format, lint, types)
+npm run test         # Run test suite
 npm run import       # Import audiobooks from Libation
+npm run db:migrate   # Run database migrations
+npm run db:generate  # Generate Prisma client
 ```
+
+### Database Management
+
+**Reset database and reimport:**
+
+```bash
+# Reset the database (clears all data)
+npx prisma migrate reset --skip-seed --force
+
+# Reimport all books
+npm run import
+```
+
+**Note:** The import script automatically uses the path configured in your `.env.local` file (`LIBATION_PATH` or `MEDIA_DATA_PATH`).
 
 ## License
 
