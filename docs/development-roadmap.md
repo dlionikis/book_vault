@@ -197,13 +197,22 @@ Add filters to search:
 - Add mobile-specific layouts
 - Test audio player on iOS/Android
 - **Media Session API** ✅ - Lock screen controls and notification controls (completed)
-- **Progressive Web App (PWA) Support** 🎯 - Make app installable on mobile devices
-  - Add Web App Manifest (`manifest.json`)
-  - Configure app icons and splash screens
-  - Implement Service Worker for offline support
-  - Enable "Add to Home Screen" functionality
-  - Better background audio on Android
-  - App-like experience without app store
+- Optimize mobile browser performance
+- Improve responsive layouts for tablet devices
+- Test gesture navigation
+
+### 5. Deployment Preparation
+
+**Priority: HIGH** - Prepare for production deployment
+
+- Set up CDN for static assets (CloudFront)
+- Optimize asset delivery (images, audio streaming)
+- Configure production environment variables
+- Set up monitoring and error tracking
+- Performance testing and optimization
+- Load testing for concurrent users
+- Database query optimization
+- Implement caching strategy (Redis/Memory)
 
 ## Long Term Goals (Next Month)
 
@@ -234,11 +243,23 @@ Add filters to search:
 
 Once API is stable:
 
-- SwiftUI app
-- Shared authentication
-- Offline download support
-- Background audio playback
-- CarPlay integration
+**Core Features**:
+
+- SwiftUI app architecture
+- Shared authentication with web app
+- Offline download support for audiobooks
+- True background audio playback (iOS background modes)
+- CarPlay integration for hands-free listening
+
+**PWA-Like Features** (better suited for native app):
+
+- Offline-first architecture with local storage
+- Service Worker equivalent (background sync)
+- Push notifications for new releases
+- "Add to Home Screen" equivalent (App Store install)
+- Native performance and UI
+- Full offline playback without streaming
+- Better battery optimization than web PWA
 
 ## Current API Endpoints ✅
 
