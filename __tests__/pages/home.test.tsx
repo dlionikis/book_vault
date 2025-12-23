@@ -60,6 +60,12 @@ jest.mock('@/components/Pagination', () => {
   };
 });
 
+jest.mock('@/components/ContinueListening', () => {
+  return function MockContinueListening() {
+    return <div data-testid="continue-listening">Continue Listening</div>;
+  };
+});
+
 describe('Home Page', () => {
   let mockPrisma: any;
 

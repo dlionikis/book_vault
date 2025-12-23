@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import AudioPlayer from '@/components/AudioPlayer';
 import ChapterList from '@/components/ChapterList';
 
@@ -13,7 +13,28 @@ interface PlaybackClientProps {
 
 export default function PlaybackClient({ audioUrl, title, author, bookId }: PlaybackClientProps) {
   const [currentTime, setCurrentTime] = useState(0);
+  const [initialPosition, setInitialPosition] = useState<number | undefined>(undefined);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Fetch user's progress on mount
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const res = await fetch(`/api/progress?bookId=${bookId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setInitialPosition(data.positionSeconds);
+        }
+      } catch (error) {
+        console.error('Error fetching progress:', error);
+      } finally {
+        setIsLoadingProgress(false);
+      }
+    };
+
+    fetchProgress();
+  }, [bookId]);
 
   const handleChapterClick = (startTime: number) => {
     if (audioRef.current) {
@@ -33,6 +54,17 @@ export default function PlaybackClient({ audioUrl, title, author, bookId }: Play
     audioRef.current = ref;
   };
 
+  // Don't render player until we've loaded progress
+  if (isLoadingProgress) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="flex items-center justify-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="bg-white rounded-lg shadow-lg p-8">
@@ -50,6 +82,7 @@ export default function PlaybackClient({ audioUrl, title, author, bookId }: Play
         title={title}
         author={author}
         bookId={bookId}
+        initialPosition={initialPosition}
         onTimeUpdate={handleTimeUpdate}
         onAudioRef={handleAudioRef}
       />

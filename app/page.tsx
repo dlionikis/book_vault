@@ -3,6 +3,7 @@ import BookGrid from '@/components/BookGrid';
 import SearchBar from '@/components/SearchBar';
 import SortDropdown from '@/components/SortDropdown';
 import Pagination from '@/components/Pagination';
+import ContinueListening from '@/components/ContinueListening';
 import Link from 'next/link';
 import { PrismaClient } from '@prisma/client';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
@@ -193,6 +194,9 @@ export default async function Home({
           </Link>
         </div>
       </div>
+
+      {/* Continue Listening Section */}
+      <ContinueListening />
 
       {/* Books Grid */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">

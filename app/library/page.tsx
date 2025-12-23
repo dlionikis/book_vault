@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
 import AddToLibraryButton from '@/components/AddToLibraryButton';
+import ProgressBadge from '@/components/ProgressBadge';
 
 const prisma = new PrismaClient();
 
@@ -29,6 +30,10 @@ interface LibraryBook {
     sequence: string | null;
   }>;
   addedAt: string;
+  progress: {
+    positionSeconds: number;
+    completed: boolean;
+  };
 }
 
 async function getLibraryBooks(userId: string): Promise<LibraryBook[]> {
@@ -76,27 +81,48 @@ async function getLibraryBooks(userId: string): Promise<LibraryBook[]> {
       },
     });
 
-    return libraryBooks.map((lb) => ({
-      id: lb.book.id,
-      asin: lb.book.asin,
-      title: lb.book.title,
-      coverUrl: lb.book.coverUrl,
-      runtimeMinutes: lb.book.runtimeMinutes,
-      authors: lb.book.authors.map((a) => ({
-        id: a.author.id,
-        name: a.author.name,
-      })),
-      narrators: lb.book.narrators.map((n) => ({
-        id: n.narrator.id,
-        name: n.narrator.name,
-      })),
-      series: lb.book.series.map((s) => ({
-        id: s.series.id,
-        title: s.series.title,
-        sequence: s.sequence,
-      })),
-      addedAt: lb.addedAt.toISOString(),
-    }));
+    // Get progress for all books
+    const bookIds = libraryBooks.map((lb) => lb.book.id);
+    const progressRecords = await prisma.userProgress.findMany({
+      where: {
+        userId,
+        bookId: {
+          in: bookIds,
+        },
+      },
+    });
+
+    // Create a map for quick lookup
+    const progressMap = new Map(progressRecords.map((p) => [p.bookId, p]));
+
+    return libraryBooks.map((lb) => {
+      const progress = progressMap.get(lb.book.id);
+      return {
+        id: lb.book.id,
+        asin: lb.book.asin,
+        title: lb.book.title,
+        coverUrl: lb.book.coverUrl,
+        runtimeMinutes: lb.book.runtimeMinutes,
+        authors: lb.book.authors.map((a) => ({
+          id: a.author.id,
+          name: a.author.name,
+        })),
+        narrators: lb.book.narrators.map((n) => ({
+          id: n.narrator.id,
+          name: n.narrator.name,
+        })),
+        series: lb.book.series.map((s) => ({
+          id: s.series.id,
+          title: s.series.title,
+          sequence: s.sequence,
+        })),
+        addedAt: lb.addedAt.toISOString(),
+        progress: {
+          positionSeconds: progress?.positionSeconds ?? 0,
+          completed: progress?.completed ?? false,
+        },
+      };
+    });
   } catch (error) {
     console.error('Error fetching library:', error);
     return [];
@@ -231,6 +257,18 @@ export default async function LibraryPage() {
                       {formatRuntime(book.runtimeMinutes)}
                     </p>
                   )}
+
+                  {/* Progress Badge */}
+                  <div className="mb-3">
+                    <ProgressBadge
+                      bookId={book.id}
+                      initialProgress={{
+                        positionSeconds: book.progress.positionSeconds,
+                        completed: book.progress.completed,
+                        totalSeconds: book.runtimeMinutes ? book.runtimeMinutes * 60 : undefined,
+                      }}
+                    />
+                  </div>
 
                   {/* Remove Button */}
                   <AddToLibraryButton
