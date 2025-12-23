@@ -31,14 +31,14 @@ export default async function BrowseNarratorsPage() {
   const narrators = await getNarrators();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white dark:bg-gray-900 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <BackButton />
 
-          <h1 className="text-3xl font-bold text-gray-900">Browse by Narrator</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Browse by Narrator</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
             {narrators.length} {narrators.length === 1 ? 'narrator' : 'narrators'}
           </p>
         </div>
@@ -52,12 +52,12 @@ export default async function BrowseNarratorsPage() {
               <Link
                 key={narrator.id}
                 href={`/narrators/${narrator.id}`}
-                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow block"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow block"
               >
-                <h3 className="text-lg font-semibold text-gray-900 mb-2 hover:text-blue-600">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 hover:text-blue-600 dark:hover:text-blue-400">
                   {narrator.name}
                 </h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   {narrator.bookCount} {narrator.bookCount === 1 ? 'book' : 'books'}
                 </p>
               </Link>
@@ -66,7 +66,7 @@ export default async function BrowseNarratorsPage() {
         ) : (
           <div className="text-center py-12">
             <svg
-              className="mx-auto h-16 w-16 text-gray-400"
+              className="mx-auto h-16 w-16 text-gray-400 dark:text-gray-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

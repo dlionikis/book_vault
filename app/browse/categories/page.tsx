@@ -31,14 +31,14 @@ export default async function BrowseCategoriesPage() {
   const categories = await getCategories();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white dark:bg-gray-900 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <BackButton />
 
-          <h1 className="text-3xl font-bold text-gray-900">Browse by Category</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Browse by Category</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
             {categories.length} {categories.length === 1 ? 'category' : 'categories'}
           </p>
         </div>
@@ -52,15 +52,17 @@ export default async function BrowseCategoriesPage() {
               <Link
                 key={category.id}
                 href={`/categories/${category.id}`}
-                className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow block"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow block"
               >
-                <h3 className="text-lg font-semibold text-gray-900 mb-1 hover:text-blue-600">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 hover:text-blue-600 dark:hover:text-blue-400">
                   {category.name}
                 </h3>
                 {category.parentName && (
-                  <p className="text-xs text-gray-500 mb-2">in {category.parentName}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                    in {category.parentName}
+                  </p>
                 )}
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   {category.bookCount} {category.bookCount === 1 ? 'book' : 'books'}
                 </p>
               </Link>
@@ -69,7 +71,7 @@ export default async function BrowseCategoriesPage() {
         ) : (
           <div className="text-center py-12">
             <svg
-              className="mx-auto h-16 w-16 text-gray-400"
+              className="mx-auto h-16 w-16 text-gray-400 dark:text-gray-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
