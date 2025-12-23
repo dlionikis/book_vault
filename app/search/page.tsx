@@ -1,39 +1,40 @@
-import { Book } from '@/lib/types';
+import { SearchResponse } from '@/lib/types';
 import BookGrid from '@/components/BookGrid';
 import SearchBar from '@/components/SearchBar';
 import BackButton from '@/components/BackButton';
+import Pagination from '@/components/Pagination';
 
-interface SearchResponse {
-  books: Book[];
-  query: string;
-}
-
-async function searchBooks(query: string): Promise<SearchResponse | null> {
+async function searchBooks(query: string, page?: string): Promise<SearchResponse | null> {
   if (!query) return null;
 
   try {
-    const res = await fetch(`http://localhost:3000/api/search?q=${encodeURIComponent(query)}`, {
-      next: { revalidate: 0 },
-    });
+    const pageParam = page ? `&page=${page}` : '';
+    const res = await fetch(
+      `http://localhost:3000/api/search?q=${encodeURIComponent(query)}${pageParam}`,
+      {
+        next: { revalidate: 0 },
+      }
+    );
 
     if (!res.ok) {
       return null;
     }
 
-    const data = await res.json();
-    return {
-      books: data.books || [],
-      query: data.query || query,
-    };
+    return res.json();
   } catch (error) {
     console.error('Error searching books:', error);
     return null;
   }
 }
 
-export default async function SearchPage({ searchParams }: { searchParams: { q?: string } }) {
-  const query = searchParams.q || '';
-  const results = query ? await searchBooks(query) : null;
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>;
+}) {
+  const params = await searchParams;
+  const query = params.q || '';
+  const results = query ? await searchBooks(query, params.page) : null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -79,10 +80,16 @@ export default async function SearchPage({ searchParams }: { searchParams: { q?:
                 Search results for &ldquo;{query}&rdquo;
               </h2>
               <p className="text-gray-600 mt-1">
-                {results.books.length} {results.books.length === 1 ? 'book' : 'books'} found
+                {results.pagination.total} {results.pagination.total === 1 ? 'book' : 'books'} found
               </p>
             </div>
             <BookGrid books={results.books} />
+            <Pagination
+              currentPage={results.pagination.page}
+              totalPages={results.pagination.pages}
+              total={results.pagination.total}
+              itemName="results"
+            />
           </div>
         ) : (
           <div className="text-center py-12">

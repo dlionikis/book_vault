@@ -6,6 +6,11 @@ const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    const searchParams = request.nextUrl.searchParams;
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const skip = (page - 1) * limit;
+
     const author = await prisma.author.findUnique({
       where: { id: params.id },
     });
@@ -15,30 +20,42 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     // Get books by this author with their relationships
-    const bookAuthorEntries = await prisma.bookAuthor.findMany({
-      where: { authorId: params.id },
-      include: {
-        book: {
-          include: {
-            authors: {
-              include: {
-                author: true,
+    const [bookAuthorEntries, total] = await Promise.all([
+      prisma.bookAuthor.findMany({
+        where: { authorId: params.id },
+        skip,
+        take: limit,
+        include: {
+          book: {
+            include: {
+              authors: {
+                include: {
+                  author: true,
+                },
               },
-            },
-            narrators: {
-              include: {
-                narrator: true,
+              narrators: {
+                include: {
+                  narrator: true,
+                },
               },
-            },
-            series: {
-              include: {
-                series: true,
+              series: {
+                include: {
+                  series: true,
+                },
               },
             },
           },
         },
-      },
-    });
+        orderBy: {
+          book: {
+            title: 'asc',
+          },
+        },
+      }),
+      prisma.bookAuthor.count({
+        where: { authorId: params.id },
+      }),
+    ]);
 
     // Transform book data to include full URLs and proper structure
     const booksWithUrls = bookAuthorEntries.map((entry) => {
@@ -66,9 +83,17 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       };
     });
 
+    const totalPages = Math.ceil(total / limit);
+
     return NextResponse.json({
       ...author,
       books: booksWithUrls,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: totalPages,
+      },
     });
   } catch (error) {
     console.error('Error fetching author:', error);

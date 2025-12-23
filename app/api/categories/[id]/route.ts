@@ -6,6 +6,11 @@ const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    const searchParams = request.nextUrl.searchParams;
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const skip = (page - 1) * limit;
+
     const category = await prisma.category.findUnique({
       where: { id: params.id },
       include: {
@@ -18,30 +23,42 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     // Get books in this category with their relationships
-    const bookCategoryEntries = await prisma.bookCategory.findMany({
-      where: { categoryId: params.id },
-      include: {
-        book: {
-          include: {
-            authors: {
-              include: {
-                author: true,
+    const [bookCategoryEntries, total] = await Promise.all([
+      prisma.bookCategory.findMany({
+        where: { categoryId: params.id },
+        skip,
+        take: limit,
+        include: {
+          book: {
+            include: {
+              authors: {
+                include: {
+                  author: true,
+                },
               },
-            },
-            narrators: {
-              include: {
-                narrator: true,
+              narrators: {
+                include: {
+                  narrator: true,
+                },
               },
-            },
-            series: {
-              include: {
-                series: true,
+              series: {
+                include: {
+                  series: true,
+                },
               },
             },
           },
         },
-      },
-    });
+        orderBy: {
+          book: {
+            title: 'asc',
+          },
+        },
+      }),
+      prisma.bookCategory.count({
+        where: { categoryId: params.id },
+      }),
+    ]);
 
     // Transform book data to include full URLs and proper structure
     const booksWithUrls = bookCategoryEntries.map((entry) => {
@@ -69,12 +86,20 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       };
     });
 
+    const totalPages = Math.ceil(total / limit);
+
     return NextResponse.json({
       id: category.id,
       name: category.name,
       level: category.level,
       parentName: category.parent?.name || null,
       books: booksWithUrls,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: totalPages,
+      },
     });
   } catch (error) {
     console.error('Error fetching category:', error);
