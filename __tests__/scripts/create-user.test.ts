@@ -20,7 +20,7 @@ describe('User Creation Script', () => {
 
     it('generates password with valid characters only', () => {
       const password = generateRandomPassword();
-      const validChars = /^[A-HJ-NP-Za-hj-np-z2-9!@#\$%^&*]+$/;
+      const validChars = /^[A-HJ-NP-Za-hj-np-z2-9!@#\$%\^&\*]+$/;
       expect(password).toMatch(validChars);
     });
 
