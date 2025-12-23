@@ -3,10 +3,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Book } from '@/lib/types';
 import AudioPlayer from '@/components/AudioPlayer';
+import { getBaseUrl } from '@/lib/api-url';
 
 async function getBook(id: string): Promise<Book | null> {
   try {
-    const res = await fetch(`http://localhost:3000/api/books/${id}`, {
+    const res = await fetch(`${getBaseUrl()}/api/books/${id}`, {
       cache: 'no-store',
     });
 

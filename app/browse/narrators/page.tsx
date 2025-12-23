@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
+import { getBaseUrl } from '@/lib/api-url';
 
 interface NarratorWithCount {
   id: string;
@@ -10,7 +11,7 @@ interface NarratorWithCount {
 
 async function getNarrators(): Promise<NarratorWithCount[]> {
   try {
-    const res = await fetch('http://localhost:3000/api/browse/narrators', {
+    const res = await fetch(`${getBaseUrl()}/api/browse/narrators`, {
       next: { revalidate: 0 },
     });
 

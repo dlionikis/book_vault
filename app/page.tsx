@@ -4,11 +4,12 @@ import SearchBar from '@/components/SearchBar';
 import SortDropdown from '@/components/SortDropdown';
 import Pagination from '@/components/Pagination';
 import Link from 'next/link';
+import { getBaseUrl } from '@/lib/api-url';
 
 async function getBooks(page?: string, sort?: string): Promise<BooksResponse> {
   const pageParam = page ? `page=${page}` : 'page=1';
   const sortParam = sort ? `&sort=${sort}` : '';
-  const res = await fetch(`http://localhost:3000/api/books?${pageParam}&limit=20${sortParam}`, {
+  const res = await fetch(`${getBaseUrl()}/api/books?${pageParam}&limit=20${sortParam}`, {
     cache: 'no-store',
   });
 

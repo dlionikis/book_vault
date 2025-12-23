@@ -3,6 +3,7 @@ import { Book, Author } from '@/lib/types';
 import BookGrid from '@/components/BookGrid';
 import BackButton from '@/components/BackButton';
 import Pagination from '@/components/Pagination';
+import { getBaseUrl } from '@/lib/api-url';
 
 interface AuthorWithBooks extends Author {
   books: Book[];
@@ -17,7 +18,7 @@ interface AuthorWithBooks extends Author {
 async function getAuthor(id: string, page?: string): Promise<AuthorWithBooks | null> {
   try {
     const pageParam = page ? `?page=${page}` : '';
-    const res = await fetch(`http://localhost:3000/api/authors/${id}${pageParam}`, {
+    const res = await fetch(`${getBaseUrl()}/api/authors/${id}${pageParam}`, {
       next: { revalidate: 0 },
     });
 

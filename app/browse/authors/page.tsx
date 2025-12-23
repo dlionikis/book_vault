@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
+import { getBaseUrl } from '@/lib/api-url';
 
 interface AuthorWithCount {
   id: string;
@@ -10,7 +11,7 @@ interface AuthorWithCount {
 
 async function getAuthors(): Promise<AuthorWithCount[]> {
   try {
-    const res = await fetch('http://localhost:3000/api/browse/authors', {
+    const res = await fetch(`${getBaseUrl()}/api/browse/authors`, {
       next: { revalidate: 0 },
     });
 

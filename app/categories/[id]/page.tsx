@@ -3,6 +3,7 @@ import { Book } from '@/lib/types';
 import BookGrid from '@/components/BookGrid';
 import BackButton from '@/components/BackButton';
 import Pagination from '@/components/Pagination';
+import { getBaseUrl } from '@/lib/api-url';
 
 interface CategoryWithBooks {
   id: string;
@@ -21,7 +22,7 @@ interface CategoryWithBooks {
 async function getCategory(id: string, page?: string): Promise<CategoryWithBooks | null> {
   try {
     const pageParam = page ? `?page=${page}` : '';
-    const res = await fetch(`http://localhost:3000/api/categories/${id}${pageParam}`, {
+    const res = await fetch(`${getBaseUrl()}/api/categories/${id}${pageParam}`, {
       next: { revalidate: 0 },
     });
 
