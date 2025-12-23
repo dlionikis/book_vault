@@ -7,9 +7,18 @@ interface AudioPlayerProps {
   title: string;
   author: string;
   bookId: string;
+  onTimeUpdate?: (time: number) => void;
+  onAudioRef?: (ref: HTMLAudioElement | null) => void;
 }
 
-export default function AudioPlayer({ audioUrl, title, author, bookId }: AudioPlayerProps) {
+export default function AudioPlayer({
+  audioUrl,
+  title,
+  author,
+  bookId,
+  onTimeUpdate,
+  onAudioRef,
+}: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -104,6 +113,20 @@ export default function AudioPlayer({ audioUrl, title, author, bookId }: AudioPl
     const s = Math.floor(seconds % 60);
     return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
+
+  // Expose audio ref to parent
+  useEffect(() => {
+    if (onAudioRef && audioRef.current) {
+      onAudioRef(audioRef.current);
+    }
+  }, [onAudioRef]);
+
+  // Call onTimeUpdate callback
+  useEffect(() => {
+    if (onTimeUpdate) {
+      onTimeUpdate(currentTime);
+    }
+  }, [currentTime, onTimeUpdate]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">

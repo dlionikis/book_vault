@@ -2,8 +2,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Book } from '@/lib/types';
-import AudioPlayer from '@/components/AudioPlayer';
 import { getBaseUrl } from '@/lib/api-url';
+import PlaybackClient from '@/components/PlaybackClient';
 
 async function getBook(id: string): Promise<Book | null> {
   try {
@@ -177,44 +177,15 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
 
           {/* Playback Area */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-lg p-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Now Playing</h2>
-
-              {/* Chapter list will go here in future */}
-              <div className="mb-6">
-                <p className="text-gray-600">Playback controls are at the bottom of the page.</p>
-              </div>
-
-              {/* Placeholder for future chapter navigation */}
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center text-gray-500">
-                <svg
-                  className="w-16 h-16 mx-auto mb-4 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                  />
-                </svg>
-                <p className="text-lg font-medium mb-2">Chapter Navigation</p>
-                <p className="text-sm">Chapter list will appear here</p>
-              </div>
-            </div>
+            <PlaybackClient
+              audioUrl={book.audioUrl}
+              title={book.title}
+              author={book.authors.map((a) => a.name).join(', ')}
+              bookId={book.id}
+            />
           </div>
         </div>
       </main>
-
-      {/* Audio Player - Fixed at bottom */}
-      <AudioPlayer
-        audioUrl={book.audioUrl}
-        title={book.title}
-        author={book.authors.map((a) => a.name).join(', ')}
-        bookId={book.id}
-      />
     </div>
   );
 }
