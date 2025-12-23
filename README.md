@@ -164,9 +164,12 @@ This is an **AI-first development project**, meaning:
 3. **Start PostgreSQL**
 
    ```bash
-   docker run --name book-vault-db -e POSTGRES_PASSWORD=yourpassword \
-     -e POSTGRES_DB=book_vault -p 5433:5432 -d postgres:15
+   docker-compose up -d
    ```
+
+   This starts PostgreSQL on port 5433 (avoiding conflicts with local postgres on 5432).
+
+   To stop the database: `docker-compose down`
 
 4. **Configure environment**
 
