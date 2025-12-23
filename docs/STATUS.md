@@ -214,9 +214,10 @@ npm run format
 1. **Start Database**: `docker-compose up -d`
 2. **Install Dependencies**: `npm install`
 3. **Run Migrations**: `npx prisma migrate dev`
-4. **Import Data**: `npm run import`
-5. **Start Dev Server**: `npm run dev`
-6. **Run Tests**: `npm test`
+4. **Seed Test User**: `npm run db:seed` (creates test@example.com / password123)
+5. **Import Data**: `npm run import` (also seeds test user automatically)
+6. **Start Dev Server**: `npm run dev`
+7. **Run Tests**: `npm test`
 
 ## Git Workflow
 
