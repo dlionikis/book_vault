@@ -29,7 +29,7 @@ export default async function Home({
   const data = await getBooks(params.page, params.sort);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Search Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <SearchBar />
@@ -40,7 +40,7 @@ export default async function Home({
         <div className="flex flex-wrap gap-3">
           <Link
             href="/browse/authors"
-            className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 font-medium hover:shadow-md hover:border-blue-500 hover:text-blue-600 transition-all"
+            className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm text-gray-900 dark:text-white font-medium hover:shadow-md hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -54,7 +54,7 @@ export default async function Home({
           </Link>
           <Link
             href="/browse/narrators"
-            className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 font-medium hover:shadow-md hover:border-blue-500 hover:text-blue-600 transition-all"
+            className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm text-gray-900 dark:text-white font-medium hover:shadow-md hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -68,7 +68,7 @@ export default async function Home({
           </Link>
           <Link
             href="/browse/series"
-            className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 font-medium hover:shadow-md hover:border-blue-500 hover:text-blue-600 transition-all"
+            className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm text-gray-900 dark:text-white font-medium hover:shadow-md hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -82,7 +82,7 @@ export default async function Home({
           </Link>
           <Link
             href="/browse/categories"
-            className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-gray-900 font-medium hover:shadow-md hover:border-blue-500 hover:text-blue-600 transition-all"
+            className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm text-gray-900 dark:text-white font-medium hover:shadow-md hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -100,9 +100,9 @@ export default async function Home({
       {/* Books Grid */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
             All Books
-            <span className="ml-2 text-sm font-normal text-gray-600">
+            <span className="ml-2 text-sm font-normal text-gray-600 dark:text-gray-400">
               ({data.pagination.total} books)
             </span>
           </h2>

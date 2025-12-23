@@ -21,10 +21,10 @@ export default function BookCard({ book }: BookCardProps) {
   return (
     <Link
       href={`/books/${book.id}`}
-      className="group block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-200 overflow-hidden"
+      className="group block bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-200 overflow-hidden"
     >
       {/* Cover Image */}
-      <div className="relative aspect-[2/3] bg-gray-200">
+      <div className="relative aspect-[2/3] bg-gray-200 dark:bg-gray-700">
         {book.coverUrl ? (
           <Image
             src={book.coverUrl}
@@ -50,13 +50,13 @@ export default function BookCard({ book }: BookCardProps) {
       {/* Book Info */}
       <div className="p-4">
         {/* Title */}
-        <h3 className="font-semibold text-lg text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">
+        <h3 className="font-semibold text-lg text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 mb-2">
           {book.title}
         </h3>
 
         {/* Series */}
         {primarySeries && (
-          <p className="text-sm text-gray-600 mb-1">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
             {primarySeries.title}
             {primarySeries.sequence && ` #${primarySeries.sequence}`}
           </p>
@@ -64,21 +64,23 @@ export default function BookCard({ book }: BookCardProps) {
 
         {/* Authors */}
         {book.authors.length > 0 && (
-          <p className="text-sm text-gray-700 mb-1">
+          <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
             by {book.authors.map((a) => a.name).join(', ')}
           </p>
         )}
 
         {/* Narrators */}
         {book.narrators.length > 0 && (
-          <p className="text-sm text-gray-600 mb-2">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
             Narrated by {book.narrators.map((n) => n.name).join(', ')}
           </p>
         )}
 
         {/* Runtime */}
         {book.runtimeMinutes && (
-          <p className="text-xs text-gray-500">{formatRuntime(book.runtimeMinutes)}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {formatRuntime(book.runtimeMinutes)}
+          </p>
         )}
       </div>
     </Link>

@@ -23,8 +23,19 @@ interface FFProbeChapter {
 }
 
 interface FFProbeFormat {
+  duration?: string;
+  bit_rate?: string;
+  format_name?: string;
   tags?: {
     CUESHEET?: string;
+    title?: string;
+    artist?: string;
+    album?: string;
+    composer?: string;
+    publisher?: string;
+    date?: string;
+    SERIES?: string;
+    PART?: string;
     [key: string]: any;
   };
 }
