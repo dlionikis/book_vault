@@ -1,5 +1,7 @@
 # User Progress Tracking Feature
 
+**Status: COMPLETED** ✅ - Merged in PR #11 on December 23, 2025
+
 ## Overview
 
 Implemented comprehensive progress tracking for audiobooks, allowing users to track their listening progress with three states: not started, in progress, and finished. Users can manually control the status or let the system automatically track their progress during playback.

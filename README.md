@@ -15,6 +15,13 @@ Book Vault is a web-based application designed to organize, search, and stream p
   - Adjustable playback speed (0.75x to 2x)
   - Volume control with mute
   - Time display
+  - Automatic position saving and resume
+- **Progress Tracking**: Track listening progress across all books
+  - Automatic position saving during playback
+  - Three states: not started, in progress, finished
+  - Manual controls to mark books as finished or reset progress
+  - Continue listening carousel on home page
+  - Visual progress indicators with percentages
 - **User Authentication**: Secure login with password protection
 - **Multi-faceted Browsing**: View books by:
   - Author
