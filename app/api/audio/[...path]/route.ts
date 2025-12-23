@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { createReadStream, statSync } from 'fs';
 import { join, resolve } from 'path';
 import { getAbsoluteMediaPath, validateMediaPath } from '@/lib/media';
 
 export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
   try {
+    // Authentication check - users must be logged in to stream audio
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Authentication required to access audio files' },
+        { status: 401 }
+      );
+    }
+
     // Build the file path from the media directory
     const mediaPath = getAbsoluteMediaPath();
     const requestedPath = join(mediaPath, ...params.path);

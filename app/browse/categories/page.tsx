@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 interface CategoryWithCount {
   id: string;
@@ -11,16 +14,27 @@ interface CategoryWithCount {
 
 async function getCategories(): Promise<CategoryWithCount[]> {
   try {
-    const res = await fetch('http://localhost:3000/api/browse/categories', {
-      next: { revalidate: 0 },
+    const categories = await prisma.category.findMany({
+      include: {
+        books: {
+          include: {
+            book: true,
+          },
+        },
+        parent: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
     });
 
-    if (!res.ok) {
-      return [];
-    }
-
-    const data = await res.json();
-    return data.categories || [];
+    return categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      level: category.level,
+      parentName: category.parent?.name || null,
+      bookCount: category.books.length,
+    }));
   } catch (error) {
     console.error('Error fetching categories:', error);
     return [];

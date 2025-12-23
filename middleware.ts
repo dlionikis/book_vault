@@ -15,16 +15,16 @@ export default withAuth(
   }
 );
 
-// Protect all routes except auth pages and API routes
+// Protect all routes except login page
+// API endpoints have their own authentication checks
 export const config = {
   matcher: [
     /*
      * Match all request paths except:
-     * - /auth/login (login page allowed)
-     * - /api/* (all API routes)
+     * - /auth/login (login page)
+     * - /api/* (API routes check auth internally)
      * - /_next/* (Next.js internals)
      * - /favicon.ico, /robots.txt (static files)
-     * Note: /auth/register is intentionally protected (admin-only user creation)
      */
     '/((?!api|auth/login|_next|favicon.ico|robots.txt).*)',
   ],

@@ -1,0 +1,139 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+// POST /api/library/series/[seriesId] - Add all books in series to library
+export async function POST(request: NextRequest, { params }: { params: { seriesId: string } }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { seriesId } = params;
+
+    // Get all books in the series
+    const seriesBooks = await prisma.bookSeries.findMany({
+      where: {
+        seriesId,
+      },
+      select: {
+        bookId: true,
+      },
+    });
+
+    if (seriesBooks.length === 0) {
+      return NextResponse.json({ error: 'Series not found or has no books' }, { status: 404 });
+    }
+
+    // Get or create user's library
+    let library = await prisma.userList.findFirst({
+      where: {
+        userId: session.user.id,
+        name: 'My Library',
+      },
+    });
+
+    if (!library) {
+      library = await prisma.userList.create({
+        data: {
+          userId: session.user.id,
+          name: 'My Library',
+          description: 'Your personal audiobook library',
+        },
+      });
+    }
+
+    // Add all books to library (skip duplicates)
+    let addedCount = 0;
+    for (const { bookId } of seriesBooks) {
+      const existing = await prisma.userListBook.findUnique({
+        where: {
+          listId_bookId: {
+            listId: library.id,
+            bookId,
+          },
+        },
+      });
+
+      if (!existing) {
+        await prisma.userListBook.create({
+          data: {
+            listId: library.id,
+            bookId,
+          },
+        });
+        addedCount++;
+      }
+    }
+
+    return NextResponse.json({
+      message: `Added ${addedCount} book${addedCount !== 1 ? 's' : ''} to library`,
+      added: addedCount,
+      total: seriesBooks.length,
+    });
+  } catch (error) {
+    console.error('Error adding series to library:', error);
+    return NextResponse.json({ error: 'Failed to add series to library' }, { status: 500 });
+  }
+}
+
+// DELETE /api/library/series/[seriesId] - Remove all books in series from library
+export async function DELETE(request: NextRequest, { params }: { params: { seriesId: string } }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { seriesId } = params;
+
+    // Get all books in the series
+    const seriesBooks = await prisma.bookSeries.findMany({
+      where: {
+        seriesId,
+      },
+      select: {
+        bookId: true,
+      },
+    });
+
+    if (seriesBooks.length === 0) {
+      return NextResponse.json({ error: 'Series not found or has no books' }, { status: 404 });
+    }
+
+    // Get user's library
+    const library = await prisma.userList.findFirst({
+      where: {
+        userId: session.user.id,
+        name: 'My Library',
+      },
+    });
+
+    if (!library) {
+      return NextResponse.json({ message: 'No books removed (library empty)' }, { status: 200 });
+    }
+
+    // Remove all books from library
+    const bookIds = seriesBooks.map((b) => b.bookId);
+    const result = await prisma.userListBook.deleteMany({
+      where: {
+        listId: library.id,
+        bookId: {
+          in: bookIds,
+        },
+      },
+    });
+
+    return NextResponse.json({
+      message: `Removed ${result.count} book${result.count !== 1 ? 's' : ''} from library`,
+      removed: result.count,
+    });
+  } catch (error) {
+    console.error('Error removing series from library:', error);
+    return NextResponse.json({ error: 'Failed to remove series from library' }, { status: 500 });
+  }
+}

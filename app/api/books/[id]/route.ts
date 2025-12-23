@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
 
 const prisma = new PrismaClient();
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const book = await prisma.book.findUnique({
       where: { id: params.id },

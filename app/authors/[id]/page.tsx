@@ -3,7 +3,10 @@ import { Book, Author } from '@/lib/types';
 import BookGrid from '@/components/BookGrid';
 import BackButton from '@/components/BackButton';
 import Pagination from '@/components/Pagination';
-import { getBaseUrl } from '@/lib/api-url';
+import { PrismaClient } from '@prisma/client';
+import { getCoverUrl, getAudioUrl } from '@/lib/media';
+
+const prisma = new PrismaClient();
 
 interface AuthorWithBooks extends Author {
   books: Book[];
@@ -17,16 +20,89 @@ interface AuthorWithBooks extends Author {
 
 async function getAuthor(id: string, page?: string): Promise<AuthorWithBooks | null> {
   try {
-    const pageParam = page ? `?page=${page}` : '';
-    const res = await fetch(`${getBaseUrl()}/api/authors/${id}${pageParam}`, {
-      next: { revalidate: 0 },
+    const pageNum = parseInt(page || '1');
+    const limit = 20;
+    const skip = (pageNum - 1) * limit;
+
+    const author = await prisma.author.findUnique({
+      where: { id },
     });
 
-    if (!res.ok) {
+    if (!author) {
       return null;
     }
 
-    return res.json();
+    const [bookAuthorEntries, total] = await Promise.all([
+      prisma.bookAuthor.findMany({
+        where: { authorId: id },
+        skip,
+        take: limit,
+        include: {
+          book: {
+            include: {
+              authors: {
+                include: {
+                  author: true,
+                },
+              },
+              narrators: {
+                include: {
+                  narrator: true,
+                },
+              },
+              series: {
+                include: {
+                  series: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          book: {
+            title: 'asc',
+          },
+        },
+      }),
+      prisma.bookAuthor.count({
+        where: { authorId: id },
+      }),
+    ]);
+
+    const books = bookAuthorEntries.map((entry) => {
+      const book = entry.book;
+      return {
+        id: book.id,
+        asin: book.asin,
+        title: book.title,
+        publisherSummary: book.publisherSummary,
+        runtimeMinutes: book.runtimeMinutes,
+        releaseDate: book.releaseDate,
+        publisher: book.publisher,
+        coverUrl: getCoverUrl(book.coverUrl),
+        audioUrl: getAudioUrl(book.audioUrl),
+        authors: book.authors.map((ba) => ba.author),
+        narrators: book.narrators.map((bn) => bn.narrator),
+        series: book.series.map((bs) => ({
+          id: bs.series.id,
+          title: bs.series.title,
+          asin: bs.series.asin,
+          sequence: bs.sequence,
+        })),
+        createdAt: book.createdAt.toISOString(),
+      };
+    });
+
+    return {
+      ...author,
+      books,
+      pagination: {
+        page: pageNum,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    };
   } catch (error) {
     console.error('Error fetching author:', error);
     return null;

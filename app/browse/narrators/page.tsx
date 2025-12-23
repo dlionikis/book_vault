@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
-import { getBaseUrl } from '@/lib/api-url';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 interface NarratorWithCount {
   id: string;
@@ -11,16 +13,25 @@ interface NarratorWithCount {
 
 async function getNarrators(): Promise<NarratorWithCount[]> {
   try {
-    const res = await fetch(`${getBaseUrl()}/api/browse/narrators`, {
-      next: { revalidate: 0 },
+    const narrators = await prisma.narrator.findMany({
+      include: {
+        books: {
+          include: {
+            book: true,
+          },
+        },
+      },
+      orderBy: {
+        name: 'asc',
+      },
     });
 
-    if (!res.ok) {
-      return [];
-    }
-
-    const data = await res.json();
-    return data.narrators || [];
+    return narrators.map((narrator) => ({
+      id: narrator.id,
+      name: narrator.name,
+      asin: narrator.asin,
+      bookCount: narrator.books.length,
+    }));
   } catch (error) {
     console.error('Error fetching narrators:', error);
     return [];
