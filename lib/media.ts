@@ -63,7 +63,18 @@ export function getCoverUrl(coverPath: string | null): string | null {
 
 /**
  * Get audio file URL
+ * For audio files, use the /api/audio endpoint for streaming support
  */
 export function getAudioUrl(audioPath: string | null): string | null {
-  return getMediaUrl(audioPath);
+  if (!audioPath) return null;
+
+  if (USE_S3) {
+    // Production: S3 URL
+    const encodedPath = audioPath.split('/').map(encodeURIComponent).join('/');
+    return `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${encodedPath}`;
+  } else {
+    // Development: Audio streaming API endpoint
+    const encodedPath = audioPath.split('/').map(encodeURIComponent).join('/');
+    return `/api/audio/${encodedPath}`;
+  }
 }
