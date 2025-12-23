@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Dark Mode Support** across entire application
+  - Theme toggle button in header (sun/moon icons)
+  - Persists theme preference using next-themes
+  - Respects system theme preference by default
+  - Full dark mode styling for all pages and components:
+    - Home page, search page, playback page
+    - Book detail, author, narrator, series, category pages
+    - All browse pages (authors, narrators, series, categories)
+    - Navigation, cards, forms, buttons, and text
+    - Empty states and loading indicators
+  - Smooth transitions between light and dark themes
 - **Chapter Navigation** on playback page
   - Interactive chapter list with click-to-jump functionality
   - Real-time current chapter highlighting during playback
