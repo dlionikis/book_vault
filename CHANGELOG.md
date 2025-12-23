@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Audio Player** with full playback controls
+  - Play/pause controls with visual feedback
+  - Seek bar for jumping to specific positions
+  - Skip backward (15s) and forward (30s) buttons
+  - Playback speed controls (0.75x, 1x, 1.25x, 1.5x, 2x)
+  - Volume control with mute button
+  - Time display showing current time and duration
+  - Mobile-responsive design with adaptive controls
+  - Fixed position at bottom of page for persistent access
+- Audio streaming API endpoint (`/api/audio/[...path]`) with range request support for seeking
+- 22 comprehensive AudioPlayer tests covering all controls and interactions
 - Pagination component with smart page number display and ellipsis
 - Pagination support across all list/detail pages (home, search, authors, narrators, series, categories)
 - 21 comprehensive pagination tests covering navigation, accessibility, and edge cases
@@ -22,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Audio URLs now use `/api/audio/` endpoint instead of `/api/images/` for streaming support
+- Book detail pages now display AudioPlayer component when audioUrl is available
 - All API endpoints now support pagination via `page` and `limit` query parameters (default: 20 items per page)
 - Home page, search page, and all detail pages now accept page parameter
 - Import script now uses ASIN-first lookup for authors/narrators to handle name variations

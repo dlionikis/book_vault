@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Book } from '@/lib/types';
 import BackButton from '@/components/BackButton';
+import AudioPlayer from '@/components/AudioPlayer';
 
 async function getBook(id: string): Promise<Book | null> {
   try {
@@ -341,6 +342,16 @@ export default async function BookDetailPage({ params }: { params: { id: string 
           </div>
         </div>
       </main>
+
+      {/* Audio Player - Fixed at bottom */}
+      {book.audioUrl && (
+        <AudioPlayer
+          audioUrl={book.audioUrl}
+          title={book.title}
+          author={book.authors.map((a) => a.name).join(', ')}
+          bookId={book.id}
+        />
+      )}
     </div>
   );
 }

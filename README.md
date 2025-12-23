@@ -8,6 +8,13 @@ Book Vault is a web-based application designed to organize, search, and stream p
 
 ## Features
 
+- **Audio Playback**: Stream audiobooks directly in the browser with:
+  - Play/pause controls
+  - Seek bar for jumping to any position
+  - Skip backward (15s) and forward (30s)
+  - Adjustable playback speed (0.75x to 2x)
+  - Volume control with mute
+  - Time display
 - **User Authentication**: Secure login with password protection
 - **Multi-faceted Browsing**: View books by:
   - Author
@@ -21,6 +28,7 @@ Book Vault is a web-based application designed to organize, search, and stream p
   - Titles
   - Categories
   - Book descriptions
+- **Pagination**: Navigate large collections with smart pagination controls
 - **Rich Media**: Cover photo display for all books
 - **Series Detection**: Automatically detect and group related books in a series
 - **User Lists**: Create custom lists to organize books ("Want to Listen", "Favorites", etc.)
