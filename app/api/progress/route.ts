@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/db';
 
 // GET /api/progress?bookId=xxx - Get user's progress for a book
 export async function GET(request: NextRequest) {
@@ -45,9 +43,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching progress:', error);
     return NextResponse.json({ error: 'Failed to fetch progress' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
+
 }
 
 // POST /api/progress - Update user's progress (save position)
@@ -93,9 +90,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error updating progress:', error);
     return NextResponse.json({ error: 'Failed to update progress' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
+
 }
 
 // PUT /api/progress - Mark book as completed or reset to not started
@@ -164,7 +160,6 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('Error updating progress status:', error);
     return NextResponse.json({ error: 'Failed to update progress status' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
+
 }

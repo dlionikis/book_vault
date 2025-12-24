@@ -1,9 +1,7 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 // Generate a random password
 function generateRandomPassword(length: number = 16): string {

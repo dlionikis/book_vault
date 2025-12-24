@@ -1,8 +1,6 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
 
 const TEST_USER_EMAIL = process.env.TEST_USER_EMAIL || 'test@example.com';
 const TEST_USER_PASSWORD = process.env.TEST_USER_PASSWORD || 'password123';

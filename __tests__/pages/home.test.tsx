@@ -1,20 +1,17 @@
 import { render, screen } from '@testing-library/react';
 import Home from '@/app/page';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 
 // Mock Prisma Client
-jest.mock('@prisma/client', () => {
-  const mockPrismaClient = {
+jest.mock('@/lib/db', () => ({
+  prisma: {
     book: {
       findMany: jest.fn(),
       count: jest.fn(),
     },
     $disconnect: jest.fn(),
-  };
-  return {
-    PrismaClient: jest.fn(() => mockPrismaClient),
-  };
-});
+  },
+}));
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
@@ -67,10 +64,7 @@ jest.mock('@/components/ContinueListening', () => {
 });
 
 describe('Home Page', () => {
-  let mockPrisma: any;
-
   beforeEach(() => {
-    mockPrisma = new PrismaClient();
     jest.clearAllMocks();
   });
 
@@ -118,14 +112,14 @@ describe('Home Page', () => {
       },
     ];
 
-    mockPrisma.book.findMany.mockResolvedValue(mockBooks);
-    mockPrisma.book.count.mockResolvedValue(2);
+    (prisma.book.findMany as jest.Mock).mockResolvedValue(mockBooks);
+    (prisma.book.count as jest.Mock).mockResolvedValue(2);
 
     const searchParams = Promise.resolve({ page: '1' });
     const page = await Home({ searchParams });
     const { container } = render(page);
 
-    expect(mockPrisma.book.findMany).toHaveBeenCalledWith(
+    expect(prisma.book.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         skip: 0,
         take: 20,
@@ -138,7 +132,7 @@ describe('Home Page', () => {
       })
     );
 
-    expect(mockPrisma.book.count).toHaveBeenCalled();
+    expect(prisma.book.count).toHaveBeenCalled();
     expect(screen.getByText('Test Book 1')).toBeInTheDocument();
     expect(screen.getByText('Test Book 2')).toBeInTheDocument();
   });
@@ -167,15 +161,15 @@ describe('Home Page', () => {
       },
     ];
 
-    mockPrisma.book.findMany.mockResolvedValue(mockBooks);
-    mockPrisma.book.count.mockResolvedValue(30);
+    (prisma.book.findMany as jest.Mock).mockResolvedValue(mockBooks);
+    (prisma.book.count as jest.Mock).mockResolvedValue(30);
 
     const searchParams = Promise.resolve({ page: '2' });
     const page = await Home({ searchParams });
     render(page);
 
     // Should skip first 20 books (page 2)
-    expect(mockPrisma.book.findMany).toHaveBeenCalledWith(
+    expect(prisma.book.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         skip: 20,
         take: 20,
@@ -184,14 +178,14 @@ describe('Home Page', () => {
   });
 
   it('handles sort parameter for title', async () => {
-    mockPrisma.book.findMany.mockResolvedValue([]);
-    mockPrisma.book.count.mockResolvedValue(0);
+    (prisma.book.findMany as jest.Mock).mockResolvedValue([]);
+    (prisma.book.count as jest.Mock).mockResolvedValue(0);
 
     const searchParams = Promise.resolve({ page: '1', sort: 'title' });
     const page = await Home({ searchParams });
     render(page);
 
-    expect(mockPrisma.book.findMany).toHaveBeenCalledWith(
+    expect(prisma.book.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         orderBy: { title: 'asc' },
       })
@@ -199,8 +193,8 @@ describe('Home Page', () => {
   });
 
   it('displays total book count', async () => {
-    mockPrisma.book.findMany.mockResolvedValue([]);
-    mockPrisma.book.count.mockResolvedValue(42);
+    (prisma.book.findMany as jest.Mock).mockResolvedValue([]);
+    (prisma.book.count as jest.Mock).mockResolvedValue(42);
 
     const searchParams = Promise.resolve({ page: '1' });
     const page = await Home({ searchParams });
@@ -210,8 +204,8 @@ describe('Home Page', () => {
   });
 
   it('renders browse navigation links', async () => {
-    mockPrisma.book.findMany.mockResolvedValue([]);
-    mockPrisma.book.count.mockResolvedValue(0);
+    (prisma.book.findMany as jest.Mock).mockResolvedValue([]);
+    (prisma.book.count as jest.Mock).mockResolvedValue(0);
 
     const searchParams = Promise.resolve({ page: '1' });
     const page = await Home({ searchParams });
@@ -224,8 +218,8 @@ describe('Home Page', () => {
   });
 
   it('renders search bar and sort dropdown', async () => {
-    mockPrisma.book.findMany.mockResolvedValue([]);
-    mockPrisma.book.count.mockResolvedValue(0);
+    (prisma.book.findMany as jest.Mock).mockResolvedValue([]);
+    (prisma.book.count as jest.Mock).mockResolvedValue(0);
 
     const searchParams = Promise.resolve({ page: '1' });
     const page = await Home({ searchParams });

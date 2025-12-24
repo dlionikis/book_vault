@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/db';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -43,7 +41,6 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching series:', error);
     return NextResponse.json({ error: 'Failed to fetch series' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
+
 }

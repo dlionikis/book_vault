@@ -1,9 +1,32 @@
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import fs from 'fs/promises';
 import path from 'path';
 
 // Mock modules BEFORE importing the script
-jest.mock('@prisma/client');
+jest.mock('@/lib/db', () => ({
+  prisma: {
+    book: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+    },
+    author: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+    },
+    narrator: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+    },
+    series: {
+      upsert: jest.fn(),
+    },
+    category: {
+      findFirst: jest.fn(),
+      create: jest.fn(),
+    },
+    $disconnect: jest.fn(),
+  },
+}));
 jest.mock('fs/promises');
 jest.mock('dotenv/config', () => ({}));
 
@@ -12,44 +35,8 @@ const importScript = require('@/scripts/import-libation');
 const importBook = importScript.importBook;
 
 describe('Import Script Edge Cases', () => {
-  let mockPrisma: any;
-
   beforeEach(() => {
     jest.clearAllMocks();
-
-    // Create mock Prisma client
-    mockPrisma = {
-      book: {
-        findUnique: jest.fn(),
-        create: jest.fn(),
-      },
-      author: {
-        findUnique: jest.fn(),
-        create: jest.fn(),
-      },
-      narrator: {
-        findUnique: jest.fn(),
-        create: jest.fn(),
-      },
-      series: {
-        upsert: jest.fn(),
-      },
-      category: {
-        findFirst: jest.fn(),
-        create: jest.fn(),
-      },
-      $disconnect: jest.fn(),
-    };
-
-    // Mock the prisma instance in the script
-    importScript.prisma.book = mockPrisma.book;
-    importScript.prisma.author = mockPrisma.author;
-    importScript.prisma.narrator = mockPrisma.narrator;
-    importScript.prisma.series = mockPrisma.series;
-    importScript.prisma.category = mockPrisma.category;
-    importScript.prisma.$disconnect = mockPrisma.$disconnect;
-
-    (PrismaClient as jest.MockedClass<typeof PrismaClient>).mockImplementation(() => mockPrisma);
   });
 
   describe('Author Handling', () => {
@@ -62,10 +49,10 @@ describe('Import Script Edge Cases', () => {
       };
 
       // First call for ASIN lookup - finds existing author
-      mockPrisma.author.findUnique.mockResolvedValueOnce(existingAuthor);
-      mockPrisma.book.findUnique.mockResolvedValue(null);
-      mockPrisma.book.create.mockResolvedValue({});
-      mockPrisma.series.upsert.mockResolvedValue({ id: 'series-1' });
+      (prisma.author.findUnique as jest.Mock).mockResolvedValueOnce(existingAuthor);
+      (prisma.book.findUnique as jest.Mock).mockResolvedValue(null);
+      (prisma.book.create as jest.Mock).mockResolvedValue({});
+      (prisma.series.upsert as jest.Mock).mockResolvedValue({ id: 'series-1' });
 
       // Simulate importing book with "Michael Manning" (no "G.")
       const metadata = {
@@ -77,19 +64,19 @@ describe('Import Script Edge Cases', () => {
       };
 
       // Import logic
-      mockPrisma.book.findUnique.mockResolvedValue(null);
+      (prisma.book.findUnique as jest.Mock).mockResolvedValue(null);
       let author = metadata.authors[0].asin
-        ? await mockPrisma.author.findUnique({ where: { asin: metadata.authors[0].asin } })
+        ? await prisma.author.findUnique({ where: { asin: metadata.authors[0].asin } })
         : null;
 
       if (!author) {
-        author = await mockPrisma.author.findUnique({ where: { name: metadata.authors[0].name } });
+        author = await prisma.author.findUnique({ where: { name: metadata.authors[0].name } });
       }
 
       // Should find author by ASIN and NOT create duplicate
-      expect(mockPrisma.author.findUnique).toHaveBeenCalledWith({ where: { asin: 'B005B3671W' } });
+      expect(prisma.author.findUnique).toHaveBeenCalledWith({ where: { asin: 'B005B3671W' } });
       expect(author).toEqual(existingAuthor);
-      expect(mockPrisma.author.create).not.toHaveBeenCalled();
+      expect(prisma.author.create).not.toHaveBeenCalled();
     });
 
     it('should handle author with same name but different ASINs', async () => {
@@ -101,7 +88,7 @@ describe('Import Script Edge Cases', () => {
       };
 
       // First book with ASIN B0BRTJLN5W - won't find by ASIN
-      mockPrisma.author.findUnique
+      prisma.author.findUnique
         .mockResolvedValueOnce(null) // ASIN lookup fails
         .mockResolvedValueOnce(existingAuthor); // Name lookup succeeds
 
@@ -115,23 +102,23 @@ describe('Import Script Edge Cases', () => {
 
       // Import logic
       let author = metadata.authors[0].asin
-        ? await mockPrisma.author.findUnique({ where: { asin: metadata.authors[0].asin } })
+        ? await prisma.author.findUnique({ where: { asin: metadata.authors[0].asin } })
         : null;
 
       if (!author) {
-        author = await mockPrisma.author.findUnique({ where: { name: metadata.authors[0].name } });
+        author = await prisma.author.findUnique({ where: { name: metadata.authors[0].name } });
       }
 
       // Should find by name and reuse existing author
-      expect(mockPrisma.author.findUnique).toHaveBeenCalledWith({ where: { asin: 'B0BRTJLN5W' } });
-      expect(mockPrisma.author.findUnique).toHaveBeenCalledWith({ where: { name: 'Selkie Myth' } });
+      expect(prisma.author.findUnique).toHaveBeenCalledWith({ where: { asin: 'B0BRTJLN5W' } });
+      expect(prisma.author.findUnique).toHaveBeenCalledWith({ where: { name: 'Selkie Myth' } });
       expect(author).toEqual(existingAuthor);
-      expect(mockPrisma.author.create).not.toHaveBeenCalled();
+      expect(prisma.author.create).not.toHaveBeenCalled();
     });
 
     it('should handle author with null ASIN', async () => {
-      mockPrisma.author.findUnique.mockResolvedValueOnce(null);
-      mockPrisma.author.create.mockResolvedValue({
+      prisma.author.findUnique.mockResolvedValueOnce(null);
+      prisma.author.create.mockResolvedValue({
         id: 'author-2',
         name: 'Unknown Author',
         asin: null,
@@ -147,15 +134,15 @@ describe('Import Script Edge Cases', () => {
 
       // Import logic
       let author = metadata.authors[0].asin
-        ? await mockPrisma.author.findUnique({ where: { asin: metadata.authors[0].asin } })
+        ? await prisma.author.findUnique({ where: { asin: metadata.authors[0].asin } })
         : null;
 
       if (!author) {
-        author = await mockPrisma.author.findUnique({ where: { name: metadata.authors[0].name } });
+        author = await prisma.author.findUnique({ where: { name: metadata.authors[0].name } });
       }
 
       if (!author) {
-        author = await mockPrisma.author.create({
+        author = await prisma.author.create({
           data: {
             name: metadata.authors[0].name,
             asin: metadata.authors[0].asin,
@@ -164,17 +151,17 @@ describe('Import Script Edge Cases', () => {
       }
 
       // Should not attempt ASIN lookup (null), should check by name, then create
-      expect(mockPrisma.author.findUnique).toHaveBeenCalledWith({
+      expect(prisma.author.findUnique).toHaveBeenCalledWith({
         where: { name: 'Unknown Author' },
       });
-      expect(mockPrisma.author.create).toHaveBeenCalledWith({
+      expect(prisma.author.create).toHaveBeenCalledWith({
         data: { name: 'Unknown Author', asin: null },
       });
     });
 
     it('should create new author when neither ASIN nor name exists', async () => {
-      mockPrisma.author.findUnique.mockResolvedValue(null);
-      mockPrisma.author.create.mockResolvedValue({
+      prisma.author.findUnique.mockResolvedValue(null);
+      prisma.author.create.mockResolvedValue({
         id: 'author-3',
         name: 'New Author',
         asin: 'NEWAUTH123',
@@ -190,15 +177,15 @@ describe('Import Script Edge Cases', () => {
 
       // Import logic
       let author = metadata.authors[0].asin
-        ? await mockPrisma.author.findUnique({ where: { asin: metadata.authors[0].asin } })
+        ? await prisma.author.findUnique({ where: { asin: metadata.authors[0].asin } })
         : null;
 
       if (!author) {
-        author = await mockPrisma.author.findUnique({ where: { name: metadata.authors[0].name } });
+        author = await prisma.author.findUnique({ where: { name: metadata.authors[0].name } });
       }
 
       if (!author) {
-        author = await mockPrisma.author.create({
+        author = await prisma.author.create({
           data: {
             name: metadata.authors[0].name,
             asin: metadata.authors[0].asin,
@@ -206,9 +193,9 @@ describe('Import Script Edge Cases', () => {
         });
       }
 
-      expect(mockPrisma.author.findUnique).toHaveBeenCalledWith({ where: { asin: 'NEWAUTH123' } });
-      expect(mockPrisma.author.findUnique).toHaveBeenCalledWith({ where: { name: 'New Author' } });
-      expect(mockPrisma.author.create).toHaveBeenCalledWith({
+      expect(prisma.author.findUnique).toHaveBeenCalledWith({ where: { asin: 'NEWAUTH123' } });
+      expect(prisma.author.findUnique).toHaveBeenCalledWith({ where: { name: 'New Author' } });
+      expect(prisma.author.create).toHaveBeenCalledWith({
         data: { name: 'New Author', asin: 'NEWAUTH123' },
       });
     });
@@ -222,7 +209,7 @@ describe('Import Script Edge Cases', () => {
         asin: 'NARR123',
       };
 
-      mockPrisma.narrator.findUnique.mockResolvedValueOnce(existingNarrator); // Find by name
+      prisma.narrator.findUnique.mockResolvedValueOnce(existingNarrator); // Find by name
 
       const metadata = {
         asin: 'BOOK111',
@@ -234,21 +221,21 @@ describe('Import Script Edge Cases', () => {
 
       // Import logic (narrator with null ASIN)
       let narrator = metadata.narrators[0].asin
-        ? await mockPrisma.narrator.findUnique({ where: { asin: metadata.narrators[0].asin } })
+        ? await prisma.narrator.findUnique({ where: { asin: metadata.narrators[0].asin } })
         : null;
 
       if (!narrator) {
-        narrator = await mockPrisma.narrator.findUnique({
+        narrator = await prisma.narrator.findUnique({
           where: { name: metadata.narrators[0].name },
         });
       }
 
       // Should skip ASIN lookup and find by name
-      expect(mockPrisma.narrator.findUnique).toHaveBeenCalledWith({
+      expect(prisma.narrator.findUnique).toHaveBeenCalledWith({
         where: { name: 'Andrea Parsneau' },
       });
       expect(narrator).toEqual(existingNarrator);
-      expect(mockPrisma.narrator.create).not.toHaveBeenCalled();
+      expect(prisma.narrator.create).not.toHaveBeenCalled();
     });
   });
 
@@ -336,7 +323,7 @@ describe('Import Script Edge Cases', () => {
         title: 'Existing Book',
       };
 
-      mockPrisma.book.findUnique.mockResolvedValue(existingBook);
+      prisma.book.findUnique.mockResolvedValue(existingBook);
 
       const metadata = {
         asin: 'EXISTING123',
@@ -346,12 +333,12 @@ describe('Import Script Edge Cases', () => {
         series: [],
       };
 
-      const book = await mockPrisma.book.findUnique({ where: { asin: metadata.asin } });
+      const book = await prisma.book.findUnique({ where: { asin: metadata.asin } });
 
       if (book) {
         // Should skip import
         expect(book).toEqual(existingBook);
-        expect(mockPrisma.book.create).not.toHaveBeenCalled();
+        expect(prisma.book.create).not.toHaveBeenCalled();
       }
     });
   });
@@ -364,7 +351,7 @@ describe('Import Script Edge Cases', () => {
         asin: 'SERIES123',
       };
 
-      mockPrisma.series.upsert.mockResolvedValue(mockSeries);
+      prisma.series.upsert.mockResolvedValue(mockSeries);
 
       const seriesInfo = {
         title: 'The Wandering Inn',
@@ -372,7 +359,7 @@ describe('Import Script Edge Cases', () => {
         asin: 'SERIES123',
       };
 
-      const series = await mockPrisma.series.upsert({
+      const series = await prisma.series.upsert({
         where: { title: seriesInfo.title },
         update: {},
         create: {
@@ -386,7 +373,7 @@ describe('Import Script Edge Cases', () => {
         sequence: seriesInfo.sequence,
       };
 
-      expect(mockPrisma.series.upsert).toHaveBeenCalledWith({
+      expect(prisma.series.upsert).toHaveBeenCalledWith({
         where: { title: 'The Wandering Inn' },
         update: {},
         create: {
@@ -570,34 +557,34 @@ describe('Import Script Edge Cases', () => {
       const coverFile = 'Test Book [BOOK123].jpg';
 
       // Setup mocks
-      mockPrisma.book.findUnique.mockResolvedValue(null);
-      mockPrisma.author.findUnique.mockResolvedValue(null);
-      mockPrisma.author.create.mockResolvedValue({
+      prisma.book.findUnique.mockResolvedValue(null);
+      prisma.author.findUnique.mockResolvedValue(null);
+      prisma.author.create.mockResolvedValue({
         id: 'auth-1',
         name: 'Test Author',
         asin: 'AUTH123',
       });
-      mockPrisma.narrator.findUnique.mockResolvedValue(null);
-      mockPrisma.narrator.create.mockResolvedValue({
+      prisma.narrator.findUnique.mockResolvedValue(null);
+      prisma.narrator.create.mockResolvedValue({
         id: 'narr-1',
         name: 'Test Narrator',
         asin: 'NARR123',
       });
-      mockPrisma.series.upsert.mockResolvedValue({
+      prisma.series.upsert.mockResolvedValue({
         id: 'ser-1',
         title: 'Test Series',
         asin: 'SER123',
       });
-      mockPrisma.category.findFirst.mockResolvedValue(null);
-      mockPrisma.category.create
+      prisma.category.findFirst.mockResolvedValue(null);
+      prisma.category.create
         .mockResolvedValueOnce({ id: 'cat-1', name: 'Fiction', parentId: null, level: 0 })
         .mockResolvedValueOnce({ id: 'cat-2', name: 'Fantasy', parentId: 'cat-1', level: 1 });
-      mockPrisma.book.create.mockResolvedValue({ id: 'book-1' });
+      prisma.book.create.mockResolvedValue({ id: 'book-1' });
 
       await importBook(metadata, folderPath, audioFile, coverFile);
 
       // Verify book was created
-      expect(mockPrisma.book.create).toHaveBeenCalledWith({
+      expect(prisma.book.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           asin: 'BOOK123',
           title: 'Test Book',
@@ -617,11 +604,11 @@ describe('Import Script Edge Cases', () => {
         series: [],
       };
 
-      mockPrisma.book.findUnique.mockResolvedValue({ id: 'book-1', asin: 'EXISTING123' });
+      prisma.book.findUnique.mockResolvedValue({ id: 'book-1', asin: 'EXISTING123' });
 
       await importBook(metadata, '/test/path', undefined, undefined);
 
-      expect(mockPrisma.book.create).not.toHaveBeenCalled();
+      expect(prisma.book.create).not.toHaveBeenCalled();
     });
   });
 });

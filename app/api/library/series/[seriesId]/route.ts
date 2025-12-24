@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/db';
 
 // POST /api/library/series/[seriesId] - Add all books in series to library
 export async function POST(request: NextRequest, { params }: { params: { seriesId: string } }) {

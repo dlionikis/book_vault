@@ -6,10 +6,8 @@ import Pagination from '@/components/Pagination';
 import ContinueListening from '@/components/ContinueListening';
 import ContinueListeningButton from '@/components/ContinueListeningButton';
 import Link from 'next/link';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
-
-const prisma = new PrismaClient();
 
 async function getBooks(page?: string, sort?: string): Promise<BooksResponse> {
   const pageNum = parseInt(page || '1');

@@ -1,19 +1,16 @@
 import { render, screen } from '@testing-library/react';
 import BrowseAuthorsPage from '@/app/browse/authors/page';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 
 // Mock Prisma Client
-jest.mock('@prisma/client', () => {
-  const mockPrismaClient = {
+jest.mock('@/lib/db', () => ({
+  prisma: {
     author: {
       findMany: jest.fn(),
     },
     $disconnect: jest.fn(),
-  };
-  return {
-    PrismaClient: jest.fn(() => mockPrismaClient),
-  };
-});
+  },
+}));
 
 // Mock components
 jest.mock('@/components/BackButton', () => {
@@ -30,10 +27,7 @@ jest.mock('next/link', () => {
 });
 
 describe('Browse Authors Page', () => {
-  let mockPrisma: any;
-
   beforeEach(() => {
-    mockPrisma = new PrismaClient();
     jest.clearAllMocks();
   });
 
@@ -59,13 +53,13 @@ describe('Browse Authors Page', () => {
       },
     ];
 
-    mockPrisma.author.findMany.mockResolvedValue(mockAuthors);
+    (prisma.author.findMany as jest.Mock).mockResolvedValue(mockAuthors);
 
     const page = await BrowseAuthorsPage();
     render(page);
 
     // Check Prisma query
-    expect(mockPrisma.author.findMany).toHaveBeenCalledWith({
+    expect(prisma.author.findMany).toHaveBeenCalledWith({
       include: {
         books: {
           include: {
@@ -96,7 +90,7 @@ describe('Browse Authors Page', () => {
       },
     ];
 
-    mockPrisma.author.findMany.mockResolvedValue(mockAuthors);
+    (prisma.author.findMany as jest.Mock).mockResolvedValue(mockAuthors);
 
     const page = await BrowseAuthorsPage();
     render(page);
@@ -129,7 +123,7 @@ describe('Browse Authors Page', () => {
       },
     ];
 
-    mockPrisma.author.findMany.mockResolvedValue(mockAuthors);
+    (prisma.author.findMany as jest.Mock).mockResolvedValue(mockAuthors);
 
     const page = await BrowseAuthorsPage();
     render(page);
@@ -148,7 +142,7 @@ describe('Browse Authors Page', () => {
       },
     ];
 
-    mockPrisma.author.findMany.mockResolvedValue(mockAuthors);
+    (prisma.author.findMany as jest.Mock).mockResolvedValue(mockAuthors);
 
     const page = await BrowseAuthorsPage();
     render(page);
@@ -167,7 +161,7 @@ describe('Browse Authors Page', () => {
       },
     ];
 
-    mockPrisma.author.findMany.mockResolvedValue(mockAuthors);
+    (prisma.author.findMany as jest.Mock).mockResolvedValue(mockAuthors);
 
     const page = await BrowseAuthorsPage();
     const { container } = render(page);
@@ -177,7 +171,7 @@ describe('Browse Authors Page', () => {
   });
 
   it('shows empty state when no authors exist', async () => {
-    mockPrisma.author.findMany.mockResolvedValue([]);
+    (prisma.author.findMany as jest.Mock).mockResolvedValue([]);
 
     const page = await BrowseAuthorsPage();
     render(page);
@@ -211,12 +205,12 @@ describe('Browse Authors Page', () => {
       },
     ];
 
-    mockPrisma.author.findMany.mockResolvedValue(mockAuthors);
+    (prisma.author.findMany as jest.Mock).mockResolvedValue(mockAuthors);
 
     const page = await BrowseAuthorsPage();
     render(page);
 
-    expect(mockPrisma.author.findMany).toHaveBeenCalledWith(
+    expect(prisma.author.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         orderBy: {
           name: 'asc',
@@ -226,7 +220,7 @@ describe('Browse Authors Page', () => {
   });
 
   it('renders back button', async () => {
-    mockPrisma.author.findMany.mockResolvedValue([]);
+    (prisma.author.findMany as jest.Mock).mockResolvedValue([]);
 
     const page = await BrowseAuthorsPage();
     render(page);
@@ -235,7 +229,7 @@ describe('Browse Authors Page', () => {
   });
 
   it('handles error gracefully', async () => {
-    mockPrisma.author.findMany.mockRejectedValue(new Error('Database error'));
+    (prisma.author.findMany as jest.Mock).mockRejectedValue(new Error('Database error'));
 
     const page = await BrowseAuthorsPage();
     render(page);

@@ -3,10 +3,8 @@ import { Book } from '@/lib/types';
 import BookGrid from '@/components/BookGrid';
 import BackButton from '@/components/BackButton';
 import Pagination from '@/components/Pagination';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
-
-const prisma = new PrismaClient();
 
 interface CategoryWithBooks {
   id: string;

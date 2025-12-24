@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/db';
 
 interface AuthorWithCount {
   id: string;
