@@ -117,7 +117,9 @@ export async function extractChapters(audioFilePath: string): Promise<Chapter[]>
     return chapters;
   } catch (error) {
     console.error('Error extracting chapters:', error);
-    throw new Error(`Failed to extract chapters: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to extract chapters: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 
@@ -170,7 +172,9 @@ export async function extractAudioMetadata(audioFilePath: string): Promise<{
     };
   } catch (error) {
     console.error('Error extracting audio metadata:', error);
-    throw new Error(`Failed to extract metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to extract metadata: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
   }
 }
 

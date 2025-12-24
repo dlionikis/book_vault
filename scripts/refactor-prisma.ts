@@ -82,7 +82,10 @@ async function refactorFile(filePath: string): Promise<FileChange> {
     }
 
     // Step 2: Remove PrismaClient instantiation
-    if (content.includes('const prisma = new PrismaClient();') || content.includes('export const prisma = new PrismaClient();')) {
+    if (
+      content.includes('const prisma = new PrismaClient();') ||
+      content.includes('export const prisma = new PrismaClient();')
+    ) {
       content = content.replace(/^const prisma = new PrismaClient\(\);$/gm, '');
       content = content.replace(/^export const prisma = new PrismaClient\(\);$/gm, '');
       modified = true;
@@ -107,7 +110,6 @@ async function refactorFile(filePath: string): Promise<FileChange> {
     } else {
       return { file: filePath, success: true, error: 'No changes needed' };
     }
-
   } catch (error) {
     return {
       file: filePath,
