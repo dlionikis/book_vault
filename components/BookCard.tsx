@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Book } from '@/lib/types';
+import { Book, Author, Narrator } from '@/lib/types';
 
 interface BookCardProps {
   book: Book;
@@ -65,14 +65,14 @@ export default function BookCard({ book }: BookCardProps) {
         {/* Authors */}
         {book.authors.length > 0 && (
           <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-            by {book.authors.map((a) => a.name).join(', ')}
+            by {book.authors.map((a: Author) => a.name).join(', ')}
           </p>
         )}
 
         {/* Narrators */}
         {book.narrators.length > 0 && (
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            Narrated by {book.narrators.map((n) => n.name).join(', ')}
+            Narrated by {book.narrators.map((n: Narrator) => n.name).join(', ')}
           </p>
         )}
 
