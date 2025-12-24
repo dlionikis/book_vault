@@ -145,3 +145,6 @@ test-data/
 
 # Keep AI context files
 !.ai/
+
+*storybook.log
+storybook-static
