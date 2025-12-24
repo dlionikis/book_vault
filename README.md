@@ -100,7 +100,8 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
 - **[Project Setup](docs/project-setup.md)** - Initial setup steps and configuration
 - **[Media Configuration](docs/media-configuration.md)** - Configuring media data paths and file locations
-- **[Security](docs/security.md)** - Security measures, linting, and code quality
+- **[Security](docs/security.md)** - Code quality tools, linting, and git hooks
+- **[API Security](docs/API_SECURITY.md)** - Authentication, endpoint protection, and security audit
 
 ### Technical Details
 

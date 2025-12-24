@@ -2,7 +2,7 @@
 
 > **Purpose**: Quick onboarding reference for Claude Code sessions. Read this first to understand the project instantly.
 
-**Last Updated**: December 23, 2025
+**Last Updated**: December 24, 2025
 **Status**: Production-ready with S3 streaming support
 **Test Status**: 184 tests passing
 
@@ -117,10 +117,12 @@ git push -u origin feature/your-feature
 
 - **Always use TypeScript** - No `.js` or `.jsx` files
 - **Strict mode enabled** - No `any` types (use `unknown` if needed)
+- **Centralized types** - Import shared types from `lib/types.ts`
 - **Import patterns**:
 
   ```typescript
-  // Prefer: Module imports
+  // Prefer: Module imports with shared types
+  import { Book, Author, SeriesInfo } from '@/lib/types';
   import { PrismaClient } from '@prisma/client';
 
   // Avoid: CommonJS (except server.js for HTTPS)
@@ -148,17 +150,17 @@ git push -u origin feature/your-feature
 #### Database Access
 
 - **⚠️ CRITICAL: DO NOT create `new PrismaClient()` directly**
-- **ALWAYS import from centralized module** (needs implementation):
+- **ALWAYS import from centralized singleton**:
 
   ```typescript
   // ❌ WRONG - Creates connection leak
   const prisma = new PrismaClient();
 
-  // ✅ CORRECT - Will use singleton (after refactor)
+  // ✅ CORRECT - Use singleton from lib/db.ts
   import { prisma } from '@/lib/db';
   ```
 
-- **Current state**: Multiple instances exist (43+) - **needs refactoring before AWS**
+- **Current state**: All files (37+) now use singleton pattern ✅
 
 #### API Routes
 
@@ -215,6 +217,8 @@ components/
 ├── BookCard.tsx                  # Server Component
 lib/
 ├── types.ts                      # Shared TypeScript types
+├── db.ts                         # Prisma Client singleton
+├── s3.ts                         # S3 streaming helpers
 ├── media.ts                      # Media URL helpers
 └── auth.ts                       # NextAuth config
 ```
@@ -239,7 +243,8 @@ lib/
 - [Project Status](docs/STATUS.md) - Current features, recent PRs, todo list
 - [Development Roadmap](docs/development-roadmap.md) - Future plans, prioritization
 - [Testing Guide](docs/testing.md) - Test patterns and examples
-- [Security](docs/security.md) - Auth, API security, best practices
+- [Security](docs/security.md) - Code quality tools, linting, git hooks
+- [API Security](docs/API_SECURITY.md) - Authentication, endpoint protection, security audit
 - [Media Configuration](docs/media-configuration.md) - S3 vs local file setup
 
 **AI Agent Context** (`.ai/` folder):

@@ -91,11 +91,38 @@ jest.mock('next/navigation', () => ({
 }));
 ```
 
+### Mocking Prisma Client
+
+For tests that interact with the database, mock the centralized Prisma client singleton:
+
+```typescript
+import { mockDeep } from 'jest-mock-extended';
+import { PrismaClient } from '@prisma/client';
+
+jest.mock('@/lib/db', () => ({
+  prisma: mockDeep<PrismaClient>(),
+}));
+
+// In your test
+import { prisma } from '@/lib/db';
+
+it('fetches books from database', async () => {
+  (prisma.book.findMany as jest.Mock).mockResolvedValue([
+    { id: '1', title: 'Test Book' /* ... */ },
+  ]);
+
+  // Test code that uses prisma
+});
+```
+
+**Note**: The project uses `jest-mock-extended` for type-safe Prisma mocking. This provides better TypeScript support than manual `jest.fn()` mocks.
+
 ## Test Configuration
 
 - **jest.config.js** - Jest configuration
 - **jest.setup.js** - Global test setup
 - \***\*mocks**/\*\* - Mock implementations
+- **lib/types.ts** - Shared TypeScript types for test data
 
 ## Best Practices
 
