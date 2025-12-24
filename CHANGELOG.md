@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Documentation Consolidation** (December 24, 2025)
+  - Consolidated all AI-related documentation into single `CLAUDE.md` file
+  - Removed outdated `.ai/` directory files (PROJECT_CONTEXT.md, DEVELOPMENT_GOALS.md, AI_INSTRUCTIONS.md)
+  - Enhanced CLAUDE.md with:
+    - Design principles and performance targets
+    - Success metrics for user experience
+    - Expanded debugging tips and common pitfalls
+    - Complete Libation metadata structure reference
+    - Data strategy decision notes
+  - Updated all references in documentation files to point to CLAUDE.md
+  - Simpler documentation structure with single source of truth for Claude Code sessions
+
 ### Added
 
 - **Dark Mode Support** across entire application
@@ -103,8 +117,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - README.md
   - ARCHITECTURE.md
   - CONTRIBUTING.md
-  - .ai/PROJECT_CONTEXT.md
-  - .ai/DEVELOPMENT_GOALS.md
+  - CLAUDE.md (AI onboarding guide)
 - Environment configuration template
 - Git repository with proper .gitignore
 

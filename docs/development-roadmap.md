@@ -703,12 +703,12 @@ importBooks()
 ## Development Workflow
 
 1. **Morning**: Review what was done yesterday
-2. **Plan**: Check `.ai/DEVELOPMENT_GOALS.md` for current phase
+2. **Plan**: Check `docs/STATUS.md` for current priorities
 3. **Code**: Implement one feature at a time
 4. **Test**: Verify it works
 5. **Document**: Update relevant docs
 6. **Commit**: Clear commit message
-7. **End of day**: Update `.ai/PROJECT_CONTEXT.md`
+7. **End of day**: Update `docs/STATUS.md` with progress
 
 ## Quick Commands Reference
 
@@ -749,10 +749,10 @@ npm run build
 ## When You Get Stuck
 
 1. Check `ARCHITECTURE.md` for design decisions
-2. Review `.ai/PROJECT_CONTEXT.md` for project context
+2. Review `CLAUDE.md` for project context and conventions
 3. Look at the sample data in Libation directory
 4. Test with a single book first
-5. Ask AI for help with specific issues
+5. Check `docs/STATUS.md` for known issues
 
 ## Success Criteria for Phase 1
 
@@ -767,7 +767,7 @@ You'll know Phase 1 is complete when:
 
 ## Moving Forward
 
-After Phase 1, proceed to Phase 2 (Backend Core) as outlined in `.ai/DEVELOPMENT_GOALS.md`.
+After Phase 1, proceed to Phase 2 (Backend Core) as outlined in `docs/STATUS.md`.
 
 Remember: This is an iterative process. It's okay to refine and adjust as you go!
 
