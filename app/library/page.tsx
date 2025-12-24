@@ -1,14 +1,12 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import Image from 'next/image';
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
 import AddToLibraryButton from '@/components/AddToLibraryButton';
 import ProgressStatus from '@/components/ProgressStatus';
-
-const prisma = new PrismaClient();
 
 interface LibraryBook {
   id: string;

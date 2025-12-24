@@ -5,12 +5,10 @@ import { Book } from '@/lib/types';
 import BackButton from '@/components/BackButton';
 import AddToLibraryButton from '@/components/AddToLibraryButton';
 import ProgressControls from '@/components/ProgressControls';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-
-const prisma = new PrismaClient();
 
 async function getBook(id: string): Promise<Book | null> {
   try {

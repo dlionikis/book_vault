@@ -3,10 +3,8 @@ import BookGrid from '@/components/BookGrid';
 import SearchBar from '@/components/SearchBar';
 import BackButton from '@/components/BackButton';
 import Pagination from '@/components/Pagination';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
-
-const prisma = new PrismaClient();
 
 async function searchBooks(query: string, page?: string): Promise<SearchResponse | null> {
   if (!query) return null;

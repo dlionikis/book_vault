@@ -1,10 +1,8 @@
 import 'dotenv/config';
 import fs from 'fs/promises';
 import path from 'path';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { seedTestUser } from './seed-test-user';
-
-export const prisma = new PrismaClient();
 
 // Use LIBATION_PATH from env, or fall back to MEDIA_DATA_PATH, or default to test-data
 const LIBATION_PATH =

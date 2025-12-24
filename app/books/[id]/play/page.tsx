@@ -2,11 +2,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Book } from '@/lib/types';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
 import PlaybackClient from '@/components/PlaybackClient';
-
-const prisma = new PrismaClient();
 
 async function getBook(id: string): Promise<Book | null> {
   try {

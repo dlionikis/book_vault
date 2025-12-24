@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
-
-const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -124,7 +122,6 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching books:', error);
     return NextResponse.json({ error: 'Failed to fetch books' }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
+
 }
