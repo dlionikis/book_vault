@@ -3,8 +3,8 @@
 > **Purpose**: Quick onboarding reference for Claude Code sessions. Read this first to understand the project instantly.
 
 **Last Updated**: December 23, 2025
-**Status**: Production-ready locally, preparing for AWS deployment
-**Test Status**: 171 tests passing
+**Status**: Production-ready with S3 streaming support
+**Test Status**: 184 tests passing
 
 ---
 
@@ -51,7 +51,7 @@
 **Media Storage**:
 
 - **Development**: Local files at `/Volumes/BeeDrive/Libation/` or `test-data/`
-- **Production** (planned): AWS S3 + CloudFront CDN
+- **Production**: AWS S3 with streaming support (images + audio with range requests)
 
 ---
 
@@ -309,23 +309,39 @@ LIBATION_PATH="/Volumes/BeeDrive/Libation"     # Import script
 TEST_USER_EMAIL="test@example.com"
 TEST_USER_PASSWORD="password123"
 
-# AWS (production - not yet implemented)
+# AWS S3 (production media storage - optional)
+# Leave empty for development (uses local filesystem)
 AWS_S3_BUCKET="book-vault-media"
 AWS_REGION="us-east-1"
 AWS_ACCESS_KEY_ID="..."
 AWS_SECRET_ACCESS_KEY="..."
 ```
 
-### Current Limitations (Pre-AWS Deployment)
+### AWS Deployment Readiness
 
-⚠️ **MUST FIX BEFORE AWS**:
+✅ **COMPLETED**:
 
-1. **PrismaClient instances** - 43+ separate instances (connection leak)
-   - **Action**: Create `lib/db.ts` with singleton pattern
-2. **S3 streaming not implemented** - Only local filesystem works
-   - **Action**: Implement S3 SDK in `app/api/images` and `app/api/audio`
-3. **Environment variable inconsistency** - `S3_BUCKET_NAME` vs `AWS_S3_BUCKET`
-   - **Action**: Standardize to `AWS_S3_BUCKET`
+1. **Prisma Client Singleton** - Centralized at `lib/db.ts`
+   - Prevents connection pool exhaustion in serverless environments
+   - All 37+ files now use singleton pattern
+
+2. **S3 Streaming Support** - Implemented in `lib/s3.ts`
+   - Images: Stream from S3 with caching headers
+   - Audio: Stream from S3 with range request support for seeking
+   - Automatic fallback to filesystem in development
+
+3. **Environment Variables** - Standardized to AWS conventions
+   - Uses `AWS_S3_BUCKET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+
+⏳ **REMAINING** (Optional optimizations):
+
+1. **Prisma Connection Pooling** - Configure for RDS
+   - Add connection limits to DATABASE_URL
+   - Tune for serverless environments
+
+2. **CloudFront CDN** - Add CDN layer for static assets
+   - Reduces S3 costs and latency
+   - Not required for initial deployment
 
 ### Data Flow Example: Audio Playback
 

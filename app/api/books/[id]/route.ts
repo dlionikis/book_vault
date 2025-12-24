@@ -87,5 +87,4 @@ export async function GET(request: Request, { params }: { params: { id: string }
     console.error('Error fetching book:', error);
     return NextResponse.json({ error: 'Failed to fetch book' }, { status: 500 });
   }
-
 }

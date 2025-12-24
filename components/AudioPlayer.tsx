@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface AudioPlayerProps {
   audioUrl: string;
@@ -33,21 +33,24 @@ export default function AudioPlayer({
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Save progress to API
-  const saveProgress = async (positionSeconds: number) => {
-    try {
-      await fetch('/api/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookId,
-          positionSeconds: Math.floor(positionSeconds),
-        }),
-      });
-      setLastSavedPosition(positionSeconds);
-    } catch (error) {
-      console.error('Error saving progress:', error);
-    }
-  };
+  const saveProgress = useCallback(
+    async (positionSeconds: number) => {
+      try {
+        await fetch('/api/progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookId,
+            positionSeconds: Math.floor(positionSeconds),
+          }),
+        });
+        setLastSavedPosition(positionSeconds);
+      } catch (error) {
+        console.error('Error saving progress:', error);
+      }
+    },
+    [bookId]
+  );
 
   // Auto-save progress every 10 seconds
   useEffect(() => {
@@ -61,7 +64,7 @@ export default function AudioPlayer({
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, currentTime, lastSavedPosition, bookId]);
+  }, [isPlaying, currentTime, lastSavedPosition, saveProgress]);
 
   // Save progress when audio is paused or component unmounts
   useEffect(() => {
@@ -71,7 +74,7 @@ export default function AudioPlayer({
         saveProgress(currentTime);
       }
     };
-  }, [currentTime, lastSavedPosition]);
+  }, [currentTime, lastSavedPosition, saveProgress]);
 
   // Set initial position when audio loads
   useEffect(() => {
@@ -120,14 +123,17 @@ export default function AudioPlayer({
   };
 
   // Skip forward/backward
-  const skip = (seconds: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = Math.max(
-        0,
-        Math.min(duration, audioRef.current.currentTime + seconds)
-      );
-    }
-  };
+  const skip = useCallback(
+    (seconds: number) => {
+      if (audioRef.current) {
+        audioRef.current.currentTime = Math.max(
+          0,
+          Math.min(duration, audioRef.current.currentTime + seconds)
+        );
+      }
+    },
+    [duration]
+  );
 
   // Handle volume change
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -255,7 +261,7 @@ export default function AudioPlayer({
           });
         } catch (error) {
           // Some browsers don't support all position state features
-          console.debug('Position state not supported:', error);
+          // Silently ignore - this is expected in some browsers
         }
       }
     }
@@ -279,8 +285,9 @@ export default function AudioPlayer({
     currentTime,
     duration,
     playbackRate,
-    currentTime,
     lastSavedPosition,
+    saveProgress,
+    skip,
   ]);
 
   return (

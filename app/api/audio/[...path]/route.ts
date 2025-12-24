@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createReadStream, statSync } from 'fs';
-import { join, resolve } from 'path';
+import { join } from 'path';
 import { getAbsoluteMediaPath, validateMediaPath } from '@/lib/media';
+import { isS3Enabled, streamS3ObjectWithRange, getS3ObjectMetadata } from '@/lib/s3';
 
 export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
   try {
@@ -16,7 +17,67 @@ export async function GET(request: NextRequest, { params }: { params: { path: st
       );
     }
 
-    // Build the file path from the media directory
+    const filePath = params.path.join('/');
+    const range = request.headers.get('range');
+
+    // Use S3 in production if configured
+    if (isS3Enabled()) {
+      try {
+        // Get file metadata first for range validation
+        const { size: fileSize } = await getS3ObjectMetadata(filePath);
+
+        if (range) {
+          // Parse range header (e.g., "bytes=0-1023")
+          const parts = range.replace(/bytes=/, '').split('-');
+          const start = parseInt(parts[0], 10);
+          const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+          // Validate range
+          if (start >= fileSize || end >= fileSize) {
+            return NextResponse.json({ error: 'Range not satisfiable' }, { status: 416 });
+          }
+
+          // Stream with range
+          const { stream, contentType, contentLength, totalSize } = await streamS3ObjectWithRange(
+            filePath,
+            { start, end }
+          );
+
+          return new NextResponse(stream as any, {
+            status: 206, // Partial Content
+            headers: {
+              'Content-Range': `bytes ${start}-${end}/${totalSize}`,
+              'Accept-Ranges': 'bytes',
+              'Content-Length': contentLength.toString(),
+              'Content-Type': contentType || getContentType(filePath),
+            },
+          });
+        }
+
+        // No range requested - stream full file
+        const { stream, contentType, contentLength } = await streamS3ObjectWithRange(filePath);
+
+        return new NextResponse(stream as any, {
+          headers: {
+            'Content-Type': contentType || getContentType(filePath),
+            'Content-Length': contentLength.toString(),
+            'Accept-Ranges': 'bytes',
+          },
+        });
+      } catch (error: any) {
+        console.error('Error streaming audio from S3:', error);
+
+        // Handle S3-specific errors
+        if (error.name === 'NoSuchKey' || error.name === 'NotFound') {
+          return NextResponse.json({ error: 'File not found' }, { status: 404 });
+        }
+
+        // Re-throw for general error handling
+        throw error;
+      }
+    }
+
+    // Fall back to local filesystem (development)
     const mediaPath = getAbsoluteMediaPath();
     const requestedPath = join(mediaPath, ...params.path);
 
@@ -34,8 +95,6 @@ export async function GET(request: NextRequest, { params }: { params: { path: st
     }
 
     // Get range header for seeking support
-    const range = request.headers.get('range');
-
     if (range) {
       // Parse range header (e.g., "bytes=0-1023")
       const parts = range.replace(/bytes=/, '').split('-');

@@ -39,5 +39,4 @@ export async function GET() {
     console.error('Error fetching narrators:', error);
     return NextResponse.json({ error: 'Failed to fetch narrators' }, { status: 500 });
   }
-
 }

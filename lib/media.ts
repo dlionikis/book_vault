@@ -4,8 +4,8 @@
 
 import path from 'path';
 
-const S3_BUCKET = process.env.S3_BUCKET_NAME;
-const S3_REGION = process.env.S3_REGION || 'us-east-1';
+const S3_BUCKET = process.env.AWS_S3_BUCKET;
+const S3_REGION = process.env.AWS_REGION || 'us-east-1';
 const USE_S3 = process.env.NODE_ENV === 'production' && S3_BUCKET;
 
 /**

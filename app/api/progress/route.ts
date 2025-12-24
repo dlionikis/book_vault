@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching progress:', error);
     return NextResponse.json({ error: 'Failed to fetch progress' }, { status: 500 });
   }
-
 }
 
 // POST /api/progress - Update user's progress (save position)
@@ -91,7 +90,6 @@ export async function POST(request: NextRequest) {
     console.error('Error updating progress:', error);
     return NextResponse.json({ error: 'Failed to update progress' }, { status: 500 });
   }
-
 }
 
 // PUT /api/progress - Mark book as completed or reset to not started
@@ -161,5 +159,4 @@ export async function PUT(request: NextRequest) {
     console.error('Error updating progress status:', error);
     return NextResponse.json({ error: 'Failed to update progress status' }, { status: 500 });
   }
-
 }
