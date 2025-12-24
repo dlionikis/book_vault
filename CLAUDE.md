@@ -92,6 +92,10 @@ npm run import                 # Import books from Libation directory
 npm run db:seed                # Seed test user (test@example.com / password123)
 npm run user:create            # Interactive admin user creation
 
+# Storybook
+npm run storybook              # Start Storybook dev server (port 6006)
+npm run build-storybook        # Build static Storybook site
+
 # Build & Deploy
 npm run build                  # Production build
 npm start                      # Start production server
