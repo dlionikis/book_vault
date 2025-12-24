@@ -47,7 +47,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/ - REMOVED: This conflicts with TypeScript lib/ folder
 lib64/
 parts/
 sdist/
