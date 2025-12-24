@@ -63,6 +63,12 @@ jest.mock('@/components/ContinueListening', () => {
   };
 });
 
+jest.mock('@/components/ContinueListeningButton', () => {
+  return function MockContinueListeningButton() {
+    return <div data-testid="continue-listening-button">Continue Listening Button</div>;
+  };
+});
+
 describe('Home Page', () => {
   beforeEach(() => {
     jest.clearAllMocks();

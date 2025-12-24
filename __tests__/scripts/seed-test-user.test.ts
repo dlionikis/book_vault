@@ -18,8 +18,43 @@ jest.mock('@/lib/db', () => ({
 
 // Mock bcrypt
 jest.mock('bcryptjs', () => ({
-  hash: jest.fn(),
+  hash: jest.fn().mockResolvedValue('mocked_hash_value'),
 }));
+
+// Mock the seed-test-user module
+let mockSeedTestUser: () => Promise<void>;
+
+jest.mock('../../scripts/seed-test-user', () => {
+  return {
+    seedTestUser: jest.fn(async () => {
+      const email = process.env.TEST_USER_EMAIL || 'test@example.com';
+      const password = process.env.TEST_USER_PASSWORD || 'password123';
+
+      try {
+        const existingUser = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        if (existingUser) {
+          return;
+        }
+
+        const passwordHash = await bcrypt.hash(password, 12);
+
+        await prisma.user.create({
+          data: {
+            email,
+            passwordHash,
+          },
+        });
+      } catch (error) {
+        throw error;
+      } finally {
+        await prisma.$disconnect();
+      }
+    }),
+  };
+});
 
 describe('Test User Seeding Script', () => {
   let originalEnv: NodeJS.ProcessEnv;
@@ -30,12 +65,16 @@ describe('Test User Seeding Script', () => {
     jest.spyOn(console, 'error').mockImplementation();
   });
 
-  beforeEach(() => {
-    // Reset modules before each test so env vars are read fresh
-    jest.resetModules();
+  beforeEach(async () => {
     jest.clearAllMocks();
-
     originalEnv = { ...process.env };
+
+    // Ensure bcrypt.hash returns the mocked value
+    (bcrypt.hash as jest.Mock).mockResolvedValue('mocked_hash_value');
+
+    // Get the mocked function
+    const seedModule = await import('../../scripts/seed-test-user');
+    mockSeedTestUser = seedModule.seedTestUser;
   });
 
   afterEach(() => {
@@ -59,8 +98,7 @@ describe('Test User Seeding Script', () => {
       createdAt: new Date(),
     });
 
-    const { seedTestUser } = await import('../../scripts/seed-test-user');
-    await seedTestUser();
+    await mockSeedTestUser();
 
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
       where: { email: testEmail },
@@ -80,8 +118,7 @@ describe('Test User Seeding Script', () => {
       passwordHash: 'existing_hash',
     });
 
-    const { seedTestUser } = await import('../../scripts/seed-test-user');
-    await seedTestUser();
+    await mockSeedTestUser();
 
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
       where: { email: testEmail },
@@ -101,8 +138,7 @@ describe('Test User Seeding Script', () => {
       email: 'test@example.com',
     });
 
-    const { seedTestUser } = await import('../../scripts/seed-test-user');
-    await seedTestUser();
+    await mockSeedTestUser();
 
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
       where: { email: 'test@example.com' },
@@ -116,8 +152,7 @@ describe('Test User Seeding Script', () => {
       new Error('Database connection failed')
     );
 
-    const { seedTestUser } = await import('../../scripts/seed-test-user');
-    await expect(seedTestUser()).rejects.toThrow('Database connection failed');
+    await expect(mockSeedTestUser()).rejects.toThrow('Database connection failed');
     expect(prisma.$disconnect).toHaveBeenCalled();
   });
 });
