@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Book } from '@/lib/types';
+import { Book, SeriesInfo, Author, Narrator, Category } from '@/lib/types';
 import BackButton from '@/components/BackButton';
 import AddToLibraryButton from '@/components/AddToLibraryButton';
 import ProgressControls from '@/components/ProgressControls';
@@ -92,9 +92,9 @@ function formatRuntime(minutes?: number | null) {
   return `${hours} hr ${mins} min`;
 }
 
-function formatDate(dateString?: string | null) {
+function formatDate(dateString?: string | Date | null) {
   if (!dateString) return null;
-  const date = new Date(dateString);
+  const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
@@ -190,7 +190,7 @@ export default async function BookDetailPage({ params }: { params: { id: string 
               {/* Series */}
               {book.series.length > 0 && (
                 <div className="mb-4">
-                  {book.series.map((s, idx) => (
+                  {book.series.map((s: SeriesInfo, idx: number) => (
                     <Link
                       key={idx}
                       href={`/series/${s.id}`}
@@ -208,7 +208,7 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                 <div className="mb-4">
                   <span className="text-gray-600 dark:text-gray-400">By </span>
                   <span className="text-lg font-medium">
-                    {book.authors.map((a, idx) => (
+                    {book.authors.map((a: Author, idx: number) => (
                       <span key={a.id}>
                         {idx > 0 && ', '}
                         <Link
@@ -228,7 +228,7 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                 <div className="mb-6">
                   <span className="text-gray-600 dark:text-gray-400">Narrated by </span>
                   <span>
-                    {book.narrators.map((n, idx) => (
+                    {book.narrators.map((n: Narrator, idx: number) => (
                       <span key={n.id}>
                         {idx > 0 && ', '}
                         <Link
@@ -307,7 +307,7 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                     Categories
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    {book.categories.map((cat) => (
+                    {book.categories.map((cat: Category) => (
                       <Link
                         key={cat.id}
                         href={`/categories/${cat.id}`}
@@ -340,7 +340,7 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                     Customer Reviews ({book.metadata.customer_reviews.length})
                   </h3>
                   <div className="space-y-6">
-                    {book.metadata.customer_reviews.map((review) => (
+                    {book.metadata.customer_reviews.map((review: any) => (
                       <div
                         key={review.id}
                         className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-b-0"
@@ -478,7 +478,7 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                 <div>
                   <div className="font-medium text-gray-900 dark:text-white">{book.title}</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {book.authors.map((a) => a.name).join(', ')}
+                    {book.authors.map((a: Author) => a.name).join(', ')}
                   </div>
                 </div>
               </div>

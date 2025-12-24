@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Book } from '@/lib/types';
+import { Book, SeriesInfo, Author, Narrator } from '@/lib/types';
 import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
 import PlaybackClient from '@/components/PlaybackClient';
@@ -177,7 +177,7 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
               {/* Series */}
               {book.series.length > 0 && (
                 <div className="mb-3">
-                  {book.series.map((s, idx) => (
+                  {book.series.map((s: SeriesInfo, idx: number) => (
                     <Link
                       key={idx}
                       href={`/series/${s.id}`}
@@ -195,7 +195,7 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
                 <div className="mb-3">
                   <span className="text-sm text-gray-600 dark:text-gray-400">By </span>
                   <span className="text-sm">
-                    {book.authors.map((a, idx) => (
+                    {book.authors.map((a: Author, idx: number) => (
                       <span key={a.id}>
                         {idx > 0 && ', '}
                         <Link
@@ -215,7 +215,7 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
                 <div className="mb-4">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Narrated by </span>
                   <span className="text-sm">
-                    {book.narrators.map((n, idx) => (
+                    {book.narrators.map((n: Narrator, idx: number) => (
                       <span key={n.id}>
                         {idx > 0 && ', '}
                         <Link
@@ -244,9 +244,9 @@ export default async function PlayPage({ params }: { params: { id: string } }) {
             <PlaybackClient
               audioUrl={book.audioUrl}
               title={book.title}
-              author={book.authors.map((a) => a.name).join(', ')}
+              author={book.authors.map((a: Author) => a.name).join(', ')}
               bookId={book.id}
-              coverUrl={book.coverUrl}
+              coverUrl={book.coverUrl || undefined}
             />
           </div>
         </div>
