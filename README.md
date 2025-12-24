@@ -101,10 +101,10 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[Project Setup](docs/project-setup.md)** - Initial setup steps and configuration
 - **[Media Configuration](docs/media-configuration.md)** - Configuring media data paths and file locations
 - **[Security](docs/security.md)** - Code quality tools, linting, and git hooks
-- **[API Security](docs/API_SECURITY.md)** - Authentication, endpoint protection, and security audit
 
 ### Technical Details
 
+- **[API Security](docs/API_SECURITY.md)** - Authentication, endpoint protection, and security audit
 - **[Media Security Verification](docs/media-security.md)** - Analysis of file access patterns and security measures
 - **[Changelog](CHANGELOG.md)** - Version history and release notes
 
@@ -202,7 +202,7 @@ This is an **AI-first development project**, meaning:
    MEDIA_DATA_PATH="/path/to/audiobooks"
    ```
 
-   See [docs/MEDIA_CONFIGURATION.md](docs/MEDIA_CONFIGURATION.md) for details.
+   See [docs/media-configuration.md](docs/media-configuration.md) for details.
 
 5. **Set up database**
 
