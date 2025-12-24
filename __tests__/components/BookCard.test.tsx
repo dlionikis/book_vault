@@ -12,9 +12,11 @@ describe('BookCard', () => {
     series: [{ id: 'series1', title: 'Test Series', sequence: '1', asin: 'SERIES123' }],
     categories: [],
     publisherSummary: 'Test summary',
-    runtimeLengthMin: 120,
-    productImages: { '500': '/test-image.jpg' },
+    runtimeMinutes: 120,
+    coverUrl: '/test-image.jpg',
+    audioUrl: '/test-audio.mp3',
     releaseDate: '2024-01-01',
+    createdAt: '2024-01-01',
   };
 
   it('renders book title', () => {

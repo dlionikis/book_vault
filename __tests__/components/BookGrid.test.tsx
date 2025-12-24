@@ -13,9 +13,11 @@ describe('BookGrid', () => {
       series: [],
       categories: [],
       publisherSummary: 'Summary 1',
-      runtimeLengthMin: 120,
-      productImages: { '500': '/book1.jpg' },
+      runtimeMinutes: 120,
+      coverUrl: '/book1.jpg',
+      audioUrl: '/audio1.mp3',
       releaseDate: '2024-01-01',
+      createdAt: '2024-01-01',
     },
     {
       id: '2',
@@ -26,9 +28,11 @@ describe('BookGrid', () => {
       series: [],
       categories: [],
       publisherSummary: 'Summary 2',
-      runtimeLengthMin: 240,
-      productImages: { '500': '/book2.jpg' },
+      runtimeMinutes: 240,
+      coverUrl: '/book2.jpg',
+      audioUrl: '/audio2.mp3',
       releaseDate: '2024-01-02',
+      createdAt: '2024-01-02',
     },
   ];
 
