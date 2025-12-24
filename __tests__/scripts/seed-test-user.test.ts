@@ -2,24 +2,19 @@
  * @jest-environment node
  */
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
-// Create a shared mock instance
-const mockPrisma = {
-  user: {
-    findUnique: jest.fn(),
-    create: jest.fn(),
-  },
-  $disconnect: jest.fn(),
-};
-
 // Mock Prisma
-jest.mock('@prisma/client', () => {
-  return {
-    PrismaClient: jest.fn(() => mockPrisma),
-  };
-});
+jest.mock('@/lib/db', () => ({
+  prisma: {
+    user: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+    },
+    $disconnect: jest.fn(),
+  },
+}));
 
 // Mock bcrypt
 jest.mock('bcryptjs', () => ({
@@ -57,8 +52,8 @@ describe('Test User Seeding Script', () => {
     process.env.TEST_USER_EMAIL = testEmail;
     process.env.TEST_USER_PASSWORD = 'testpass123';
 
-    mockPrisma.user.findUnique.mockResolvedValue(null);
-    mockPrisma.user.create.mockResolvedValue({
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+    (prisma.user.create as jest.Mock).mockResolvedValue({
       id: '1',
       email: testEmail,
       createdAt: new Date(),
@@ -67,19 +62,19 @@ describe('Test User Seeding Script', () => {
     const { seedTestUser } = await import('../../scripts/seed-test-user');
     await seedTestUser();
 
-    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
       where: { email: testEmail },
     });
 
-    expect(mockPrisma.user.create).toHaveBeenCalled();
-    expect(mockPrisma.$disconnect).toHaveBeenCalled();
+    expect(prisma.user.create).toHaveBeenCalled();
+    expect(prisma.$disconnect).toHaveBeenCalled();
   });
 
   it('skips creation when user already exists', async () => {
     const testEmail = 'existing@example.com';
     process.env.TEST_USER_EMAIL = testEmail;
 
-    mockPrisma.user.findUnique.mockResolvedValue({
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
       id: '1',
       email: testEmail,
       passwordHash: 'existing_hash',
@@ -88,20 +83,20 @@ describe('Test User Seeding Script', () => {
     const { seedTestUser } = await import('../../scripts/seed-test-user');
     await seedTestUser();
 
-    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
       where: { email: testEmail },
     });
 
-    expect(mockPrisma.user.create).not.toHaveBeenCalled();
-    expect(mockPrisma.$disconnect).toHaveBeenCalled();
+    expect(prisma.user.create).not.toHaveBeenCalled();
+    expect(prisma.$disconnect).toHaveBeenCalled();
   });
 
   it('uses default credentials when environment variables are not set', async () => {
     delete process.env.TEST_USER_EMAIL;
     delete process.env.TEST_USER_PASSWORD;
 
-    mockPrisma.user.findUnique.mockResolvedValue(null);
-    mockPrisma.user.create.mockResolvedValue({
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+    (prisma.user.create as jest.Mock).mockResolvedValue({
       id: '1',
       email: 'test@example.com',
     });
@@ -109,7 +104,7 @@ describe('Test User Seeding Script', () => {
     const { seedTestUser } = await import('../../scripts/seed-test-user');
     await seedTestUser();
 
-    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({
       where: { email: 'test@example.com' },
     });
   });
@@ -117,10 +112,12 @@ describe('Test User Seeding Script', () => {
   it('handles database errors gracefully', async () => {
     process.env.TEST_USER_EMAIL = 'test@example.com';
 
-    mockPrisma.user.findUnique.mockRejectedValue(new Error('Database connection failed'));
+    (prisma.user.findUnique as jest.Mock).mockRejectedValue(
+      new Error('Database connection failed')
+    );
 
     const { seedTestUser } = await import('../../scripts/seed-test-user');
     await expect(seedTestUser()).rejects.toThrow('Database connection failed');
-    expect(mockPrisma.$disconnect).toHaveBeenCalled();
+    expect(prisma.$disconnect).toHaveBeenCalled();
   });
 });
