@@ -10,7 +10,11 @@ describe('S3 Helper Module', () => {
     originalEnv = { ...process.env };
 
     // Set environment variables that will be used by all tests
-    process.env.NODE_ENV = 'production';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'production',
+      writable: true,
+      configurable: true,
+    });
     process.env.AWS_S3_BUCKET = 'test-bucket';
     process.env.AWS_ACCESS_KEY_ID = 'test-key-id';
     process.env.AWS_SECRET_ACCESS_KEY = 'test-secret-key';

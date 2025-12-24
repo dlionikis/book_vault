@@ -71,7 +71,7 @@ jest.mock('next/image', () => ({
 describe('Book Detail Page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (notFound as jest.Mock).mockImplementation(() => {
+    (notFound as unknown as jest.Mock).mockImplementation(() => {
       throw new Error('Not Found');
     });
 

@@ -2,6 +2,13 @@ import { extractChapters, extractAudioMetadata, isFFProbeAvailable } from '@/lib
 import path from 'path';
 import { getAbsoluteMediaPath } from '@/lib/media';
 
+// Test audio file path - shared across all tests
+const testAudioPath = path.join(
+  getAbsoluteMediaPath(),
+  'A Binding of Blood [B0B91976NY]',
+  'A Binding of Blood: A Practical Guide to Sorcery, Book 2 [B0B91976NY].mp3'
+);
+
 describe('Audio Metadata Extraction', () => {
   beforeAll(async () => {
     const available = await isFFProbeAvailable();
@@ -17,12 +24,6 @@ describe('Audio Metadata Extraction', () => {
 
   // Skip these tests if ffprobe is not available or if test data doesn't exist
   describe('Chapter Extraction', () => {
-    const testAudioPath = path.join(
-      getAbsoluteMediaPath(),
-      'A Binding of Blood [B0B91976NY]',
-      'A Binding of Blood: A Practical Guide to Sorcery, Book 2 [B0B91976NY].mp3'
-    );
-
     it('should extract chapters from an MP3 file', async () => {
       const available = await isFFProbeAvailable();
       if (!available) {

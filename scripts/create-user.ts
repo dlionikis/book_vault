@@ -4,8 +4,9 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
 // Generate a random password
+// Excludes visually confusing characters: I, i, O, o, l, 1, 0
 function generateRandomPassword(length: number = 16): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*';
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*';
   const randomBytes = crypto.randomBytes(length);
   let password = '';
 
