@@ -38,7 +38,7 @@ This document outlines the technical architecture for the Book Vault audiobook l
 
 ## Technology Stack Recommendations
 
-### Option 1: Modern JavaScript Stack (Recommended)
+### JavaScript Stack (Recommended)
 
 **Frontend**
 
@@ -101,52 +101,6 @@ This document outlines the technical architecture for the Book Vault audiobook l
 - Node.js can be memory-intensive for large file operations
 - May need worker processes for background jobs
 
----
-
-### Option 2: Python Stack
-
-**Frontend**: React + Vite
-**Backend**: FastAPI
-**Database**: PostgreSQL
-**ORM**: SQLAlchemy
-
-**Pros**:
-
-- Excellent for data processing
-- Great ML/AI integration if needed
-- Fast API development with FastAPI
-- Strong typing with Pydantic
-
-**Cons**:
-
-- Two languages to maintain
-- Slightly more complex deployment
-
----
-
-### Option 3: Go Stack
-
-**Frontend**: React + Vite
-**Backend**: Go (Gin or Fiber framework)
-**Database**: PostgreSQL
-
-**Pros**:
-
-- Extremely fast and efficient
-- Excellent for file streaming
-- Small binary size
-- Great concurrency
-
-**Cons**:
-
-- Smaller ecosystem
-- Steeper learning curve
-- Less familiar for web development
-
----
-
-## Recommended: Next.js + PostgreSQL Stack
-
 ### Reasoning
 
 1. **Unified Development**: Single TypeScript codebase
@@ -158,176 +112,47 @@ This document outlines the technical architecture for the Book Vault audiobook l
 
 ## Data Architecture
 
-### Database Schema
+### Database Schema (Prisma)
 
-#### Users Table
+The application uses Prisma ORM with PostgreSQL. See [prisma/schema.prisma](../prisma/schema.prisma) for the complete schema.
 
-```sql
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+**Core Models:**
 
-#### Books Table
+- **User**: Authentication and user data
+  - Relations: `progress[]`, `lists[]`
 
-```sql
-CREATE TABLE books (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  asin VARCHAR(50) UNIQUE NOT NULL,
-  title VARCHAR(500) NOT NULL,
-  description TEXT,
-  publisher_summary TEXT,
-  runtime_minutes INTEGER,
-  release_date DATE,
-  publisher VARCHAR(255),
-  cover_url VARCHAR(500),
-  audio_url VARCHAR(500),
-  metadata JSONB, -- Store full metadata JSON
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+- **Book**: Audiobook metadata
+  - Fields: `asin`, `title`, `description`, `publisherSummary`, `runtimeMinutes`, `releaseDate`, `publisher`, `coverUrl`, `audioUrl`, `metadata` (JSON)
+  - Relations: `authors[]`, `narrators[]`, `series[]`, `categories[]`, `chapters[]`, `progress[]`
+  - Indexes: `title`
 
-CREATE INDEX idx_books_title ON books USING GIN (to_tsvector('english', title));
-CREATE INDEX idx_books_description ON books USING GIN (to_tsvector('english', description));
-CREATE INDEX idx_books_metadata ON books USING GIN (metadata);
-```
+- **Chapter**: Audiobook chapters (extracted from .cue files)
+  - Fields: `chapterNumber`, `title`, `startTime`, `endTime`, `duration`
+  - Relations: `book`
+  - Unique constraint: `[bookId, chapterNumber]`
 
-#### Authors Table
+- **Author**, **Narrator**, **Series**: People and series metadata
+  - Fields: `asin`, `name`/`title`
+  - Relations: Many-to-many with Books
 
-```sql
-CREATE TABLE authors (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  asin VARCHAR(50) UNIQUE,
-  name VARCHAR(255) NOT NULL UNIQUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+- **Category**: Hierarchical taxonomy
+  - Fields: `name`, `parentId`, `level`
+  - Self-referential: `parent`, `children[]`
 
-CREATE INDEX idx_authors_name ON authors (name);
-```
+**User Features:**
 
-#### Narrators Table
+- **UserProgress**: Track playback position
+  - Fields: `userId`, `bookId`, `positionSeconds`, `completed`, `lastPlayed`
+  - Unique constraint: `[userId, bookId]`
 
-```sql
-CREATE TABLE narrators (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  asin VARCHAR(50) UNIQUE,
-  name VARCHAR(255) NOT NULL UNIQUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+- **UserList** & **UserListBook**: Custom user collections
+  - User can create multiple lists (e.g., "Want to Listen", "Favorites")
+  - Books can be added with custom ordering
 
-CREATE INDEX idx_narrators_name ON narrators (name);
-```
+**Join Tables:**
 
-#### Series Table
-
-```sql
-CREATE TABLE series (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  asin VARCHAR(50) UNIQUE,
-  title VARCHAR(500) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_series_title ON series (title);
-```
-
-#### Categories Table
-
-```sql
-CREATE TABLE categories (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(255) NOT NULL,
-  parent_id UUID REFERENCES categories(id),
-  level INTEGER NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(name, parent_id)
-);
-
-CREATE INDEX idx_categories_name ON categories (name);
-CREATE INDEX idx_categories_parent ON categories (parent_id);
-```
-
-#### Join Tables
-
-```sql
--- Books to Authors (many-to-many)
-CREATE TABLE book_authors (
-  book_id UUID REFERENCES books(id) ON DELETE CASCADE,
-  author_id UUID REFERENCES authors(id) ON DELETE CASCADE,
-  PRIMARY KEY (book_id, author_id)
-);
-
--- Books to Narrators (many-to-many)
-CREATE TABLE book_narrators (
-  book_id UUID REFERENCES books(id) ON DELETE CASCADE,
-  narrator_id UUID REFERENCES narrators(id) ON DELETE CASCADE,
-  PRIMARY KEY (book_id, narrator_id)
-);
-
--- Books to Series (many-to-many with sequence)
-CREATE TABLE book_series (
-  book_id UUID REFERENCES books(id) ON DELETE CASCADE,
-  series_id UUID REFERENCES series(id) ON DELETE CASCADE,
-  sequence VARCHAR(50),
-  PRIMARY KEY (book_id, series_id)
-);
-
-CREATE INDEX idx_book_series_sequence ON book_series (series_id, sequence);
-
--- Books to Categories (many-to-many)
-CREATE TABLE book_categories (
-  book_id UUID REFERENCES books(id) ON DELETE CASCADE,
-  category_id UUID REFERENCES categories(id) ON DELETE CASCADE,
-  PRIMARY KEY (book_id, category_id)
-);
-```
-
-#### User Progress Table (Future)
-
-```sql
-CREATE TABLE user_progress (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  book_id UUID REFERENCES books(id) ON DELETE CASCADE,
-  position_seconds INTEGER DEFAULT 0,
-  completed BOOLEAN DEFAULT FALSE,
-  last_played TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(user_id, book_id)
-);
-
-CREATE INDEX idx_user_progress_user ON user_progress (user_id, last_played DESC);
-```
-
-#### User Lists Table (For iOS App - Future)
-
-```sql
--- User's custom lists ("Want to Listen", "Favorites", etc.)
-CREATE TABLE user_lists (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Books in user lists
-CREATE TABLE user_list_books (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  list_id UUID REFERENCES user_lists(id) ON DELETE CASCADE,
-  book_id UUID REFERENCES books(id) ON DELETE CASCADE,
-  added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  position INTEGER, -- For custom ordering
-  UNIQUE(list_id, book_id)
-);
-
-CREATE INDEX idx_user_lists_user ON user_lists (user_id);
-CREATE INDEX idx_user_list_books_list ON user_list_books (list_id, position);
-```
+- `BookAuthor`, `BookNarrator`, `BookSeries`, `BookCategory` handle many-to-many relationships
+- All use cascade deletes for data integrity
 
 ## Application Structure
 
@@ -335,54 +160,70 @@ CREATE INDEX idx_user_list_books_list ON user_list_books (list_id, position);
 
 ```
 book_vault/
-├── .ai/                        # AI context files
-│   ├── PROJECT_CONTEXT.md
-│   └── DEVELOPMENT_GOALS.md
 ├── .github/                    # GitHub Actions CI/CD
 │   └── workflows/
 ├── public/                     # Static assets
-├── src/
-│   ├── app/                    # Next.js 14 app directory
-│   │   ├── api/               # API routes
-│   │   │   ├── auth/
-│   │   │   ├── books/
-│   │   │   ├── search/
-│   │   │   └── stream/
-│   │   ├── browse/            # Browse pages
-│   │   │   ├── authors/
-│   │   │   ├── series/
-│   │   │   ├── narrators/
-│   │   │   └── categories/
-│   │   ├── book/              # Book detail page
-│   │   ├── search/            # Search page
-│   │   ├── login/             # Auth pages
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── components/            # React components
-│   │   ├── AudioPlayer/
-│   │   ├── BookCard/
-│   │   ├── BookGrid/
-│   │   ├── SearchBar/
-│   │   └── Navigation/
-│   ├── lib/                   # Core business logic
-│   │   ├── db/               # Database utilities
-│   │   ├── auth/             # Authentication
-│   │   ├── import/           # Libation import logic
-│   │   └── search/           # Search utilities
-│   ├── types/                 # TypeScript types
-│   └── utils/                 # Helper functions
+├── app/                        # Next.js 14 app directory
+│   ├── api/                   # API routes
+│   │   ├── auth/
+│   │   ├── audio/             # Audio streaming
+│   │   ├── books/
+│   │   ├── browse/
+│   │   ├── images/            # Image serving
+│   │   ├── library/           # User library management
+│   │   ├── progress/          # Playback progress
+│   │   ├── search/
+│   │   └── user/
+│   ├── auth/                  # Auth pages
+│   │   ├── login/
+│   │   └── register/
+│   ├── books/[id]/            # Book detail & playback
+│   │   ├── page.tsx
+│   │   └── play/
+│   ├── browse/                # Browse pages
+│   │   ├── authors/
+│   │   ├── series/
+│   │   ├── narrators/
+│   │   └── categories/
+│   ├── authors/[id]/
+│   ├── series/[id]/
+│   ├── narrators/[id]/
+│   ├── categories/[id]/
+│   ├── library/               # User library page
+│   ├── search/                # Search page
+│   ├── settings/              # User settings
+│   ├── layout.tsx
+│   └── page.tsx
+├── components/                # React components
+│   ├── AudioPlayer.tsx
+│   ├── BookCard.tsx
+│   ├── BookGrid.tsx
+│   ├── ChapterList.tsx
+│   ├── PlaybackClient.tsx
+│   ├── SearchBar.tsx
+│   ├── ThemeToggle.tsx
+│   └── ...
+├── lib/                       # Core business logic
+│   ├── auth.ts               # NextAuth configuration
+│   ├── db.ts                 # Prisma singleton
+│   ├── media.ts              # Media URL helpers
+│   ├── s3.ts                 # S3 streaming
+│   ├── types.ts              # TypeScript types
+│   └── audio-metadata.ts     # Chapter extraction
+├── prisma/                    # Database schema
+│   └── schema.prisma
 ├── scripts/                   # Utility scripts
-│   └── import-books.ts       # Import script
-├── tests/                     # Test files
+│   ├── import-libation.ts    # Import script
+│   ├── seed-test-user.ts
+│   └── create-user.ts
+├── docs/                      # Documentation
 ├── .env.example
 ├── .gitignore
-├── docker-compose.yml         # Local development
-├── Dockerfile
+├── docker-compose.yml         # PostgreSQL container
 ├── next.config.js
 ├── package.json
 ├── tsconfig.json
-├── README.md
-└── ARCHITECTURE.md
+└── README.md
 ```
 
 ## Key Components
@@ -499,37 +340,42 @@ export const authOptions = {
 
 ### 5. API Endpoints (Mobile-Ready)
 
-**Core API routes that serve both web and mobile:**
+**Core API routes (implemented):**
 
 ```typescript
 // API structure
 /api/
   auth/
-    [...nextauth]          # Authentication (web + mobile)
-    token/refresh          # JWT refresh endpoint
+    [...nextauth]          # NextAuth.js authentication
+    register/              # User registration
+  audio/[...path]/         # Stream audio files (range requests)
+  images/[...path]/        # Serve cover images
   books/
     GET    /               # List books with pagination
     GET    /:id            # Get single book
-    GET    /:id/stream     # Stream audio file (range requests)
+    GET    /:id/chapters   # Get book chapters
   search/
-    GET    /               # Search books
+    GET    /               # Full-text search
   browse/
-    authors/               # List authors
-    series/                # List series
-    narrators/             # List narrators
-    categories/            # List categories
+    GET    /authors        # List all authors
+    GET    /series         # List all series
+    GET    /narrators      # List all narrators
+    GET    /categories     # List all categories
+  authors/:id              # Author detail & books
+  series/:id               # Series detail & books
+  narrators/:id            # Narrator detail & books
+  categories/:id           # Category detail & books
+  library/
+    GET    /               # User's library (added books)
+    POST   /               # Add book to library
+    DELETE /:bookId        # Remove book from library
+    GET    /check          # Check if book in library
+    GET    /series/:seriesId  # Library books by series
+  progress/
+    GET    /               # Get user's progress (all or by bookId)
+    POST   /               # Update playback position
   user/
-    lists/                 # User's custom lists (for iOS)
-      GET    /             # Get all lists
-      POST   /             # Create new list
-      GET    /:id          # Get list with books
-      PUT    /:id          # Update list
-      DELETE /:id          # Delete list
-      POST   /:id/books    # Add book to list
-      DELETE /:id/books/:bookId  # Remove book from list
-    progress/              # Playback progress
-      GET    /             # Get user's progress
-      PUT    /:bookId      # Update progress for book
+    PUT    /password       # Change password
 ```
 
 ## AWS Deployment Architecture
@@ -658,8 +504,8 @@ export const authOptions = {
 
 2. **Testing**
    - Jest for unit tests
-   - Playwright for E2E tests
-   - Database migrations tested
+   - React Testing Library for component tests
+   - 184+ tests passing
 
 3. **CI/CD**
    - GitHub Actions
@@ -751,6 +597,6 @@ The architecture is designed with a future iOS app in mind:
 
 ---
 
-**Last Updated**: December 21, 2025  
-**Status**: Initial Architecture  
-**Version**: 1.0
+**Last Updated**: December 24, 2025
+**Status**: Production-ready with S3 streaming support
+**Version**: 2.0
