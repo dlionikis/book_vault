@@ -12,6 +12,12 @@
 
 **Book Vault** is a personal audiobook library web application for managing and streaming audiobooks purchased from Audible, processed through [Libation](https://github.com/rmcrackan/Libation).
 
+**Project Details**:
+
+- **Started**: December 21, 2025
+- **Owner**: Demetri
+- **Development Approach**: AI-First Development (documentation-first for continuity across sessions)
+
 ### Tech Stack
 
 | Layer         | Technology                   | Version   |
@@ -233,6 +239,35 @@ lib/
 
 ---
 
+## 3.5 DESIGN PRINCIPLES
+
+### Core Philosophy
+
+1. **Data Integrity** - Never modify source Libation files (read-only access)
+2. **API-First Design** - All features as API endpoints to support future iOS app
+3. **AI-First Development** - Clear documentation for continuity across sessions
+4. **Simplicity First** - Start with core functionality, add features incrementally
+5. **Performance Matters** - Fast load times and responsive interactions
+6. **Maintainability** - Clean, self-documenting code
+7. **User-Centric Design** - Intuitive and enjoyable, not just functional
+
+### Performance Targets
+
+- **Page Load**: < 2 seconds initial load
+- **Search**: < 500ms for results
+- **Audio Start**: < 1 second to playback
+- **Navigation**: Instant feel for UI interactions
+
+### Success Metrics
+
+- Can find any book in < 10 seconds
+- Can start listening in < 3 clicks
+- Series books properly ordered
+- Search returns relevant results
+- Audio plays without interruption
+
+---
+
 ## 4. REFS: Documentation Links
 
 ### Internal Documentation
@@ -247,12 +282,6 @@ lib/
 - [API Security](docs/API_SECURITY.md) - Authentication, endpoint protection, security audit
 - [Media Configuration](docs/media-configuration.md) - S3 vs local file setup
 
-**AI Agent Context** (`.ai/` folder):
-
-- [Project Context](/.ai/PROJECT_CONTEXT.md) - Problem statement, data structure
-- [Development Goals](/.ai/DEVELOPMENT_GOALS.md) - Phase-by-phase roadmap
-- [AI Instructions](/.ai/AI_INSTRUCTIONS.md) - Guidelines for AI collaboration
-
 ### External References
 
 - **Next.js 14**: https://nextjs.org/docs
@@ -260,6 +289,44 @@ lib/
 - **NextAuth.js**: https://next-auth.js.org/
 - **Tailwind CSS**: https://tailwindcss.com/docs
 - **Libation (source data)**: https://github.com/rmcrackan/Libation
+
+### Libation Metadata Structure
+
+Complete JSON structure reference:
+
+```json
+{
+  "asin": "string",
+  "title": "string",
+  "authors": [{"name": "string", "asin": "string"}],
+  "narrators": [{"name": "string", "asin": "string"}],
+  "series": [
+    {
+      "title": "string",
+      "sequence": "string",
+      "asin": "string",
+      "url": "string"
+    }
+  ],
+  "publisher_summary": "string (HTML content)",
+  "category_ladders": [
+    {
+      "root": "string",
+      "ladder": [{"id": "string", "name": "string"}]
+    }
+  ],
+  "runtime_length_min": number,
+  "release_date": "string",
+  "publisher": "string"
+}
+```
+
+**Key Constraints**:
+
+- `series.sequence` can be numeric ("1") or descriptive ("1.5", "Prequel")
+- `publisher_summary` contains HTML and must be sanitized
+- `category_ladders` creates hierarchical taxonomy (multiple paths per book)
+- Each book folder contains: `.metadata.json`, `.mp3`, `.jpg`, `.cue` (chapters), `Icon?` (macOS metadata - ignore)
 
 ---
 
@@ -320,6 +387,10 @@ AWS_S3_BUCKET="book-vault-media"
 AWS_REGION="us-east-1"
 AWS_ACCESS_KEY_ID="..."
 AWS_SECRET_ACCESS_KEY="..."
+
+# Data Strategy Decision (TBD)
+# Current: Local filesystem for development
+# Future: Evaluate S3 sync vs. direct access based on cost/accessibility tradeoff
 ```
 
 ### AWS Deployment Readiness
@@ -411,16 +482,50 @@ When starting a new session:
 2. **Media paths**: Development uses local files, production will use S3
 3. **Server vs Client**: Most pages are Server Components - only use `'use client'` for interactivity
 4. **Dark mode**: Always test both themes (`dark:` Tailwind classes)
+   - Test theme persistence across navigation
+   - Verify system preference detection
+   - Check contrast for readability
+   - Test theme toggle functionality
 5. **Chapter extraction**: Lazy-loaded on first playback (not during import)
 6. **Authentication**: Protected routes use middleware (`middleware.ts`)
+7. **File formats**: Each book has `.metadata.json`, `.mp3`, `.jpg`, `.cue` (chapters), `Icon?` (ignore)
+8. **Data integrity**: NEVER modify files in Libation directory - read-only access only
+
+### Common Pitfalls to Avoid
+
+- **Don't hard-code paths** - Use environment variables
+- **Don't commit secrets** - Use .env files (gitignored)
+- **Don't skip migrations** - Always use Prisma migration system
+- **Don't modify Libation files** - Read-only constraint (see Design Principles)
+- **Don't forget database indexes** - Performance matters
+
+### Debugging Tips
+
+**Import Issues**:
+
+- Check file permissions on Libation directory
+- Validate JSON format of metadata files
+- Check for special characters in filenames
+
+**Database Issues**:
+
+- Verify connection string in .env
+- Check migration status: `npx prisma migrate status`
+- Review indexes in Prisma schema
+
+**Authentication Issues**:
+
+- Verify NEXTAUTH_SECRET is set in .env
+- Check session configuration in [lib/auth.ts](lib/auth.ts)
+- Review cookie settings (secure flag, domain)
 
 ---
 
 ## Questions or Issues?
 
 1. Check `docs/` folder for detailed guides
-2. Review `.ai/` folder for project context
-3. Search existing tests in `**/*.test.ts` for examples
-4. Check `docs/STATUS.md` for known issues
+2. Search existing tests in `**/*.test.ts` for examples
+3. Check [docs/STATUS.md](docs/STATUS.md) for known issues
+4. Review [docs/development-roadmap.md](docs/development-roadmap.md) for priorities
 
 **Project Motto**: "Keep it simple, make it work, test thoroughly"

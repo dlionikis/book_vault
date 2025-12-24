@@ -32,27 +32,15 @@ book_vault/
    - Security considerations
    - Performance optimization strategies
 
-3. **.ai/PROJECT_CONTEXT.md** - For AI agents:
-   - Problem statement
-   - Core requirements
-   - Data structure analysis
-   - Technical considerations
-   - Current state tracking
+3. **CLAUDE.md** - Quick onboarding reference for Claude Code sessions:
+   - Project overview and tech stack
+   - Common commands and workflow
+   - Coding patterns and conventions
+   - Design principles and performance targets
+   - Database schema and environment variables
+   - Common gotchas and debugging tips
 
-4. **.ai/DEVELOPMENT_GOALS.md** - Development roadmap:
-   - 5 phases from Foundation to Enhancement
-   - Clear success criteria
-   - Design principles
-   - Open questions to resolve
-
-5. **.ai/AI_INSTRUCTIONS.md** - AI agent playbook:
-   - First steps guidance
-   - Common tasks
-   - Best practices
-   - Debugging tips
-   - Context maintenance
-
-6. **NEXT_STEPS.md** - Immediate action items:
+4. **NEXT_STEPS.md** - Immediate action items:
    - Next.js initialization
    - Database setup
    - Import script skeleton
@@ -106,8 +94,8 @@ This project is optimized for AI-assisted development:
 
 Start by reading:
 
-1. `.ai/PROJECT_CONTEXT.md` - What we're building and why
-2. `.ai/AI_INSTRUCTIONS.md` - How to work on this project
+1. `CLAUDE.md` - Quick onboarding reference for Claude Code sessions
+2. `docs/STATUS.md` - Current project status and next steps
 3. `ARCHITECTURE.md` - Technical decisions and design
 4. `NEXT_STEPS.md` - What to do next
 
@@ -225,9 +213,9 @@ All answers are in the documentation:
 
 For AI agents:
 
-- **Project context?** → [.ai/PROJECT_CONTEXT.md](.ai/PROJECT_CONTEXT.md)
-- **Development goals?** → [.ai/DEVELOPMENT_GOALS.md](.ai/DEVELOPMENT_GOALS.md)
-- **How to work on this?** → [.ai/AI_INSTRUCTIONS.md](.ai/AI_INSTRUCTIONS.md)
+- **Project context?** → [CLAUDE.md](../CLAUDE.md)
+- **Development goals?** → [development-roadmap.md](development-roadmap.md)
+- **Current status?** → [STATUS.md](STATUS.md)
 
 ## 🎉 You're All Set!
 
