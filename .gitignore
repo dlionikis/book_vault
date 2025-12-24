@@ -92,6 +92,7 @@ out/
 .nuxt
 .cache
 .parcel-cache
+*.tsbuildinfo
 
 # Database
 *.db
