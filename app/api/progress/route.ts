@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 // GET /api/progress?bookId=xxx - Get user's progress for a book
 export async function GET(request: NextRequest) {
@@ -48,43 +49,103 @@ export async function GET(request: NextRequest) {
 
 // POST /api/progress - Update user's progress (save position)
 export async function POST(request: NextRequest) {
+  // Support both session-based (web) and Bearer token (mobile) auth
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  const mobileUser = await getAuthUserFromRequest(request);
+
+  const user = session?.user || mobileUser;
+
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Rate limiting check
+  if (!checkRateLimit(user.id, 100, 60000)) {
+    return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+  }
+
   try {
+    const startTime = Date.now();
     const body = await request.json();
-    const { bookId, positionSeconds } = body;
+    const { bookId, positionSeconds, timestamp } = body;
 
     if (!bookId || positionSeconds === undefined) {
       return NextResponse.json({ error: 'Book ID and position are required' }, { status: 400 });
     }
 
-    // Create or update progress
-    const progress = await prisma.userProgress.upsert({
-      where: {
-        userId_bookId: {
-          userId: session.user.id,
-          bookId: bookId,
+    // Use provided timestamp or current time
+    const updateTime = timestamp ? new Date(timestamp) : new Date();
+
+    let updated = true;
+
+    // If timestamp provided, check for conflicts
+    if (timestamp) {
+      const existing = await prisma.userProgress.findUnique({
+        where: {
+          userId_bookId: {
+            userId: user.id,
+            bookId: bookId,
+          },
         },
-      },
-      update: {
-        positionSeconds: positionSeconds,
-        lastPlayed: new Date(),
-      },
-      create: {
-        userId: session.user.id,
-        bookId: bookId,
-        positionSeconds: positionSeconds,
-        completed: false,
-      },
-    });
+      });
+
+      // Only update if client timestamp is newer or no existing record
+      if (existing && existing.lastPlayed > updateTime) {
+        updated = false;
+      }
+    }
+
+    let progress;
+
+    if (updated) {
+      // Create or update progress
+      progress = await prisma.userProgress.upsert({
+        where: {
+          userId_bookId: {
+            userId: user.id,
+            bookId: bookId,
+          },
+        },
+        update: {
+          positionSeconds: positionSeconds,
+          lastPlayed: updateTime,
+        },
+        create: {
+          userId: user.id,
+          bookId: bookId,
+          positionSeconds: positionSeconds,
+          completed: false,
+          lastPlayed: updateTime,
+        },
+      });
+    } else {
+      // Return existing progress (conflict case)
+      progress = await prisma.userProgress.findUnique({
+        where: {
+          userId_bookId: {
+            userId: user.id,
+            bookId: bookId,
+          },
+        },
+      });
+    }
+
+    const duration = Date.now() - startTime;
+
+    // Performance monitoring: warn on slow queries
+    if (duration > 100) {
+      console.warn('Slow progress query', {
+        userId: user.id,
+        bookId,
+        durationMs: duration,
+      });
+    }
 
     return NextResponse.json({
-      positionSeconds: progress.positionSeconds,
-      completed: progress.completed,
-      lastPlayed: progress.lastPlayed.toISOString(),
+      positionSeconds: progress!.positionSeconds,
+      completed: progress!.completed,
+      lastPlayed: progress!.lastPlayed.toISOString(),
+      updated,
     });
   } catch (error) {
     console.error('Error updating progress:', error);
