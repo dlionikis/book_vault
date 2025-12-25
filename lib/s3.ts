@@ -6,6 +6,7 @@
  */
 
 import { S3Client, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Readable } from 'stream';
 
 const S3_BUCKET = process.env.AWS_S3_BUCKET;
@@ -183,4 +184,23 @@ export async function s3ObjectExists(key: string): Promise<boolean> {
     }
     throw error;
   }
+}
+
+/**
+ * Generate a pre-signed URL for downloading an S3 object
+ * URL is valid for specified duration (default 1 hour)
+ *
+ * @param key - S3 object key (file path)
+ * @param expiresIn - URL validity in seconds (default: 3600 = 1 hour)
+ * @returns Pre-signed URL string
+ */
+export async function generatePresignedUrl(key: string, expiresIn: number = 3600): Promise<string> {
+  const client = getS3Client();
+  const command = new GetObjectCommand({
+    Bucket: S3_BUCKET,
+    Key: key,
+  });
+
+  const url = await getSignedUrl(client, command, { expiresIn });
+  return url;
 }

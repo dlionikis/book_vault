@@ -20,6 +20,7 @@ model User {
   progress      UserProgress[]
   lists         UserList[]
   refreshTokens RefreshToken[]
+  downloads     UserDownload[]
 
   @@map("users")
 }
@@ -46,6 +47,7 @@ model Book {
   chapters          Chapter[]
   progress          UserProgress[]
   listBooks         UserListBook[]
+  downloads         UserDownload[]
 
   @@index([title])
   @@map("books")
@@ -228,4 +230,19 @@ model RefreshToken {
   @@index([userId])
   @@index([token])
   @@map("refresh_tokens")
+}
+
+model UserDownload {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  bookId       String   @map("book_id")
+  downloadedAt DateTime @default(now()) @map("downloaded_at")
+  deviceId     String?  @map("device_id")
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([userId, downloadedAt(sort: Desc)])
+  @@index([bookId])
+  @@map("user_downloads")
 }
