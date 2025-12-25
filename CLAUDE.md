@@ -244,7 +244,7 @@ lib/
 ### Core Philosophy
 
 1. **Data Integrity** - Never modify source Libation files (read-only access)
-2. **API-First Design** - All features as API endpoints to support future iOS app
+2. **API-First Design** - All features as RESTful JSON endpoints (backend is mobile-ready)
 3. **AI-First Development** - Clear documentation for continuity across sessions
 4. **Simplicity First** - Start with core functionality, add features incrementally
 5. **Performance Matters** - Fast load times and responsive interactions
@@ -277,6 +277,7 @@ lib/
 - [Architecture & Tech Stack](docs/architecture.md) - Detailed system design
 - [Project Status](docs/STATUS.md) - Current features, recent PRs, todo list
 - [Development Roadmap](docs/development-roadmap.md) - Future plans, prioritization
+- [iOS Mobile App Plan](docs/mobile-ios-plan.md) - Native iOS app implementation (post-deployment)
 - [Testing Guide](docs/testing.md) - Test patterns and examples
 - [Security](docs/security.md) - Code quality tools, linting, git hooks
 - [API Security](docs/API_SECURITY.md) - Authentication, endpoint protection, security audit
@@ -463,16 +464,32 @@ When starting a new session:
 
 ---
 
-## 7. Deployment Notes (Future)
+## 7. Deployment & Mobile Plans
 
-**AWS Infrastructure** (planned):
+### AWS Deployment (Next Priority)
+
+**Infrastructure** (ready to deploy):
 
 - **Hosting**: ECS or Lambda
 - **Database**: RDS PostgreSQL
-- **Storage**: S3 (audio files) + CloudFront (CDN)
-- **Auth**: JWT tokens for mobile compatibility
+- **Storage**: S3 (audio files + images) + CloudFront (CDN)
+- **Auth**: JWT tokens (already mobile-compatible)
 
-**Pre-deployment checklist**: See "Current Limitations" section above.
+**Backend is mobile-ready**: See "AWS Deployment Readiness" section above.
+
+### iOS Mobile App (Post-Deployment)
+
+**Technology**: Native Swift + SwiftUI
+
+**Status**: Planning complete, implementation post-deployment
+
+**Full plan**: See [docs/mobile-ios-plan.md](docs/mobile-ios-plan.md) for:
+
+- 8 phased implementation steps
+- Technical architecture
+- API integration patterns
+- Testing strategy
+- App Store deployment process
 
 ---
 

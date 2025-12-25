@@ -190,16 +190,18 @@ Add filters to search:
 - Published date range
 - Duration range
 
-### 4. Mobile Optimization
+### 4. Mobile Web Optimization
 
 - Test on mobile devices
 - Improve touch targets
 - Add mobile-specific layouts
-- Test audio player on iOS/Android
+- Test audio player on iOS/Android browsers
 - **Media Session API** ✅ - Lock screen controls and notification controls (completed)
 - Optimize mobile browser performance
 - Improve responsive layouts for tablet devices
 - Test gesture navigation
+
+**Note**: Native iOS app (post-deployment) will provide superior mobile experience - see [mobile-ios-plan.md](mobile-ios-plan.md)
 
 ### 5. Deployment Preparation
 
@@ -241,25 +243,18 @@ Add filters to search:
 
 ### 2. iOS App Development
 
-Once API is stable:
+**Status**: Planning complete, implementation post-deployment
 
-**Core Features**:
+**Technology**: Native Swift + SwiftUI (chosen for best iOS integration)
 
-- SwiftUI app architecture
-- Shared authentication with web app
-- Offline download support for audiobooks
-- True background audio playback (iOS background modes)
-- CarPlay integration for hands-free listening
+**Implementation Plan**: See [mobile-ios-plan.md](mobile-ios-plan.md) for complete details:
 
-**PWA-Like Features** (better suited for native app):
+- 8 phased implementation steps with clear acceptance criteria
+- Auth & Browsing → Audio Playback → Background Audio → Progress Sync → Chapters → Search → Lists → Offline
+- Technical architecture (services, API client, data models)
+- Testing strategy and App Store deployment process
 
-- Offline-first architecture with local storage
-- Service Worker equivalent (background sync)
-- Push notifications for new releases
-- "Add to Home Screen" equivalent (App Store install)
-- Native performance and UI
-- Full offline playback without streaming
-- Better battery optimization than web PWA
+**Backend is mobile-ready**: JWT auth, RESTful JSON API, S3 streaming with range requests
 
 ## Current API Endpoints ✅
 

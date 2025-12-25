@@ -512,91 +512,57 @@ export const authOptions = {
    - Automated tests on PR
    - Deploy on merge to main
 
-## Mobile App Considerations (Future iOS App)
+## Mobile App Support
 
-### API-First Design
+### Backend is Mobile-Ready ✅
 
-The architecture is designed with a future iOS app in mind:
+The backend architecture is designed API-first for future mobile clients:
 
 1. **RESTful JSON API**: All endpoints return JSON, consumable by any client
-2. **JWT Authentication**: Mobile-friendly token-based auth
-3. **Range Request Support**: Audio streaming works on iOS
-4. **CORS Configuration**: Allow mobile app origins
-5. **Versioned API**: `/api/v1/` for future compatibility
+2. **JWT Authentication**: Mobile-friendly token-based auth (already implemented)
+3. **Range Request Support**: HTTP range requests for iOS AVPlayer audio streaming
+4. **S3 Streaming**: Images and audio served from S3 with proper headers
+5. **CORS Configuration**: Ready for mobile app origins
+6. **Pagination**: All list endpoints support efficient pagination
+7. **Progress Sync**: User progress tracking with automatic position saving
 
-### iOS App Features (Planned)
+### iOS App Plan
 
-**Browsing**
+**Technology**: Native Swift + SwiftUI
 
-- Browse books by author, series, narrator, category
-- Search functionality
-- View book details with cover art
+**Status**: Planning complete, implementation post-deployment
 
-**User Lists**
+**Full implementation details**: See [mobile-ios-plan.md](mobile-ios-plan.md) for:
 
-- Create custom lists ("Want to Listen", "Favorites", etc.)
-- Add/remove books from lists
-- Reorder books within lists
+- 8 phased implementation steps (Auth → Playback → Offline)
+- Technical architecture and service patterns
+- API integration examples
+- Background audio and lock screen controls
+- Testing strategy and App Store deployment
 
-**Audio Playback**
+**Key iOS Features** (from plan):
 
-- Stream audio from server
-- Playback controls (play, pause, seek, speed)
-- Remember playback position
-- Background audio support
-- AirPlay support
-
-### iOS Implementation Notes
-
-**Technology Options:**
-
-- **Native Swift + SwiftUI**: Best performance and iOS integration
-- **React Native**: Reuse TypeScript knowledge, faster development
-
-**Audio Streaming:**
-
-- Use AVPlayer with remote URL
-- Implement range request support
-- Handle background audio properly
-- Support interruptions (calls, etc.)
-
-**Offline Support (Future):**
-
-- Download books for offline listening
-- Sync playback position when online
-- Cache cover images
-
-**API Client:**
-
-- Generate TypeScript types from backend
-- Use OpenAPI/Swagger for API documentation
-- Shared type definitions ensure consistency
-
-### Backend Requirements for Mobile
-
-1. **API Endpoints**: All functionality exposed via REST API
-2. **Authentication**: JWT tokens with refresh mechanism
-3. **File Streaming**: Support HTTP range requests for seeking
-4. **User Lists**: Database schema and endpoints for custom lists
-5. **Progress Sync**: Track and sync playback position
-6. **Pagination**: Efficient data loading for large collections
-7. **CORS**: Properly configured for mobile requests
+- Native audio playback with AVPlayer
+- Background audio and lock screen controls
+- Chapter navigation with real-time highlighting
+- Progress sync with backend
+- Search and browse (authors, series, narrators, categories)
+- Custom user lists (Want to Listen, Favorites)
+- Offline downloads (optional phase)
+- CarPlay integration (future)
 
 ## Next Steps
 
-1. Set up Next.js project with API-first architecture
-2. Configure TypeScript and ESLint
-3. Set up PostgreSQL locally
-4. Create database schema (including user lists tables)
-5. Build import script
-6. Develop core API endpoints (mobile-ready)
-7. Build frontend components
-8. Implement JWT-based authentication
-9. Deploy to AWS
-10. (Future) Develop iOS app
+1. **Deploy to AWS** (next priority)
+   - See "AWS Deployment Architecture" section above
+   - Backend is production-ready with S3 streaming support
+
+2. **iOS App Development** (post-deployment)
+   - See [mobile-ios-plan.md](mobile-ios-plan.md) for full plan
+   - Backend API is already mobile-ready
 
 ---
 
 **Last Updated**: December 24, 2025
-**Status**: Production-ready with S3 streaming support
-**Version**: 2.0
+**Status**: Production-ready with S3 streaming support, mobile-ready API
+**Version**: 2.1

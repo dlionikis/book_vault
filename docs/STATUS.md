@@ -164,11 +164,11 @@ All major functionality is working as expected. Minor improvements and feature a
     - Caching strategies
     - Database query optimization
 
-11. **Mobile App** (Future)
-    - iOS app using existing API
-    - Offline playback
-    - Background audio
-    - CarPlay integration
+11. **iOS Mobile App** (Post-Deployment)
+    - Native Swift + SwiftUI app
+    - Full plan in [mobile-ios-plan.md](mobile-ios-plan.md)
+    - Backend API is already mobile-ready
+    - 8 phased implementation (Auth → Playback → Offline)
 
 ## Technical Debt / Improvements
 
