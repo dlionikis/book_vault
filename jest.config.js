@@ -27,6 +27,9 @@ const customJestConfig = {
     '/.next/',
     '__tests__/api/', // Skip API tests for now
   ],
+  transformIgnorePatterns: [
+    'node_modules/(?!(jose)/)', // Transform jose package
+  ],
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

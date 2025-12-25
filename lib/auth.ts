@@ -2,6 +2,8 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { NextRequest } from 'next/server';
+import { verifyAccessToken } from '@/lib/jwt';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -60,3 +62,39 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
+
+/**
+ * Get authenticated user from Bearer token in request headers
+ * This supports mobile clients using JWT tokens
+ * @param request - Next.js request object
+ * @returns User object or null if not authenticated
+ */
+export async function getAuthUserFromRequest(
+  request: NextRequest
+): Promise<{ id: string; email: string } | null> {
+  try {
+    // Check for Authorization header with Bearer token
+    const authHeader = request.headers.get('authorization');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return null;
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    // Verify and decode token
+    const payload = await verifyAccessToken(token);
+
+    if (!payload) {
+      return null;
+    }
+
+    return {
+      id: payload.userId,
+      email: payload.email,
+    };
+  } catch (error) {
+    console.error('Failed to get auth user from request:', error);
+    return null;
+  }
+}

@@ -16,9 +16,10 @@ model User {
   passwordHash  String         @map("password_hash")
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
-  
+
   progress      UserProgress[]
   lists         UserList[]
+  refreshTokens RefreshToken[]
 
   @@map("users")
 }
@@ -213,4 +214,18 @@ model UserListBook {
   @@unique([listId, bookId])
   @@index([listId, position])
   @@map("user_list_books")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
 }
