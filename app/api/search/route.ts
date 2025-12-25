@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
+import { parseBookFields, parsePagination } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -12,193 +13,181 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q') || '';
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const skip = (page - 1) * limit;
+    const fieldsParam = searchParams.get('fields');
+    const { page, limit, skip } = parsePagination(
+      searchParams.get('page'),
+      searchParams.get('limit')
+    );
 
     if (!query) {
       return NextResponse.json({ error: 'Search query is required' }, { status: 400 });
     }
 
+    // Parse field filtering
+    const select = parseBookFields(fieldsParam);
+
+    // Build where clause for search
+    const whereClause = {
+      OR: [
+        {
+          title: {
+            contains: query,
+            mode: 'insensitive' as const,
+          },
+        },
+        {
+          description: {
+            contains: query,
+            mode: 'insensitive' as const,
+          },
+        },
+        {
+          publisherSummary: {
+            contains: query,
+            mode: 'insensitive' as const,
+          },
+        },
+        {
+          authors: {
+            some: {
+              author: {
+                name: {
+                  contains: query,
+                  mode: 'insensitive' as const,
+                },
+              },
+            },
+          },
+        },
+        {
+          narrators: {
+            some: {
+              narrator: {
+                name: {
+                  contains: query,
+                  mode: 'insensitive' as const,
+                },
+              },
+            },
+          },
+        },
+        {
+          series: {
+            some: {
+              series: {
+                title: {
+                  contains: query,
+                  mode: 'insensitive' as const,
+                },
+              },
+            },
+          },
+        },
+      ],
+    };
+
     // Search across multiple fields
     const [books, total] = await Promise.all([
-      prisma.book.findMany({
-        where: {
-          OR: [
-            {
-              title: {
-                contains: query,
-                mode: 'insensitive',
-              },
+      select
+        ? prisma.book.findMany({
+            where: whereClause,
+            skip,
+            take: limit,
+            select,
+            orderBy: {
+              title: 'asc',
             },
-            {
-              description: {
-                contains: query,
-                mode: 'insensitive',
-              },
-            },
-            {
-              publisherSummary: {
-                contains: query,
-                mode: 'insensitive',
-              },
-            },
-            {
+          })
+        : prisma.book.findMany({
+            where: whereClause,
+            skip,
+            take: limit,
+            include: {
               authors: {
-                some: {
-                  author: {
-                    name: {
-                      contains: query,
-                      mode: 'insensitive',
-                    },
-                  },
+                include: {
+                  author: true,
                 },
               },
-            },
-            {
               narrators: {
-                some: {
-                  narrator: {
-                    name: {
-                      contains: query,
-                      mode: 'insensitive',
-                    },
-                  },
+                include: {
+                  narrator: true,
                 },
               },
-            },
-            {
               series: {
-                some: {
-                  series: {
-                    title: {
-                      contains: query,
-                      mode: 'insensitive',
-                    },
-                  },
+                include: {
+                  series: true,
                 },
               },
             },
-          ],
-        },
-        skip,
-        take: limit,
-        include: {
-          authors: {
-            include: {
-              author: true,
+            orderBy: {
+              title: 'asc',
             },
-          },
-          narrators: {
-            include: {
-              narrator: true,
-            },
-          },
-          series: {
-            include: {
-              series: true,
-            },
-          },
-        },
-        orderBy: {
-          title: 'asc',
-        },
-      }),
+          }),
       prisma.book.count({
-        where: {
-          OR: [
-            {
-              title: {
-                contains: query,
-                mode: 'insensitive',
-              },
-            },
-            {
-              description: {
-                contains: query,
-                mode: 'insensitive',
-              },
-            },
-            {
-              publisherSummary: {
-                contains: query,
-                mode: 'insensitive',
-              },
-            },
-            {
-              authors: {
-                some: {
-                  author: {
-                    name: {
-                      contains: query,
-                      mode: 'insensitive',
-                    },
-                  },
-                },
-              },
-            },
-            {
-              narrators: {
-                some: {
-                  narrator: {
-                    name: {
-                      contains: query,
-                      mode: 'insensitive',
-                    },
-                  },
-                },
-              },
-            },
-            {
-              series: {
-                some: {
-                  series: {
-                    title: {
-                      contains: query,
-                      mode: 'insensitive',
-                    },
-                  },
-                },
-              },
-            },
-          ],
-        },
+        where: whereClause,
       }),
     ]);
 
     // Transform the response
-    const transformedBooks = books.map((book) => ({
-      id: book.id,
-      asin: book.asin,
-      title: book.title,
-      publisherSummary: book.publisherSummary,
-      runtimeMinutes: book.runtimeMinutes,
-      releaseDate: book.releaseDate,
-      publisher: book.publisher,
-      coverUrl: getCoverUrl(book.coverUrl),
-      audioUrl: getAudioUrl(book.audioUrl),
-      authors: book.authors.map((ba) => ({
-        id: ba.author.id,
-        name: ba.author.name,
-        asin: ba.author.asin,
-      })),
-      narrators: book.narrators.map((bn) => ({
-        id: bn.narrator.id,
-        name: bn.narrator.name,
-        asin: bn.narrator.asin,
-      })),
-      series: book.series.map((bs) => ({
-        id: bs.series.id,
-        title: bs.series.title,
-        asin: bs.series.asin,
-        sequence: bs.sequence,
-      })),
-      createdAt: book.createdAt,
-    }));
+    const transformedBooks = select
+      ? // If using field filtering, return books as-is (with selected fields only)
+        books.map((book) => {
+          const result: Record<string, unknown> = {};
+          for (const [key, value] of Object.entries(book)) {
+            if (key === 'coverUrl') {
+              result[key] = getCoverUrl(value as string | null);
+            } else if (key === 'audioUrl') {
+              result[key] = getAudioUrl(value as string | null);
+            } else {
+              result[key] = value;
+            }
+          }
+          return result;
+        })
+      : // Otherwise, return full transformed books
+        books.map((book) => {
+          // Type assertion for the full book with includes
+          const fullBook = book as typeof book & {
+            authors: Array<{ author: { id: string; name: string; asin: string | null } }>;
+            narrators: Array<{ narrator: { id: string; name: string; asin: string | null } }>;
+            series: Array<{
+              series: { id: string; title: string; asin: string | null };
+              sequence: string | null;
+            }>;
+          };
+
+          return {
+            id: fullBook.id,
+            asin: fullBook.asin,
+            title: fullBook.title,
+            publisherSummary: fullBook.publisherSummary,
+            runtimeMinutes: fullBook.runtimeMinutes,
+            releaseDate: fullBook.releaseDate,
+            publisher: fullBook.publisher,
+            coverUrl: getCoverUrl(fullBook.coverUrl),
+            audioUrl: getAudioUrl(fullBook.audioUrl),
+            authors: fullBook.authors.map((ba) => ({
+              id: ba.author.id,
+              name: ba.author.name,
+              asin: ba.author.asin,
+            })),
+            narrators: fullBook.narrators.map((bn) => ({
+              id: bn.narrator.id,
+              name: bn.narrator.name,
+              asin: bn.narrator.asin,
+            })),
+            series: fullBook.series.map((bs) => ({
+              id: bs.series.id,
+              title: bs.series.title,
+              asin: bs.series.asin,
+              sequence: bs.sequence,
+            })),
+            createdAt: fullBook.createdAt,
+          };
+        });
 
     return NextResponse.json({
-      query,
-      books: transformedBooks,
+      results: transformedBooks,
       pagination: {
         page,
         limit,

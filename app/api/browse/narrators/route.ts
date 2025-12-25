@@ -1,39 +1,56 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { parsePagination } from '@/lib/api-utils';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const narrators = await prisma.narrator.findMany({
-      include: {
-        books: {
-          include: {
-            book: true,
+    const searchParams = request.nextUrl.searchParams;
+    const { page, limit, skip } = parsePagination(
+      searchParams.get('page'),
+      searchParams.get('limit')
+    );
+
+    const [narrators, total] = await Promise.all([
+      prisma.narrator.findMany({
+        skip,
+        take: limit,
+        include: {
+          _count: {
+            select: {
+              books: true,
+            },
           },
         },
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
+        orderBy: {
+          name: 'asc',
+        },
+      }),
+      prisma.narrator.count(),
+    ]);
 
     // Transform to include book count
     const transformedNarrators = narrators.map((narrator) => ({
       id: narrator.id,
       name: narrator.name,
       asin: narrator.asin,
-      bookCount: narrator.books.length,
+      bookCount: narrator._count.books,
     }));
 
     return NextResponse.json({
-      narrators: transformedNarrators,
-      total: narrators.length,
+      results: transformedNarrators,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     console.error('Error fetching narrators:', error);
