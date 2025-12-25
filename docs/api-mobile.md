@@ -13,6 +13,7 @@ This document provides comprehensive API documentation for mobile clients (iOS a
 3. [Audio Streaming](#audio-streaming)
 4. [Chapter Navigation](#chapter-navigation)
 5. [Search & Browse](#search--browse)
+6. [Library & Lists Sync](#library--lists-sync)
 
 ---
 
@@ -1037,6 +1038,465 @@ class BrowseViewModel: ObservableObject {
 
 ---
 
+## Library & Lists Sync
+
+### Overview
+
+Mobile clients can manage user lists and library with cross-device sync using polling and last-write-wins conflict resolution.
+
+### Endpoints
+
+#### GET /api/library/lists
+
+Fetch all user lists with book counts.
+
+**Request:**
+
+```
+GET /api/library/lists
+Authorization: Bearer <token>
+```
+
+**Response (200):**
+
+```json
+{
+  "lists": [
+    {
+      "id": "list-uuid-1",
+      "name": "Favorites",
+      "description": "My favorite audiobooks",
+      "bookCount": 12,
+      "createdAt": "2025-12-20T10:00:00.000Z",
+      "updatedAt": "2025-12-24T15:30:00.000Z"
+    },
+    {
+      "id": "list-uuid-2",
+      "name": "To Read",
+      "description": null,
+      "bookCount": 25,
+      "createdAt": "2025-12-21T08:00:00.000Z",
+      "updatedAt": "2025-12-23T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Errors:**
+
+- `401`: Unauthorized
+
+---
+
+#### POST /api/library/lists
+
+Create a new list.
+
+**Request:**
+
+```json
+{
+  "name": "Favorites",
+  "description": "My favorite audiobooks" // Optional
+}
+```
+
+**Response (201):**
+
+```json
+{
+  "id": "list-uuid",
+  "name": "Favorites",
+  "description": "My favorite audiobooks",
+  "bookCount": 0,
+  "createdAt": "2025-12-25T10:00:00.000Z",
+  "updatedAt": "2025-12-25T10:00:00.000Z"
+}
+```
+
+**Errors:**
+
+- `400`: List name is required
+- `401`: Unauthorized
+- `500`: Server error
+
+---
+
+#### PUT /api/library/lists/[id]
+
+Update list metadata (name and/or description).
+
+**Request:**
+
+```json
+{
+  "name": "My Favorites", // Optional
+  "description": "Updated description" // Optional
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "id": "list-uuid",
+  "name": "My Favorites",
+  "description": "Updated description",
+  "bookCount": 12,
+  "createdAt": "2025-12-20T10:00:00.000Z",
+  "updatedAt": "2025-12-25T10:00:00.000Z"
+}
+```
+
+**Errors:**
+
+- `401`: Unauthorized
+- `403`: Not your list
+- `404`: List not found
+- `500`: Server error
+
+---
+
+#### DELETE /api/library/lists/[id]
+
+Delete a list (cascade deletes all books in list).
+
+**Request:**
+
+```
+DELETE /api/library/lists/<list-id>
+Authorization: Bearer <token>
+```
+
+**Response (200):**
+
+```json
+{
+  "success": true
+}
+```
+
+**Errors:**
+
+- `401`: Unauthorized
+- `403`: Not your list
+- `404`: List not found
+- `500`: Server error
+
+---
+
+#### PUT /api/library/lists/[id]/reorder
+
+Reorder books in a list (drag-to-reorder).
+
+**Request:**
+
+```json
+{
+  "bookIds": ["book-uuid-3", "book-uuid-1", "book-uuid-2"]
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "updated": 3
+}
+```
+
+**Errors:**
+
+- `400`: Book IDs array required
+- `401`: Unauthorized
+- `403`: Not your list
+- `404`: List not found
+- `500`: Server error
+
+---
+
+#### POST /api/library/lists/[id]/books
+
+Add a book to a list.
+
+**Request:**
+
+```json
+{
+  "bookId": "book-uuid"
+}
+```
+
+**Response (201):**
+
+```json
+{
+  "success": true
+}
+```
+
+**Notes:**
+
+- Uses upsert to handle duplicates gracefully
+- If book already in list, returns success without error
+
+**Errors:**
+
+- `400`: Book ID is required
+- `401`: Unauthorized
+- `403`: Not your list
+- `404`: List not found or book not found
+- `500`: Server error
+
+---
+
+#### DELETE /api/library/lists/[id]/books?bookId=xxx
+
+Remove a book from a list.
+
+**Request:**
+
+```
+DELETE /api/library/lists/<list-id>/books?bookId=<book-uuid>
+Authorization: Bearer <token>
+```
+
+**Response (200):**
+
+```json
+{
+  "success": true
+}
+```
+
+**Errors:**
+
+- `400`: Book ID is required
+- `401`: Unauthorized
+- `403`: Not your list
+- `404`: List not found
+- `500`: Server error
+
+---
+
+### Conflict Resolution Strategy
+
+**List Metadata (name, description):**
+
+- **Strategy**: Last-write-wins based on `updatedAt` timestamp
+- **How it works**:
+  1. Client fetches lists and stores `updatedAt` timestamp
+  2. Client makes local changes
+  3. Client pushes changes immediately if online
+  4. On next sync, client compares local `updatedAt` with server `updatedAt`
+  5. Newer timestamp wins (server overwrites client or vice versa)
+
+**List Contents (books added/removed):**
+
+- **Strategy**: Merge changes (no conflicts)
+- **How it works**:
+  1. Each add/remove operation is independent
+  2. Adding same book twice = no-op (upsert handles)
+  3. Removing same book twice = no-op (delete handles)
+  4. No conflict resolution needed (operations are idempotent)
+
+**Book Order (position):**
+
+- **Strategy**: Last-write-wins (entire list reordered atomically)
+- **How it works**:
+  1. Client sends complete `bookIds` array in desired order
+  2. Server updates all positions in single transaction
+  3. Last reorder request wins if multiple clients reorder simultaneously
+
+---
+
+### Sync Strategy
+
+**Recommended polling interval:**
+
+- **When app active**: Poll every 30 seconds
+- **On app launch**: Fetch immediately
+- **Push local changes**: Immediately when online (don't wait for poll)
+
+**iOS sync flow example:**
+
+1. **App Launch:**
+   - Fetch all lists: `GET /api/library/lists`
+   - Store locally with `updatedAt` timestamps
+   - Fetch full list contents for active/favorite lists
+
+2. **Periodic Sync (every 30s):**
+   - Fetch lists: `GET /api/library/lists`
+   - Compare `updatedAt` timestamps with local cache
+   - If server timestamp newer, fetch updated list
+   - If local timestamp newer, push local changes
+
+3. **Immediate Push (user makes change):**
+   - User adds book to list → `POST /api/library/lists/[id]/books`
+   - User removes book → `DELETE /api/library/lists/[id]/books`
+   - User reorders list → `PUT /api/library/lists/[id]/reorder`
+   - Don't wait for next poll interval
+
+4. **Conflict Handling:**
+   - If server rejects update (403, 404), refetch and show error
+   - If network error, queue operation locally and retry
+   - Show sync status indicator in UI (syncing, synced, error)
+
+---
+
+### iOS Integration Example
+
+**Swift code for list management:**
+
+```swift
+class ListSyncManager: ObservableObject {
+    @Published var lists: [UserList] = []
+    @Published var isSyncing = false
+
+    private var syncTimer: Timer?
+    private let syncInterval: TimeInterval = 30 // seconds
+
+    func startSync() {
+        // Initial fetch
+        Task { await syncLists() }
+
+        // Start polling
+        syncTimer = Timer.scheduledTimer(withTimeInterval: syncInterval, repeats: true) { [weak self] _ in
+            Task { await self?.syncLists() }
+        }
+    }
+
+    func stopSync() {
+        syncTimer?.invalidate()
+        syncTimer = nil
+    }
+
+    func syncLists() async {
+        isSyncing = true
+
+        do {
+            let url = URL(string: "https://api.bookvault.app/api/library/lists")!
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+
+            let (data, _) = try await URLSession.shared.data(for: request)
+            let response = try JSONDecoder().decode(ListsResponse.self, from: data)
+
+            await MainActor.run {
+                self.lists = response.lists
+                self.isSyncing = false
+            }
+        } catch {
+            print("Sync error: \(error)")
+            await MainActor.run {
+                self.isSyncing = false
+            }
+        }
+    }
+
+    func createList(name: String, description: String?) async throws -> UserList {
+        let url = URL(string: "https://api.bookvault.app/api/library/lists")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body = CreateListRequest(name: name, description: description)
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let list = try JSONDecoder().decode(UserList.self, from: data)
+
+        // Update local cache immediately
+        await MainActor.run {
+            self.lists.append(list)
+        }
+
+        return list
+    }
+
+    func addBookToList(listId: String, bookId: String) async throws {
+        let url = URL(string: "https://api.bookvault.app/api/library/lists/\(listId)/books")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body = AddBookRequest(bookId: bookId)
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (_, _) = try await URLSession.shared.data(for: request)
+
+        // Trigger immediate sync to update book count
+        await syncLists()
+    }
+
+    func reorderList(listId: String, bookIds: [String]) async throws {
+        let url = URL(string: "https://api.bookvault.app/api/library/lists/\(listId)/reorder")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body = ReorderRequest(bookIds: bookIds)
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (_, _) = try await URLSession.shared.data(for: request)
+    }
+}
+
+struct UserList: Codable, Identifiable {
+    let id: String
+    let name: String
+    let description: String?
+    let bookCount: Int
+    let createdAt: Date
+    let updatedAt: Date
+}
+
+struct ListsResponse: Codable {
+    let lists: [UserList]
+}
+
+struct CreateListRequest: Codable {
+    let name: String
+    let description: String?
+}
+
+struct AddBookRequest: Codable {
+    let bookId: String
+}
+
+struct ReorderRequest: Codable {
+    let bookIds: [String]
+}
+```
+
+---
+
+### Concurrency & Race Conditions
+
+**Safe operations** (handled automatically):
+
+- Adding same book to list from multiple devices → upsert prevents duplicates
+- Removing same book from multiple devices → delete handles missing records
+- Creating lists with same name → allowed (no unique constraint)
+
+**Potential conflicts** (last-write-wins):
+
+- Editing list metadata simultaneously → server timestamp wins
+- Reordering list simultaneously → last reorder request wins
+- No explicit conflict UI needed (operations are rare, conflicts rarer)
+
+**Transaction safety:**
+
+- List reorder uses `prisma.$transaction` for atomicity
+- All book add/remove operations are atomic
+- No partial state exposed to clients
+
+---
+
 ## Performance Guidelines
 
 ### Progress Sync
@@ -1174,6 +1634,16 @@ curl -I -H "Authorization: Bearer <token>" \
 ---
 
 ## Changelog
+
+### Phase 6 (December 25, 2025)
+
+- Added `GET /api/library/lists` (fetch all lists with book counts)
+- Added `POST/PUT/DELETE /api/library/lists` (create/update/delete lists)
+- Added `PUT /api/library/lists/[id]/reorder` (drag-to-reorder books)
+- Added `POST/DELETE /api/library/lists/[id]/books` (add/remove books)
+- Documented conflict resolution strategy (last-write-wins + merge)
+- Added iOS integration examples for list management and sync
+- Added concurrency handling with transaction safety
 
 ### Phase 5 (December 25, 2025)
 

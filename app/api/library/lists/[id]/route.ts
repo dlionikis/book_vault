@@ -1,0 +1,95 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+
+// PUT /api/library/lists/[id] - Update list metadata
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = params;
+    const body = await request.json();
+    const { name, description } = body;
+
+    // Verify list belongs to user
+    const existingList = await prisma.userList.findUnique({
+      where: { id },
+    });
+
+    if (!existingList) {
+      return NextResponse.json({ error: 'List not found' }, { status: 404 });
+    }
+
+    if (existingList.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Not your list' }, { status: 403 });
+    }
+
+    // Update list
+    const updateData: { name?: string; description?: string | null } = {};
+    if (name !== undefined) {
+      updateData.name = name;
+    }
+    if (description !== undefined) {
+      updateData.description = description || null;
+    }
+
+    const list = await prisma.userList.update({
+      where: { id },
+      data: updateData,
+      include: {
+        _count: { select: { books: true } },
+      },
+    });
+
+    return NextResponse.json({
+      id: list.id,
+      name: list.name,
+      description: list.description,
+      bookCount: list._count.books,
+      createdAt: list.createdAt.toISOString(),
+      updatedAt: list.updatedAt.toISOString(),
+    });
+  } catch (error) {
+    console.error('Error updating list:', error);
+    return NextResponse.json({ error: 'Failed to update list' }, { status: 500 });
+  }
+}
+
+// DELETE /api/library/lists/[id] - Delete list
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = params;
+
+    // Verify list belongs to user
+    const existingList = await prisma.userList.findUnique({
+      where: { id },
+    });
+
+    if (!existingList) {
+      return NextResponse.json({ error: 'List not found' }, { status: 404 });
+    }
+
+    if (existingList.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Not your list' }, { status: 403 });
+    }
+
+    // Delete list (cascade deletes books via Prisma schema)
+    await prisma.userList.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting list:', error);
+    return NextResponse.json({ error: 'Failed to delete list' }, { status: 500 });
+  }
+}
