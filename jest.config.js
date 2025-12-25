@@ -25,7 +25,7 @@ const customJestConfig = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/.next/',
-    '__tests__/api/', // Skip API tests for now
+    '__tests__/api/', // Skip API tests for now (edge runtime issues)
   ],
   transformIgnorePatterns: [
     'node_modules/(?!(jose)/)', // Transform jose package
