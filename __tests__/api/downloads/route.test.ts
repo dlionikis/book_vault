@@ -44,6 +44,60 @@ describe('Download Endpoints', () => {
     audioUrl: 'books/test-book/audio.mp3',
   };
 
+  // Clean up leftover test data once before all tests
+  beforeAll(async () => {
+    await prisma.userDownload.deleteMany({
+      where: {
+        user: {
+          email: {
+            in: [
+              'test-downloads@example.com',
+              'test-limit@example.com',
+              'test-download@example.com',
+              'test-ratelimit@example.com',
+              'test-under-limit@example.com',
+              'test-reset@example.com',
+            ],
+          },
+        },
+      },
+    });
+
+    await prisma.user.deleteMany({
+      where: {
+        email: {
+          in: [
+            'test-downloads@example.com',
+            'test-limit@example.com',
+            'test-download@example.com',
+            'test-ratelimit@example.com',
+            'test-under-limit@example.com',
+            'test-reset@example.com',
+          ],
+        },
+      },
+    });
+
+    await prisma.book.deleteMany({
+      where: {
+        asin: {
+          in: [
+            'B001234567',
+            'B999999999',
+            'B111111111',
+            'B222222222',
+            'B333333333',
+            'B444444444',
+            'B555555555',
+            'B666666666',
+            'B777777777',
+            'B888888888',
+          ],
+        },
+      },
+    });
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -334,6 +388,12 @@ describe('Download Endpoints', () => {
 
   describe('Rate Limiting', () => {
     it('should enforce 10 downloads per day limit', async () => {
+      // Use the real checkDownloadLimit implementation (unmock the module)
+      jest.unmock('@/lib/rate-limit');
+      // Clear the module cache and re-import to get the real implementation
+      jest.resetModules();
+      const { checkDownloadLimit } = await import('@/lib/rate-limit');
+
       const user = await prisma.user.create({
         data: {
           email: 'test-ratelimit@example.com',
@@ -360,7 +420,6 @@ describe('Download Endpoints', () => {
       }
 
       // Verify actual rate limit check
-      const { checkDownloadLimit } = await import('@/lib/rate-limit');
       const isAllowed = await checkDownloadLimit(user.id);
 
       expect(isAllowed).toBe(false);
@@ -372,6 +431,11 @@ describe('Download Endpoints', () => {
     });
 
     it('should allow downloads when under limit', async () => {
+      // Use the real checkDownloadLimit implementation
+      jest.unmock('@/lib/rate-limit');
+      jest.resetModules();
+      const { checkDownloadLimit } = await import('@/lib/rate-limit');
+
       const user = await prisma.user.create({
         data: {
           email: 'test-under-limit@example.com',
@@ -397,7 +461,6 @@ describe('Download Endpoints', () => {
         });
       }
 
-      const { checkDownloadLimit } = await import('@/lib/rate-limit');
       const isAllowed = await checkDownloadLimit(user.id);
 
       expect(isAllowed).toBe(true);
@@ -409,6 +472,11 @@ describe('Download Endpoints', () => {
     });
 
     it('should reset after 24 hours', async () => {
+      // Use the real checkDownloadLimit implementation
+      jest.unmock('@/lib/rate-limit');
+      jest.resetModules();
+      const { checkDownloadLimit } = await import('@/lib/rate-limit');
+
       const user = await prisma.user.create({
         data: {
           email: 'test-reset@example.com',
@@ -436,7 +504,6 @@ describe('Download Endpoints', () => {
         });
       }
 
-      const { checkDownloadLimit } = await import('@/lib/rate-limit');
       const isAllowed = await checkDownloadLimit(user.id);
 
       expect(isAllowed).toBe(true); // Old downloads don't count
