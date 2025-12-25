@@ -14,6 +14,7 @@ This document provides comprehensive API documentation for mobile clients (iOS a
 4. [Chapter Navigation](#chapter-navigation)
 5. [Search & Browse](#search--browse)
 6. [Library & Lists Sync](#library--lists-sync)
+7. [Offline Downloads](#offline-downloads)
 
 ---
 
@@ -1633,7 +1634,536 @@ curl -I -H "Authorization: Bearer <token>" \
 
 ---
 
+## Offline Downloads
+
+### Overview
+
+iOS clients can download audiobooks for offline playback using time-limited S3 pre-signed URLs. Downloads are tracked for analytics and future quota enforcement.
+
+### Endpoints
+
+#### GET /api/downloads/[bookId]/check
+
+Check if user is eligible to download a book.
+
+**Request:**
+
+```
+GET /api/downloads/<book-id>/check
+Authorization: Bearer <token>
+```
+
+**Response (200):**
+
+```json
+{
+  "eligible": true
+}
+```
+
+Or if not eligible:
+
+```json
+{
+  "eligible": false,
+  "reason": "Download quota exceeded"
+}
+```
+
+**Errors:**
+
+- `401`: Unauthorized
+- `404`: Book not found
+- `500`: Server error
+
+**Current eligibility rules (MVP):**
+
+- All users can download all books
+- Future: Check if book in user's library, check storage quota
+
+---
+
+#### POST /api/downloads/[bookId]
+
+Generate a time-limited S3 pre-signed URL for downloading a book's audio file.
+
+**Request:**
+
+```json
+{
+  "deviceId": "iOS-device-uuid" // Optional
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "downloadUrl": "https://s3.amazonaws.com/book-vault-media/book-folder/audio.mp3?signature=...",
+  "expiresAt": "2025-12-25T14:30:00.000Z",
+  "fileSize": 125829120
+}
+```
+
+**Headers:**
+
+- `Authorization: Bearer <token>` (required)
+
+**Errors:**
+
+- `400`: Invalid request (missing bookId)
+- `401`: Unauthorized (missing/invalid token)
+- `403`: Download not allowed (eligibility check failed)
+- `404`: Book not found
+- `429`: Download limit exceeded (10/day)
+- `501`: Downloads require S3 configuration (development mode)
+
+**Rate Limiting:**
+
+- Max 10 downloads per day per user
+- Counter resets after 24 hours
+- Download count tracked in database
+
+---
+
+#### GET /api/downloads
+
+Fetch user's download history.
+
+**Request:**
+
+```
+GET /api/downloads
+Authorization: Bearer <token>
+```
+
+**Response (200):**
+
+```json
+{
+  "downloads": [
+    {
+      "bookId": "book-uuid-1",
+      "bookTitle": "Harry Potter and the Philosopher's Stone",
+      "downloadedAt": "2025-12-25T10:00:00.000Z",
+      "deviceId": "iOS-device-uuid"
+    },
+    {
+      "bookId": "book-uuid-2",
+      "bookTitle": "The Hobbit",
+      "downloadedAt": "2025-12-24T15:30:00.000Z",
+      "deviceId": "iOS-device-uuid"
+    }
+  ],
+  "dailyCount": 2
+}
+```
+
+**Response fields:**
+
+- `downloads`: Array of recent downloads (last 50)
+- `dailyCount`: Number of downloads in last 24 hours (for quota UI)
+
+**Errors:**
+
+- `401`: Unauthorized
+- `500`: Server error
+
+---
+
+### Download Flow
+
+**Recommended iOS implementation:**
+
+1. **Check Eligibility (optional):**
+   - `GET /api/downloads/[bookId]/check`
+   - Show download button only if eligible
+   - Display quota status (e.g., "7/10 downloads today")
+
+2. **Request Download URL:**
+   - `POST /api/downloads/[bookId]` with device UUID
+   - Receive pre-signed S3 URL and expiry time
+   - URL is valid for 1 hour
+
+3. **Download File:**
+   - Use URLSession background download task
+   - Download must complete within 1 hour (URL expiry)
+   - URLSession handles resume if interrupted
+
+4. **Store Locally:**
+   - Move downloaded file to app's Documents directory
+   - Store metadata (bookId, downloadedAt, filePath) in local database
+   - Update UI to show "Downloaded" badge
+
+5. **Playback:**
+   - Use local file URL for AVPlayer
+   - No network requests during playback
+   - Track progress locally, sync when online
+
+---
+
+### iOS Integration
+
+**Swift Example:**
+
+```swift
+import Foundation
+
+class DownloadManager: NSObject, ObservableObject {
+    @Published var downloads: [String: Download] = [:] // bookId -> Download
+
+    private lazy var session: URLSession = {
+        let config = URLSessionConfiguration.background(withIdentifier: "com.bookvault.downloads")
+        config.isDiscretionary = false
+        config.sessionSendsLaunchEvents = true
+        return URLSession(configuration: config, delegate: self, delegateQueue: nil)
+    }()
+
+    struct Download {
+        let bookId: String
+        let bookTitle: String
+        let progress: Double
+        let state: State
+
+        enum State {
+            case pending
+            case downloading
+            case completed
+            case failed(Error)
+        }
+    }
+
+    // Check if eligible to download
+    func checkEligibility(bookId: String) async throws -> Bool {
+        let url = URL(string: "https://api.bookvault.app/api/downloads/\(bookId)/check")!
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let response = try JSONDecoder().decode(EligibilityResponse.self, from: data)
+        return response.eligible
+    }
+
+    // Start download
+    func startDownload(bookId: String, bookTitle: String) async throws {
+        // Request pre-signed URL
+        let downloadURL = try await requestDownloadURL(bookId: bookId)
+
+        // Create background download task
+        let task = session.downloadTask(with: downloadURL)
+
+        // Track download
+        await MainActor.run {
+            downloads[bookId] = Download(
+                bookId: bookId,
+                bookTitle: bookTitle,
+                progress: 0,
+                state: .pending
+            )
+        }
+
+        task.resume()
+    }
+
+    private func requestDownloadURL(bookId: String) async throws -> URL {
+        let url = URL(string: "https://api.bookvault.app/api/downloads/\(bookId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? ""
+        let body = ["deviceId": deviceId]
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let response = try JSONDecoder().decode(DownloadResponse.self, from: data)
+
+        // Verify URL hasn't expired
+        if let expiresAt = ISO8601DateFormatter().date(from: response.expiresAt),
+           expiresAt < Date() {
+            throw DownloadError.urlExpired
+        }
+
+        return URL(string: response.downloadUrl)!
+    }
+}
+
+// URLSessionDownloadDelegate
+extension DownloadManager: URLSessionDownloadDelegate {
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        // Move file to permanent location
+        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let bookId = downloadTask.taskDescription ?? ""
+        let destination = documentsPath.appendingPathComponent("\(bookId).mp3")
+
+        do {
+            // Remove old file if exists
+            try? FileManager.default.removeItem(at: destination)
+
+            // Move downloaded file
+            try FileManager.default.moveItem(at: location, to: destination)
+
+            // Update state
+            Task { @MainActor in
+                if var download = downloads[bookId] {
+                    downloads[bookId] = Download(
+                        bookId: download.bookId,
+                        bookTitle: download.bookTitle,
+                        progress: 1.0,
+                        state: .completed
+                    )
+                }
+            }
+
+            // Save metadata locally
+            saveDownloadMetadata(bookId: bookId, localPath: destination.path)
+        } catch {
+            print("Failed to save download: \(error)")
+            Task { @MainActor in
+                if var download = downloads[bookId] {
+                    downloads[bookId] = Download(
+                        bookId: download.bookId,
+                        bookTitle: download.bookTitle,
+                        progress: 0,
+                        state: .failed(error)
+                    )
+                }
+            }
+        }
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didWriteData bytesWritten: Int64, totalBytesWritten: Int64,
+                    totalBytesExpectedToWrite: Int64) {
+        let progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+        let bookId = downloadTask.taskDescription ?? ""
+
+        Task { @MainActor in
+            if var download = downloads[bookId] {
+                downloads[bookId] = Download(
+                    bookId: download.bookId,
+                    bookTitle: download.bookTitle,
+                    progress: progress,
+                    state: .downloading
+                )
+            }
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error = error {
+            let bookId = task.taskDescription ?? ""
+            Task { @MainActor in
+                if var download = downloads[bookId] {
+                    downloads[bookId] = Download(
+                        bookId: download.bookId,
+                        bookTitle: download.bookTitle,
+                        progress: 0,
+                        state: .failed(error)
+                    )
+                }
+            }
+        }
+    }
+
+    private func saveDownloadMetadata(bookId: String, localPath: String) {
+        // Save to local database (Core Data, Realm, etc.)
+        // Store: bookId, downloadedAt, localPath
+    }
+}
+
+struct EligibilityResponse: Codable {
+    let eligible: Bool
+    let reason: String?
+}
+
+struct DownloadResponse: Codable {
+    let downloadUrl: String
+    let expiresAt: String
+    let fileSize: Int
+}
+
+enum DownloadError: Error {
+    case urlExpired
+}
+```
+
+**UI Example:**
+
+```swift
+struct BookDetailView: View {
+    let book: Book
+    @StateObject private var downloadManager = DownloadManager()
+    @State private var showingQuotaAlert = false
+
+    var body: some View {
+        VStack {
+            // Book details...
+
+            // Download button
+            if let download = downloadManager.downloads[book.id] {
+                switch download.state {
+                case .pending, .downloading:
+                    ProgressView(value: download.progress)
+                        .progressViewStyle(.linear)
+                case .completed:
+                    Label("Downloaded", systemImage: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                case .failed(let error):
+                    Button("Retry Download") {
+                        Task { try? await downloadManager.startDownload(bookId: book.id, bookTitle: book.title) }
+                    }
+                }
+            } else {
+                Button("Download for Offline") {
+                    Task {
+                        do {
+                            let eligible = try await downloadManager.checkEligibility(bookId: book.id)
+                            if eligible {
+                                try await downloadManager.startDownload(bookId: book.id, bookTitle: book.title)
+                            } else {
+                                showingQuotaAlert = true
+                            }
+                        } catch {
+                            print("Download error: \(error)")
+                        }
+                    }
+                }
+            }
+        }
+        .alert("Download Limit Exceeded", isPresented: $showingQuotaAlert) {
+            Button("OK") { }
+        } message: {
+            Text("You've reached your daily download limit (10/day). Try again tomorrow.")
+        }
+    }
+}
+```
+
+---
+
+### Storage Management
+
+**Local file organization:**
+
+```
+Documents/
+├── downloads/
+│   ├── <book-uuid-1>.mp3
+│   ├── <book-uuid-2>.mp3
+│   └── metadata.json  // Download tracking
+```
+
+**Metadata structure:**
+
+```json
+{
+  "downloads": [
+    {
+      "bookId": "uuid-1",
+      "downloadedAt": "2025-12-25T10:00:00Z",
+      "localPath": "downloads/uuid-1.mp3",
+      "fileSize": 125829120
+    }
+  ]
+}
+```
+
+**Storage quota:**
+
+- Track total download size locally
+- Warn user when approaching device storage limit
+- Provide UI to delete downloaded books
+- Future: Server-side storage quota enforcement
+
+---
+
+### Error Handling
+
+**Common errors:**
+
+1. **URL Expired (1 hour limit):**
+   - Error occurs if download doesn't complete within 1 hour
+   - Solution: Request new pre-signed URL and restart download
+   - URLSession supports resume from partial download
+
+2. **Network Interruption:**
+   - URLSession background tasks automatically resume
+   - Files remain in temp location until complete
+   - No action needed from app
+
+3. **Download Limit Exceeded:**
+   - Show user-friendly message
+   - Display quota status (e.g., "10/10 downloads today")
+   - Suggest trying again tomorrow
+
+4. **Insufficient Storage:**
+   - Check available space before starting download
+   - Warn user if insufficient space
+   - Provide option to delete other downloads
+
+**Swift error checking:**
+
+```swift
+func checkStorageSpace(requiredBytes: Int) -> Bool {
+    guard let attributes = try? FileManager.default.attributesOfFileSystem(
+        forPath: NSHomeDirectory()
+    ) else {
+        return false
+    }
+
+    if let freeSpace = attributes[.systemFreeSize] as? Int64 {
+        return Int64(requiredBytes) < freeSpace
+    }
+
+    return false
+}
+```
+
+---
+
+### Best Practices
+
+1. **Pre-signed URL Expiry:**
+   - URLs valid for 1 hour only
+   - Complete download within this window
+   - For large files on slow connections, consider requesting new URL if needed
+
+2. **Background Downloads:**
+   - Use URLSession background configuration
+   - Handle app termination gracefully
+   - Resume downloads when app relaunches
+
+3. **Storage Management:**
+   - Monitor device storage space
+   - Provide UI to manage downloaded books
+   - Auto-delete old downloads (optional)
+
+4. **Quota Display:**
+   - Show remaining downloads (e.g., "7/10 downloads today")
+   - Fetch count from `GET /api/downloads` endpoint
+   - Update UI after each download
+
+5. **Network Optimization:**
+   - Download only over WiFi (optional setting)
+   - Pause downloads on low battery
+   - Queue multiple downloads, process one at a time
+
+---
+
 ## Changelog
+
+### Phase 7 (December 25, 2025)
+
+- Added `POST /api/downloads/[bookId]` (generate pre-signed S3 URLs)
+- Added `GET /api/downloads/[bookId]/check` (eligibility validation)
+- Added `GET /api/downloads` (download history with daily count)
+- Added `UserDownload` table for tracking downloads
+- Added rate limiting (max 10 downloads/day per user)
+- Documented iOS URLSession integration for background downloads
+- Added storage management best practices
+- S3 configuration required for downloads (501 error in development)
 
 ### Phase 6 (December 25, 2025)
 

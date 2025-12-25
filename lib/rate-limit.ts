@@ -58,11 +58,25 @@ export function checkRateLimit(
 
 /**
  * Check download rate limit (max 10 downloads per day per user)
+ * Uses database to track downloads for persistent rate limiting
  * @param userId - User ID to check
  * @returns Promise<boolean> - true if download is allowed, false if limit exceeded
  */
 export async function checkDownloadLimit(userId: string): Promise<boolean> {
-  // This is a placeholder - will be implemented in Phase 7
-  // For now, always allow downloads
-  return true;
+  const { prisma } = await import('@/lib/db');
+
+  // Count downloads in last 24 hours
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const downloadCount = await prisma.userDownload.count({
+    where: {
+      userId,
+      downloadedAt: {
+        gte: twentyFourHoursAgo,
+      },
+    },
+  });
+
+  // Max 10 downloads per day
+  return downloadCount < 10;
 }
