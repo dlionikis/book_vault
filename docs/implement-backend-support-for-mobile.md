@@ -41,33 +41,25 @@
 
 ---
 
-## Open Questions / Decisions Needed
+## Decisions Made ✅
 
 ### Phase 1 Decisions
 
-- **Token refresh strategy**: Dedicated `/api/auth/refresh` endpoint OR rely on session extension?
-  - **Recommendation**: Implement dedicated endpoint with refresh token stored in separate table for explicit revocation support
-- **CORS origins**: Which domain/bundle ID patterns to allow?
-  - **Recommendation**: Start with explicit iOS bundle ID (`com.bookvault.app`), add web origins later
+- **Token refresh strategy**: ✅ **DECIDED** - Implement dedicated `/api/auth/refresh` endpoint with refresh token stored in separate table for explicit revocation support
+- **CORS origins**: ✅ **DECIDED** - Start with `*` for development, lock down to iOS bundle ID before production deployment
 
 ### Phase 7 Decisions
 
-- **Offline downloads**: Generate pre-signed S3 URLs for iOS to download directly OR proxy through API?
-  - **Recommendation**: Pre-signed S3 URLs (less backend load, better performance)
-  - **Alternative**: API proxy if S3 costs become prohibitive or need tighter access control
+- **Offline downloads**: ✅ **DECIDED** - Use pre-signed S3 URLs for direct downloads (less backend load, better performance, industry standard)
 
 ### Phase 8 Decisions
 
-- **Push notifications**: APNs direct OR third-party (OneSignal, Firebase)?
-  - **Recommendation**: APNs direct (simpler, no third-party dependencies, better privacy)
-  - **Alternative**: OneSignal for easier multi-platform support if Android app planned
+- **Push notifications**: ✅ **DECIDED** - **SKIP Phase 8** - Not implementing push notifications at this time (can be added later if needed)
 
 ### Cross-Phase Decisions
 
-- **Rate limiting**: Per-user rate limits for mobile API calls?
-  - **Recommendation**: Phase 1 - implement basic rate limiting (100 req/min per user), tune based on real usage
-- **Analytics**: Track mobile-specific metrics (device type, iOS version, playback quality)?
-  - **Recommendation**: Phase 2+ - add simple logging, evaluate dedicated analytics service later
+- **Rate limiting**: ✅ **DECIDED** - Implement basic rate limiting (100 req/min per user), tune based on real usage
+- **Analytics**: ✅ **DECIDED** - Add simple logging for mobile-specific metrics (device type, iOS version), evaluate dedicated analytics service later
 
 ---
 
@@ -384,6 +376,7 @@ Optimize existing `/api/progress` endpoints for mobile usage patterns (high-freq
   - Index already exists: `@@index([userId, lastPlayed(sort: Desc)])` on `UserProgress` ✅
   - Verify in schema, no migration needed
 - [ ] Run query to test performance:
+
   ```sql
   EXPLAIN ANALYZE
   SELECT * FROM user_progress
@@ -810,6 +803,7 @@ Optimize chapter queries for mobile clients, add optional prefetch endpoint to r
   - Unique constraint exists: `@@unique([bookId, chapterNumber])` ✅
   - No migration needed
 - [ ] Test query performance:
+
   ```sql
   EXPLAIN ANALYZE
   SELECT * FROM chapters
