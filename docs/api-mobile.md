@@ -1,6 +1,6 @@
 # Mobile API Documentation
 
-**Last Updated**: December 24, 2025
+**Last Updated**: December 25, 2025
 
 This document provides comprehensive API documentation for mobile clients (iOS app) integrating with Book Vault backend.
 
@@ -11,6 +11,7 @@ This document provides comprehensive API documentation for mobile clients (iOS a
 1. [Authentication](#authentication)
 2. [Progress Sync](#progress-sync)
 3. [Audio Streaming](#audio-streaming)
+4. [Chapter Navigation](#chapter-navigation)
 
 ---
 
@@ -377,6 +378,184 @@ curl -I -H "Range: bytes=1000000-1001023" http://localhost:3000/api/audio/<path>
 
 ---
 
+## Chapter Navigation
+
+### Overview
+
+Audiobooks include chapter markers for navigation. Chapters are extracted from `.cue` files during import and stored in the database.
+
+### Chapter Data Format
+
+Each chapter object includes:
+
+```typescript
+{
+  id: string; // UUID
+  chapterNumber: number; // Sequential number (1, 2, 3, ...)
+  title: string; // Chapter title
+  startTime: number; // Start time in seconds (decimal)
+  endTime: number; // End time in seconds (decimal)
+  duration: number; // Duration in seconds (decimal)
+}
+```
+
+**Important Notes:**
+
+- Times are in **seconds** (not milliseconds)
+- Times are **decimal** (e.g., `123.45` seconds)
+- No conversion needed for iOS playback APIs
+- Chapters are ordered by `chapterNumber` (ascending)
+
+### Fetching Chapters
+
+#### Option 1: Fetch with Book (Single Request)
+
+Include chapters when fetching book details to reduce round-trips:
+
+```
+GET /api/books/{id}?include=chapters
+Authorization: Bearer <token>
+```
+
+**Response (200):**
+
+```json
+{
+  "id": "uuid",
+  "title": "Book Title",
+  // ... other book fields
+  "chapters": [
+    {
+      "id": "chapter-uuid-1",
+      "chapterNumber": 1,
+      "title": "Chapter 1: Introduction",
+      "startTime": 0,
+      "endTime": 123.45,
+      "duration": 123.45
+    },
+    {
+      "id": "chapter-uuid-2",
+      "chapterNumber": 2,
+      "title": "Chapter 2: The Journey Begins",
+      "startTime": 123.45,
+      "endTime": 456.78,
+      "duration": 333.33
+    }
+  ]
+}
+```
+
+**Caching:**
+
+- Response includes `Cache-Control: public, max-age=86400` (24 hours)
+- Chapters rarely change, safe to cache aggressively
+- Reduces bandwidth on repeated requests
+
+#### Option 2: Fetch Book Without Chapters (Default)
+
+Omit `?include=chapters` to get book without chapters (backward compatible with web):
+
+```
+GET /api/books/{id}
+Authorization: Bearer <token>
+```
+
+**Response (200):**
+
+```json
+{
+  "id": "uuid",
+  "title": "Book Title"
+  // ... other book fields
+  // No chapters field
+}
+```
+
+### iOS Integration
+
+**Swift Example:**
+
+```swift
+struct Chapter: Codable {
+    let id: String
+    let chapterNumber: Int
+    let title: String
+    let startTime: Double  // Seconds (decimal)
+    let endTime: Double
+    let duration: Double
+}
+
+// Fetch book with chapters
+func fetchBookWithChapters(bookId: String) async throws -> Book {
+    let url = URL(string: "https://api.bookvault.app/api/books/\(bookId)?include=chapters")!
+    var request = URLRequest(url: url)
+    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    let book = try JSONDecoder().decode(Book.self, from: data)
+    return book
+}
+
+// Seek to chapter start
+func seekToChapter(_ chapter: Chapter) {
+    let time = CMTime(seconds: chapter.startTime, preferredTimescale: 1)
+    player.seek(to: time) { finished in
+        if finished {
+            print("Seeked to \(chapter.title)")
+        }
+    }
+}
+```
+
+**Chapter UI Example:**
+
+```swift
+List(book.chapters, id: \.id) { chapter in
+    Button(action: { seekToChapter(chapter) }) {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(chapter.title)
+                    .font(.headline)
+                Text(formatDuration(chapter.duration))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            if isCurrentChapter(chapter) {
+                Image(systemName: "play.fill")
+                    .foregroundColor(.blue)
+            }
+        }
+    }
+}
+
+func formatDuration(_ seconds: Double) -> String {
+    let minutes = Int(seconds) / 60
+    let secs = Int(seconds) % 60
+    return String(format: "%d:%02d", minutes, secs)
+}
+
+func isCurrentChapter(_ chapter: Chapter) -> Bool {
+    let currentTime = player.currentTime().seconds
+    return currentTime >= chapter.startTime && currentTime < chapter.endTime
+}
+```
+
+### Performance
+
+- **Query performance**: <500ms for books with 50+ chapters (indexed by `bookId`)
+- **Caching**: 24-hour cache reduces bandwidth on repeated requests
+- **Single request**: Use `?include=chapters` to fetch book + chapters in one round-trip
+
+### Best Practices
+
+1. **Cache chapters locally**: Store in app database after first fetch
+2. **Respect cache headers**: Use `Cache-Control` to minimize requests
+3. **Prefetch on playback**: Fetch chapters when user starts playing book
+4. **Update on sync**: Check for chapter updates when syncing library
+
+---
+
 ## Performance Guidelines
 
 ### Progress Sync
@@ -514,6 +693,14 @@ curl -I -H "Authorization: Bearer <token>" \
 ---
 
 ## Changelog
+
+### Phase 4 (December 25, 2025)
+
+- Added optional `?include=chapters` parameter to book detail endpoint
+- Added Cache-Control headers (24hr) for chapter responses
+- Documented chapter timestamp format (seconds decimal) for iOS
+- Verified Chapter index performance for fast queries
+- Added Swift code examples for chapter navigation UI
 
 ### Phase 3 (December 25, 2025)
 

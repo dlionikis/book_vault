@@ -10,6 +10,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
+    // Check if chapters should be included
+    const url = new URL(request.url);
+    const includeChapters = url.searchParams.get('include') === 'chapters';
+
     const book = await prisma.book.findUnique({
       where: { id: params.id },
       include: {
@@ -37,6 +41,13 @@ export async function GET(request: Request, { params }: { params: { id: string }
             },
           },
         },
+        chapters: includeChapters
+          ? {
+              orderBy: {
+                chapterNumber: 'asc',
+              },
+            }
+          : false,
       },
     });
 
@@ -80,9 +91,27 @@ export async function GET(request: Request, { params }: { params: { id: string }
       })),
       metadata: book.metadata,
       createdAt: book.createdAt,
+      ...(includeChapters &&
+        book.chapters && {
+          chapters: book.chapters.map((chapter) => ({
+            id: chapter.id,
+            chapterNumber: chapter.chapterNumber,
+            title: chapter.title,
+            startTime: chapter.startTime,
+            endTime: chapter.endTime,
+            duration: chapter.duration,
+          })),
+        }),
     };
 
-    return NextResponse.json(transformedBook);
+    const response = NextResponse.json(transformedBook);
+
+    // Add caching headers when chapters are included
+    if (includeChapters) {
+      response.headers.set('Cache-Control', 'public, max-age=86400');
+    }
+
+    return response;
   } catch (error) {
     console.error('Error fetching book:', error);
     return NextResponse.json({ error: 'Failed to fetch book' }, { status: 500 });
