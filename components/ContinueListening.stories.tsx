@@ -10,7 +10,7 @@ interface InProgressBook {
   id: string;
   title: string;
   coverUrl: string | null;
-  runtimeMinutes: number | null;
+  runtimeMinutes: number | null | undefined;
   authors: string[];
   positionSeconds: number;
   lastPlayed: Date;
@@ -20,7 +20,10 @@ interface ContinueListeningMockProps {
   books: InProgressBook[];
 }
 
-function getProgressPercentage(positionSeconds: number, runtimeMinutes: number | null): number {
+function getProgressPercentage(
+  positionSeconds: number,
+  runtimeMinutes: number | null | undefined
+): number {
   if (!runtimeMinutes) return 0;
   const totalSeconds = runtimeMinutes * 60;
   return Math.min(100, Math.round((positionSeconds / totalSeconds) * 100));

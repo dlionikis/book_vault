@@ -23,6 +23,7 @@ export async function GET(request: NextRequest, { params }: { params: { path: st
 
     // Log range requests for monitoring (helpful for debugging iOS seeking issues)
     if (range) {
+      // eslint-disable-next-line no-console
       console.log('Range request', { path: filePath, range, userId });
     }
 

@@ -48,7 +48,9 @@ const meta: Meta<typeof ChapterList> = {
   ],
   tags: ['autodocs'],
   args: {
-    onChapterClick: () => console.log('Chapter clicked'),
+    onChapterClick: () => {
+      // Action handler - Storybook will log this automatically
+    },
   },
 };
 

@@ -69,7 +69,7 @@ export const WithoutChapters: Story = {
     title: 'Book Without Chapters',
     author: 'Unknown Author',
     bookId: 'book-no-chapters',
-    coverUrl: null,
+    coverUrl: undefined,
     initialPosition: 0,
   },
 };
