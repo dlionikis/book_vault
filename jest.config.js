@@ -11,6 +11,9 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    // Redirect all jose imports (including nested ones) to mocked version
+    '^jose$': '<rootDir>/__mocks__/jose.js',
+    '^.*/jose$': '<rootDir>/__mocks__/jose.js',
   },
   collectCoverageFrom: [
     'app/**/*.{js,jsx,ts,tsx}',
@@ -22,13 +25,10 @@ const customJestConfig = {
     '!**/.next/**',
   ],
   testMatch: ['**/__tests__/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)'],
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    '/.next/',
-    '__tests__/api/', // Skip API tests for now (edge runtime issues)
-  ],
+  testPathIgnorePatterns: ['/node_modules/', '/.next/'],
   transformIgnorePatterns: [
-    'node_modules/(?!(jose)/)', // Transform jose package
+    // Transform all jose packages (including nested ones in next-auth and openid-client)
+    'node_modules/(?!(.*/)?jose($|/))',
   ],
 };
 
