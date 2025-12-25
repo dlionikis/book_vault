@@ -12,6 +12,7 @@ This document provides comprehensive API documentation for mobile clients (iOS a
 2. [Progress Sync](#progress-sync)
 3. [Audio Streaming](#audio-streaming)
 4. [Chapter Navigation](#chapter-navigation)
+5. [Search & Browse](#search--browse)
 
 ---
 
@@ -556,6 +557,486 @@ func isCurrentChapter(_ chapter: Chapter) -> Bool {
 
 ---
 
+## Search & Browse
+
+### Overview
+
+Mobile clients can search and browse the library with pagination, field filtering, and autocomplete support for responsive UX.
+
+### Search Endpoint
+
+#### GET /api/search
+
+Search across books, authors, narrators, and series with pagination and field filtering.
+
+**Query Parameters:**
+
+- `q` (required): Search query (case-insensitive, partial match)
+- `page` (optional): Page number (default: 1, 1-based)
+- `limit` (optional): Results per page (default: 20, max: 100)
+- `fields` (optional): Comma-separated field list (e.g., `id,title,coverUrl`)
+
+**Request:**
+
+```
+GET /api/search?q=harry&page=1&limit=20
+Authorization: Bearer <token>
+```
+
+**Response (200):**
+
+```json
+{
+  "results": [
+    {
+      "id": "uuid",
+      "asin": "B001234567",
+      "title": "Harry Potter and the Philosopher's Stone",
+      "publisherSummary": "...",
+      "runtimeMinutes": 480,
+      "releaseDate": "1997-06-26T00:00:00.000Z",
+      "publisher": "Pottermore Publishing",
+      "coverUrl": "https://cdn.bookvault.app/...",
+      "audioUrl": "https://cdn.bookvault.app/...",
+      "authors": [
+        {
+          "id": "author-uuid",
+          "name": "J.K. Rowling",
+          "asin": "A001234567"
+        }
+      ],
+      "narrators": [
+        {
+          "id": "narrator-uuid",
+          "name": "Stephen Fry",
+          "asin": "N001234567"
+        }
+      ],
+      "series": [
+        {
+          "id": "series-uuid",
+          "title": "Harry Potter",
+          "asin": "S001234567",
+          "sequence": "1"
+        }
+      ],
+      "createdAt": "2025-12-20T10:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 145,
+    "pages": 8
+  }
+}
+```
+
+**Search Behavior:**
+
+- **Case-insensitive**: Searches ignore case
+- **Partial match**: Uses `contains` matching (not exact)
+- **Searches across**:
+  - Book title
+  - Book description
+  - Publisher summary
+  - Author names
+  - Narrator names
+  - Series titles
+
+**Field Filtering:**
+
+To reduce payload size for mobile bandwidth optimization:
+
+```
+GET /api/search?q=harry&fields=id,title,coverUrl
+Authorization: Bearer <token>
+```
+
+**Response with fields:**
+
+```json
+{
+  "results": [
+    {
+      "id": "uuid",
+      "title": "Harry Potter and the Philosopher's Stone",
+      "coverUrl": "https://cdn.bookvault.app/..."
+    }
+  ],
+  "pagination": { ... }
+}
+```
+
+**Available fields:**
+
+- `id`, `asin`, `title`, `description`, `publisherSummary`
+- `runtimeMinutes`, `releaseDate`, `publisher`
+- `coverUrl`, `audioUrl`
+- `authors`, `narrators`, `series`, `categories`, `chapters`
+- `createdAt`, `updatedAt`
+
+**Errors:**
+
+- `400`: Search query required
+- `401`: Unauthorized
+- `500`: Server error
+
+---
+
+### Autocomplete Endpoint
+
+#### GET /api/search/suggestions
+
+Fast autocomplete suggestions for search-as-you-type UX.
+
+**Query Parameters:**
+
+- `q` (required): Query (min 2 characters)
+
+**Request:**
+
+```
+GET /api/search/suggestions?q=har
+Authorization: Bearer <token>
+```
+
+**Response (200):**
+
+```json
+{
+  "books": [
+    {
+      "id": "uuid-1",
+      "title": "Harry Potter and the Philosopher's Stone",
+      "coverUrl": "https://cdn.bookvault.app/..."
+    },
+    {
+      "id": "uuid-2",
+      "title": "A Harlan Coben Novel",
+      "coverUrl": "https://cdn.bookvault.app/..."
+    }
+  ],
+  "authors": [
+    {
+      "id": "author-uuid-1",
+      "name": "Harlan Coben"
+    },
+    {
+      "id": "author-uuid-2",
+      "name": "Charlaine Harris"
+    }
+  ],
+  "narrators": [
+    {
+      "id": "narrator-uuid-1",
+      "name": "Harris Yulin"
+    }
+  ]
+}
+```
+
+**Suggestion Limits:**
+
+- Top 5 books (by title or series title match)
+- Top 3 authors
+- Top 2 narrators
+- **Total:** Up to 10 mixed results
+- **Performance:** <200ms target response time
+
+**Errors:**
+
+- `400`: Query must be at least 2 characters
+- `401`: Unauthorized
+- `500`: Server error
+
+---
+
+### Browse Endpoints
+
+Browse by authors, series, narrators, or categories with pagination.
+
+#### GET /api/browse/authors
+
+List all authors with book counts.
+
+**Query Parameters:**
+
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Results per page (default: 20, max: 100)
+
+**Response (200):**
+
+```json
+{
+  "results": [
+    {
+      "id": "author-uuid",
+      "name": "J.K. Rowling",
+      "asin": "A001234567",
+      "bookCount": 7
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 456,
+    "pages": 23
+  }
+}
+```
+
+---
+
+#### GET /api/browse/series
+
+List all series with book counts.
+
+**Query Parameters:**
+
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Results per page (default: 20, max: 100)
+
+**Response (200):**
+
+```json
+{
+  "results": [
+    {
+      "id": "series-uuid",
+      "title": "Harry Potter",
+      "asin": "S001234567",
+      "bookCount": 7
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 234,
+    "pages": 12
+  }
+}
+```
+
+---
+
+#### GET /api/browse/narrators
+
+List all narrators with book counts.
+
+**Query Parameters:**
+
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Results per page (default: 20, max: 100)
+
+**Response (200):**
+
+```json
+{
+  "results": [
+    {
+      "id": "narrator-uuid",
+      "name": "Stephen Fry",
+      "asin": "N001234567",
+      "bookCount": 12
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 189,
+    "pages": 10
+  }
+}
+```
+
+---
+
+#### GET /api/browse/categories
+
+List all categories with book counts.
+
+**Query Parameters:**
+
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Results per page (default: 20, max: 100)
+
+**Response (200):**
+
+```json
+{
+  "results": [
+    {
+      "id": "category-uuid",
+      "name": "Science Fiction & Fantasy",
+      "level": 0,
+      "parentName": null,
+      "bookCount": 234
+    },
+    {
+      "id": "category-uuid-2",
+      "name": "Fantasy",
+      "level": 1,
+      "parentName": "Science Fiction & Fantasy",
+      "bookCount": 156
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 89,
+    "pages": 5
+  }
+}
+```
+
+---
+
+### iOS Integration Examples
+
+**Search with Debounce:**
+
+```swift
+import Combine
+
+class SearchViewModel: ObservableObject {
+    @Published var searchText = ""
+    @Published var results: [Book] = []
+    @Published var isLoading = false
+
+    private var cancellables = Set<AnyCancellable>()
+
+    init() {
+        // Debounce search input (500ms)
+        $searchText
+            .debounce(for: .milliseconds(500), scheduler: DispatchQueue.main)
+            .removeDuplicates()
+            .filter { $0.count >= 2 }
+            .sink { [weak self] query in
+                self?.performSearch(query: query)
+            }
+            .store(in: &cancellables)
+    }
+
+    func performSearch(query: String) {
+        isLoading = true
+
+        Task {
+            do {
+                let results = try await searchBooks(query: query, page: 1, limit: 20)
+                await MainActor.run {
+                    self.results = results
+                    self.isLoading = false
+                }
+            } catch {
+                print("Search error: \(error)")
+                await MainActor.run {
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+
+    func searchBooks(query: String, page: Int, limit: Int) async throws -> [Book] {
+        var components = URLComponents(string: "https://api.bookvault.app/api/search")!
+        components.queryItems = [
+            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "fields", value: "id,title,coverUrl,authors") // Reduce payload
+        ]
+
+        var request = URLRequest(url: components.url!)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let response = try JSONDecoder().decode(SearchResponse.self, from: data)
+        return response.results
+    }
+}
+```
+
+**Autocomplete:**
+
+```swift
+func fetchSuggestions(query: String) async throws -> Suggestions {
+    guard query.count >= 2 else {
+        return Suggestions(books: [], authors: [], narrators: [])
+    }
+
+    var components = URLComponents(string: "https://api.bookvault.app/api/search/suggestions")!
+    components.queryItems = [URLQueryItem(name: "q", value: query)]
+
+    var request = URLRequest(url: components.url!)
+    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+
+    let (data, _) = try await URLSession.shared.data(for: request)
+    let suggestions = try JSONDecoder().decode(Suggestions.self, from: data)
+    return suggestions
+}
+```
+
+**Pagination (Infinite Scroll):**
+
+```swift
+class BrowseViewModel: ObservableObject {
+    @Published var authors: [Author] = []
+    @Published var isLoadingMore = false
+
+    private var currentPage = 1
+    private var totalPages = 1
+
+    func loadNextPage() async {
+        guard currentPage < totalPages && !isLoadingMore else { return }
+
+        isLoadingMore = true
+        currentPage += 1
+
+        do {
+            let response = try await fetchAuthors(page: currentPage, limit: 20)
+            await MainActor.run {
+                self.authors.append(contentsOf: response.results)
+                self.totalPages = response.pagination.pages
+                self.isLoadingMore = false
+            }
+        } catch {
+            print("Load more error: \(error)")
+            await MainActor.run {
+                self.currentPage -= 1 // Revert on error
+                self.isLoadingMore = false
+            }
+        }
+    }
+}
+```
+
+---
+
+### Performance & Best Practices
+
+**Search:**
+
+- **Debounce**: Wait 300-500ms after user stops typing
+- **Min query length**: 2 characters minimum for autocomplete
+- **Field filtering**: Use `?fields=` to reduce payload size for list views
+- **Pagination**: Load 20-50 results per page (balance UX vs performance)
+- **Cache**: Cache results for 5-10 minutes to reduce requests
+
+**Browse:**
+
+- **Infinite scroll**: Load next page when user reaches 80% of current list
+- **Prefetch**: Load page 2 when user views page 1
+- **Cache**: Cache browse results for 30 minutes
+- **Refresh**: Pull-to-refresh to clear cache and reload
+
+**Performance Targets:**
+
+- Search: <500ms for queries with 1000+ books
+- Autocomplete: <200ms for fast suggestions
+- Browse: <500ms per page
+
+---
+
 ## Performance Guidelines
 
 ### Progress Sync
@@ -693,6 +1174,15 @@ curl -I -H "Authorization: Bearer <token>" \
 ---
 
 ## Changelog
+
+### Phase 5 (December 25, 2025)
+
+- Added pagination to `/api/search` and `/api/browse/*` endpoints
+- Created `/api/search/suggestions` for autocomplete (<200ms)
+- Added `?fields=` parameter for selective response fields
+- Verified indexes on Book, Author, Narrator, Series for search performance
+- Documented search syntax and pagination behavior
+- Added iOS integration examples for search, autocomplete, and pagination
 
 ### Phase 4 (December 25, 2025)
 

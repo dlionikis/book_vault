@@ -1,28 +1,44 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { parsePagination } from '@/lib/api-utils';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const categories = await prisma.category.findMany({
-      include: {
-        books: {
-          include: {
-            book: true,
+    const searchParams = request.nextUrl.searchParams;
+    const { page, limit, skip } = parsePagination(
+      searchParams.get('page'),
+      searchParams.get('limit')
+    );
+
+    const [categories, total] = await Promise.all([
+      prisma.category.findMany({
+        skip,
+        take: limit,
+        include: {
+          _count: {
+            select: {
+              books: true,
+            },
+          },
+          parent: {
+            select: {
+              name: true,
+            },
           },
         },
-        parent: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
+        orderBy: {
+          name: 'asc',
+        },
+      }),
+      prisma.category.count(),
+    ]);
 
     // Transform to include book count and parent name
     const transformedCategories = categories.map((category) => ({
@@ -30,12 +46,17 @@ export async function GET() {
       name: category.name,
       level: category.level,
       parentName: category.parent?.name || null,
-      bookCount: category.books.length,
+      bookCount: category._count.books,
     }));
 
     return NextResponse.json({
-      categories: transformedCategories,
-      total: categories.length,
+      results: transformedCategories,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     console.error('Error fetching categories:', error);
