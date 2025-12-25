@@ -92,6 +92,10 @@ npm run import                 # Import books from Libation directory
 npm run db:seed                # Seed test user (test@example.com / password123)
 npm run user:create            # Interactive admin user creation
 
+# Storybook
+npm run storybook              # Start Storybook dev server (port 6006)
+npm run build-storybook        # Build static Storybook site
+
 # Build & Deploy
 npm run build                  # Production build
 npm start                      # Start production server
@@ -464,7 +468,48 @@ When starting a new session:
 
 ---
 
-## 7. Deployment & Mobile Plans
+## 7. AI-Assisted Development (⭐ READ THIS FIRST)
+
+**IMPORTANT**: Before exploring the codebase for any task, follow this workflow to save 50-80% of tokens:
+
+### Recommended Workflow for Feature Implementation
+
+1. **Read** [docs/component-guide.md](docs/component-guide.md) - Which component to use (decision tree)
+2. **Read** [docs/data-flows.md](docs/data-flows.md) - How data flows through the app
+3. **Read** [docs/api-quick-ref.md](docs/api-quick-ref.md) - Exact API request/response shapes
+4. **Check** `ComponentName.stories.tsx` - See component usage examples in Storybook
+5. **Implement** using documented patterns
+6. **Update** stories for new functionality
+
+### Why This Workflow Works
+
+- **Component guide** → No guessing which component to use
+- **Data flows** → Understand full path without exploring files
+- **API reference** → Exact endpoints without scanning routes
+- **Stories** → See prop shapes without reading component files
+
+**Token savings**: 90-95% reduction (5,000-8,000 tokens → 300-500 tokens per feature)
+
+### What NOT to Do
+
+- ❌ Scan entire codebase to understand component relationships
+- ❌ Read multiple component files to find prop types
+- ❌ Explore API routes to understand request/response shapes
+- ❌ Grep through code to find usage examples
+
+### Quick Reference Files
+
+| File                                               | Purpose                | When to Use                     |
+| -------------------------------------------------- | ---------------------- | ------------------------------- |
+| [docs/component-guide.md](docs/component-guide.md) | Component selection    | "Which component should I use?" |
+| [docs/data-flows.md](docs/data-flows.md)           | Data movement patterns | "How does data flow here?"      |
+| [docs/api-quick-ref.md](docs/api-quick-ref.md)     | API endpoints          | "What's the request/response?"  |
+| [docs/storybook.md](docs/storybook.md)             | Storybook usage        | "How do I use Storybook?"       |
+| Component `.stories.tsx`                           | Component examples     | "How do I use this component?"  |
+
+---
+
+## 8. Deployment & Mobile Plans
 
 ### AWS Deployment (Next Priority)
 
@@ -493,7 +538,7 @@ When starting a new session:
 
 ---
 
-## 8. Common Gotchas
+## 9. Common Gotchas
 
 1. **Port conflict**: PostgreSQL runs on `5433` (not default `5432`)
 2. **Media paths**: Development uses local files, production will use S3
