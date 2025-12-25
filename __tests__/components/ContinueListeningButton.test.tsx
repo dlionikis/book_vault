@@ -2,6 +2,12 @@ import { render, screen } from '@testing-library/react';
 import ContinueListeningButton from '@/components/ContinueListeningButton';
 import { prisma } from '@/lib/db';
 
+// Mock jose
+jest.mock('jose', () => ({
+  SignJWT: jest.fn(),
+  jwtVerify: jest.fn(),
+}));
+
 // Mock Prisma
 jest.mock('@/lib/db', () => ({
   prisma: {
