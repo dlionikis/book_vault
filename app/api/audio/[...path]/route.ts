@@ -19,6 +19,12 @@ export async function GET(request: NextRequest, { params }: { params: { path: st
 
     const filePath = params.path.join('/');
     const range = request.headers.get('range');
+    const userId = session.user.id;
+
+    // Log range requests for monitoring (helpful for debugging iOS seeking issues)
+    if (range) {
+      console.log('Range request', { path: filePath, range, userId });
+    }
 
     // Use S3 in production if configured
     if (isS3Enabled()) {
