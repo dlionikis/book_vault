@@ -515,6 +515,14 @@ curl -I -H "Authorization: Bearer <token>" \
 
 ## Changelog
 
+### Phase 3 (December 25, 2025)
+
+- Validated HTTP Range request support (206 Partial Content)
+- Confirmed S3 range request forwarding for production
+- Added range request logging for debugging iOS seeking issues
+- Verified backend streaming is fully compatible with iOS AVPlayer
+- Documented background playback requirements
+
 ### Phase 2 (December 24, 2025)
 
 - Added batch progress sync endpoint
