@@ -56,12 +56,30 @@
 
 ## 📱 Mobile Development
 
-| File                                     | Purpose                                    | Tokens |
-| ---------------------------------------- | ------------------------------------------ | ------ |
-| [api-mobile.md](api-mobile.md)           | **Mobile API quick reference** (condensed) | ~370   |
-| [mobile-ios-plan.md](mobile-ios-plan.md) | Native iOS app 8-phase implementation plan | ~2,140 |
+### Overview & Planning
 
-**Note**: For detailed Swift code examples, see `archive/api-mobile-detailed.md` (2,925 lines, ~10,600 tokens).
+| File                                       | Purpose                                            | Tokens |
+| ------------------------------------------ | -------------------------------------------------- | ------ |
+| [mobile-ios-plan.md](mobile-ios-plan.md)   | **iOS implementation overview & development plan** | ~2,800 |
+| [ios-backend-sync.md](ios-backend-sync.md) | **iOS-Backend sync tracker** (API change impact)   | ~2,000 |
+| [api-mobile.md](api-mobile.md)             | Mobile API quick reference (condensed)             | ~370   |
+
+### Detailed iOS Guides (Read When Implementing)
+
+| File                                                               | Purpose                                     | Tokens |
+| ------------------------------------------------------------------ | ------------------------------------------- | ------ |
+| [mobile/implementation-phases.md](mobile/implementation-phases.md) | 8 phases with acceptance criteria           | ~1,500 |
+| [mobile/architecture.md](mobile/architecture.md)                   | SwiftUI + MVVM architecture, file structure | ~3,800 |
+| [mobile/api-integration.md](mobile/api-integration.md)             | Swift API client implementation examples    | ~4,000 |
+| [mobile/ios-features.md](mobile/ios-features.md)                   | Background audio, lock screen, CarPlay      | ~3,500 |
+
+**Quick Start for iOS Development**:
+
+1. Read [mobile-ios-plan.md](mobile-ios-plan.md) for overview & workflow
+2. Check [ios-backend-sync.md](ios-backend-sync.md) for current API status
+3. Read specific guides in `mobile/` as needed per implementation phase
+
+**Note**: For detailed Swift code examples (legacy), see `archive/api-mobile-detailed.md` (2,925 lines, ~10,600 tokens).
 
 ---
 
@@ -113,11 +131,20 @@ Located in `archive/` folder:
 3. Read [api-quick-ref.md](api-quick-ref.md) - API endpoints
 4. Check component `.stories.tsx` files - Usage examples
 
-**I'm working on mobile integration**:
+**I'm working on mobile iOS app**:
 
-1. Read [api-mobile.md](api-mobile.md) - Quick reference
-2. Read [mobile-ios-plan.md](mobile-ios-plan.md) - Implementation roadmap
-3. Check [API_SECURITY.md](API_SECURITY.md) - Auth patterns
+1. Read [mobile-ios-plan.md](mobile-ios-plan.md) - Development workflow & overview
+2. Read [ios-backend-sync.md](ios-backend-sync.md) - Current API status
+3. Read phase-specific guides in `mobile/` directory as needed
+4. Check [API_SECURITY.md](API_SECURITY.md) - Auth patterns
+
+**I'm making API changes that affect iOS**:
+
+1. Read [ios-backend-sync.md](ios-backend-sync.md) - Check iOS impact
+2. Update OpenAPI spec first (`docs/api/openapi.yaml`)
+3. Run `npm run api:generate` to regenerate types
+4. Update iOS code if needed
+5. Document change in [ios-backend-sync.md](ios-backend-sync.md)
 
 **I'm debugging an issue**:
 

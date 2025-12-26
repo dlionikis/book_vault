@@ -2,23 +2,27 @@
 
 **Status**: Planning
 **Priority**: Post-deployment
-**Last Updated**: December 24, 2025
+**Last Updated**: December 25, 2025
 
 > **TL;DR (30 seconds)**
 >
 > - **Tech**: Native Swift + SwiftUI (best for audio performance)
 > - **Backend**: ✅ Already mobile-ready (JWT, REST API, S3 streaming)
+> - **Development**: Monorepo with OpenAPI-driven code generation
+> - **Workflow**: VS Code (backend) + Xcode (iOS) with shared API contracts
 > - **Plan**: 8 phased rollout (Auth → Playback → Background → Sync → Lists → Offline)
 > - **Timeline**: Start after AWS deployment
 > - **Key features**: AVPlayer streaming, background audio, offline downloads, progress sync
 
-**Jump to**: [Backend Readiness](#backend-readiness-) · [Core Features](#core-features-mvp) · [Technology Decision](#technology-decision)
+**Jump to**: [Development Workflow](#development-workflow) · [Technology Decision](#technology-decision) · [Implementation Phases](#implementation-phases)
 
 ---
 
 ## Overview
 
 Native iOS app for Book Vault audiobook library, built on the existing API-first backend. The web app backend is already mobile-ready with JWT authentication, RESTful JSON endpoints, and S3 streaming support.
+
+This plan includes a comprehensive **dual-platform development strategy** that optimizes for AI-assisted development across both backend (TypeScript/Next.js) and iOS (Swift/SwiftUI) codebases.
 
 ## Technology Decision
 
@@ -33,6 +37,301 @@ Native iOS app for Book Vault audiobook library, built on the existing API-first
 - Full access to AVFoundation for professional audio playback
 - Better offline support with local storage
 
+## Development Workflow
+
+### Repository Structure: Monorepo (Recommended)
+
+```
+book-vault/
+├── app/                      # Next.js app (current root)
+├── components/               # React components
+├── lib/                      # Backend utilities
+├── prisma/                   # Database schema
+├── ios/                      # 🆕 Xcode project
+│   ├── BookVault.xcodeproj
+│   ├── BookVault/
+│   │   ├── Views/
+│   │   ├── Models/           # Generated from OpenAPI
+│   │   └── Services/
+│   └── BookVaultTests/
+├── docs/
+│   ├── api/                  # 🆕 OpenAPI specifications
+│   │   ├── openapi.yaml      # API contract (source of truth)
+│   │   └── README.md         # API documentation
+│   ├── mobile/               # 🆕 iOS-specific docs
+│   │   ├── development-workflow.md
+│   │   ├── api-integration.md
+│   │   └── implementation-phases.md
+│   └── ios-backend-sync.md   # 🆕 Sync status tracker
+└── test-fixtures/            # 🆕 Shared test data (backend + iOS)
+    ├── books-list.json
+    ├── book-detail.json
+    └── user-progress.json
+```
+
+**Why Monorepo**:
+
+- Single `git clone` for both projects
+- Atomic commits across backend + iOS changes
+- Easier for Claude Code to see both codebases
+- Shared documentation and test fixtures
+- Simpler for solo/small team development
+
+### Development Environment
+
+**Backend (VS Code)**:
+
+```bash
+# Terminal 1: Backend with network access for iOS
+npm run dev:mobile              # Next.js on 0.0.0.0:3000
+
+# Terminal 2: Watch API specs (auto-regenerate types)
+npm run api:watch               # Regenerates TypeScript + Swift on changes
+
+# Terminal 3: Tests
+npm run test:watch
+```
+
+**iOS (Xcode)**:
+
+- Run iOS app in Simulator (points to `http://localhost:3000`)
+- Build/run for debugging
+- Interface previews
+
+**Tooling Setup**:
+
+```bash
+# Add to package.json
+{
+  "scripts": {
+    "dev:mobile": "next dev --hostname 0.0.0.0",
+    "api:generate": "npm run api:generate:ts && npm run api:generate:swift",
+    "api:generate:ts": "openapi-typescript docs/api/openapi.yaml -o lib/api-types.ts",
+    "api:generate:swift": "openapi-generator generate -i docs/api/openapi.yaml -g swift5 -o ios/BookVault/Generated",
+    "api:watch": "nodemon --watch docs/api/openapi.yaml --exec 'npm run api:generate'",
+    "api:validate": "swagger-cli validate docs/api/openapi.yaml"
+  }
+}
+
+# Install tools
+npm install --save-dev openapi-typescript swagger-cli nodemon
+brew install openapi-generator
+```
+
+### API Contract Management (CRITICAL)
+
+**OpenAPI as Single Source of Truth**:
+
+1. **Update API contract first** (`docs/api/openapi.yaml`)
+2. **Generate code** for both platforms (`npm run api:generate`)
+3. **Implement** using generated types
+4. **Test** both backend and iOS
+5. **Commit atomically** (both changes together)
+
+**Example OpenAPI Spec**:
+
+```yaml
+# docs/api/openapi.yaml
+openapi: 3.0.0
+info:
+  title: Book Vault API
+  version: 1.0.0
+paths:
+  /api/books:
+    get:
+      summary: Get all books
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookListResponse'
+components:
+  schemas:
+    Book:
+      type: object
+      required: [id, title, asin]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        asin: { type: string }
+        # ... rest of schema
+    BookListResponse:
+      type: object
+      properties:
+        books:
+          type: array
+          items:
+            $ref: '#/components/schemas/Book'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+```
+
+**Benefits**:
+
+- TypeScript and Swift stay in sync automatically
+- Documentation is always up-to-date
+- Prevents API contract drift
+- Reduces manual typing errors
+
+### Development Workflow for API Changes
+
+**Scenario: Adding a new "Playlists" feature**
+
+```bash
+# Step 1: Design API in OpenAPI (5 min)
+# Edit docs/api/openapi.yaml - add /api/playlists endpoint
+
+# Step 2: Generate Types (1 min)
+npm run api:generate
+
+# Step 3: Implement Backend (VS Code, 30 min)
+# Create app/api/playlists/route.ts
+
+# Step 4: Test Backend (VS Code, 10 min)
+npm test -- playlists
+curl http://localhost:3000/api/playlists
+
+# Step 5: Implement iOS (Xcode, 30 min)
+# Use generated Swift models in PlaylistService.swift
+
+# Step 6: Test Integration (Both, 10 min)
+# Backend: npm run dev:mobile
+# iOS: Run in Simulator, verify data flows
+
+# Step 7: Commit Atomically (VS Code, 2 min)
+git add .
+git commit -m "feat: add playlists feature (backend + iOS)"
+```
+
+**Total time**: ~90 minutes for full-stack feature
+
+### VS Code + Xcode Workflow
+
+**Option A: Dual Monitor** (Recommended)
+
+```
+Monitor 1: VS Code (backend code, git, docs)
+Monitor 2: Xcode (iOS) + iOS Simulator
+```
+
+**Option B: Single Monitor** (Use macOS Desktops)
+
+```
+Desktop 1: VS Code (backend)
+Desktop 2: Xcode (iOS)
+Desktop 3: Browser (Postman, docs)
+
+Keyboard: Ctrl + → to switch desktops
+```
+
+**Option C: VS Code Primary** (Minimal Xcode)
+
+```
+VS Code: Backend dev, Swift editing, git, docs
+Xcode: Only for building/running iOS app
+
+# Install VS Code Swift extension
+code --install-extension sswg.swift-lang
+```
+
+### Testing Strategy
+
+**Backend (API Integration Tests)**:
+
+```typescript
+// __tests__/api/mobile-integration.test.ts
+describe('Mobile API Integration', () => {
+  test('GET /api/books returns mobile-friendly response', async () => {
+    const response = await fetch('http://localhost:3000/api/books');
+    const data = await response.json();
+
+    // Validate against OpenAPI schema
+    expect(data).toMatchSchema(bookListSchema);
+
+    // Mobile-specific checks
+    expect(data.books[0].coverUrl).toMatch(/^https?:\/\//); // Absolute URLs
+    expect(data.books[0].audioUrl).toMatch(/^https?:\/\//);
+  });
+});
+```
+
+**iOS (Unit Tests with Mocks)**:
+
+```swift
+// BookVaultTests/Services/BookServiceTests.swift
+class BookServiceTests: XCTestCase {
+    func testFetchBooks() async throws {
+        let mockSession = MockURLSession()
+        let service = BookService(session: mockSession)
+
+        // Load fixture from shared test-fixtures/
+        mockSession.nextResponse = loadFixture("books-list.json")
+
+        let books = try await service.fetchBooks()
+        XCTAssertEqual(books.count, 10)
+    }
+}
+```
+
+**Shared Test Fixtures**:
+
+```
+test-fixtures/
+├── books-list.json      # Used by both backend and iOS tests
+├── book-detail.json
+└── user-progress.json
+```
+
+### Recommended Tools
+
+1. **Postman/Insomnia** (API testing before iOS integration)
+2. **Charles Proxy** (debug iOS ↔ Backend traffic)
+3. **OpenAPI Generator** (code generation)
+4. **Swagger UI** (interactive API docs)
+
+### Git Workflow with Dual Codebases
+
+**Pre-commit Hooks** (`.husky/pre-commit`):
+
+```bash
+#!/bin/sh
+# Validate API contract
+npm run api:validate
+
+# Backend checks
+npm run type-check
+npm run lint
+
+# iOS build check (fast validation)
+cd ios && xcodebuild -scheme BookVault \
+  -destination 'generic/platform=iOS' \
+  -quiet || exit 1
+```
+
+**Commit Messages** (atomic changes):
+
+```bash
+# Both platforms changed together
+git commit -m "feat(playlists): add playlist feature (backend + iOS)"
+
+# Backend only
+git commit -m "feat(api): add playlist sorting endpoint"
+
+# iOS only
+git commit -m "feat(ios): add pull-to-refresh on playlist screen"
+```
+
 ## Backend Readiness ✅
 
 The web app backend is **fully prepared** for mobile:
@@ -43,7 +342,7 @@ The web app backend is **fully prepared** for mobile:
    - Refresh token mechanism ready
 
 2. **API Design**: RESTful JSON (all endpoints return JSON)
-   - See [architecture.md](architecture.md) for complete endpoint list
+   - See [api-quick-ref.md](api-quick-ref.md) for complete endpoint list
    - Pagination support on all list endpoints
    - CORS configuration for mobile origins
 
@@ -57,398 +356,69 @@ The web app backend is **fully prepared** for mobile:
    - UserProgress, UserList, Chapter
    - JSON responses map cleanly to Swift Codable structs
 
-## Core Features (MVP)
+## Implementation Phases
 
-### Phase 1: Authentication & Browsing
+**Detailed implementation phases**: See [docs/mobile/implementation-phases.md](mobile/implementation-phases.md)
 
-**Objective**: Users can log in and browse their audiobook library
+**Quick overview**:
 
-**Key Tasks**:
+1. **Phase 1**: Authentication & Browsing
+2. **Phase 2**: Audio Playback (Basic)
+3. **Phase 3**: Background Audio & Lock Screen
+4. **Phase 4**: Progress Sync
+5. **Phase 5**: Chapter Navigation
+6. **Phase 6**: Search & Browse
+7. **Phase 7**: User Lists
+8. **Phase 8**: Offline Downloads (Optional)
 
-- Swift project setup with SwiftUI
-- API client with URLSession (JWT token management)
-- Login screen with credential validation
-- Home screen with book grid (fetch from `/api/books`)
-- Book detail screen with metadata
-- Navigation structure (TabView + NavigationStack)
+## Architecture
 
-**Acceptance Criteria**:
+**Detailed architecture**: See [docs/mobile/architecture.md](mobile/architecture.md)
 
-- User can log in with existing web credentials
-- User can browse books with cover images
-- User can view book details (title, author, narrator, description)
-- App handles network errors gracefully
+**Quick overview**:
 
-**Stop Point**: Commit code, test on device, clear context
-
----
-
-### Phase 2: Audio Playback (Basic)
-
-**Objective**: Users can stream and play audiobooks
-
-**Key Tasks**:
-
-- AVPlayer integration with remote URL streaming
-- Playback controls (play, pause, seek)
-- Playback speed control (0.5x - 2.5x)
-- Volume control
-- Now Playing screen UI
-- Progress bar with time display
-
-**Acceptance Criteria**:
-
-- User can start playback from book detail
-- User can control playback (play/pause/seek)
-- User can adjust playback speed
-- Audio streams without buffering issues
-- Playback position updates in real-time
-
-**Stop Point**: Test audio streaming, verify seek performance
-
----
-
-### Phase 3: Background Audio & Lock Screen
-
-**Objective**: Audio continues when app is backgrounded
-
-**Key Tasks**:
-
-- Background audio mode configuration (Info.plist)
-- AVAudioSession setup for background playback
-- Lock screen controls (MPNowPlayingInfoCenter)
-- Remote command center (play/pause/skip from lock screen)
-- Interruption handling (phone calls, alarms)
-- Route change handling (headphones disconnect)
-
-**Acceptance Criteria**:
-
-- Audio continues when screen locks
-- Lock screen shows cover art, title, author
-- Lock screen controls work (play, pause, skip)
-- Audio pauses on interruption, resumes after
-- Audio handles headphone disconnect properly
-
-**Stop Point**: Test background audio, verify interruption handling
-
----
-
-### Phase 4: Progress Sync
-
-**Objective**: Playback position syncs with backend
-
-**Key Tasks**:
-
-- Integrate with `/api/progress` endpoints
-- Auto-save position every 10 seconds
-- Load saved position on playback start
-- Mark book as completed when finished
-- Continue listening section on home screen
-- Progress indicators on book cards
-
-**Acceptance Criteria**:
-
-- Position saves automatically during playback
-- Position resumes correctly on app restart
-- Books marked as completed sync to backend
-- Continue listening section shows recent books
-- Progress syncs between web and mobile
-
-**Stop Point**: Test sync behavior, verify cross-platform consistency
-
----
-
-### Phase 5: Chapter Navigation
-
-**Objective**: Users can navigate by chapter
-
-**Key Tasks**:
-
-- Fetch chapters from `/api/books/:id/chapters`
-- Chapter list UI in Now Playing screen
-- Skip to chapter functionality
-- Current chapter highlighting
-- Chapter metadata display (title, duration)
-
-**Acceptance Criteria**:
-
-- User can view chapter list
-- User can skip to any chapter
-- Current chapter is highlighted during playback
-- Chapter transitions are smooth
-
-**Stop Point**: Test chapter navigation, verify timing accuracy
-
----
-
-### Phase 6: Search & Browse
-
-**Objective**: Users can search and browse by author/series/narrator
-
-**Key Tasks**:
-
-- Search screen with `/api/search` integration
-- Browse by authors (`/api/browse/authors`)
-- Browse by series (`/api/browse/series`)
-- Browse by narrators (`/api/browse/narrators`)
-- Browse by categories (`/api/browse/categories`)
-- Author/Series/Narrator detail screens
-
-**Acceptance Criteria**:
-
-- User can search across books, authors, narrators
-- User can browse by author/series/narrator/category
-- Search results are relevant and fast
-- Detail screens show all related books
-
-**Stop Point**: Test search performance, verify filtering
-
----
-
-### Phase 7: User Lists
-
-**Objective**: Users can create and manage custom lists
-
-**Key Tasks**:
-
-- My Library screen (show user's added books)
-- Add/remove books from library
-- Custom lists UI (Want to Listen, Favorites)
-- Create/edit/delete lists
-- Drag-to-reorder books in lists
-- Sync with `/api/library/*` endpoints
-
-**Acceptance Criteria**:
-
-- User can add/remove books from library
-- User can create custom lists
-- User can reorder books in lists
-- Lists sync between web and mobile
-
-**Stop Point**: Test list management, verify sync
-
----
-
-### Phase 8: Offline Downloads (Optional)
-
-**Objective**: Users can download books for offline listening
-
-**Key Tasks**:
-
-- Download manager (URLSession background downloads)
-- Local storage management (file system)
-- Download progress UI
-- Offline playback mode (local files)
-- Storage limit management
-- Delete downloaded books
-
-**Acceptance Criteria**:
-
-- User can download books for offline use
-- Downloads work in background
-- Offline playback works without network
-- Storage usage is visible and manageable
-
-**Stop Point**: Test offline mode, verify storage limits
-
----
-
-## Technical Architecture
-
-### App Structure
-
-```
-BookVault/
-├── App/
-│   ├── BookVaultApp.swift           # App entry point
-│   └── AppState.swift                # Global state management
-├── Features/
-│   ├── Auth/
-│   │   ├── Views/
-│   │   │   └── LoginView.swift
-│   │   └── AuthService.swift
-│   ├── Home/
-│   │   └── Views/
-│   │       └── HomeView.swift
-│   ├── Browse/
-│   │   └── Views/
-│   │       ├── BooksListView.swift
-│   │       ├── BookDetailView.swift
-│   │       └── SearchView.swift
-│   ├── Player/
-│   │   ├── Views/
-│   │   │   └── NowPlayingView.swift
-│   │   └── AudioPlayerService.swift
-│   └── Library/
-│       └── Views/
-│           └── LibraryView.swift
-├── Networking/
-│   ├── APIClient.swift               # URLSession wrapper
-│   ├── Endpoints.swift               # API endpoint definitions
-│   └── Models/                       # Codable response models
-│       ├── Book.swift
-│       ├── Author.swift
-│       └── UserProgress.swift
-├── Services/
-│   ├── AuthenticationService.swift  # JWT token management
-│   ├── AudioPlayerService.swift     # AVPlayer wrapper
-│   └── DownloadService.swift        # Offline downloads
-└── Resources/
-    └── Assets.xcassets
-```
-
-### Key Services
-
-**AuthenticationService**:
-
-- JWT token storage (Keychain)
-- Token refresh mechanism
-- Login/logout flows
-
-**AudioPlayerService**:
-
-- AVPlayer management
-- Background audio setup
-- Lock screen integration
-- Progress tracking
-
-**APIClient**:
-
-- URLSession configuration
-- Request/response handling
-- Error handling
-- Authentication headers
-
-**DownloadService** (Phase 8):
-
-- Background download tasks
-- File system management
-- Progress tracking
+- SwiftUI for UI layer
+- AVPlayer for audio playback
+- URLSession for networking
+- Keychain for JWT storage
+- FileManager for offline downloads
 
 ## API Integration
 
-### Authentication Flow
+**Detailed API integration guide**: See [docs/mobile/api-integration.md](mobile/api-integration.md)
 
-```swift
-// Login
-POST /api/auth/login
-Body: { email, password }
-Response: { token, user: { id, email } }
+**Quick reference**:
 
-// Store token in Keychain
-// Add to Authorization header: "Bearer {token}"
-```
+- Authentication flow (JWT tokens)
+- Data fetching patterns
+- Progress sync mechanism
+- Error handling strategy
 
-### Data Fetching Examples
+## iOS-Specific Features
 
-```swift
-// Get books
-GET /api/books?page=1&limit=20
-Response: { books: [...], pagination: {...} }
+**Detailed iOS considerations**: See [docs/mobile/ios-features.md](mobile/ios-features.md)
 
-// Get book detail
-GET /api/books/{id}
-Response: { id, title, authors, ... }
+**Key features**:
 
-// Get user progress
-GET /api/progress?bookId={id}
-Response: { positionSeconds, completed, lastPlayed }
-
-// Update progress
-POST /api/progress
-Body: { bookId, positionSeconds, completed }
-```
-
-## iOS-Specific Considerations
-
-### Background Audio
-
-- Add "Audio, AirPlay, and Picture in Picture" background mode
-- Configure AVAudioSession for playback
-- Handle interruptions (calls, alarms)
-- Support remote control events
-
-### Lock Screen Integration
-
-```swift
-// MPNowPlayingInfoCenter
-nowPlayingInfo = [
-    MPMediaItemPropertyTitle: book.title,
-    MPMediaItemPropertyArtist: book.authors.joined(", "),
-    MPMediaItemPropertyArtwork: coverArt,
-    MPMediaItemPropertyPlaybackDuration: duration,
-    MPNowPlayingInfoPropertyElapsedPlaybackTime: position
-]
-```
-
-### CarPlay (Future)
-
-- CarPlay audio app template
-- Simplified UI for driving safety
-- Voice control integration
-
-### Offline Storage
-
-- Use FileManager for local audio files
-- Store in app's Documents directory
-- Respect iOS storage limits
-- Clean up when space is low
-
-## Testing Strategy
-
-### Unit Tests
-
-- API client request/response handling
-- Authentication service token management
-- Progress sync logic
-- Download manager file operations
-
-### UI Tests
-
-- Login flow
-- Book browsing and search
-- Playback controls
-- Chapter navigation
-
-### Manual Testing
-
-- Background audio on real device
-- Lock screen controls
-- Interruption handling (phone calls)
-- Network connectivity changes
-- Different iOS versions (16+)
+- Background audio mode
+- Lock screen controls (MPNowPlayingInfoCenter)
+- Interruption handling (calls, alarms)
+- CarPlay support (future)
 
 ## Deployment
 
-### App Store Submission
+**App Store Requirements**:
 
-1. Apple Developer account (individual or organization)
-2. App Store Connect setup
-3. App ID and provisioning profiles
-4. TestFlight beta testing
-5. App Store review submission
-
-### Requirements
-
-- iOS 16+ minimum deployment target
-- Privacy policy (required for App Store)
+- Apple Developer account ($99/year)
+- Privacy policy (required)
 - Terms of service
-- App icon and screenshots
-- App Store description and metadata
+- App Store assets (icon, screenshots)
+- TestFlight beta testing
 
-## Future Enhancements
+**Minimum Requirements**:
 
-### Post-MVP Features
-
-- CarPlay integration
-- Widgets (Continue Listening, Recent Books)
-- Share audiobook recommendations
-- Sleep timer
-- Bookmarks and notes
-- iCloud sync for downloads
-- Siri integration ("Play [book title]")
-- AirPlay support
-- Picture-in-Picture mode
+- iOS 16+ deployment target
+- Privacy manifest (App Privacy Details)
 
 ## Success Metrics
 
@@ -462,4 +432,17 @@ nowPlayingInfo = [
 
 ---
 
-**Next Steps**: Complete web app deployment to AWS, then begin Phase 1 of iOS development.
+**Detailed Documentation**:
+
+- [Development Workflow](mobile/development-workflow.md) - VS Code + Xcode coordination
+- [Implementation Phases](mobile/implementation-phases.md) - 8 phases with acceptance criteria
+- [Architecture](mobile/architecture.md) - Technical architecture and file structure
+- [API Integration](mobile/api-integration.md) - API endpoints and integration patterns
+- [iOS Features](mobile/ios-features.md) - iOS-specific implementations
+
+**Next Steps**:
+
+1. Complete web app deployment to AWS
+2. Create OpenAPI specification from existing APIs
+3. Setup iOS project in monorepo
+4. Begin Phase 1 of iOS development
