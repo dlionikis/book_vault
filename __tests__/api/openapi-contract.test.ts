@@ -78,28 +78,27 @@ describe('OpenAPI Contract Tests', () => {
   const runTests = process.env.RUN_CONTRACT_TESTS === 'true';
   const testFn = runTests ? test : test.skip;
 
-  // TODO: Authentication endpoint tests are disabled because OpenAPI spec doesn't match implementation
-  // OpenAPI spec documents /api/auth/login but actual endpoint is /api/auth/mobile/login
-  // Need to update OpenAPI spec in Phase 2 fixes
-  describe.skip('Authentication Endpoints', () => {
-    describe('POST /api/auth/login', () => {
+  describe('Authentication Endpoints', () => {
+    describe('POST /api/auth/mobile/login', () => {
       testFn('should satisfy OpenAPI spec for successful login', async () => {
-        const response = await axios.post(`${BASE_URL}/api/auth/login`, TEST_USER, {
+        const response = await axios.post(`${BASE_URL}/api/auth/mobile/login`, TEST_USER, {
           headers: { 'Content-Type': 'application/json' },
           validateStatus: () => true,
         });
 
         expect(response.status).toBe(200);
         expect(response).toSatisfyApiSpec();
-        expect(response.data).toHaveProperty('token');
+        expect(response.data).toHaveProperty('accessToken');
+        expect(response.data).toHaveProperty('refreshToken');
         expect(response.data).toHaveProperty('user');
+        expect(response.data).toHaveProperty('expiresIn');
         expect(response.data.user).toHaveProperty('id');
         expect(response.data.user).toHaveProperty('email');
       });
 
       testFn('should satisfy OpenAPI spec for invalid credentials', async () => {
         const response = await axios.post(
-          `${BASE_URL}/api/auth/login`,
+          `${BASE_URL}/api/auth/mobile/login`,
           { email: TEST_USER.email, password: 'wrong-password' },
           {
             headers: { 'Content-Type': 'application/json' },

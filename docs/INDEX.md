@@ -62,7 +62,6 @@
 | ------------------------------------------ | -------------------------------------------------- | ------ |
 | [mobile-ios-plan.md](mobile-ios-plan.md)   | **iOS implementation overview & development plan** | ~2,800 |
 | [ios-backend-sync.md](ios-backend-sync.md) | **iOS-Backend sync tracker** (API change impact)   | ~2,000 |
-| [api-mobile.md](api-mobile.md)             | Mobile API quick reference (condensed)             | ~370   |
 
 ### Detailed iOS Guides (Read When Implementing)
 
@@ -166,7 +165,6 @@ Located in `archive/` folder:
 
 - [component-guide.md](component-guide.md) - 660 tokens, high value
 - [storybook.md](storybook.md) - 300 tokens, high value
-- [api-mobile.md](api-mobile.md) - 370 tokens, high value (condensed)
 
 **Moderate cost**:
 
