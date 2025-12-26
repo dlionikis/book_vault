@@ -7,18 +7,18 @@ info:
 
     ## Authentication
 
-    **IMPORTANT**: This API uses **session-based authentication** (NextAuth.js) for web clients.
-    Most endpoints require an active session cookie, NOT Bearer tokens.
+    **IMPORTANT**: This API supports **dual authentication** for maximum flexibility.
+    All endpoints accept BOTH session cookies (web) AND Bearer tokens (mobile).
 
-    ### Web Authentication (Default)
+    ### Web Authentication (Session-based)
     - Login via NextAuth.js at `/api/auth/signin`
     - Session maintained via HTTP-only cookies
-    - All documented endpoints use session auth unless noted
+    - All documented endpoints support session auth
 
-    ### Mobile Authentication (Limited)
+    ### Mobile Authentication (Bearer tokens)
     - Mobile-specific endpoints at `/api/auth/mobile/*`
     - Use JWT Bearer tokens: `Authorization: Bearer {token}`
-    - Only `/api/progress` (POST) currently supports Bearer auth
+    - All endpoints support both auth methods
     - See "Mobile Authentication" tag for mobile-specific endpoints
 
     ## Base URL

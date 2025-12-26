@@ -12,7 +12,14 @@
 
 import jestOpenAPI from 'jest-openapi';
 import path from 'path';
-import fetch, { RequestInit as NodeRequestInit, Response as NodeResponse } from 'node-fetch';
+import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
+import http from 'http';
+import https from 'https';
+
+// Configure axios to use Node.js adapters instead of XHR (for Jest/JSDOM environment)
+axios.defaults.adapter = require('axios/lib/adapters/http');
+axios.defaults.httpAgent = new http.Agent({ keepAlive: true });
+axios.defaults.httpsAgent = new https.Agent({ keepAlive: true });
 
 // Load OpenAPI spec
 const openApiPath = path.join(__dirname, '../../docs/api/openapi.yaml');
@@ -31,35 +38,38 @@ let authToken: string | null = null;
 async function getAuthToken(): Promise<string> {
   if (authToken) return authToken;
 
-  // NOTE: Using /api/auth/mobile/login instead of /api/auth/login
-  // The OpenAPI spec needs to be updated to reflect the actual endpoints
-  const response = await fetch(`${BASE_URL}/api/auth/mobile/login`, {
-    method: 'POST',
+  // NOTE: Using /api/auth/mobile/login to get JWT Bearer token
+  // All endpoints now support both session cookies and Bearer tokens
+  const response = await axios.post(`${BASE_URL}/api/auth/mobile/login`, TEST_USER, {
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(TEST_USER),
+    validateStatus: () => true, // Don't throw on any status code
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to get auth token: ${response.status} ${await response.text()}`);
+  if (response.status !== 200) {
+    throw new Error(
+      `Failed to get auth token: ${response.status} ${JSON.stringify(response.data)}`
+    );
   }
 
-  const data = (await response.json()) as { accessToken: string };
-  authToken = data.accessToken;
-  return authToken;
+  const token = response.data.accessToken as string;
+  authToken = token;
+  return token;
 }
 
 // Helper to make authenticated requests
-async function authenticatedFetch(
+async function authenticatedRequest(
   url: string,
-  options: NodeRequestInit = {}
-): Promise<NodeResponse> {
+  options: AxiosRequestConfig = {}
+): Promise<AxiosResponse> {
   const token = await getAuthToken();
-  return fetch(url, {
+  return axios({
+    url,
     ...options,
     headers: {
-      ...(options.headers as Record<string, string>),
+      ...options.headers,
       Authorization: `Bearer ${token}`,
     },
+    validateStatus: () => true, // Don't throw on any status code
   });
 }
 
@@ -74,34 +84,32 @@ describe('OpenAPI Contract Tests', () => {
   describe.skip('Authentication Endpoints', () => {
     describe('POST /api/auth/login', () => {
       testFn('should satisfy OpenAPI spec for successful login', async () => {
-        const response = await fetch(`${BASE_URL}/api/auth/login`, {
-          method: 'POST',
+        const response = await axios.post(`${BASE_URL}/api/auth/login`, TEST_USER, {
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(TEST_USER),
+          validateStatus: () => true,
         });
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('token');
-        expect(data).toHaveProperty('user');
-        expect(data.user).toHaveProperty('id');
-        expect(data.user).toHaveProperty('email');
+        expect(response.data).toHaveProperty('token');
+        expect(response.data).toHaveProperty('user');
+        expect(response.data.user).toHaveProperty('id');
+        expect(response.data.user).toHaveProperty('email');
       });
 
       testFn('should satisfy OpenAPI spec for invalid credentials', async () => {
-        const response = await fetch(`${BASE_URL}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: TEST_USER.email, password: 'wrong-password' }),
-        });
+        const response = await axios.post(
+          `${BASE_URL}/api/auth/login`,
+          { email: TEST_USER.email, password: 'wrong-password' },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            validateStatus: () => true,
+          }
+        );
 
         expect(response.status).toBe(401);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('error');
+        expect(response.data).toHaveProperty('error');
       });
     });
   });
@@ -109,42 +117,40 @@ describe('OpenAPI Contract Tests', () => {
   describe('Books Endpoints', () => {
     describe('GET /api/books', () => {
       testFn('should satisfy OpenAPI spec for book list', async () => {
-        const response = await authenticatedFetch(`${BASE_URL}/api/books?page=1&limit=10`);
+        const url = `${BASE_URL}/api/books?page=1&limit=10`;
+        const response = await authenticatedRequest(url, { method: 'GET' });
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('books');
-        expect(data).toHaveProperty('pagination');
-        expect(Array.isArray(data.books)).toBe(true);
+        expect(response.data).toHaveProperty('books');
+        expect(response.data).toHaveProperty('pagination');
+        expect(Array.isArray(response.data.books)).toBe(true);
 
         // Validate pagination structure
-        expect(data.pagination).toHaveProperty('page');
-        expect(data.pagination).toHaveProperty('limit');
-        expect(data.pagination).toHaveProperty('total');
-        expect(data.pagination).toHaveProperty('pages');
+        expect(response.data.pagination).toHaveProperty('page');
+        expect(response.data.pagination).toHaveProperty('limit');
+        expect(response.data.pagination).toHaveProperty('total');
+        expect(response.data.pagination).toHaveProperty('pages');
       });
 
       testFn('should satisfy OpenAPI spec with sort parameter', async () => {
-        const response = await authenticatedFetch(
-          `${BASE_URL}/api/books?sort=title&page=1&limit=5`
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/books?sort=title&page=1&limit=5`,
+          { method: 'GET' }
         );
 
         expect(response.status).toBe(200);
-
-        await response.json();
         expect(response).toSatisfyApiSpec();
       });
 
       testFn('should return 401 for unauthenticated request', async () => {
-        const response = await fetch(`${BASE_URL}/api/books`);
+        const response = await axios.get(`${BASE_URL}/api/books`, {
+          validateStatus: () => true,
+        });
 
         expect(response.status).toBe(401);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('error');
+        expect(response.data).toHaveProperty('error');
       });
     });
 
@@ -153,10 +159,11 @@ describe('OpenAPI Contract Tests', () => {
 
       beforeAll(async () => {
         // Get a book ID from the books list
-        const response = await authenticatedFetch(`${BASE_URL}/api/books?limit=1`);
-        const data = await response.json();
-        if (data.books && data.books.length > 0) {
-          testBookId = data.books[0].id;
+        const response = await authenticatedRequest(`${BASE_URL}/api/books?limit=1`, {
+          method: 'GET',
+        });
+        if (response.data.books && response.data.books.length > 0) {
+          testBookId = response.data.books[0].id;
         }
       });
 
@@ -166,33 +173,33 @@ describe('OpenAPI Contract Tests', () => {
           return;
         }
 
-        const response = await authenticatedFetch(`${BASE_URL}/api/books/${testBookId}`);
+        const response = await authenticatedRequest(`${BASE_URL}/api/books/${testBookId}`, {
+          method: 'GET',
+        });
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
 
         // Validate required Book fields
-        expect(data).toHaveProperty('id');
-        expect(data).toHaveProperty('asin');
-        expect(data).toHaveProperty('title');
-        expect(data).toHaveProperty('runtimeMinutes');
-        expect(data).toHaveProperty('coverUrl');
-        expect(data).toHaveProperty('audioUrl');
-        expect(data).toHaveProperty('authors');
-        expect(Array.isArray(data.authors)).toBe(true);
+        expect(response.data).toHaveProperty('id');
+        expect(response.data).toHaveProperty('asin');
+        expect(response.data).toHaveProperty('title');
+        expect(response.data).toHaveProperty('runtimeMinutes');
+        expect(response.data).toHaveProperty('coverUrl');
+        expect(response.data).toHaveProperty('audioUrl');
+        expect(response.data).toHaveProperty('authors');
+        expect(Array.isArray(response.data.authors)).toBe(true);
       });
 
       testFn('should return 404 for non-existent book', async () => {
         const nonExistentId = '00000000-0000-0000-0000-000000000000';
-        const response = await authenticatedFetch(`${BASE_URL}/api/books/${nonExistentId}`);
+        const response = await authenticatedRequest(`${BASE_URL}/api/books/${nonExistentId}`, {
+          method: 'GET',
+        });
 
         expect(response.status).toBe(404);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('error');
+        expect(response.data).toHaveProperty('error');
       });
     });
   });
@@ -202,10 +209,11 @@ describe('OpenAPI Contract Tests', () => {
 
     beforeAll(async () => {
       // Get a book ID from the books list
-      const response = await authenticatedFetch(`${BASE_URL}/api/books?limit=1`);
-      const data = await response.json();
-      if (data.books && data.books.length > 0) {
-        testBookId = data.books[0].id;
+      const response = await authenticatedRequest(`${BASE_URL}/api/books?limit=1`, {
+        method: 'GET',
+      });
+      if (response.data.books && response.data.books.length > 0) {
+        testBookId = response.data.books[0].id;
       }
     });
 
@@ -216,29 +224,29 @@ describe('OpenAPI Contract Tests', () => {
           return;
         }
 
-        const response = await authenticatedFetch(`${BASE_URL}/api/books/${testBookId}/chapters`);
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/books/${testBookId}/chapters`,
+          { method: 'GET' }
+        );
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('chapters');
-        expect(data).toHaveProperty('source');
-        expect(Array.isArray(data.chapters)).toBe(true);
-        expect(['database', 'extracted', 'none']).toContain(data.source);
+        expect(response.data).toHaveProperty('chapters');
+        expect(response.data).toHaveProperty('source');
+        expect(Array.isArray(response.data.chapters)).toBe(true);
+        expect(['database', 'extracted', 'none']).toContain(response.data.source);
       });
 
       testFn('should return 404 for non-existent book', async () => {
         const nonExistentId = '00000000-0000-0000-0000-000000000000';
-        const response = await authenticatedFetch(
-          `${BASE_URL}/api/books/${nonExistentId}/chapters`
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/books/${nonExistentId}/chapters`,
+          { method: 'GET' }
         );
 
         expect(response.status).toBe(404);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('error');
+        expect(response.data).toHaveProperty('error');
       });
     });
   });
@@ -248,10 +256,11 @@ describe('OpenAPI Contract Tests', () => {
 
     beforeAll(async () => {
       // Get a book ID from the books list
-      const response = await authenticatedFetch(`${BASE_URL}/api/books?limit=1`);
-      const data = await response.json();
-      if (data.books && data.books.length > 0) {
-        testBookId = data.books[0].id;
+      const response = await authenticatedRequest(`${BASE_URL}/api/books?limit=1`, {
+        method: 'GET',
+      });
+      if (response.data.books && response.data.books.length > 0) {
+        testBookId = response.data.books[0].id;
       }
     });
 
@@ -262,24 +271,23 @@ describe('OpenAPI Contract Tests', () => {
           return;
         }
 
-        const response = await authenticatedFetch(`${BASE_URL}/api/progress?bookId=${testBookId}`);
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/progress?bookId=${testBookId}`,
+          { method: 'GET' }
+        );
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('positionSeconds');
-        expect(data).toHaveProperty('completed');
+        expect(response.data).toHaveProperty('positionSeconds');
+        expect(response.data).toHaveProperty('completed');
       });
 
       testFn('should return 400 for missing bookId', async () => {
-        const response = await authenticatedFetch(`${BASE_URL}/api/progress`);
+        const response = await authenticatedRequest(`${BASE_URL}/api/progress`, { method: 'GET' });
 
         expect(response.status).toBe(400);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('error');
+        expect(response.data).toHaveProperty('error');
       });
     });
 
@@ -290,23 +298,21 @@ describe('OpenAPI Contract Tests', () => {
           return;
         }
 
-        const response = await authenticatedFetch(`${BASE_URL}/api/progress`, {
+        const response = await authenticatedRequest(`${BASE_URL}/api/progress`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          data: {
             bookId: testBookId,
             positionSeconds: 123.45,
-          }),
+          },
         });
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('positionSeconds');
-        expect(data).toHaveProperty('completed');
-        expect(data).toHaveProperty('lastPlayed');
-        expect(data).toHaveProperty('updated');
+        expect(response.data).toHaveProperty('positionSeconds');
+        expect(response.data).toHaveProperty('completed');
+        expect(response.data).toHaveProperty('lastPlayed');
+        expect(response.data).toHaveProperty('updated');
       });
     });
 
@@ -317,22 +323,20 @@ describe('OpenAPI Contract Tests', () => {
           return;
         }
 
-        const response = await authenticatedFetch(`${BASE_URL}/api/progress`, {
+        const response = await authenticatedRequest(`${BASE_URL}/api/progress`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          data: {
             bookId: testBookId,
             status: 'completed',
-          }),
+          },
         });
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('positionSeconds');
-        expect(data).toHaveProperty('completed');
-        expect(data.completed).toBe(true);
+        expect(response.data).toHaveProperty('positionSeconds');
+        expect(response.data).toHaveProperty('completed');
+        expect(response.data.completed).toBe(true);
       });
 
       testFn('should satisfy OpenAPI spec for reset to not-started', async () => {
@@ -341,23 +345,21 @@ describe('OpenAPI Contract Tests', () => {
           return;
         }
 
-        const response = await authenticatedFetch(`${BASE_URL}/api/progress`, {
+        const response = await authenticatedRequest(`${BASE_URL}/api/progress`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          data: {
             bookId: testBookId,
             status: 'not-started',
-          }),
+          },
         });
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('positionSeconds');
-        expect(data).toHaveProperty('completed');
-        expect(data.positionSeconds).toBe(0);
-        expect(data.completed).toBe(false);
+        expect(response.data).toHaveProperty('positionSeconds');
+        expect(response.data).toHaveProperty('completed');
+        expect(response.data.positionSeconds).toBe(0);
+        expect(response.data.completed).toBe(false);
       });
     });
   });
@@ -365,25 +367,24 @@ describe('OpenAPI Contract Tests', () => {
   describe('Search Endpoints', () => {
     describe('GET /api/search', () => {
       testFn('should satisfy OpenAPI spec for search results', async () => {
-        const response = await authenticatedFetch(`${BASE_URL}/api/search?q=test&page=1&limit=10`);
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/search?q=test&page=1&limit=10`,
+          { method: 'GET' }
+        );
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('results');
-        expect(data).toHaveProperty('pagination');
-        expect(Array.isArray(data.results)).toBe(true);
+        expect(response.data).toHaveProperty('results');
+        expect(response.data).toHaveProperty('pagination');
+        expect(Array.isArray(response.data.results)).toBe(true);
       });
 
       testFn('should return 400 for missing query', async () => {
-        const response = await authenticatedFetch(`${BASE_URL}/api/search`);
+        const response = await authenticatedRequest(`${BASE_URL}/api/search`, { method: 'GET' });
 
         expect(response.status).toBe(400);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('error');
+        expect(response.data).toHaveProperty('error');
       });
     });
   });
@@ -391,18 +392,19 @@ describe('OpenAPI Contract Tests', () => {
   describe('Browse Endpoints', () => {
     describe('GET /api/browse/authors', () => {
       testFn('should satisfy OpenAPI spec for authors list', async () => {
-        const response = await authenticatedFetch(`${BASE_URL}/api/browse/authors?page=1&limit=10`);
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/browse/authors?page=1&limit=10`,
+          { method: 'GET' }
+        );
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('results');
-        expect(data).toHaveProperty('pagination');
-        expect(Array.isArray(data.results)).toBe(true);
+        expect(response.data).toHaveProperty('results');
+        expect(response.data).toHaveProperty('pagination');
+        expect(Array.isArray(response.data.results)).toBe(true);
 
-        if (data.results.length > 0) {
-          const author = data.results[0];
+        if (response.data.results.length > 0) {
+          const author = response.data.results[0];
           expect(author).toHaveProperty('id');
           expect(author).toHaveProperty('name');
           expect(author).toHaveProperty('bookCount');
@@ -412,44 +414,43 @@ describe('OpenAPI Contract Tests', () => {
 
     describe('GET /api/browse/series', () => {
       testFn('should satisfy OpenAPI spec for series list', async () => {
-        const response = await authenticatedFetch(`${BASE_URL}/api/browse/series?page=1&limit=10`);
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/browse/series?page=1&limit=10`,
+          { method: 'GET' }
+        );
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('results');
-        expect(data).toHaveProperty('pagination');
+        expect(response.data).toHaveProperty('results');
+        expect(response.data).toHaveProperty('pagination');
       });
     });
 
     describe('GET /api/browse/narrators', () => {
       testFn('should satisfy OpenAPI spec for narrators list', async () => {
-        const response = await authenticatedFetch(
-          `${BASE_URL}/api/browse/narrators?page=1&limit=10`
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/browse/narrators?page=1&limit=10`,
+          { method: 'GET' }
         );
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('results');
-        expect(data).toHaveProperty('pagination');
+        expect(response.data).toHaveProperty('results');
+        expect(response.data).toHaveProperty('pagination');
       });
     });
 
     describe('GET /api/browse/categories', () => {
       testFn('should satisfy OpenAPI spec for categories list', async () => {
-        const response = await authenticatedFetch(
-          `${BASE_URL}/api/browse/categories?page=1&limit=10`
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/browse/categories?page=1&limit=10`,
+          { method: 'GET' }
         );
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('results');
-        expect(data).toHaveProperty('pagination');
+        expect(response.data).toHaveProperty('results');
+        expect(response.data).toHaveProperty('pagination');
       });
     });
 
@@ -458,10 +459,11 @@ describe('OpenAPI Contract Tests', () => {
 
       beforeAll(async () => {
         // Get an author ID from the authors list
-        const response = await authenticatedFetch(`${BASE_URL}/api/browse/authors?limit=1`);
-        const data = await response.json();
-        if (data.results && data.results.length > 0) {
-          testAuthorId = data.results[0].id;
+        const response = await authenticatedRequest(`${BASE_URL}/api/browse/authors?limit=1`, {
+          method: 'GET',
+        });
+        if (response.data.results && response.data.results.length > 0) {
+          testAuthorId = response.data.results[0].id;
         }
       });
 
@@ -471,17 +473,17 @@ describe('OpenAPI Contract Tests', () => {
           return;
         }
 
-        const response = await authenticatedFetch(`${BASE_URL}/api/authors/${testAuthorId}`);
+        const response = await authenticatedRequest(`${BASE_URL}/api/authors/${testAuthorId}`, {
+          method: 'GET',
+        });
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('id');
-        expect(data).toHaveProperty('name');
-        expect(data).toHaveProperty('books');
-        expect(data).toHaveProperty('pagination');
-        expect(Array.isArray(data.books)).toBe(true);
+        expect(response.data).toHaveProperty('id');
+        expect(response.data).toHaveProperty('name');
+        expect(response.data).toHaveProperty('books');
+        expect(response.data).toHaveProperty('pagination');
+        expect(Array.isArray(response.data.books)).toBe(true);
       });
     });
   });
@@ -489,16 +491,14 @@ describe('OpenAPI Contract Tests', () => {
   describe('Library Endpoints', () => {
     describe('GET /api/library', () => {
       testFn('should satisfy OpenAPI spec for library', async () => {
-        const response = await authenticatedFetch(`${BASE_URL}/api/library`);
+        const response = await authenticatedRequest(`${BASE_URL}/api/library`, { method: 'GET' });
 
         expect(response.status).toBe(200);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('books');
-        expect(data).toHaveProperty('total');
-        expect(Array.isArray(data.books)).toBe(true);
-        expect(typeof data.total).toBe('number');
+        expect(response.data).toHaveProperty('books');
+        expect(response.data).toHaveProperty('total');
+        expect(Array.isArray(response.data.books)).toBe(true);
+        expect(typeof response.data.total).toBe('number');
       });
     });
 
@@ -507,10 +507,11 @@ describe('OpenAPI Contract Tests', () => {
 
       beforeAll(async () => {
         // Get a book ID from the books list
-        const response = await authenticatedFetch(`${BASE_URL}/api/books?limit=1`);
-        const data = await response.json();
-        if (data.books && data.books.length > 0) {
-          testBookId = data.books[0].id;
+        const response = await authenticatedRequest(`${BASE_URL}/api/books?limit=1`, {
+          method: 'GET',
+        });
+        if (response.data.books && response.data.books.length > 0) {
+          testBookId = response.data.books[0].id;
         }
       });
 
@@ -520,32 +521,28 @@ describe('OpenAPI Contract Tests', () => {
           return;
         }
 
-        const response = await authenticatedFetch(`${BASE_URL}/api/library`, {
+        const response = await authenticatedRequest(`${BASE_URL}/api/library`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bookId: testBookId }),
+          data: { bookId: testBookId },
         });
 
         // Either 200 (already in library) or 201 (added)
         expect([200, 201]).toContain(response.status);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('message');
+        expect(response.data).toHaveProperty('message');
       });
 
       testFn('should return 400 for missing bookId', async () => {
-        const response = await authenticatedFetch(`${BASE_URL}/api/library`, {
+        const response = await authenticatedRequest(`${BASE_URL}/api/library`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
+          data: {},
         });
 
         expect(response.status).toBe(400);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('error');
+        expect(response.data).toHaveProperty('error');
       });
     });
 
@@ -554,16 +551,17 @@ describe('OpenAPI Contract Tests', () => {
 
       beforeAll(async () => {
         // Get a book ID and ensure it's in the library
-        const booksResponse = await authenticatedFetch(`${BASE_URL}/api/books?limit=1`);
-        const booksData = await booksResponse.json();
-        if (booksData.books && booksData.books.length > 0) {
-          testBookId = booksData.books[0].id;
+        const booksResponse = await authenticatedRequest(`${BASE_URL}/api/books?limit=1`, {
+          method: 'GET',
+        });
+        if (booksResponse.data.books && booksResponse.data.books.length > 0) {
+          testBookId = booksResponse.data.books[0].id;
 
           // Add it to library first
-          await authenticatedFetch(`${BASE_URL}/api/library`, {
+          await authenticatedRequest(`${BASE_URL}/api/library`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bookId: testBookId }),
+            data: { bookId: testBookId },
           });
         }
       });
@@ -574,16 +572,14 @@ describe('OpenAPI Contract Tests', () => {
           return;
         }
 
-        const response = await authenticatedFetch(`${BASE_URL}/api/library/${testBookId}`, {
+        const response = await authenticatedRequest(`${BASE_URL}/api/library/${testBookId}`, {
           method: 'DELETE',
         });
 
         // Either 200 (removed) or 404 (not in library)
         expect([200, 404]).toContain(response.status);
-
-        const data = await response.json();
         expect(response).toSatisfyApiSpec();
-        expect(data).toHaveProperty('message');
+        expect(response.data).toHaveProperty('message');
       });
     });
   });

@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
 // DELETE /api/library/[bookId] - Remove book from library
 export async function DELETE(request: NextRequest, { params }: { params: { bookId: string } }) {
   try {
+    // Check both auth methods
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const mobileUser = await getAuthUserFromRequest(request);
+    const user = session?.user || mobileUser;
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -16,7 +20,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { bookI
     // Get user's library
     const library = await prisma.userList.findFirst({
       where: {
-        userId: session.user.id,
+        userId: user.id,
         name: 'My Library',
       },
     });

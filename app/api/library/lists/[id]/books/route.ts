@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
 // POST /api/library/lists/[id]/books - Add book to list
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // Check both auth methods
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const mobileUser = await getAuthUserFromRequest(request);
+    const user = session?.user || mobileUser;
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -28,7 +32,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: 'List not found' }, { status: 404 });
     }
 
-    if (existingList.userId !== session.user.id) {
+    if (existingList.userId !== user.id) {
       return NextResponse.json({ error: 'Not your list' }, { status: 403 });
     }
 
@@ -66,8 +70,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 // DELETE /api/library/lists/[id]/books - Remove book from list
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // Check both auth methods
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const mobileUser = await getAuthUserFromRequest(request);
+    const user = session?.user || mobileUser;
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -88,7 +96,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: 'List not found' }, { status: 404 });
     }
 
-    if (existingList.userId !== session.user.id) {
+    if (existingList.userId !== user.id) {
       return NextResponse.json({ error: 'Not your list' }, { status: 403 });
     }
 

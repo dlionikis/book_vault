@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { extractChapters } from '@/lib/audio-metadata';
 import { getAbsoluteMediaPath } from '@/lib/media';
 import path from 'path';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  // Check both auth methods
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  const mobileUser = await getAuthUserFromRequest(request);
+  const user = session?.user || mobileUser;
+
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

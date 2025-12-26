@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUserFromRequest } from '@/lib/auth';
+import { getServerSession } from 'next-auth';
+import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isS3Enabled, generatePresignedUrl, getS3ObjectMetadata } from '@/lib/s3';
 import { checkDownloadLimit } from '@/lib/rate-limit';
@@ -9,8 +10,11 @@ export async function POST(
   { params }: { params: { bookId: string } }
 ) {
   try {
-    // Authenticate user
-    const user = await getAuthUserFromRequest(request);
+    // Check both auth methods
+    const session = await getServerSession(authOptions);
+    const mobileUser = await getAuthUserFromRequest(request);
+    const user = session?.user || mobileUser;
+
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },

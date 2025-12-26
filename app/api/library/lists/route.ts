@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
 // GET /api/library/lists - Get all user lists with book counts
 export async function GET(request: NextRequest) {
   try {
+    // Check both auth methods
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const mobileUser = await getAuthUserFromRequest(request);
+    const user = session?.user || mobileUser;
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const lists = await prisma.userList.findMany({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       include: {
         _count: { select: { books: true } },
       },
@@ -38,8 +42,12 @@ export async function GET(request: NextRequest) {
 // POST /api/library/lists - Create new list
 export async function POST(request: NextRequest) {
   try {
+    // Check both auth methods
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const mobileUser = await getAuthUserFromRequest(request);
+    const user = session?.user || mobileUser;
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -52,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     const list = await prisma.userList.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         name,
         description: description || null,
       },
