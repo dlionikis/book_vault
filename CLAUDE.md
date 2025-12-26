@@ -89,11 +89,13 @@ npm run db:generate            # Regenerate Prisma Client
 npm test                       # Run all Jest tests
 npm run test:watch             # Watch mode
 npm run test:coverage          # Coverage report
+npm run test:contract          # Run OpenAPI contract tests (auto-starts server)
 npm run type-check             # TypeScript validation
 npm run lint                   # ESLint check
 npm run lint:fix               # Auto-fix linting issues
 npm run format                 # Prettier format
 npm run validate               # Run all checks (format + lint + typecheck + test)
+npm run validate:full          # Full validation including API contract checks
 
 # Data Management
 npm run import                 # Import books from Libation directory
@@ -112,6 +114,7 @@ npm run api:generate           # Generate all types (TypeScript + Swift)
 npm run api:docs               # Generate API documentation (HTML)
 npm run docs:generate          # Generate everything (types + docs)
 npm run api:watch              # Watch for changes and auto-regenerate
+npm run api:check-drift        # Check if generated types are stale
 
 # Build & Deploy
 npm run build                  # Production build
@@ -216,6 +219,43 @@ git push -u origin feature/your-feature
     return NextResponse.json({ error: 'Descriptive message' }, { status: 500 });
   }
   ```
+
+#### API Development (OpenAPI-First)
+
+- **⚠️ CRITICAL: Spec-first development** - Always update OpenAPI spec BEFORE implementing endpoints
+- **Auto-generated types** - Use types from `lib/api-types.ts` (regenerated from spec)
+- **Pre-commit hooks** - Automatically regenerate types when `openapi.yaml` changes
+- **CI enforcement** - PRs fail if generated types are stale or contract tests fail
+
+**Workflow**:
+
+1. Update `docs/api/openapi.yaml` with new endpoint
+2. Run `npm run api:generate:ts` (or rely on pre-commit hook)
+3. Implement endpoint using generated types
+4. Run `npm run test:contract` to verify spec compliance
+5. Commit spec + implementation together
+
+**Example**:
+
+```typescript
+// ✅ CORRECT - Use generated types
+import { paths } from '@/lib/api-types';
+
+type BookResponse =
+  paths['/api/books/{id}']['get']['responses']['200']['content']['application/json'];
+
+export async function GET(request: NextRequest) {
+  const book: BookResponse = await fetchBook();
+  return NextResponse.json(book);
+}
+
+// ❌ WRONG - Manual types that drift from spec
+interface BookResponse {
+  id: string;
+  title: string;
+  // ... manually maintained
+}
+```
 
 #### Styling
 
@@ -382,6 +422,38 @@ User {
 - Cascade deletes: Deleting a book removes all related joins
 - UUIDs everywhere: `@id @default(uuid())`
 - Snake_case in DB, camelCase in code: `@map("created_at")`
+
+### OpenAPI Contract & CI/CD
+
+**Spec Location**: `docs/api/openapi.yaml` (single source of truth)
+
+**Generated Artifacts**:
+
+- `lib/api-types.ts` - TypeScript types (auto-generated, do not edit)
+- `docs/api/api-reference.html` - HTML documentation
+
+**CI Enforcement** (`.github/workflows/api.yml`):
+
+1. **Spec validation** - Fails if `openapi.yaml` is invalid
+2. **Drift detection** - Fails if `lib/api-types.ts` is stale (not regenerated)
+3. **Contract tests** - Fails if API responses don't match spec (23 tests)
+
+**Pre-commit Hooks**:
+
+- Auto-regenerates `lib/api-types.ts` when `openapi.yaml` changes
+- Validates spec before allowing commit
+
+**Local Testing**:
+
+```bash
+# Quick contract test (one command)
+npm run test:contract
+
+# Full validation (pre-push check)
+npm run validate:full
+```
+
+**Important**: Never manually edit `lib/api-types.ts` - it will be overwritten on next generation.
 
 ### Environment Variables
 

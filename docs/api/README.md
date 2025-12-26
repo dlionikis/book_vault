@@ -81,6 +81,54 @@ RUN_CONTRACT_TESTS=true npm test -- openapi-contract
 - Status codes match documented responses
 - Error responses have correct structure
 
+## CI/CD Integration
+
+### Automated Validation (GitHub Actions)
+
+Every PR and push to `main` runs:
+
+1. **Spec Validation** - Ensures `openapi.yaml` is syntactically correct
+2. **Drift Detection** - Fails if `lib/api-types.ts` is stale
+3. **Contract Tests** - Validates all 23 endpoints match spec
+
+**Workflow**: `.github/workflows/api.yml`
+
+**Status Badge**:
+
+```markdown
+[![API Contract](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/api.yml/badge.svg)](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/api.yml)
+```
+
+### Pre-commit Hooks
+
+When you commit changes to `openapi.yaml`:
+
+1. TypeScript types auto-regenerate (`lib/api-types.ts`)
+2. Spec validation runs
+3. Regenerated types automatically added to commit
+
+**No manual steps needed** - just commit the spec change.
+
+### What Happens on Failure
+
+**Stale types detected**:
+
+```
+❌ ERROR: Generated types are out of sync with OpenAPI spec
+Please run: npm run api:generate:ts
+Then commit the updated lib/api-types.ts file
+```
+
+**Contract test failure**:
+
+```
+❌ Expected response to satisfy OpenAPI spec
+Endpoint: GET /api/books
+Actual response missing required field: pagination.pages
+```
+
+Fix the implementation to match the spec, then push again.
+
 ## Adding New Endpoints
 
 1. Update `openapi.yaml` with new endpoint
