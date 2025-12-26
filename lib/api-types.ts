@@ -7,729 +7,82 @@
 export interface paths {
   "/api/auth/mobile/login": {
     /** Mobile app login - returns JWT tokens */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": {
-            /**
-             * Format: email
-             * @example test@example.com
-             */
-            email: string;
-            /**
-             * Format: password
-             * @example password123
-             */
-            password: string;
-          };
-        };
-      };
-      responses: {
-        /** @description Login successful */
-        200: {
-          content: {
-            "application/json": {
-              /**
-               * @description JWT access token for API requests
-               * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-               */
-              accessToken: string;
-              /**
-               * Format: uuid
-               * @description Refresh token for obtaining new access tokens
-               * @example 19706212-c220-465e-a94f-b3042ceb47ba
-               */
-              refreshToken: string;
-              user: components["schemas"]["User"];
-              /**
-               * @description Access token lifetime in seconds
-               * @example 3600
-               */
-              expiresIn: number;
-            };
-          };
-        };
-        /** @description Missing email or password */
-        400: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-        /** @description Invalid credentials */
-        401: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    post: operations["loginMobile"];
   };
   "/api/auth/register": {
     /** Register a new user account */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": {
-            /**
-             * Format: email
-             * @example newuser@example.com
-             */
-            email: string;
-            /**
-             * Format: password
-             * @example securepassword123
-             */
-            password: string;
-          };
-        };
-      };
-      responses: {
-        /** @description User created successfully */
-        201: {
-          content: {
-            "application/json": {
-              /** @example User created successfully */
-              message: string;
-              user: components["schemas"]["User"];
-            };
-          };
-        };
-        /** @description Invalid input (bad email format or weak password) */
-        400: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-        /** @description User already exists */
-        409: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    post: operations["registerUser"];
   };
   "/api/books": {
     /** Get all books (paginated and sortable) */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Page number */
-          page?: number;
-          /** @description Items per page */
-          limit?: number;
-          /** @description Sort order (title, author, narrator, or series) */
-          sort?: "title" | "author" | "narrator" | "series";
-        };
-      };
-      responses: {
-        /** @description Paginated list of books */
-        200: {
-          content: {
-            "application/json": {
-              books: components["schemas"]["Book"][];
-              pagination: {
-                /** @example 1 */
-                page: number;
-                /** @example 20 */
-                limit: number;
-                /** @example 150 */
-                total: number;
-                /** @example 8 */
-                pages: number;
-              };
-            };
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-        /** @description Server error */
-        500: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    get: operations["listBooks"];
   };
   "/api/books/{id}": {
     /** Get book details */
-    get: {
-      parameters: {
-        query?: {
-          /** @description Include related data (chapters) */
-          include?: "chapters";
-        };
-        path: {
-          /** @description Book ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Book details */
-        200: {
-          content: {
-            "application/json": components["schemas"]["Book"];
-          };
-        };
-        /** @description Book not found */
-        404: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    get: operations["getBook"];
   };
   "/api/books/{id}/chapters": {
     /** Get chapters for a book (lazy extraction from audio file) */
-    get: {
-      parameters: {
-        path: {
-          /** @description Book ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description List of chapters */
-        200: {
-          content: {
-            "application/json": {
-              chapters: components["schemas"]["Chapter"][];
-              /**
-               * @description Where chapters came from:
-               * - database: Previously extracted chapters from DB
-               * - extracted: Newly extracted from audio file
-               * - none: No chapters found in audio file
-               * - unavailable: ffprobe not installed (graceful degradation)
-               * - error: Extraction failed
-               *
-               * @example database
-               * @enum {string}
-               */
-              source: "database" | "extracted" | "none" | "unavailable" | "error";
-              /** @example No chapters found in audio file */
-              message?: string | null;
-            };
-          };
-        };
-        /** @description Book not found */
-        404: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    get: operations["getBookChapters"];
   };
   "/api/progress": {
     /** Get user progress for a book */
-    get: {
-      parameters: {
-        query: {
-          /** @description Book ID to get progress for */
-          bookId: string;
-        };
-      };
-      responses: {
-        /** @description User progress */
-        200: {
-          content: {
-            "application/json": {
-              /**
-               * Format: double
-               * @example 3612.5
-               */
-              positionSeconds: number;
-              /** @example false */
-              completed: boolean;
-              /**
-               * Format: date-time
-               * @example 2025-12-25T10:30:00Z
-               */
-              lastPlayed?: string | null;
-            };
-          };
-        };
-        /** @description Missing book ID */
-        400: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    get: operations["getProgress"];
     /** Mark book as completed or reset to not started */
-    put: {
-      requestBody: {
-        content: {
-          "application/json": {
-            /** Format: uuid */
-            bookId: string;
-            /**
-             * @description Mark as completed or reset progress
-             * @enum {string}
-             */
-            status: "completed" | "not-started";
-          };
-        };
-      };
-      responses: {
-        /** @description Progress status updated */
-        200: {
-          content: {
-            "application/json": {
-              /**
-               * Format: double
-               * @example 0
-               */
-              positionSeconds: number;
-              /** @example true */
-              completed: boolean;
-              /**
-               * Format: date-time
-               * @example 2025-12-25T10:30:00Z
-               */
-              lastPlayed?: string | null;
-            };
-          };
-        };
-      };
-    };
+    put: operations["setProgressStatus"];
     /**
      * Update user progress (save position)
      * @description **Supports both authentication methods**:
      * - Session cookies (web)
      * - Bearer token (mobile)
      */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": {
-            /** Format: uuid */
-            bookId: string;
-            /** Format: double */
-            positionSeconds: number;
-            /**
-             * Format: date-time
-             * @description Optional client timestamp for conflict resolution
-             */
-            timestamp?: string;
-          };
-        };
-      };
-      responses: {
-        /** @description Progress updated */
-        200: {
-          content: {
-            "application/json": {
-              /**
-               * Format: double
-               * @example 3612.5
-               */
-              positionSeconds: number;
-              /** @example false */
-              completed: boolean;
-              /**
-               * Format: date-time
-               * @example 2025-12-25T10:30:00Z
-               */
-              lastPlayed: string;
-              /**
-               * @description Whether update was applied (false if timestamp conflict)
-               * @example true
-               */
-              updated: boolean;
-            };
-          };
-        };
-      };
-    };
+    post: operations["updateProgress"];
   };
   "/api/search": {
     /** Search across books, authors, narrators, and series */
-    get: {
-      parameters: {
-        query: {
-          /** @description Search query string */
-          q: string;
-          page?: number;
-          limit?: number;
-          /** @description Comma-separated list of fields to return (optional) */
-          fields?: string;
-        };
-      };
-      responses: {
-        /** @description Search results */
-        200: {
-          content: {
-            "application/json": {
-              results: components["schemas"]["Book"][];
-              pagination: {
-                page: number;
-                limit: number;
-                total: number;
-                pages: number;
-              };
-            };
-          };
-        };
-        /** @description Missing or invalid search query */
-        400: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    get: operations["searchAll"];
   };
   "/api/browse/authors": {
     /** List all authors with book counts */
-    get: {
-      parameters: {
-        query?: {
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description Paginated list of authors */
-        200: {
-          content: {
-            "application/json": {
-              results: components["schemas"]["AuthorWithBookCount"][];
-              pagination: {
-                page: number;
-                limit: number;
-                total: number;
-                pages: number;
-              };
-            };
-          };
-        };
-      };
-    };
+    get: operations["listAuthors"];
   };
   "/api/browse/series": {
     /** List all series with book counts */
-    get: {
-      parameters: {
-        query?: {
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description Paginated list of series */
-        200: {
-          content: {
-            "application/json": {
-              results: components["schemas"]["SeriesWithBookCount"][];
-              pagination: {
-                page: number;
-                limit: number;
-                total: number;
-                pages: number;
-              };
-            };
-          };
-        };
-      };
-    };
+    get: operations["listSeries"];
   };
   "/api/browse/narrators": {
     /** List all narrators with book counts */
-    get: {
-      parameters: {
-        query?: {
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description Paginated list of narrators */
-        200: {
-          content: {
-            "application/json": {
-              results: components["schemas"]["NarratorWithBookCount"][];
-              pagination: {
-                page: number;
-                limit: number;
-                total: number;
-                pages: number;
-              };
-            };
-          };
-        };
-      };
-    };
+    get: operations["listNarrators"];
   };
   "/api/browse/categories": {
     /** List all categories with book counts */
-    get: {
-      parameters: {
-        query?: {
-          page?: number;
-          limit?: number;
-        };
-      };
-      responses: {
-        /** @description Paginated list of categories */
-        200: {
-          content: {
-            "application/json": {
-              results: components["schemas"]["CategoryWithBookCount"][];
-              pagination: {
-                page: number;
-                limit: number;
-                total: number;
-                pages: number;
-              };
-            };
-          };
-        };
-      };
-    };
+    get: operations["listCategories"];
   };
   "/api/authors/{id}": {
     /** Get author details and their books */
-    get: {
-      parameters: {
-        query?: {
-          page?: number;
-          limit?: number;
-        };
-        path: {
-          /** @description Author ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Author with their books */
-        200: {
-          content: {
-            "application/json": {
-              /** Format: uuid */
-              id: string;
-              /** @example Patrick Rothfuss */
-              name: string;
-              asin?: string | null;
-              books: components["schemas"]["Book"][];
-              pagination: components["schemas"]["Pagination"];
-            };
-          };
-        };
-        /** @description Author not found */
-        404: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    get: operations["getAuthor"];
   };
   "/api/series/{id}": {
     /** Get series details and books in the series */
-    get: {
-      parameters: {
-        query?: {
-          page?: number;
-          limit?: number;
-        };
-        path: {
-          /** @description Series ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Series with books */
-        200: {
-          content: {
-            "application/json": {
-              /** Format: uuid */
-              id: string;
-              /** @example The Kingkiller Chronicle */
-              title: string;
-              asin?: string | null;
-              books: components["schemas"]["Book"][];
-              pagination: components["schemas"]["Pagination"];
-            };
-          };
-        };
-        /** @description Series not found */
-        404: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    get: operations["getSeries"];
   };
   "/api/narrators/{id}": {
     /** Get narrator details and their books */
-    get: {
-      parameters: {
-        query?: {
-          page?: number;
-          limit?: number;
-        };
-        path: {
-          /** @description Narrator ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Narrator with their books */
-        200: {
-          content: {
-            "application/json": {
-              /** Format: uuid */
-              id: string;
-              /** @example Nick Podehl */
-              name: string;
-              asin?: string | null;
-              books: components["schemas"]["Book"][];
-              pagination: components["schemas"]["Pagination"];
-            };
-          };
-        };
-        /** @description Narrator not found */
-        404: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    get: operations["getNarrator"];
   };
   "/api/categories/{id}": {
     /** Get category details and books in the category */
-    get: {
-      parameters: {
-        query?: {
-          page?: number;
-          limit?: number;
-        };
-        path: {
-          /** @description Category ID */
-          id: string;
-        };
-      };
-      responses: {
-        /** @description Category with books */
-        200: {
-          content: {
-            "application/json": {
-              /** Format: uuid */
-              id: string;
-              /** @example Fantasy */
-              name: string;
-              level?: number;
-              books: components["schemas"]["Book"][];
-              pagination: components["schemas"]["Pagination"];
-            };
-          };
-        };
-        /** @description Category not found */
-        404: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    get: operations["getCategory"];
   };
   "/api/library": {
     /** Get user's library books */
-    get: {
-      responses: {
-        /** @description User's library */
-        200: {
-          content: {
-            "application/json": {
-              books: components["schemas"]["Book"][];
-              /** @example 42 */
-              total: number;
-            };
-          };
-        };
-        /** @description Unauthorized */
-        401: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    get: operations["getLibrary"];
     /** Add book to user's library */
-    post: {
-      requestBody: {
-        content: {
-          "application/json": {
-            /** Format: uuid */
-            bookId: string;
-          };
-        };
-      };
-      responses: {
-        /** @description Book already in library */
-        200: {
-          content: {
-            "application/json": {
-              /** @example Book already in library */
-              message: string;
-            };
-          };
-        };
-        /** @description Book added to library */
-        201: {
-          content: {
-            "application/json": {
-              /** @example Book added to library */
-              message: string;
-            };
-          };
-        };
-        /** @description Missing book ID */
-        400: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    post: operations["addToLibrary"];
   };
   "/api/library/{bookId}": {
     /** Remove book from user's library */
-    delete: {
-      parameters: {
-        path: {
-          /** @description Book ID to remove */
-          bookId: string;
-        };
-      };
-      responses: {
-        /** @description Book removed from library */
-        200: {
-          content: {
-            "application/json": {
-              /** @example Book removed from library */
-              message: string;
-            };
-          };
-        };
-        /** @description Library not found */
-        404: {
-          content: {
-            "application/json": components["schemas"]["Error"];
-          };
-        };
-      };
-    };
+    delete: operations["removeFromLibrary"];
   };
 }
 
@@ -844,6 +197,7 @@ export interface components {
       /** @example 0 */
       index: number;
     };
+    /** @description Full user progress model (for future direct queries) */
     UserProgress: {
       /** Format: uuid */
       id: string;
@@ -883,6 +237,7 @@ export interface components {
       /** @example 12 */
       bookCount: number;
     };
+    /** @description Series model (referenced by SeriesInfo and SeriesWithBookCount) */
     Series: {
       /** Format: uuid */
       id: string;
@@ -930,4 +285,746 @@ export type $defs = Record<string, never>;
 
 export type external = Record<string, never>;
 
-export type operations = Record<string, never>;
+export interface operations {
+
+  /** Mobile app login - returns JWT tokens */
+  loginMobile: {
+    requestBody: {
+      content: {
+        "application/json": {
+          /**
+           * Format: email
+           * @example test@example.com
+           */
+          email: string;
+          /**
+           * Format: password
+           * @example password123
+           */
+          password: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Login successful */
+      200: {
+        content: {
+          "application/json": {
+            /**
+             * @description JWT access token for API requests
+             * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+             */
+            accessToken: string;
+            /**
+             * Format: uuid
+             * @description Refresh token for obtaining new access tokens
+             * @example 19706212-c220-465e-a94f-b3042ceb47ba
+             */
+            refreshToken: string;
+            user: components["schemas"]["User"];
+            /**
+             * @description Access token lifetime in seconds
+             * @example 3600
+             */
+            expiresIn: number;
+          };
+        };
+      };
+      /** @description Missing email or password */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Invalid credentials */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Register a new user account */
+  registerUser: {
+    requestBody: {
+      content: {
+        "application/json": {
+          /**
+           * Format: email
+           * @example newuser@example.com
+           */
+          email: string;
+          /**
+           * Format: password
+           * @example securepassword123
+           */
+          password: string;
+        };
+      };
+    };
+    responses: {
+      /** @description User created successfully */
+      201: {
+        content: {
+          "application/json": {
+            /** @example User created successfully */
+            message: string;
+            user: components["schemas"]["User"];
+          };
+        };
+      };
+      /** @description Invalid input (bad email format or weak password) */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description User already exists */
+      409: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Get all books (paginated and sortable) */
+  listBooks: {
+    parameters: {
+      query?: {
+        /** @description Page number */
+        page?: number;
+        /** @description Items per page */
+        limit?: number;
+        /** @description Sort order (title, author, narrator, or series) */
+        sort?: "title" | "author" | "narrator" | "series";
+      };
+    };
+    responses: {
+      /** @description Paginated list of books */
+      200: {
+        content: {
+          "application/json": {
+            books: components["schemas"]["Book"][];
+            pagination: {
+              /** @example 1 */
+              page: number;
+              /** @example 20 */
+              limit: number;
+              /** @example 150 */
+              total: number;
+              /** @example 8 */
+              pages: number;
+            };
+          };
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Server error */
+      500: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Get book details */
+  getBook: {
+    parameters: {
+      query?: {
+        /** @description Include related data (chapters) */
+        include?: "chapters";
+      };
+      path: {
+        /** @description Book ID */
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Book details */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Book"];
+        };
+      };
+      /** @description Book not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Get chapters for a book (lazy extraction from audio file) */
+  getBookChapters: {
+    parameters: {
+      path: {
+        /** @description Book ID */
+        id: string;
+      };
+    };
+    responses: {
+      /** @description List of chapters */
+      200: {
+        content: {
+          "application/json": {
+            chapters: components["schemas"]["Chapter"][];
+            /**
+             * @description Where chapters came from:
+             * - database: Previously extracted chapters from DB
+             * - extracted: Newly extracted from audio file
+             * - none: No chapters found in audio file
+             * - unavailable: ffprobe not installed (graceful degradation)
+             * - error: Extraction failed
+             *
+             * @example database
+             * @enum {string}
+             */
+            source: "database" | "extracted" | "none" | "unavailable" | "error";
+            /** @example No chapters found in audio file */
+            message?: string | null;
+          };
+        };
+      };
+      /** @description Book not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Get user progress for a book */
+  getProgress: {
+    parameters: {
+      query: {
+        /** @description Book ID to get progress for */
+        bookId: string;
+      };
+    };
+    responses: {
+      /** @description User progress */
+      200: {
+        content: {
+          "application/json": {
+            /**
+             * Format: double
+             * @example 3612.5
+             */
+            positionSeconds: number;
+            /** @example false */
+            completed: boolean;
+            /**
+             * Format: date-time
+             * @example 2025-12-25T10:30:00Z
+             */
+            lastPlayed?: string | null;
+          };
+        };
+      };
+      /** @description Missing book ID */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Mark book as completed or reset to not started */
+  setProgressStatus: {
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: uuid */
+          bookId: string;
+          /**
+           * @description Mark as completed or reset progress
+           * @enum {string}
+           */
+          status: "completed" | "not-started";
+        };
+      };
+    };
+    responses: {
+      /** @description Progress status updated */
+      200: {
+        content: {
+          "application/json": {
+            /**
+             * Format: double
+             * @example 0
+             */
+            positionSeconds: number;
+            /** @example true */
+            completed: boolean;
+            /**
+             * Format: date-time
+             * @example 2025-12-25T10:30:00Z
+             */
+            lastPlayed?: string | null;
+          };
+        };
+      };
+      /** @description Invalid request (missing bookId or invalid status) */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /**
+   * Update user progress (save position)
+   * @description **Supports both authentication methods**:
+   * - Session cookies (web)
+   * - Bearer token (mobile)
+   */
+  updateProgress: {
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: uuid */
+          bookId: string;
+          /** Format: double */
+          positionSeconds: number;
+          /**
+           * Format: date-time
+           * @description Optional client timestamp for conflict resolution
+           */
+          timestamp?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Progress updated */
+      200: {
+        content: {
+          "application/json": {
+            /**
+             * Format: double
+             * @example 3612.5
+             */
+            positionSeconds: number;
+            /** @example false */
+            completed: boolean;
+            /**
+             * Format: date-time
+             * @example 2025-12-25T10:30:00Z
+             */
+            lastPlayed: string;
+            /**
+             * @description Whether update was applied (false if timestamp conflict)
+             * @example true
+             */
+            updated: boolean;
+          };
+        };
+      };
+      /** @description Invalid request (missing bookId or invalid positionSeconds) */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Search across books, authors, narrators, and series */
+  searchAll: {
+    parameters: {
+      query: {
+        /** @description Search query string */
+        q: string;
+        page?: number;
+        limit?: number;
+        /** @description Comma-separated list of fields to return (optional) */
+        fields?: string;
+      };
+    };
+    responses: {
+      /** @description Search results */
+      200: {
+        content: {
+          "application/json": {
+            results: components["schemas"]["Book"][];
+            pagination: {
+              page: number;
+              limit: number;
+              total: number;
+              pages: number;
+            };
+          };
+        };
+      };
+      /** @description Missing or invalid search query */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** List all authors with book counts */
+  listAuthors: {
+    parameters: {
+      query?: {
+        page?: number;
+        limit?: number;
+      };
+    };
+    responses: {
+      /** @description Paginated list of authors */
+      200: {
+        content: {
+          "application/json": {
+            results: components["schemas"]["AuthorWithBookCount"][];
+            pagination: {
+              page: number;
+              limit: number;
+              total: number;
+              pages: number;
+            };
+          };
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** List all series with book counts */
+  listSeries: {
+    parameters: {
+      query?: {
+        page?: number;
+        limit?: number;
+      };
+    };
+    responses: {
+      /** @description Paginated list of series */
+      200: {
+        content: {
+          "application/json": {
+            results: components["schemas"]["SeriesWithBookCount"][];
+            pagination: {
+              page: number;
+              limit: number;
+              total: number;
+              pages: number;
+            };
+          };
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** List all narrators with book counts */
+  listNarrators: {
+    parameters: {
+      query?: {
+        page?: number;
+        limit?: number;
+      };
+    };
+    responses: {
+      /** @description Paginated list of narrators */
+      200: {
+        content: {
+          "application/json": {
+            results: components["schemas"]["NarratorWithBookCount"][];
+            pagination: {
+              page: number;
+              limit: number;
+              total: number;
+              pages: number;
+            };
+          };
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** List all categories with book counts */
+  listCategories: {
+    parameters: {
+      query?: {
+        page?: number;
+        limit?: number;
+      };
+    };
+    responses: {
+      /** @description Paginated list of categories */
+      200: {
+        content: {
+          "application/json": {
+            results: components["schemas"]["CategoryWithBookCount"][];
+            pagination: {
+              page: number;
+              limit: number;
+              total: number;
+              pages: number;
+            };
+          };
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Get author details and their books */
+  getAuthor: {
+    parameters: {
+      query?: {
+        page?: number;
+        limit?: number;
+      };
+      path: {
+        /** @description Author ID */
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Author with their books */
+      200: {
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** @example Patrick Rothfuss */
+            name: string;
+            asin?: string | null;
+            books: components["schemas"]["Book"][];
+            pagination: components["schemas"]["Pagination"];
+          };
+        };
+      };
+      /** @description Author not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Get series details and books in the series */
+  getSeries: {
+    parameters: {
+      query?: {
+        page?: number;
+        limit?: number;
+      };
+      path: {
+        /** @description Series ID */
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Series with books */
+      200: {
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** @example The Kingkiller Chronicle */
+            title: string;
+            asin?: string | null;
+            books: components["schemas"]["Book"][];
+            pagination: components["schemas"]["Pagination"];
+          };
+        };
+      };
+      /** @description Series not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Get narrator details and their books */
+  getNarrator: {
+    parameters: {
+      query?: {
+        page?: number;
+        limit?: number;
+      };
+      path: {
+        /** @description Narrator ID */
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Narrator with their books */
+      200: {
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** @example Nick Podehl */
+            name: string;
+            asin?: string | null;
+            books: components["schemas"]["Book"][];
+            pagination: components["schemas"]["Pagination"];
+          };
+        };
+      };
+      /** @description Narrator not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Get category details and books in the category */
+  getCategory: {
+    parameters: {
+      query?: {
+        page?: number;
+        limit?: number;
+      };
+      path: {
+        /** @description Category ID */
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Category with books */
+      200: {
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** @example Fantasy */
+            name: string;
+            level?: number;
+            books: components["schemas"]["Book"][];
+            pagination: components["schemas"]["Pagination"];
+          };
+        };
+      };
+      /** @description Category not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Get user's library books */
+  getLibrary: {
+    responses: {
+      /** @description User's library */
+      200: {
+        content: {
+          "application/json": {
+            books: components["schemas"]["Book"][];
+            /** @example 42 */
+            total: number;
+          };
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Add book to user's library */
+  addToLibrary: {
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: uuid */
+          bookId: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Book already in library */
+      200: {
+        content: {
+          "application/json": {
+            /** @example Book already in library */
+            message: string;
+          };
+        };
+      };
+      /** @description Book added to library */
+      201: {
+        content: {
+          "application/json": {
+            /** @example Book added to library */
+            message: string;
+          };
+        };
+      };
+      /** @description Missing book ID */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Remove book from user's library */
+  removeFromLibrary: {
+    parameters: {
+      path: {
+        /** @description Book ID to remove */
+        bookId: string;
+      };
+    };
+    responses: {
+      /** @description Book removed from library */
+      200: {
+        content: {
+          "application/json": {
+            /** @example Book removed from library */
+            message: string;
+          };
+        };
+      };
+      /** @description Library not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+}

@@ -2,6 +2,9 @@ openapi: 3.0.0
 info:
   title: Book Vault API
   version: 1.0.1
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
   # Test comment for Phase 2 pre-commit hook validation
   description: |
     RESTful API for Book Vault audiobook library.
@@ -29,6 +32,8 @@ info:
 servers:
   - url: http://localhost:3000
     description: Development server
+    # Note: localhost is intentional for local development
+    # Production URL will be configured via environment variable
   - url: https://api.bookvault.com
     description: Production server (TBD)
 
@@ -239,6 +244,8 @@ components:
           example: 0
 
     UserProgress:
+      x-internal: true
+      description: Full user progress model (for future direct queries)
       type: object
       required: [id, bookId, userId, positionSeconds, completed, lastPlayed]
       properties:
@@ -297,6 +304,8 @@ components:
           example: 12
 
     Series:
+      x-internal: true
+      description: Series model (referenced by SeriesInfo and SeriesWithBookCount)
       type: object
       required: [id, title]
       properties:
@@ -373,6 +382,7 @@ paths:
   # Mobile Authentication endpoints
   /api/auth/mobile/login:
     post:
+      operationId: loginMobile
       tags: [Mobile Authentication]
       summary: Mobile app login - returns JWT tokens
       security: [] # Override global security (no auth needed)
@@ -431,6 +441,7 @@ paths:
 
   /api/auth/register:
     post:
+      operationId: registerUser
       tags: [Authentication]
       summary: Register a new user account
       security: [] # Override global security (no auth needed)
@@ -481,6 +492,7 @@ paths:
   # Books endpoints
   /api/books:
     get:
+      operationId: listBooks
       tags: [Books]
       summary: Get all books (paginated and sortable)
       parameters:
@@ -550,6 +562,7 @@ paths:
 
   /api/books/{id}:
     get:
+      operationId: getBook
       tags: [Books]
       summary: Get book details
       parameters:
@@ -583,6 +596,7 @@ paths:
   # Chapters endpoints
   /api/books/{id}/chapters:
     get:
+      operationId: getBookChapters
       tags: [Chapters]
       summary: Get chapters for a book (lazy extraction from audio file)
       parameters:
@@ -631,6 +645,7 @@ paths:
   # Progress endpoints
   /api/progress:
     get:
+      operationId: getProgress
       tags: [Progress]
       summary: Get user progress for a book
       parameters:
@@ -671,6 +686,7 @@ paths:
                 $ref: '#/components/schemas/Error'
 
     post:
+      operationId: updateProgress
       tags: [Progress]
       summary: Update user progress (save position)
       description: |
@@ -724,8 +740,21 @@ paths:
                     type: boolean
                     description: Whether update was applied (false if timestamp conflict)
                     example: true
+        '400':
+          description: Invalid request (missing bookId or invalid positionSeconds)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
     put:
+      operationId: setProgressStatus
       tags: [Progress]
       summary: Mark book as completed or reset to not started
       requestBody:
@@ -765,10 +794,23 @@ paths:
                     format: date-time
                     nullable: true
                     example: '2025-12-25T10:30:00Z'
+        '400':
+          description: Invalid request (missing bookId or invalid status)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   # Search endpoints
   /api/search:
     get:
+      operationId: searchAll
       tags: [Search]
       summary: Search across books, authors, narrators, and series
       parameters:
@@ -832,6 +874,7 @@ paths:
   # Browse endpoints - List views
   /api/browse/authors:
     get:
+      operationId: listAuthors
       tags: [Browse]
       summary: List all authors with book counts
       parameters:
@@ -873,9 +916,16 @@ paths:
                         type: integer
                       pages:
                         type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /api/browse/series:
     get:
+      operationId: listSeries
       tags: [Browse]
       summary: List all series with book counts
       parameters:
@@ -917,9 +967,16 @@ paths:
                         type: integer
                       pages:
                         type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /api/browse/narrators:
     get:
+      operationId: listNarrators
       tags: [Browse]
       summary: List all narrators with book counts
       parameters:
@@ -961,9 +1018,16 @@ paths:
                         type: integer
                       pages:
                         type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /api/browse/categories:
     get:
+      operationId: listCategories
       tags: [Browse]
       summary: List all categories with book counts
       parameters:
@@ -1005,10 +1069,17 @@ paths:
                         type: integer
                       pages:
                         type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   # Browse endpoints - Detail views (books by entity)
   /api/authors/{id}:
     get:
+      operationId: getAuthor
       tags: [Browse]
       summary: Get author details and their books
       parameters:
@@ -1065,6 +1136,7 @@ paths:
 
   /api/series/{id}:
     get:
+      operationId: getSeries
       tags: [Browse]
       summary: Get series details and books in the series
       parameters:
@@ -1121,6 +1193,7 @@ paths:
 
   /api/narrators/{id}:
     get:
+      operationId: getNarrator
       tags: [Browse]
       summary: Get narrator details and their books
       parameters:
@@ -1177,6 +1250,7 @@ paths:
 
   /api/categories/{id}:
     get:
+      operationId: getCategory
       tags: [Browse]
       summary: Get category details and books in the category
       parameters:
@@ -1234,6 +1308,7 @@ paths:
   # Library endpoints
   /api/library:
     get:
+      operationId: getLibrary
       tags: [Library]
       summary: Get user's library books
       responses:
@@ -1261,6 +1336,7 @@ paths:
                 $ref: '#/components/schemas/Error'
 
     post:
+      operationId: addToLibrary
       tags: [Library]
       summary: Add book to user's library
       requestBody:
@@ -1306,6 +1382,7 @@ paths:
 
   /api/library/{bookId}:
     delete:
+      operationId: removeFromLibrary
       tags: [Library]
       summary: Remove book from user's library
       parameters:
