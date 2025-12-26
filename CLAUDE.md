@@ -276,16 +276,16 @@ lib/
 
 ### Internal Documentation
 
-**Primary Docs** (`docs/` folder):
+**📍 START HERE**: Read [docs/INDEX.md](docs/INDEX.md) for complete documentation map
 
-- [Architecture & Tech Stack](docs/architecture.md) - Detailed system design
-- [Project Status](docs/STATUS.md) - Current features, recent PRs, todo list
-- [Development Roadmap](docs/development-roadmap.md) - Future plans, prioritization
-- [iOS Mobile App Plan](docs/mobile-ios-plan.md) - Native iOS app implementation (post-deployment)
-- [Testing Guide](docs/testing.md) - Test patterns and examples
-- [Security](docs/security.md) - Code quality tools, linting, git hooks
-- [API Security](docs/API_SECURITY.md) - Authentication, endpoint protection, security audit
-- [Media Configuration](docs/media-configuration.md) - S3 vs local file setup
+**Most Used** (read these for common tasks):
+
+- [docs/component-guide.md](docs/component-guide.md) - Which component to use (decision tree)
+- [docs/data-flows.md](docs/data-flows.md) - How data flows through the app
+- [docs/api-quick-ref.md](docs/api-quick-ref.md) - API endpoints reference (copy-paste)
+- [docs/STATUS.md](docs/STATUS.md) - Current status, recent work, next priorities
+
+**Full Documentation List**: See [docs/INDEX.md](docs/INDEX.md) for organized index with token estimates
 
 ### External References
 
@@ -455,6 +455,7 @@ components/AudioPlayer.tsx ('use client')
 When starting a new session:
 
 - [ ] Read this file (CLAUDE.md)
+- [ ] Read [docs/INDEX.md](docs/INDEX.md) for documentation navigation
 - [ ] Check [docs/STATUS.md](docs/STATUS.md) for latest completed work
 - [ ] Review [docs/development-roadmap.md](docs/development-roadmap.md) for priorities
 - [ ] Start Docker: `docker-compose up -d`
@@ -472,14 +473,36 @@ When starting a new session:
 
 **IMPORTANT**: Before exploring the codebase for any task, follow this workflow to save 50-80% of tokens:
 
+### Efficient Documentation Navigation (CRITICAL)
+
+**ALWAYS start here** (prevents wasting 10,000+ tokens on exploration):
+
+1. **Read [docs/INDEX.md](docs/INDEX.md) FIRST** (~1,020 tokens)
+   - Complete documentation map with token estimates
+   - Tells you exactly which file to read for your task
+   - Organized by use case ("I'm implementing a feature", "I'm debugging", etc.)
+
+2. **Scan TL;DR sections** (~50 tokens each)
+   - All large docs (architecture.md, mobile-ios-plan.md, etc.) have TL;DR at top
+   - Decide if you need the full file before reading it
+   - Look for "Jump to" links to skip to relevant sections
+
+3. **Read overview docs, not detailed docs**
+   - Use `architecture.md` (overview) not `architecture/*.md` (details)
+   - Use `development-roadmap.md` (current focus) not archived plans
+   - Detailed docs are created only when needed
+
 ### Recommended Workflow for Feature Implementation
 
-1. **Read** [docs/component-guide.md](docs/component-guide.md) - Which component to use (decision tree)
-2. **Read** [docs/data-flows.md](docs/data-flows.md) - How data flows through the app
-3. **Read** [docs/api-quick-ref.md](docs/api-quick-ref.md) - Exact API request/response shapes
-4. **Check** `ComponentName.stories.tsx` - See component usage examples in Storybook
-5. **Implement** using documented patterns
-6. **Update** stories for new functionality
+1. **Read** [docs/INDEX.md](docs/INDEX.md) - Find which docs you need (~1,020 tokens)
+2. **Read** [docs/component-guide.md](docs/component-guide.md) - Which component to use (~660 tokens)
+3. **Read** [docs/data-flows.md](docs/data-flows.md) - How data flows (~1,170 tokens)
+4. **Read** [docs/api-quick-ref.md](docs/api-quick-ref.md) - API request/response shapes (~1,000 tokens)
+5. **Check** `ComponentName.stories.tsx` - Component usage examples in Storybook
+6. **Implement** using documented patterns
+7. **Update** stories for new functionality
+
+**Total tokens**: ~3,850 (vs. ~15,000 without this workflow)
 
 ### Why This Workflow Works
 

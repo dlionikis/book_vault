@@ -4,6 +4,16 @@
 **Priority**: Post-deployment
 **Last Updated**: December 24, 2025
 
+> **TL;DR (30 seconds)**
+>
+> - **Tech**: Native Swift + SwiftUI (best for audio performance)
+> - **Backend**: ✅ Already mobile-ready (JWT, REST API, S3 streaming)
+> - **Plan**: 8 phased rollout (Auth → Playback → Background → Sync → Lists → Offline)
+> - **Timeline**: Start after AWS deployment
+> - **Key features**: AVPlayer streaming, background audio, offline downloads, progress sync
+
+**Jump to**: [Backend Readiness](#backend-readiness-) · [Core Features](#core-features-mvp) · [Technology Decision](#technology-decision)
+
 ---
 
 ## Overview
