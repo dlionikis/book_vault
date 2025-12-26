@@ -607,8 +607,14 @@ paths:
                       $ref: '#/components/schemas/Chapter'
                   source:
                     type: string
-                    enum: [database, extracted, none]
-                    description: Where chapters came from
+                    enum: [database, extracted, none, unavailable, error]
+                    description: |
+                      Where chapters came from:
+                      - database: Previously extracted chapters from DB
+                      - extracted: Newly extracted from audio file
+                      - none: No chapters found in audio file
+                      - unavailable: ffprobe not installed (graceful degradation)
+                      - error: Extraction failed
                     example: 'database'
                   message:
                     type: string

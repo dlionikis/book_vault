@@ -234,7 +234,9 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('chapters');
         expect(response.data).toHaveProperty('source');
         expect(Array.isArray(response.data.chapters)).toBe(true);
-        expect(['database', 'extracted', 'none']).toContain(response.data.source);
+        expect(['database', 'extracted', 'none', 'unavailable', 'error']).toContain(
+          response.data.source
+        );
       });
 
       testFn('should return 404 for non-existent book', async () => {

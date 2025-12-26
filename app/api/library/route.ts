@@ -60,6 +60,13 @@ export async function GET(request: NextRequest) {
 
     const books = libraryBooks.map((lb) => ({
       ...lb.book,
+      // Flatten nested join table structures to match OpenAPI spec
+      authors: lb.book.authors.map((ba) => ba.author),
+      narrators: lb.book.narrators.map((bn) => bn.narrator),
+      series: lb.book.series.map((bs) => ({
+        ...bs.series,
+        sequence: bs.sequence, // Preserve sequence from join table
+      })),
       addedAt: lb.addedAt,
     }));
 
