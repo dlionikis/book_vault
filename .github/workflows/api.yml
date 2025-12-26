@@ -1,0 +1,127 @@
+name: API Contract Validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate-spec:
+    name: Validate OpenAPI Specification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate OpenAPI spec
+        run: npm run api:validate
+
+  check-generated-types:
+    name: Check Generated Types are Up-to-Date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate TypeScript types
+        run: npm run api:generate:ts
+
+      - name: Check for uncommitted changes
+        run: |
+          if ! git diff --exit-code lib/api-types.ts; then
+            echo "❌ ERROR: Generated types are out of sync with OpenAPI spec"
+            echo "Please run: npm run api:generate:ts"
+            echo "Then commit the updated lib/api-types.ts file"
+            exit 1
+          fi
+          echo "✅ Generated types are up-to-date"
+
+  contract-tests:
+    name: Run Contract Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: book_vault
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup environment
+        run: |
+          cp .env.example .env.test.local || true
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/book_vault?schema=public" >> .env.test.local
+          echo "NEXTAUTH_SECRET=test-secret-for-ci" >> .env.test.local
+          echo "NEXTAUTH_URL=http://localhost:3000" >> .env.test.local
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/book_vault?schema=public
+
+      - name: Generate Prisma Client
+        run: npm run db:generate
+
+      - name: Seed test database
+        run: npm run db:seed
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/book_vault?schema=public
+
+      - name: Build Next.js app
+        run: npm run build
+
+      - name: Start dev server in background
+        run: |
+          npm run dev &
+          echo $! > .dev-server.pid
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/book_vault?schema=public
+
+      - name: Wait for server to be ready
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:3000/api/health 2>/dev/null; do sleep 2; done' || {
+            echo "❌ Server failed to start"
+            kill $(cat .dev-server.pid) 2>/dev/null || true
+            exit 1
+          }
+
+      - name: Run contract tests
+        run: RUN_CONTRACT_TESTS=true npm test -- openapi-contract
+        env:
+          TEST_API_URL: http://localhost:3000
+          TEST_USER_EMAIL: test@example.com
+          TEST_USER_PASSWORD: password123
+
+      - name: Stop dev server
+        if: always()
+        run: kill $(cat .dev-server.pid) 2>/dev/null || true
