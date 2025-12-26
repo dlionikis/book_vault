@@ -38,7 +38,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 1)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -55,7 +55,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 1)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -73,7 +73,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 5)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -88,7 +88,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 4)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -110,7 +110,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 6)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -125,7 +125,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 6)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -145,7 +145,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 7)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -162,7 +162,7 @@ When making API changes:
 
 **Backend Status**: Partially implemented
 **iOS Status**: Not started (Phase 7)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 

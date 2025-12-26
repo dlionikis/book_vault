@@ -1,6 +1,10 @@
 # API Endpoints Quick Reference
 
-> Copy-paste reference for API calls. Shows exact request/response shapes.
+> **Full API Documentation**: See [api/api-reference.html](api/api-reference.html) (auto-generated from OpenAPI spec)
+
+This is a quick cheat sheet for common endpoints. For complete documentation with request/response schemas, authentication details, and examples, view the generated API reference.
+
+## Quick Endpoints Cheat Sheet
 
 ## Books
 

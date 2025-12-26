@@ -104,6 +104,15 @@ npm run user:create            # Interactive admin user creation
 npm run storybook              # Start Storybook dev server (port 6006)
 npm run build-storybook        # Build static Storybook site
 
+# OpenAPI Spec
+npm run api:validate           # Validate OpenAPI specification
+npm run api:generate:ts        # Generate TypeScript types from OpenAPI
+npm run api:generate:swift     # Generate Swift models (requires iOS project)
+npm run api:generate           # Generate all types (TypeScript + Swift)
+npm run api:docs               # Generate API documentation (HTML)
+npm run docs:generate          # Generate everything (types + docs)
+npm run api:watch              # Watch for changes and auto-regenerate
+
 # Build & Deploy
 npm run build                  # Production build
 npm start                      # Start production server

@@ -149,5 +149,6 @@ test-data/
 *storybook.log
 storybook-static
 
-# Generated API types
+# Generated API types and documentation
 lib/api-types.ts
+docs/api/api-reference.html

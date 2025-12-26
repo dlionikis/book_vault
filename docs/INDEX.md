@@ -34,6 +34,26 @@
 
 ---
 
+## 🔌 API Documentation
+
+| File                                             | Purpose                                       | Tokens  |
+| ------------------------------------------------ | --------------------------------------------- | ------- |
+| [api/openapi.yaml](api/openapi.yaml)             | **OpenAPI 3.0 spec** (single source of truth) | ~varies |
+| [api/api-reference.html](api/api-reference.html) | 🤖 Auto-generated API docs (interactive)      | N/A     |
+| [api-quick-ref.md](api-quick-ref.md)             | Quick cheat sheet + links to generated docs   | ~500    |
+
+**OpenAPI Tools**:
+
+- `npm run api:validate` - Validate spec
+- `npm run api:generate` - Generate TypeScript + Swift types
+- `npm run api:docs` - Generate HTML documentation
+- `npm run docs:generate` - Generate all (types + docs)
+- `npm run api:watch` - Auto-regenerate on changes
+
+**After OpenAPI**: [api-reference.html](api/api-reference.html) becomes primary API docs (always up-to-date)
+
+---
+
 ## 🏗️ Architecture & Design
 
 | File                                             | Purpose                                          | Tokens |
