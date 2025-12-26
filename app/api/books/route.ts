@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
+import type { components } from '@/lib/api-types';
+
+type Book = components['schemas']['Book'];
+type Pagination = components['schemas']['Pagination'];
 
 export async function GET(request: NextRequest) {
+  // Check both auth methods
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  const mobileUser = await getAuthUserFromRequest(request);
+  const user = session?.user || mobileUser;
+
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
@@ -67,17 +75,17 @@ export async function GET(request: NextRequest) {
       prisma.book.count(),
     ]);
 
-    // Transform the response to be more user-friendly
-    let transformedBooks = books.map((book) => ({
+    // Transform the response to match OpenAPI Book schema
+    let transformedBooks: Book[] = books.map((book) => ({
       id: book.id,
       asin: book.asin,
       title: book.title,
-      publisherSummary: book.publisherSummary,
-      runtimeMinutes: book.runtimeMinutes,
-      releaseDate: book.releaseDate,
+      description: book.publisherSummary,
+      runtimeMinutes: book.runtimeMinutes ?? 0,
+      releaseDate: book.releaseDate?.toISOString().split('T')[0] ?? null,
       publisher: book.publisher,
-      coverUrl: getCoverUrl(book.coverUrl),
-      audioUrl: getAudioUrl(book.audioUrl),
+      coverUrl: getCoverUrl(book.coverUrl) ?? '',
+      audioUrl: getAudioUrl(book.audioUrl) ?? '',
       authors: book.authors.map((ba) => ba.author),
       narrators: book.narrators.map((bn) => bn.narrator),
       series: book.series.map((bs) => ({
@@ -86,7 +94,7 @@ export async function GET(request: NextRequest) {
         asin: bs.series.asin,
         sequence: bs.sequence,
       })),
-      createdAt: book.createdAt.toISOString(),
+      categories: [], // TODO: Add categories when implemented
     }));
 
     // Apply client-side sorting for author/narrator/series
@@ -98,26 +106,28 @@ export async function GET(request: NextRequest) {
       });
     } else if (sort === 'narrator') {
       transformedBooks.sort((a, b) => {
-        const aNarrator = a.narrators[0]?.name || '';
-        const bNarrator = b.narrators[0]?.name || '';
+        const aNarrator = a.narrators?.[0]?.name || '';
+        const bNarrator = b.narrators?.[0]?.name || '';
         return aNarrator.localeCompare(bNarrator);
       });
     } else if (sort === 'series') {
       transformedBooks.sort((a, b) => {
-        const aSeries = a.series[0]?.title || '';
-        const bSeries = b.series[0]?.title || '';
+        const aSeries = a.series?.[0]?.title || '';
+        const bSeries = b.series?.[0]?.title || '';
         return aSeries.localeCompare(bSeries);
       });
     }
 
+    const pagination: Pagination = {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    };
+
     return NextResponse.json({
       books: transformedBooks,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination,
     });
   } catch (error) {
     console.error('Error fetching books:', error);

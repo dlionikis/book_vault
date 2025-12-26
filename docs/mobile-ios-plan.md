@@ -105,16 +105,18 @@ npm run test:watch
 {
   "scripts": {
     "dev:mobile": "next dev --hostname 0.0.0.0",
+    "api:validate": "redocly lint docs/api/openapi.yaml",
+    "api:docs": "redocly build-docs docs/api/openapi.yaml -o docs/api/api-reference.html",
     "api:generate": "npm run api:generate:ts && npm run api:generate:swift",
     "api:generate:ts": "openapi-typescript docs/api/openapi.yaml -o lib/api-types.ts",
     "api:generate:swift": "openapi-generator generate -i docs/api/openapi.yaml -g swift5 -o ios/BookVault/Generated",
     "api:watch": "nodemon --watch docs/api/openapi.yaml --exec 'npm run api:generate'",
-    "api:validate": "swagger-cli validate docs/api/openapi.yaml"
+    "docs:generate": "npm run api:generate && npm run api:docs"
   }
 }
 
-# Install tools
-npm install --save-dev openapi-typescript swagger-cli nodemon
+# Install tools (✅ Phase 0 complete - using @redocly/cli instead of deprecated swagger-cli)
+npm install --save-dev openapi-typescript @redocly/cli nodemon yaml
 brew install openapi-generator
 ```
 

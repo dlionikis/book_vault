@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
 // GET /api/library/check?bookId=xxx - Check if book is in library
 export async function GET(request: NextRequest) {
   try {
+    // Check both auth methods
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const mobileUser = await getAuthUserFromRequest(request);
+    const user = session?.user || mobileUser;
+
+    if (!user) {
       return NextResponse.json({ inLibrary: false });
     }
 
@@ -19,7 +23,7 @@ export async function GET(request: NextRequest) {
     // Get user's library
     const library = await prisma.userList.findFirst({
       where: {
-        userId: session.user.id,
+        userId: user.id,
         name: 'My Library',
       },
     });

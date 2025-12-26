@@ -85,6 +85,27 @@ Each book's `.metadata.json` file contains:
 - **Type Safety**: TypeScript with strict mode
 - **Security**: npm audit, pre-commit hooks
 
+## API Documentation
+
+Book Vault uses OpenAPI 3.0 for API documentation and code generation.
+
+**View API Docs**: Open `docs/api/api-reference.html` in your browser
+
+**Generate Docs**:
+
+```bash
+npm run docs:generate  # Generate types + documentation
+```
+
+**Available Commands**:
+
+- `npm run api:validate` - Validate OpenAPI spec
+- `npm run api:generate` - Generate TypeScript + Swift types
+- `npm run api:docs` - Generate HTML documentation
+- `npm run api:watch` - Auto-regenerate on changes
+
+See [docs/openapi-implementation-plan.md](docs/openapi-implementation-plan.md) for details.
+
 ## Documentation
 
 Comprehensive documentation is available in the [`docs/`](docs/) directory:

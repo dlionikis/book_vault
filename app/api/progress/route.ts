@@ -6,8 +6,12 @@ import { checkRateLimit } from '@/lib/rate-limit';
 
 // GET /api/progress?bookId=xxx - Get user's progress for a book
 export async function GET(request: NextRequest) {
+  // Check both auth methods
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  const mobileUser = await getAuthUserFromRequest(request);
+  const user = session?.user || mobileUser;
+
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -22,7 +26,7 @@ export async function GET(request: NextRequest) {
     const progress = await prisma.userProgress.findUnique({
       where: {
         userId_bookId: {
-          userId: session.user.id,
+          userId: user.id,
           bookId: bookId,
         },
       },
@@ -155,8 +159,12 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/progress - Mark book as completed or reset to not started
 export async function PUT(request: NextRequest) {
+  // Check both auth methods
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  const mobileUser = await getAuthUserFromRequest(request);
+  const user = session?.user || mobileUser;
+
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -179,7 +187,7 @@ export async function PUT(request: NextRequest) {
       // Reset progress (delete the record)
       await prisma.userProgress.deleteMany({
         where: {
-          userId: session.user.id,
+          userId: user.id,
           bookId: bookId,
         },
       });
@@ -194,7 +202,7 @@ export async function PUT(request: NextRequest) {
       const progress = await prisma.userProgress.upsert({
         where: {
           userId_bookId: {
-            userId: session.user.id,
+            userId: user.id,
             bookId: bookId,
           },
         },
@@ -203,7 +211,7 @@ export async function PUT(request: NextRequest) {
           lastPlayed: new Date(),
         },
         create: {
-          userId: session.user.id,
+          userId: user.id,
           bookId: bookId,
           positionSeconds: 0,
           completed: true,

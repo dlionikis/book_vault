@@ -38,7 +38,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 1)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -55,7 +55,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 1)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -73,7 +73,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 5)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -88,7 +88,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 4)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -110,7 +110,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 6)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -125,7 +125,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 6)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -145,7 +145,7 @@ When making API changes:
 
 **Backend Status**: Implemented
 **iOS Status**: Not started (Phase 7)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -162,7 +162,7 @@ When making API changes:
 
 **Backend Status**: Partially implemented
 **iOS Status**: Not started (Phase 7)
-**OpenAPI Status**: Needs documentation
+**OpenAPI Status**: ✅ Documented
 
 **Endpoints**:
 
@@ -300,21 +300,23 @@ Cleanup: Remove v1 endpoints after iOS migration complete
 
 ### Backend (TypeScript)
 
-**Status**: ⏳ Not started
+**Status**: ✅ Tooling installed (Phase 0 complete)
 **Command**: `npm run api:generate:ts`
 **Output**: `lib/api-types.ts`
+**Tooling**: `openapi-typescript` + `@redocly/cli`
 
-**Action Required**: Create OpenAPI spec, setup generation
+**Action Required**: Create OpenAPI spec (Phase 1)
 
 ---
 
 ### iOS (Swift)
 
-**Status**: ⏳ Not started
+**Status**: ✅ Tooling ready (openapi-generator installed)
 **Command**: `npm run api:generate:swift`
 **Output**: `ios/BookVault/Generated/Models/`
+**Tooling**: `openapi-generator` (Homebrew)
 
-**Action Required**: Create OpenAPI spec, setup generation, create iOS project
+**Action Required**: Create OpenAPI spec (Phase 1), create iOS project
 
 ---
 
@@ -364,16 +366,16 @@ Cleanup: Remove v1 endpoints after iOS migration complete
 
 ### Before iOS Development Starts
 
-1. **Create OpenAPI Specification**:
+1. ✅ **Setup Code Generation** (Phase 0 complete):
+   - ✅ Install tooling (openapi-typescript, @redocly/cli, openapi-generator)
+   - ✅ Add npm scripts
+   - ⏳ Test generation with sample spec (after Phase 1)
+
+2. **Create OpenAPI Specification** (Phase 1):
    - Document all existing endpoints
    - Define request/response schemas
    - Add authentication requirements
    - Include examples
-
-2. **Setup Code Generation**:
-   - Install tooling (openapi-typescript, openapi-generator)
-   - Add npm scripts
-   - Test generation with sample spec
 
 3. **Implement Missing Endpoints**:
    - Token refresh endpoint
@@ -423,11 +425,17 @@ Cleanup: Remove v1 endpoints after iOS migration complete
 ## Useful Commands
 
 ```bash
-# Validate OpenAPI spec
+# Validate OpenAPI spec (using Redocly)
 npm run api:validate
+
+# Generate API documentation
+npm run api:docs
 
 # Generate types for both platforms
 npm run api:generate
+
+# Generate everything (types + docs)
+npm run docs:generate
 
 # Watch OpenAPI for changes
 npm run api:watch

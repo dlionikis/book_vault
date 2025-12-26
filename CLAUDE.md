@@ -2,9 +2,9 @@
 
 > **Purpose**: Quick onboarding reference for Claude Code sessions. Read this first to understand the project instantly.
 
-**Last Updated**: December 24, 2025
+**Last Updated**: December 26, 2025
 **Status**: Production-ready with S3 streaming support
-**Test Status**: 184 tests passing
+**Test Status**: 207 tests passing (23 OpenAPI contract tests + 184 unit tests)
 
 ---
 
@@ -29,6 +29,14 @@
 | **Auth**      | NextAuth.js (JWT)            | 4.24+     |
 | **Testing**   | Jest + React Testing Library | 30+ / 16+ |
 | **Container** | Docker (PostgreSQL)          | -         |
+
+### System Dependencies (Optional)
+
+| Dependency | Purpose                       | Installation          | Required? |
+| ---------- | ----------------------------- | --------------------- | --------- |
+| **FFmpeg** | Chapter extraction from audio | `brew install ffmpeg` | Optional  |
+
+**Note**: FFmpeg provides `ffprobe` for extracting chapter metadata from audiobook files. Without it, the app will gracefully degrade and return empty chapters arrays instead of crashing.
 
 ### Core Architecture
 
@@ -95,6 +103,15 @@ npm run user:create            # Interactive admin user creation
 # Storybook
 npm run storybook              # Start Storybook dev server (port 6006)
 npm run build-storybook        # Build static Storybook site
+
+# OpenAPI Spec
+npm run api:validate           # Validate OpenAPI specification
+npm run api:generate:ts        # Generate TypeScript types from OpenAPI
+npm run api:generate:swift     # Generate Swift models (requires iOS project)
+npm run api:generate           # Generate all types (TypeScript + Swift)
+npm run api:docs               # Generate API documentation (HTML)
+npm run docs:generate          # Generate everything (types + docs)
+npm run api:watch              # Watch for changes and auto-regenerate
 
 # Build & Deploy
 npm run build                  # Production build
@@ -461,6 +478,7 @@ When starting a new session:
 - [ ] Start Docker: `docker-compose up -d`
 - [ ] Start dev server: `npm run dev`
 - [ ] Run tests if making changes: `npm test`
+- [ ] (Optional) Install FFmpeg for chapter extraction: `brew install ffmpeg`
 
 **Default credentials**:
 

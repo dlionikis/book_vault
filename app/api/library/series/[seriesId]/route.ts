@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
 // POST /api/library/series/[seriesId] - Add all books in series to library
 export async function POST(request: NextRequest, { params }: { params: { seriesId: string } }) {
   try {
+    // Check both auth methods
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const mobileUser = await getAuthUserFromRequest(request);
+    const user = session?.user || mobileUser;
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -30,7 +34,7 @@ export async function POST(request: NextRequest, { params }: { params: { seriesI
     // Get or create user's library
     let library = await prisma.userList.findFirst({
       where: {
-        userId: session.user.id,
+        userId: user.id,
         name: 'My Library',
       },
     });
@@ -38,7 +42,7 @@ export async function POST(request: NextRequest, { params }: { params: { seriesI
     if (!library) {
       library = await prisma.userList.create({
         data: {
-          userId: session.user.id,
+          userId: user.id,
           name: 'My Library',
           description: 'Your personal audiobook library',
         },
@@ -82,8 +86,12 @@ export async function POST(request: NextRequest, { params }: { params: { seriesI
 // DELETE /api/library/series/[seriesId] - Remove all books in series from library
 export async function DELETE(request: NextRequest, { params }: { params: { seriesId: string } }) {
   try {
+    // Check both auth methods
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const mobileUser = await getAuthUserFromRequest(request);
+    const user = session?.user || mobileUser;
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -106,7 +114,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { serie
     // Get user's library
     const library = await prisma.userList.findFirst({
       where: {
-        userId: session.user.id,
+        userId: user.id,
         name: 'My Library',
       },
     });

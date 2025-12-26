@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { extractChapters } from '@/lib/audio-metadata';
+import { extractChapters, isFFProbeAvailable } from '@/lib/audio-metadata';
 import { getAbsoluteMediaPath } from '@/lib/media';
 import path from 'path';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  // Check both auth methods
   const session = await getServerSession(authOptions);
-  if (!session?.user) {
+  const mobileUser = await getAuthUserFromRequest(request);
+  const user = session?.user || mobileUser;
+
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -45,8 +49,29 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const mediaPath = getAbsoluteMediaPath();
     const audioFilePath = path.join(mediaPath, book.audioUrl);
 
+    // Check if ffprobe is available
+    const ffprobeAvailable = await isFFProbeAvailable();
+    if (!ffprobeAvailable) {
+      return NextResponse.json({
+        chapters: [],
+        source: 'unavailable',
+        message: 'Chapter extraction requires ffprobe (install FFmpeg)',
+      });
+    }
+
     // Extract chapters from audio file
-    const extractedChapters = await extractChapters(audioFilePath);
+    let extractedChapters;
+    try {
+      extractedChapters = await extractChapters(audioFilePath);
+    } catch (extractError) {
+      // If extraction fails, return empty chapters instead of 500 error
+      console.warn('Chapter extraction failed:', extractError);
+      return NextResponse.json({
+        chapters: [],
+        source: 'error',
+        message: 'Failed to extract chapters from audio file',
+      });
+    }
 
     if (extractedChapters.length === 0) {
       return NextResponse.json({
