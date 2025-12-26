@@ -6,6 +6,17 @@ Book Vault is a functional personal audiobook library with comprehensive browsin
 
 ### Recent Accomplishments
 
+#### Dual Authentication Implementation (December 26, 2025)
+
+- ✅ All 26 API endpoints now support both session cookies (web) and JWT Bearer tokens (mobile)
+- ✅ Applied dual auth pattern to all routes: books, browse, search, progress, library, downloads
+- ✅ 25/25 OpenAPI contract tests passing with Bearer token authentication
+- ✅ Mobile apps can now access full API using JWT tokens
+- ✅ Web sessions continue to work unchanged (backward compatible)
+- **Impact**: API is now fully mobile-ready with dual authentication support
+- **Completed In**: PR #35 - OpenAPI Implementation (commit db20b14)
+- **Implementation Plan**: `docs/archive/completed-plans/openapi-dual-auth-implementation-plan.md`
+
 #### OpenAPI Drift Prevention (December 26, 2025)
 
 - ✅ CI workflow validates spec, checks for stale types, runs contract tests
@@ -72,7 +83,8 @@ Book Vault is a functional personal audiobook library with comprehensive browsin
 
 ### Test Coverage
 
-- **171 total tests** - All passing ✅
+- **207 total tests** - All passing ✅
+- **25 OpenAPI contract tests** - All passing ✅ (validate API against spec)
 - AudioPlayer: 22 tests
 - Pagination: 21 tests
 - Import script: 21 tests
@@ -102,6 +114,8 @@ Book Vault is a functional personal audiobook library with comprehensive browsin
 - ✅ HTTPS development server for mobile testing
 - ✅ Responsive design (mobile-ready)
 - ✅ Storybook integration (5 components documented)
+- ✅ Dual authentication (session cookies + JWT Bearer tokens)
+- ✅ Mobile-ready API with full authentication support
 
 ### Technical Features
 
@@ -113,6 +127,8 @@ Book Vault is a functional personal audiobook library with comprehensive browsin
 - ✅ ESLint + Prettier + Husky
 - ✅ Docker for database
 - ✅ Environment-based configuration
+- ✅ OpenAPI 3.0 specification with automated type generation
+- ✅ Contract testing with OpenAPI validation
 
 ## Known Issues
 
@@ -281,5 +297,5 @@ All documentation is up to date:
 
 ---
 
-**Last Updated**: December 23, 2025, 1:00 AM CST
-**Next Review**: December 23, 2025 (Morning)
+**Last Updated**: December 26, 2025, 2:00 PM CST
+**Next Review**: December 27, 2025
