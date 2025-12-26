@@ -1,0 +1,1329 @@
+openapi: 3.0.0
+info:
+  title: Book Vault API
+  version: 1.0.1
+  description: |
+    RESTful API for Book Vault audiobook library.
+
+    ## Authentication
+
+    **IMPORTANT**: This API uses **session-based authentication** (NextAuth.js) for web clients.
+    Most endpoints require an active session cookie, NOT Bearer tokens.
+
+    ### Web Authentication (Default)
+    - Login via NextAuth.js at `/api/auth/signin`
+    - Session maintained via HTTP-only cookies
+    - All documented endpoints use session auth unless noted
+
+    ### Mobile Authentication (Limited)
+    - Mobile-specific endpoints at `/api/auth/mobile/*`
+    - Use JWT Bearer tokens: `Authorization: Bearer {token}`
+    - Only `/api/progress` (POST) currently supports Bearer auth
+    - See "Mobile Authentication" tag for mobile-specific endpoints
+
+    ## Base URL
+    - Development: http://localhost:3000
+    - Production: TBD (AWS deployment)
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.bookvault.com
+    description: Production server (TBD)
+
+tags:
+  - name: Authentication
+    description: Web authentication (NextAuth.js session-based)
+  - name: Mobile Authentication
+    description: Mobile app JWT-based authentication
+  - name: Books
+    description: Book catalog and details
+  - name: Chapters
+    description: Chapter navigation
+  - name: Progress
+    description: User playback progress
+  - name: Search
+    description: Search across books, authors, narrators
+  - name: Browse
+    description: Browse by author, series, narrator, category
+  - name: Library
+    description: User's personal library
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: NextAuth.js session cookie (HTTP-only)
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Mobile JWT token (limited endpoint support)
+
+  schemas:
+    # Common schemas
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: 'Book not found'
+
+    Pagination:
+      type: object
+      required: [page, limit, total, pages]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          example: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 20
+        total:
+          type: integer
+          minimum: 0
+          example: 150
+        pages:
+          type: integer
+          minimum: 0
+          example: 8
+          description: Total number of pages
+
+    # Core models (from lib/types.ts)
+    Book:
+      type: object
+      required: [id, asin, title, runtimeMinutes, coverUrl, audioUrl, authors]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: '550e8400-e29b-41d4-a716-446655440000'
+        asin:
+          type: string
+          example: 'B002V5D1CG'
+        title:
+          type: string
+          example: 'The Name of the Wind'
+        description:
+          type: string
+          nullable: true
+          example: "Told in Kvothe's own voice, this is the tale of the magically gifted young man..."
+        runtimeMinutes:
+          type: integer
+          minimum: 0
+          example: 1068
+        releaseDate:
+          type: string
+          format: date
+          nullable: true
+          example: '2008-04-01'
+        publisher:
+          type: string
+          nullable: true
+          example: 'DAW'
+        coverUrl:
+          type: string
+          format: uri
+          example: 'https://book-vault-media.s3.amazonaws.com/covers/B002V5D1CG.jpg'
+        audioUrl:
+          type: string
+          format: uri
+          example: 'https://book-vault-media.s3.amazonaws.com/audio/B002V5D1CG.m4b'
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Author'
+        narrators:
+          type: array
+          items:
+            $ref: '#/components/schemas/Narrator'
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeriesInfo'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+
+    Author:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: 'Patrick Rothfuss'
+        asin:
+          type: string
+          nullable: true
+          example: 'B002BMAYSQ'
+
+    Narrator:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: 'Nick Podehl'
+        asin:
+          type: string
+          nullable: true
+
+    SeriesInfo:
+      type: object
+      required: [id, title]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: 'The Kingkiller Chronicle'
+        sequence:
+          type: string
+          nullable: true
+          description: "Book number in series (can be '1', '1.5', 'Prequel', etc.)"
+          example: '1'
+        asin:
+          type: string
+          nullable: true
+
+    Category:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: 'Fantasy'
+
+    Chapter:
+      type: object
+      required: [id, title, startTime, endTime, index]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: 'Chapter 1: A Place for Demons'
+        startTime:
+          type: number
+          format: double
+          minimum: 0
+          example: 0
+        endTime:
+          type: number
+          format: double
+          minimum: 0
+          example: 1806.5
+        index:
+          type: integer
+          minimum: 0
+          example: 0
+
+    UserProgress:
+      type: object
+      required: [id, bookId, userId, positionSeconds, completed, lastPlayed]
+      properties:
+        id:
+          type: string
+          format: uuid
+        bookId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        positionSeconds:
+          type: number
+          format: double
+          minimum: 0
+          example: 3612.5
+        completed:
+          type: boolean
+          example: false
+        lastPlayed:
+          type: string
+          format: date-time
+          example: '2025-12-25T10:30:00Z'
+
+    User:
+      type: object
+      required: [id, email]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+          example: 'user@example.com'
+
+    # Additional browse/list entity schemas
+    AuthorWithBookCount:
+      type: object
+      required: [id, name, bookCount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: 'Patrick Rothfuss'
+        asin:
+          type: string
+          nullable: true
+          example: 'B002BMAYSQ'
+        bookCount:
+          type: integer
+          minimum: 0
+          example: 12
+
+    Series:
+      type: object
+      required: [id, title]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: 'The Kingkiller Chronicle'
+        asin:
+          type: string
+          nullable: true
+
+    SeriesWithBookCount:
+      type: object
+      required: [id, title, bookCount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: 'The Kingkiller Chronicle'
+        asin:
+          type: string
+          nullable: true
+        bookCount:
+          type: integer
+          minimum: 0
+          example: 3
+
+    NarratorWithBookCount:
+      type: object
+      required: [id, name, bookCount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: 'Nick Podehl'
+        asin:
+          type: string
+          nullable: true
+        bookCount:
+          type: integer
+          minimum: 0
+          example: 25
+
+    CategoryWithBookCount:
+      type: object
+      required: [id, name, bookCount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: 'Fantasy'
+        level:
+          type: integer
+          minimum: 0
+          example: 1
+        bookCount:
+          type: integer
+          minimum: 0
+          example: 150
+
+# Security applied to all endpoints by default (session-based auth for web)
+security:
+  - sessionAuth: []
+
+paths:
+  # Mobile Authentication endpoints
+  /api/auth/mobile/login:
+    post:
+      tags: [Mobile Authentication]
+      summary: Mobile app login - returns JWT tokens
+      security: [] # Override global security (no auth needed)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: 'test@example.com'
+                password:
+                  type: string
+                  format: password
+                  example: 'password123'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accessToken, refreshToken, user, expiresIn]
+                properties:
+                  accessToken:
+                    type: string
+                    description: JWT access token for API requests
+                    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+                  refreshToken:
+                    type: string
+                    format: uuid
+                    description: Refresh token for obtaining new access tokens
+                    example: '19706212-c220-465e-a94f-b3042ceb47ba'
+                  user:
+                    $ref: '#/components/schemas/User'
+                  expiresIn:
+                    type: integer
+                    description: Access token lifetime in seconds
+                    example: 3600
+        '400':
+          description: Missing email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user account
+      security: [] # Override global security (no auth needed)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: 'newuser@example.com'
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: 'securepassword123'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, user]
+                properties:
+                  message:
+                    type: string
+                    example: 'User created successfully'
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input (bad email format or weak password)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Books endpoints
+  /api/books:
+    get:
+      tags: [Books]
+      summary: Get all books (paginated and sortable)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Items per page
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [title, author, narrator, series]
+            default: title
+          description: Sort order (title, author, narrator, or series)
+      responses:
+        '200':
+          description: Paginated list of books
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [books, pagination]
+                properties:
+                  books:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Book'
+                  pagination:
+                    type: object
+                    required: [page, limit, total, pages]
+                    properties:
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 20
+                      total:
+                        type: integer
+                        example: 150
+                      pages:
+                        type: integer
+                        example: 8
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/books/{id}:
+    get:
+      tags: [Books]
+      summary: Get book details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Book ID
+        - name: include
+          in: query
+          schema:
+            type: string
+            enum: [chapters]
+          description: Include related data (chapters)
+      responses:
+        '200':
+          description: Book details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '404':
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Chapters endpoints
+  /api/books/{id}/chapters:
+    get:
+      tags: [Chapters]
+      summary: Get chapters for a book (lazy extraction from audio file)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Book ID
+      responses:
+        '200':
+          description: List of chapters
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [chapters, source]
+                properties:
+                  chapters:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Chapter'
+                  source:
+                    type: string
+                    enum: [database, extracted, none]
+                    description: Where chapters came from
+                    example: 'database'
+                  message:
+                    type: string
+                    nullable: true
+                    example: 'No chapters found in audio file'
+        '404':
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Progress endpoints
+  /api/progress:
+    get:
+      tags: [Progress]
+      summary: Get user progress for a book
+      parameters:
+        - name: bookId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Book ID to get progress for
+      responses:
+        '200':
+          description: User progress
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [positionSeconds, completed]
+                properties:
+                  positionSeconds:
+                    type: number
+                    format: double
+                    minimum: 0
+                    example: 3612.5
+                  completed:
+                    type: boolean
+                    example: false
+                  lastPlayed:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    example: '2025-12-25T10:30:00Z'
+        '400':
+          description: Missing book ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Progress]
+      summary: Update user progress (save position)
+      description: |
+        **Supports both authentication methods**:
+        - Session cookies (web)
+        - Bearer token (mobile)
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookId, positionSeconds]
+              properties:
+                bookId:
+                  type: string
+                  format: uuid
+                positionSeconds:
+                  type: number
+                  format: double
+                  minimum: 0
+                timestamp:
+                  type: string
+                  format: date-time
+                  description: Optional client timestamp for conflict resolution
+      responses:
+        '200':
+          description: Progress updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [positionSeconds, completed, lastPlayed, updated]
+                properties:
+                  positionSeconds:
+                    type: number
+                    format: double
+                    minimum: 0
+                    example: 3612.5
+                  completed:
+                    type: boolean
+                    example: false
+                  lastPlayed:
+                    type: string
+                    format: date-time
+                    example: '2025-12-25T10:30:00Z'
+                  updated:
+                    type: boolean
+                    description: Whether update was applied (false if timestamp conflict)
+                    example: true
+
+    put:
+      tags: [Progress]
+      summary: Mark book as completed or reset to not started
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookId, status]
+              properties:
+                bookId:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                  enum: [completed, not-started]
+                  description: Mark as completed or reset progress
+      responses:
+        '200':
+          description: Progress status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [positionSeconds, completed]
+                properties:
+                  positionSeconds:
+                    type: number
+                    format: double
+                    minimum: 0
+                    example: 0
+                  completed:
+                    type: boolean
+                    example: true
+                  lastPlayed:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    example: '2025-12-25T10:30:00Z'
+
+  # Search endpoints
+  /api/search:
+    get:
+      tags: [Search]
+      summary: Search across books, authors, narrators, and series
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: Search query string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: fields
+          in: query
+          schema:
+            type: string
+          description: Comma-separated list of fields to return (optional)
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results, pagination]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Book'
+                  pagination:
+                    type: object
+                    required: [page, limit, total, pages]
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+        '400':
+          description: Missing or invalid search query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Browse endpoints - List views
+  /api/browse/authors:
+    get:
+      tags: [Browse]
+      summary: List all authors with book counts
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of authors
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results, pagination]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuthorWithBookCount'
+                  pagination:
+                    type: object
+                    required: [page, limit, total, pages]
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+
+  /api/browse/series:
+    get:
+      tags: [Browse]
+      summary: List all series with book counts
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of series
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results, pagination]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SeriesWithBookCount'
+                  pagination:
+                    type: object
+                    required: [page, limit, total, pages]
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+
+  /api/browse/narrators:
+    get:
+      tags: [Browse]
+      summary: List all narrators with book counts
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of narrators
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results, pagination]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NarratorWithBookCount'
+                  pagination:
+                    type: object
+                    required: [page, limit, total, pages]
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+
+  /api/browse/categories:
+    get:
+      tags: [Browse]
+      summary: List all categories with book counts
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated list of categories
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results, pagination]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CategoryWithBookCount'
+                  pagination:
+                    type: object
+                    required: [page, limit, total, pages]
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+
+  # Browse endpoints - Detail views (books by entity)
+  /api/authors/{id}:
+    get:
+      tags: [Browse]
+      summary: Get author details and their books
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Author ID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Author with their books
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name, books, pagination]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                    example: 'Patrick Rothfuss'
+                  asin:
+                    type: string
+                    nullable: true
+                  books:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Book'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '404':
+          description: Author not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/series/{id}:
+    get:
+      tags: [Browse]
+      summary: Get series details and books in the series
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Series ID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Series with books
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, title, books, pagination]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  title:
+                    type: string
+                    example: 'The Kingkiller Chronicle'
+                  asin:
+                    type: string
+                    nullable: true
+                  books:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Book'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '404':
+          description: Series not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/narrators/{id}:
+    get:
+      tags: [Browse]
+      summary: Get narrator details and their books
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Narrator ID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Narrator with their books
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name, books, pagination]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                    example: 'Nick Podehl'
+                  asin:
+                    type: string
+                    nullable: true
+                  books:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Book'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '404':
+          description: Narrator not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/categories/{id}:
+    get:
+      tags: [Browse]
+      summary: Get category details and books in the category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Category ID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Category with books
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name, books, pagination]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                    example: 'Fantasy'
+                  level:
+                    type: integer
+                    minimum: 0
+                  books:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Book'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '404':
+          description: Category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Library endpoints
+  /api/library:
+    get:
+      tags: [Library]
+      summary: Get user's library books
+      responses:
+        '200':
+          description: User's library
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [books, total]
+                properties:
+                  books:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Book'
+                  total:
+                    type: integer
+                    minimum: 0
+                    example: 42
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Library]
+      summary: Add book to user's library
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookId]
+              properties:
+                bookId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Book added to library
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: 'Book added to library'
+        '200':
+          description: Book already in library
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: 'Book already in library'
+        '400':
+          description: Missing book ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/library/{bookId}:
+    delete:
+      tags: [Library]
+      summary: Remove book from user's library
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Book ID to remove
+      responses:
+        '200':
+          description: Book removed from library
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: 'Book removed from library'
+        '404':
+          description: Library not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
