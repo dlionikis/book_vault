@@ -31,6 +31,7 @@
     "api:generate:ts": "openapi-typescript docs/api/openapi.yaml -o lib/api-types.ts",
     "api:generate:swift": "echo 'Skipping Swift generation (no iOS project yet)'",
     "api:watch": "nodemon --watch docs/api/openapi.yaml --exec 'npm run api:generate'",
+    "api:check-drift": "npm run api:generate:ts && git diff --exit-code lib/api-types.ts",
     "docs:generate": "npm run api:generate && npm run api:docs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"

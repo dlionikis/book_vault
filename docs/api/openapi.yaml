@@ -2,6 +2,7 @@ openapi: 3.0.0
 info:
   title: Book Vault API
   version: 1.0.1
+  # Test comment for Phase 2 pre-commit hook validation
   description: |
     RESTful API for Book Vault audiobook library.
 

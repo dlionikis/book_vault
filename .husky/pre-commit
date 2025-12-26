@@ -1,1 +1,14 @@
 npx lint-staged
+
+# OpenAPI: Check if spec changed and regenerate types
+if git diff --cached --name-only | grep -q "docs/api/openapi.yaml"; then
+  echo "📝 OpenAPI spec changed, regenerating TypeScript types..."
+  npm run api:generate:ts
+  git add lib/api-types.ts
+
+  echo "✅ Validating OpenAPI spec..."
+  npm run api:validate || {
+    echo "❌ OpenAPI spec validation failed"
+    exit 1
+  }
+fi
