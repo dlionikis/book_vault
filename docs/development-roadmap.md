@@ -135,6 +135,7 @@ Allow users to organize books into custom collections:
 - ✅ Media Session API (lock screen controls)
 - ✅ Storybook integration (184 tests passing)
 - ✅ Mobile API backend support (S3 streaming, range requests)
+- ✅ OpenAPI drift prevention (CI validates spec, checks stale types, runs contract tests)
 
 ### Phase 3: Core Features (Dec 2025)
 

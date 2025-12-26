@@ -129,6 +129,12 @@ Located in `archive/` folder:
 - `archive/completed-plans/fix-api-tests.md` (10K, 1,311 words)
 - `archive/completed-plans/library-concurrency-tests.md` (6K, 819 words)
 
+**Implementation Plans**:
+
+Located in `archive/implementation-plans/` folder:
+
+- [OpenAPI Drift Prevention Plan](archive/implementation-plans/openapi-drift-prevention.md) (~3,800 tokens) - CI/CD workflow for API contract enforcement
+
 **When to read archived docs**: Only if investigating historical decisions or debugging edge cases.
 
 ---

@@ -1,10 +1,22 @@
-# Project Status - December 23, 2025
+# Project Status - December 26, 2025
 
 ## Current State
 
 Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing.
 
-### Recent Accomplishments (December 23, 2025)
+### Recent Accomplishments
+
+#### OpenAPI Drift Prevention (December 26, 2025)
+
+- ✅ CI workflow validates spec, checks for stale types, runs contract tests
+- ✅ Pre-commit hooks auto-regenerate types on spec changes
+- ✅ OpenAPI spec cleaned (30 warnings → 0 warnings)
+- ✅ One-command contract testing: `npm run test:contract`
+- ✅ Full validation script: `npm run validate:full`
+- **Impact**: API contract guaranteed to stay in sync with implementation
+- **Files**: `.github/workflows/api.yml`, `.husky/pre-commit`, `docs/api/openapi.yaml`
+
+#### Previous Accomplishments (December 23, 2025)
 
 #### PR #12: Media Session API & HTTPS Development (Merged)
 

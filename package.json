@@ -10,6 +10,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:contract": "concurrently --kill-others --success first \"npm run dev\" \"npm run test:contract:wait\"",
+    "test:contract:wait": "wait-on http://localhost:3000 && RUN_CONTRACT_TESTS=true npm test -- openapi-contract",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
@@ -18,6 +20,7 @@
     "security:audit": "npm audit --production",
     "security:fix": "npm audit fix",
     "validate": "npm run format:check && npm run lint && npm run type-check && npm run test",
+    "validate:full": "npm run format:check && npm run lint && npm run type-check && npm run api:validate && npm run api:check-drift && npm test",
     "prepare": "husky",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -31,6 +34,7 @@
     "api:generate:ts": "openapi-typescript docs/api/openapi.yaml -o lib/api-types.ts",
     "api:generate:swift": "echo 'Skipping Swift generation (no iOS project yet)'",
     "api:watch": "nodemon --watch docs/api/openapi.yaml --exec 'npm run api:generate'",
+    "api:check-drift": "npm run api:generate:ts && git diff --exit-code lib/api-types.ts",
     "docs:generate": "npm run api:generate && npm run api:docs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
@@ -55,6 +59,7 @@
     "@storybook/addon-docs": "^10.1.10",
     "@storybook/addon-onboarding": "^10.1.10",
     "@storybook/nextjs": "^10.1.10",
+    "concurrently": "^8.2.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
@@ -86,6 +91,7 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "undici": "^5.29.0",
+    "wait-on": "^7.2.0",
     "yaml": "^2.8.2"
   },
   "overrides": {

@@ -1,6 +1,16 @@
 # Book Vault
 
+[![API Contract](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/api.yml/badge.svg)](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/api.yml)
+[![Storybook](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/storybook.yml/badge.svg)](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/storybook.yml)
+
 A personal audiobook library web application for hosting and managing audiobooks from Audible, processed through Libation.
+
+**API Status**:
+
+- ✅ OpenAPI spec valid (0 warnings)
+- ✅ TypeScript types auto-generated
+- ✅ 23 contract tests passing
+- 📱 Ready for iOS development
 
 ## Overview
 
