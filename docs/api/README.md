@@ -41,17 +41,24 @@ npm run api:watch
 
 Contract tests validate that API responses match the OpenAPI specification.
 
-```bash
-# Run contract tests (requires dev server running)
-RUN_CONTRACT_TESTS=true npm test -- openapi-contract
+**Quick start** (recommended):
 
-# Step-by-step:
-# 1. Start dev server in one terminal
+```bash
+npm run test:contract
+# Automatically starts server, waits for startup, runs tests, stops server
+```
+
+**Manual control** (for debugging):
+
+```bash
+# Terminal 1: Start dev server
 npm run dev
 
-# 2. Run contract tests in another terminal
+# Terminal 2: Run contract tests
 RUN_CONTRACT_TESTS=true npm test -- openapi-contract
 ```
+
+**In CI**: Contract tests run automatically on every PR via `.github/workflows/api.yml`
 
 **Environment Variables**:
 
