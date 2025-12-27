@@ -11,7 +11,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:contract": "concurrently --kill-others --success first \"npm run dev\" \"npm run test:contract:wait\"",
-    "test:contract:wait": "wait-on http://localhost:3000 && RUN_CONTRACT_TESTS=true npm test -- openapi-contract",
+    "test:contract:wait": "wait-on http://localhost:3000 && RUN_CONTRACT_TESTS=true npm test -- __tests__/api",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
@@ -55,7 +55,7 @@
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
     "turndown": "^7.2.2",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@redocly/cli": "^1.25.14",
