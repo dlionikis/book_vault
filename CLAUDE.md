@@ -339,6 +339,7 @@ lib/
 
 - [docs/component-guide.md](docs/component-guide.md) - Which component to use (decision tree)
 - [docs/data-flows.md](docs/data-flows.md) - How data flows through the app
+- [docs/data-validation-layers.md](docs/data-validation-layers.md) - How OpenAPI, TypeScript, Zod, Prisma, and Swift types work together
 - [docs/api-quick-ref.md](docs/api-quick-ref.md) - API endpoints reference (copy-paste)
 - [docs/STATUS.md](docs/STATUS.md) - Current status, recent work, next priorities
 
@@ -612,13 +613,14 @@ When starting a new session:
 
 ### Quick Reference Files
 
-| File                                               | Purpose                | When to Use                     |
-| -------------------------------------------------- | ---------------------- | ------------------------------- |
-| [docs/component-guide.md](docs/component-guide.md) | Component selection    | "Which component should I use?" |
-| [docs/data-flows.md](docs/data-flows.md)           | Data movement patterns | "How does data flow here?"      |
-| [docs/api-quick-ref.md](docs/api-quick-ref.md)     | API endpoints          | "What's the request/response?"  |
-| [docs/storybook.md](docs/storybook.md)             | Storybook usage        | "How do I use Storybook?"       |
-| Component `.stories.tsx`                           | Component examples     | "How do I use this component?"  |
+| File                                                             | Purpose                  | When to Use                                |
+| ---------------------------------------------------------------- | ------------------------ | ------------------------------------------ |
+| [docs/component-guide.md](docs/component-guide.md)               | Component selection      | "Which component should I use?"            |
+| [docs/data-flows.md](docs/data-flows.md)                         | Data movement patterns   | "How does data flow here?"                 |
+| [docs/data-validation-layers.md](docs/data-validation-layers.md) | Type safety architecture | "How do OpenAPI/Zod/Prisma work together?" |
+| [docs/api-quick-ref.md](docs/api-quick-ref.md)                   | API endpoints            | "What's the request/response?"             |
+| [docs/storybook.md](docs/storybook.md)                           | Storybook usage          | "How do I use Storybook?"                  |
+| Component `.stories.tsx`                                         | Component examples       | "How do I use this component?"             |
 
 ---
 

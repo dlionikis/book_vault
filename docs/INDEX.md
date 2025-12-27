@@ -23,12 +23,13 @@
 
 **Use these for daily development work:**
 
-| File                                     | Purpose                                   | When to Use                     | Tokens |
-| ---------------------------------------- | ----------------------------------------- | ------------------------------- | ------ |
-| [component-guide.md](component-guide.md) | Component selection decision tree         | "Which component should I use?" | ~660   |
-| [data-flows.md](data-flows.md)           | How data moves through the app            | "How does data flow here?"      | ~1,170 |
-| [api-quick-ref.md](api-quick-ref.md)     | API endpoint reference (copy-paste)       | "What's the request/response?"  | ~1,000 |
-| [storybook.md](storybook.md)             | Using Storybook for component development | "How do I use Storybook?"       | ~300   |
+| File                                                   | Purpose                                         | When to Use                                  | Tokens |
+| ------------------------------------------------------ | ----------------------------------------------- | -------------------------------------------- | ------ |
+| [component-guide.md](component-guide.md)               | Component selection decision tree               | "Which component should I use?"              | ~660   |
+| [data-flows.md](data-flows.md)                         | How data moves through the app                  | "How does data flow here?"                   | ~1,170 |
+| [data-validation-layers.md](data-validation-layers.md) | OpenAPI/TypeScript/Zod/Prisma/Swift integration | "How do all the type systems work together?" | ~5,200 |
+| [api-quick-ref.md](api-quick-ref.md)                   | API endpoint reference (copy-paste)             | "What's the request/response?"               | ~1,000 |
+| [storybook.md](storybook.md)                           | Using Storybook for component development       | "How do I use Storybook?"                    | ~300   |
 
 **💡 Token-saving tip**: Read these BEFORE exploring the codebase. Saves 5,000-8,000 tokens per feature.
 
