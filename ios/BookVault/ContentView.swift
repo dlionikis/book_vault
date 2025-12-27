@@ -8,21 +8,23 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject var authManager: AuthManager
+
     var body: some View {
-        VStack {
-            Image(systemName: "books.vertical")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("BookVault")
-                .font(.largeTitle)
-            Text("iOS Pre-Development Setup Complete")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        Group {
+            if authManager.isAuthenticated {
+                // User is logged in - show books list
+                BooksListView()
+            } else {
+                // User is not logged in - show login screen
+                LoginView()
+            }
         }
-        .padding()
+        .animation(.default, value: authManager.isAuthenticated)
     }
 }
 
 #Preview {
     ContentView()
+        .environmentObject(AuthManager.shared)
 }

@@ -48,9 +48,10 @@ export function getMediaUrl(relativePath: string | null): string | null {
     const encodedPath = relativePath.split('/').map(encodeURIComponent).join('/');
     return `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${encodedPath}`;
   } else {
-    // Development: Local API endpoint
+    // Development: Local API endpoint with absolute URL for mobile clients
     const encodedPath = relativePath.split('/').map(encodeURIComponent).join('/');
-    return `/api/images/${encodedPath}`;
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    return `${baseUrl}/api/images/${encodedPath}`;
   }
 }
 
@@ -73,8 +74,9 @@ export function getAudioUrl(audioPath: string | null): string | null {
     const encodedPath = audioPath.split('/').map(encodeURIComponent).join('/');
     return `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${encodedPath}`;
   } else {
-    // Development: Audio streaming API endpoint
+    // Development: Audio streaming API endpoint with absolute URL for mobile clients
     const encodedPath = audioPath.split('/').map(encodeURIComponent).join('/');
-    return `/api/audio/${encodedPath}`;
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    return `${baseUrl}/api/audio/${encodedPath}`;
   }
 }

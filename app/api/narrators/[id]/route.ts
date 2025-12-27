@@ -80,8 +80,16 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         publisher: book.publisher,
         coverUrl: getCoverUrl(book.coverUrl),
         audioUrl: getAudioUrl(book.audioUrl),
-        authors: book.authors.map((ba) => ba.author),
-        narrators: book.narrators.map((bn) => bn.narrator),
+        authors: book.authors.map((ba) => ({
+          id: ba.author.id,
+          name: ba.author.name,
+          asin: ba.author.asin,
+        })),
+        narrators: book.narrators.map((bn) => ({
+          id: bn.narrator.id,
+          name: bn.narrator.name,
+          asin: bn.narrator.asin,
+        })),
         series: book.series.map((bs) => ({
           id: bs.series.id,
           title: bs.series.title,

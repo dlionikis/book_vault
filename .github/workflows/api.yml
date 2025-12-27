@@ -106,6 +106,8 @@ jobs:
           echo $! > .dev-server.pid
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/book_vault?schema=public
+          NEXTAUTH_SECRET: test-secret-for-ci
+          NEXTAUTH_URL: http://localhost:3000
 
       - name: Wait for server to be ready
         run: |
