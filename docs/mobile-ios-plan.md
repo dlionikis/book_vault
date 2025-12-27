@@ -326,6 +326,30 @@ This approach enables full iOS development within VS Code, including:
 - Use Xcode only when you need SwiftUI Previews
 - Leverage Copilot for AI-assisted Swift development in VS Code
 
+**Common Setup Issues**:
+
+1. **Missing `contents.xcworkspacedata` file**:
+   - **Symptom**: Sweetpad errors when trying to build/run
+   - **Solution**: Xcode auto-generates this file when opening `.xcodeproj` for the first time. If missing, create manually:
+     ```xml
+     <?xml version="1.0" encoding="UTF-8"?>
+     <Workspace version="1.0">
+       <FileRef location="self:"></FileRef>
+     </Workspace>
+     ```
+   - **Location**: `ios/BookVault.xcodeproj/project.xcworkspace/contents.xcworkspacedata`
+
+2. **App build succeeds but run fails**:
+   - **Symptom**: "App path does not exist. Have you built the app?"
+   - **Solution**: Build the app first using Command Palette → "Sweetpad: Build"
+   - Then run using "Sweetpad: Run (for debugging)"
+
+3. **IntelliSense not working**:
+   - **Solution**: Ensure `buildServer.json` exists (run "Sweetpad: Generate Build Server Config")
+   - Add to `.gitignore` since it contains machine-specific paths
+
+**See Also**: [docs/mobile/vscode-ios-setup.md](mobile/vscode-ios-setup.md) for complete VS Code setup guide
+
 ### Testing Strategy
 
 **Backend (API Integration Tests)**:
