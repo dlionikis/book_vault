@@ -12,7 +12,7 @@ struct BooksListView: View {
     @StateObject private var authManager = AuthManager.shared
 
     private let columns = [
-        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16)
+        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
     ]
 
     var body: some View {
@@ -125,7 +125,7 @@ struct BookGridItem: View {
                 case .success(let image):
                     image
                         .resizable()
-                        .aspectRatio(contentMode: .fill)
+                        .aspectRatio(contentMode: .fit)
                 case .failure:
                     Rectangle()
                         .fill(Color.gray.opacity(0.2))

@@ -47,13 +47,32 @@ class APIClient {
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
 
+    // Debug logging flag - automatically enabled for DEBUG builds
+    private let enableDebugLogging: Bool = {
+        #if DEBUG
+        return true  // Enable in debug builds
+        #else
+        return false // Disable in release builds
+        #endif
+    }()
+
     // Token storage (will be managed by AuthManager)
     var accessToken: String?
 
     private init() {
-        // Use localhost for development
-        // TODO: Switch to production URL after deployment
-        self.baseURL = URL(string: "http://localhost:3000")!
+        // Determine the appropriate base URL
+        // In iOS simulator, localhost actually works and resolves to the host Mac
+        // The simulator's network is bridged to the host's network stack
+        #if targetEnvironment(simulator)
+        // For simulator: localhost works and connects to host machine
+        let urlString = "http://localhost:3000"
+        #else
+        // For physical device: would need to use actual server URL
+        // TODO: Use environment variable or configuration for production
+        let urlString = "http://localhost:3000"
+        #endif
+
+        self.baseURL = URL(string: urlString)!
 
         // Configure session
         let configuration = URLSessionConfiguration.default
@@ -61,9 +80,30 @@ class APIClient {
         configuration.timeoutIntervalForResource = 300
         self.session = URLSession(configuration: configuration)
 
-        // Configure JSON decoder for ISO8601 dates
+        // Configure JSON decoder with custom date handling
         self.decoder = JSONDecoder()
-        self.decoder.dateDecodingStrategy = .iso8601
+        // Use custom date decoding to handle both full ISO8601 and date-only formats
+        self.decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateString = try container.decode(String.self)
+
+            // Try ISO8601 format first (e.g., "2022-08-08T00:00:00Z")
+            let iso8601Formatter = ISO8601DateFormatter()
+            if let date = iso8601Formatter.date(from: dateString) {
+                return date
+            }
+
+            // Try date-only format (e.g., "2022-08-08")
+            let dateOnlyFormatter = DateFormatter()
+            dateOnlyFormatter.dateFormat = "yyyy-MM-dd"
+            dateOnlyFormatter.locale = Locale(identifier: "en_US_POSIX")
+            dateOnlyFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+            if let date = dateOnlyFormatter.date(from: dateString) {
+                return date
+            }
+
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string: \(dateString)")
+        }
 
         // Configure JSON encoder
         self.encoder = JSONEncoder()
@@ -109,6 +149,16 @@ class APIClient {
             throw APIError.invalidResponse
         }
 
+        // Debug logging (only in DEBUG builds)
+        if enableDebugLogging {
+            print("📡 API Response:")
+            print("   URL: \(request.url?.absoluteString ?? "unknown")")
+            print("   Status: \(httpResponse.statusCode)")
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("   Body: \(responseString)") // Full response for debugging
+            }
+        }
+
         // Handle HTTP error codes
         switch httpResponse.statusCode {
         case 200...299:
@@ -116,6 +166,27 @@ class APIClient {
             do {
                 return try decoder.decode(T.self, from: data)
             } catch {
+                // Detailed error logging in debug mode
+                if enableDebugLogging {
+                    print("❌ Decoding Error: \(error)")
+                    if let decodingError = error as? DecodingError {
+                        switch decodingError {
+                        case .keyNotFound(let key, let context):
+                            print("   Missing key: \(key.stringValue)")
+                            print("   Context: \(context.debugDescription)")
+                        case .typeMismatch(let type, let context):
+                            print("   Type mismatch: expected \(type)")
+                            print("   Context: \(context.debugDescription)")
+                        case .valueNotFound(let type, let context):
+                            print("   Value not found: \(type)")
+                            print("   Context: \(context.debugDescription)")
+                        case .dataCorrupted(let context):
+                            print("   Data corrupted: \(context.debugDescription)")
+                        @unknown default:
+                            print("   Unknown decoding error")
+                        }
+                    }
+                }
                 throw APIError.decodingError(error)
             }
         case 401:
@@ -202,7 +273,7 @@ class APIClient {
         let request = try createRequest(
             path: components.url!.absoluteString,
             method: "GET",
-            requiresAuth: false
+            requiresAuth: true
         )
 
         return try await execute(request: request)
@@ -213,7 +284,7 @@ class APIClient {
         let request = try createRequest(
             path: "/api/books/\(id.uuidString)",
             method: "GET",
-            requiresAuth: false
+            requiresAuth: true
         )
 
         return try await execute(request: request)
@@ -224,7 +295,7 @@ class APIClient {
         let request = try createRequest(
             path: "/api/books/\(bookId.uuidString)/chapters",
             method: "GET",
-            requiresAuth: false
+            requiresAuth: true
         )
 
         let response: GetBookChapters200Response = try await execute(request: request)

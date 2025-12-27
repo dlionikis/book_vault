@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       where: { token: refreshToken },
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout failed:', error);
     return NextResponse.json({ error: 'Logout failed' }, { status: 500 });

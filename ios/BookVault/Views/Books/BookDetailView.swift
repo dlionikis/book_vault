@@ -102,7 +102,7 @@ struct BookDetailView: View {
                                     MetadataRow(
                                         icon: "books.vertical",
                                         label: "Series",
-                                        value: "\(seriesInfo.title) #\(seriesInfo.sequence)"
+                                        value: "\(seriesInfo.title) #\(seriesInfo.sequence ?? "?")"
                                     )
                                 }
                             }
@@ -111,14 +111,26 @@ struct BookDetailView: View {
 
                     Divider()
 
-                    // Description
+                    // Description (expecting markdown from backend)
                     if let description = book.description {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Description")
                                 .font(.headline)
-                            Text(description)
-                                .font(.body)
-                                .foregroundColor(.secondary)
+
+                            // Render markdown as attributed text
+                            if let attributedString = try? AttributedString(
+                                markdown: description,
+                                options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+                            ) {
+                                Text(attributedString)
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                            } else {
+                                // Fallback to plain text if markdown parsing fails
+                                Text(description)
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
 

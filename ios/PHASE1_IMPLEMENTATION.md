@@ -1,7 +1,7 @@
-# Phase 1: Authentication & Browsing - Implementation Complete
+# Phase 1: Authentication & Browsing - Implementation Complete ✅
 
-**Date**: December 26, 2025
-**Status**: Code Complete - Requires Xcode Project Update
+**Date**: December 26-27, 2025
+**Status**: Complete and Fully Tested
 
 ## Completed Components
 
@@ -127,47 +127,26 @@ User Action → View → ViewModel → APIClient → Backend
 5. Scroll to bottom triggers loadMoreBooks()
 6. Tap book navigates to BookDetailView
 
-## Known Issues & Next Steps
+## Next Steps
 
-### ⚠️ Xcode Project Configuration Required
+Phase 1 is complete! Ready for Phase 2: Audio Playback.
 
-The Swift files have been created but need to be added to the Xcode project file (`.xcodeproj`). The build currently fails with "cannot find type 'AuthManager'" because Xcode doesn't know about the new files.
-
-**Files to Add**:
-
-- `Services/APIClient.swift`
-- `Services/AuthManager.swift`
-- `Views/Auth/LoginView.swift`
-- `Views/Books/BooksListView.swift`
-- `Views/Books/BookDetailView.swift`
-
-**How to Fix**:
-
-1. Open `ios/BookVault.xcodeproj` in Xcode
-2. Right-click on the `BookVault` folder in the Project Navigator
-3. Select "Add Files to BookVault..."
-4. Navigate to each file listed above and add them
-5. Ensure "Copy items if needed" is **unchecked** (files are already in place)
-6. Ensure "BookVault" target is **checked**
-7. Click "Add"
-8. Build and run
-
-Alternatively, the files can be dragged from Finder directly into the Xcode Project Navigator.
+See `docs/mobile-ios-plan.md` for the full implementation roadmap.
 
 ## Testing Checklist
 
-Once the Xcode project is updated, test the following:
+All Phase 1 features tested and working:
 
-- [ ] App builds successfully
-- [ ] Login screen appears on first launch
-- [ ] Can login with `test@example.com` / `password123`
-- [ ] Books list loads and displays covers
-- [ ] Can scroll through books (pagination works)
-- [ ] Can tap a book to see details
-- [ ] Book detail shows all metadata correctly
-- [ ] Can logout from books list
-- [ ] Returns to login screen after logout
-- [ ] Tokens persist across app restarts (session restoration)
+- [x] App builds successfully (via SweetPad)
+- [x] Login screen appears on first launch
+- [x] Can login with `test@example.com` / `password123`
+- [x] Books list loads and displays covers
+- [x] Can scroll through books (pagination works)
+- [x] Can tap a book to see details
+- [x] Book detail shows all metadata correctly (including Markdown descriptions)
+- [x] Can logout from books list
+- [x] Returns to login screen after logout
+- [x] Tokens persist across app restarts (session restoration)
 
 ## File Structure Created
 
@@ -242,12 +221,69 @@ The "Play Audiobook" button in BookDetailView is a placeholder. Phase 2 will imp
 - Select iOS Simulator as destination
 - Build and run
 
+## Issues Resolved During Testing
+
+### 1. API Response Format Mismatch
+
+- **Issue**: Logout endpoint returned `{"success": true}` but OpenAPI spec required `{"message": "..."}`
+- **Fix**: Updated `/app/api/auth/mobile/logout/route.ts` to return correct format
+
+### 2. Authentication Requirements
+
+- **Issue**: Books endpoints called without authentication but backend required auth
+- **Fix**: Updated `fetchBooks()`, `fetchBook()`, `fetchBookChapters()` to use `requiresAuth: true`
+
+### 3. Date Format Decoding
+
+- **Issue**: API returned date-only format "2022-08-08" but Swift decoder expected full ISO8601
+- **Fix**: Added custom date decoder in `APIClient.swift` to handle both formats
+
+### 4. Prisma Field Leakage
+
+- **Issue**: API leaked `createdAt` fields from Prisma that weren't in OpenAPI spec
+- **Fix**: Explicitly mapped only spec-defined fields in 6 endpoints
+
+### 5. HTML in Descriptions
+
+- **Issue**: Book descriptions showed raw HTML tags in both iOS and web
+- **Fix**:
+  - Installed `turndown` package
+  - Created `/lib/html-to-markdown.ts` utility
+  - Updated backend to convert HTML to Markdown before sending to clients
+  - iOS and web both now render properly formatted Markdown
+
+### 6. Series Display
+
+- **Issue**: Series showing "Optional("2")" instead of "#2"
+- **Fix**: Used nil coalescing operator: `seriesInfo.sequence ?? "?"`
+
+### 7. Cover Art Not Loading
+
+- **Issue**: Cover images not loading in iOS app or web UI
+- **Root Cause**: `MEDIA_DATA_PATH` pointed to unmounted drive `/Volumes/BeeDrive/Libation/`
+- **Fix**: Changed to `test-data` directory in `.env.local`
+
+### 8. Cover URLs for Mobile
+
+- **Issue**: API returned relative URLs (`/api/images/...`) which don't work in iOS
+- **Fix**: Updated `lib/media.ts` to return absolute URLs (`http://localhost:3000/api/images/...`)
+
+### 9. Cover Image Overlap
+
+- **Issue**: Cover images overlapping in grid layout
+- **Fix**: Changed from `.aspectRatio(contentMode: .fill)` to `.fit`
+
+### 10. Grid Misalignment
+
+- **Issue**: When book titles wrap to multiple lines, images don't align
+- **Fix**: Added `alignment: .top` to `GridItem` configuration
+
 ## Commit Message
 
 ```
-feat(ios): implement Phase 1 - Authentication & Browsing
+feat(ios): complete Phase 1 - Authentication & Browsing
 
-Phase 1 Complete:
+Phase 1 Complete and Fully Tested:
 - Generated 52 Swift models from OpenAPI spec
 - Implemented APIClient with full backend integration
 - Implemented AuthManager with Keychain token storage
@@ -256,8 +292,13 @@ Phase 1 Complete:
 - Created BookDetailView with full metadata display
 - Updated app structure with authentication gating
 
-All code complete and ready for testing once Xcode project
-file is updated to include new Swift source files.
+Backend improvements:
+- Fixed HTML-to-Markdown conversion for descriptions
+- Updated media URLs to absolute paths for mobile compatibility
+- Corrected API response formats to match OpenAPI spec
+- Fixed date format handling for cross-platform compatibility
+
+All Phase 1 checklist items tested and working.
 
 Implements: NEXT_STEPS.md Phase 1 checklist
 Refs: docs/mobile-ios-plan.md

@@ -9,6 +9,8 @@ import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { htmlToMarkdown } from '@/lib/html-to-markdown';
+import ReactMarkdown from 'react-markdown';
 
 async function getBook(id: string): Promise<Book | null> {
   try {
@@ -61,7 +63,7 @@ async function getBook(id: string): Promise<Book | null> {
       id: book.id,
       asin: book.asin,
       title: book.title,
-      publisherSummary: book.publisherSummary,
+      publisherSummary: htmlToMarkdown(book.publisherSummary),
       runtimeMinutes: book.runtimeMinutes,
       releaseDate: book.releaseDate,
       publisher: book.publisher,
@@ -326,10 +328,9 @@ export default async function BookDetailPage({ params }: { params: { id: string 
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                     About this audiobook
                   </h3>
-                  <div
-                    className="text-gray-700 dark:text-gray-300 leading-relaxed prose prose-sm max-w-none dark:prose-invert"
-                    dangerouslySetInnerHTML={{ __html: book.publisherSummary }}
-                  />
+                  <div className="text-gray-700 dark:text-gray-300 leading-relaxed prose prose-sm max-w-none dark:prose-invert">
+                    <ReactMarkdown>{book.publisherSummary}</ReactMarkdown>
+                  </div>
                 </div>
               )}
 
