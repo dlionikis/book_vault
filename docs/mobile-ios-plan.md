@@ -117,7 +117,7 @@ npm run test:watch
 
 # Install tools (✅ Phase 0 complete - using @redocly/cli instead of deprecated swagger-cli)
 npm install --save-dev openapi-typescript @redocly/cli nodemon yaml
-brew install openapi-generator
+brew install openapi-generator xcodegen
 ```
 
 ### API Contract Management (CRITICAL)
@@ -197,26 +197,66 @@ components:
 # Step 2: Generate Types (1 min)
 npm run api:generate
 
-# Step 3: Implement Backend (VS Code, 30 min)
+# Step 3: Regenerate Xcode Project (if new files added, 10 sec)
+cd ios && xcodegen generate
+
+# Step 4: Implement Backend (VS Code, 30 min)
 # Create app/api/playlists/route.ts
 
-# Step 4: Test Backend (VS Code, 10 min)
+# Step 5: Test Backend (VS Code, 10 min)
 npm test -- playlists
 curl http://localhost:3000/api/playlists
 
-# Step 5: Implement iOS (Xcode, 30 min)
-# Use generated Swift models in PlaylistService.swift
+# Step 6: Implement iOS (Xcode, 30 min)
+# Create PlaylistService.swift (use generated Swift models)
+# After creating new files: cd ios && xcodegen generate
 
-# Step 6: Test Integration (Both, 10 min)
+# Step 7: Test Integration (Both, 10 min)
 # Backend: npm run dev:mobile
 # iOS: Run in Simulator, verify data flows
 
-# Step 7: Commit Atomically (VS Code, 2 min)
+# Step 8: Commit Atomically (VS Code, 2 min)
 git add .
 git commit -m "feat: add playlists feature (backend + iOS)"
 ```
 
 **Total time**: ~90 minutes for full-stack feature
+
+### XcodeGen: Project File Management
+
+We use **XcodeGen** to automatically manage the Xcode project file:
+
+**Why XcodeGen?**
+
+- No manual "Add Files to Xcode" clicking
+- Project file auto-generated from `ios/project.yml` config
+- Auto-discovers all Swift files
+- Reduces merge conflicts in `.xcodeproj`
+- Version control friendly
+
+**Configuration** (`ios/project.yml`):
+
+```yaml
+sources:
+  - path: BookVault
+    createIntermediateGroups: true # Auto-discovers files!
+```
+
+**When to regenerate**:
+
+```bash
+cd ios && xcodegen generate
+```
+
+Run this after:
+
+- Creating new Swift files
+- Deleting Swift files
+- Moving files between folders
+- Pulling changes that modify file structure
+- Changing dependencies
+
+**It's fast** (~1 second) and safe to run anytime!
 
 ### VS Code + Xcode Workflow
 

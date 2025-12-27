@@ -9,6 +9,8 @@ import SwiftUI
 
 struct BookDetailView: View {
     let book: Book
+    @StateObject private var audioPlayer = AudioPlayerManager.shared
+    @State private var showingNowPlaying = false
 
     var body: some View {
         ScrollView {
@@ -153,14 +155,14 @@ struct BookDetailView: View {
                         }
                     }
 
-                    // Play button (placeholder for Phase 2)
+                    // Play button
                     Button {
-                        // TODO: Implement playback in Phase 2
-                        print("Play button tapped for book: \(book.title)")
+                        audioPlayer.play(book: book)
+                        showingNowPlaying = true
                     } label: {
                         HStack {
-                            Image(systemName: "play.fill")
-                            Text("Play Audiobook")
+                            Image(systemName: audioPlayer.currentBook?.id == book.id && audioPlayer.isPlaying ? "pause.fill" : "play.fill")
+                            Text(audioPlayer.currentBook?.id == book.id && audioPlayer.isPlaying ? "Playing" : "Play Audiobook")
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -175,6 +177,9 @@ struct BookDetailView: View {
             .padding(.vertical)
         }
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(isPresented: $showingNowPlaying) {
+            NowPlayingView()
+        }
     }
 
     private func formatDate(_ date: Date) -> String {

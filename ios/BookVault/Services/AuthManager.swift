@@ -26,6 +26,11 @@ class AuthManager: ObservableObject {
     private let refreshTokenKey = "com.bookvault.refreshToken"
     private let userDataKey = "com.bookvault.userData"
 
+    // Public access to token for authenticated requests (e.g., audio streaming)
+    var token: String? {
+        loadFromKeychain(key: accessTokenKey)
+    }
+
     private init() {
         // Try to restore session from keychain
         Task {

@@ -649,12 +649,17 @@ When starting a new session:
 # Generate Swift models from OpenAPI spec
 npm run api:generate:swift
 
+# Regenerate Xcode project (after adding/removing files)
+cd ios && xcodegen generate
+
 # Watch for OpenAPI changes
 npm run api:watch
 
 # Open Xcode
 open ios/BookVault.xcodeproj
 ```
+
+**Adding New Swift Files**: We use **XcodeGen** to automatically manage the Xcode project. After creating new Swift files, run `cd ios && xcodegen generate` to update the project. See [docs/mobile/xcodegen-guide.md](docs/mobile/xcodegen-guide.md) for details.
 
 **Test Fixtures**: Shared JSON fixtures for backend and iOS testing in `test-fixtures/`
 
