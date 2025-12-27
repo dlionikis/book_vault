@@ -1,0 +1,83 @@
+{
+  "results": [
+    {
+      "id": "59780b81-d7a4-4661-8666-005d5da8cc2d",
+      "asin": "B01N9V499O",
+      "title": "A Conjuring of Light",
+      "publisherSummary": "<p>Londons fall and kingdoms rise while darkness sweeps the Maresh Empire, and the fraught balance of magic blossoms into dangerous territory while heroes struggle. The direct sequel to <i>A Gathering of Shadows</i>, and the final audiobook in the Shades of Magic epic fantasy series, <i>A Conjuring of Light</i> sees the newly minted <i>New York Times</i> best-selling author V. E. Schwab reach a thrilling conclusion concerning the fate of beloved protagonists - and old foes. </p> <p><b>Shades of Magic series</b> <br /> 1. <i>A Darker Shade of Magic</i> <br /> 2. <i>A Gathering of Shadows</i> <br /> 3. <i>A Conjuring of Light</i> </p>",
+      "runtimeMinutes": 1143,
+      "releaseDate": "2017-02-21T00:00:00.000Z",
+      "publisher": null,
+      "coverUrl": "/api/images/A%20Conjuring%20of%20Light%20%5BB01N9V499O%5D/A%20Conjuring%20of%20Light%3A%20Shades%20of%20Magic%2C%20Book%203%20%5BB01N9V499O%5D.jpg",
+      "audioUrl": "/api/audio/A%20Conjuring%20of%20Light%20%5BB01N9V499O%5D/A%20Conjuring%20of%20Light%3A%20Shades%20of%20Magic%2C%20Book%203%20%5BB01N9V499O%5D.mp3",
+      "authors": [
+        {
+          "id": "8773cfca-7ee4-452c-86fa-0e00dcf282f7",
+          "name": "V. E. Schwab",
+          "asin": "B00MLKA3WM"
+        }
+      ],
+      "narrators": [
+        {
+          "id": "50855078-c408-4a85-ba31-039048465a8c",
+          "name": "Michael Kramer",
+          "asin": null
+        },
+        {
+          "id": "95fa4bfd-bf2a-47d3-87a8-48daa65d3011",
+          "name": "Kate Reading",
+          "asin": null
+        }
+      ],
+      "series": [
+        {
+          "id": "4df09138-aa9b-4da9-a732-d4962f9bf8e7",
+          "title": "A Darker Shade of Magic",
+          "asin": "B00VY0C50S",
+          "sequence": "3"
+        }
+      ],
+      "createdAt": "2025-12-23T06:38:47.427Z"
+    },
+    {
+      "id": "95d0ffa8-2c83-430e-a898-434a96a6ce0b",
+      "asin": "059328741X",
+      "title": "A Deadly Education",
+      "publisherSummary": "<p><b><i>New York Times </i></b><b>Best Seller</b></p> <p><b>From the author of </b><b><i>Uprooted</i></b><b> and </b><b><i>Spinning Silver</i></b><b> comes the first book of the Scholomance trilogy, the story of an unwilling dark sorceress who is destined to rewrite the rules of magic.</b></p> <p><b>Finalist for the Lodestar Award</b></p> <p><b>“The dark school of magic I’ve been waiting for.” (Katherine Arden, author of the Winternight Trilogy)</b> </p> <p>I decided that Orion Lake needed to die after the second time he saved my life. </p> <p>Everyone loves Orion Lake. Everyone <i>else,</i> that is. Far as I’m concerned, he can keep his flashy combat magic to himself. I’m not joining his pack of adoring fans. </p> <p>I don’t need help surviving the Scholomance, even if they do. Forget the hordes of monsters and cursed artifacts; I’m probably the most dangerous thing in the place. Just give me a chance and I’ll level mountains and kill untold millions, making myself the dark queen of the world. </p> <p>At least, that’s what the world expects. Most of the other students in here would be delighted if Orion killed me, like one more evil thing that’s crawled out of the drains. Sometimes I think they want me to turn into the evil witch they assume I am. The school certainly does. </p> <p>But the Scholomance isn’t getting what it wants from me. And neither is Orion Lake. I may not be anyone’s idea of the shining hero, but I’m going to make it out of this place alive, and I’m not going to slaughter thousands to do it, either.</p> <p>Although I’m giving serious consideration to <i>just one</i>.</p> <p><b>With flawless mastery, Naomi Novik creates a</b> <b>school bursting with magic like you’ve never seen before, and a</b> <b>heroine for the ages - a character so sharply realized and so richly nuanced that she will live on in hearts and minds for generations to come.</b></p> <p><b>The magic of the Scholomance trilogy continues in </b><b><i>The Last Graduate</i></b><b>.</b> </p> <p>“The can’t-miss fantasy of fall 2020, a brutal coming-of-power story steeped in the aesthetics of dark academia. ... <i>A Deadly Education</i> will cement Naomi Novik’s place as one of the greatest and most versatile fantasy writers of our time.” (<i>BookPage, </i>starred review)</p> <p>“A must-read ... Novik puts a refreshingly dark, adult spin on the magical boarding school. ... Readers will delight in the push-and-pull of El and Orion’s relationship, the fantastically detailed world, the clever magic system, and the matter-of-fact diversity of the student body.” (<i>Publishers Weekly, </i>starred review)</p>",
+      "runtimeMinutes": 659,
+      "releaseDate": "2020-09-29T00:00:00.000Z",
+      "publisher": null,
+      "coverUrl": "/api/images/A%20Deadly%20Education%20%5B059328741X%5D/A%20Deadly%20Education%3A%20A%20Novel%20(The%20Scholomance%2C%20Book%201)%20%5B059328741X%5D.jpg",
+      "audioUrl": "/api/audio/A%20Deadly%20Education%20%5B059328741X%5D/A%20Deadly%20Education%3A%20A%20Novel%20(The%20Scholomance%2C%20Book%201)%20%5B059328741X%5D.mp3",
+      "authors": [
+        {
+          "id": "604eace2-2dac-4f5d-92e7-cea86cce72bd",
+          "name": "Naomi Novik",
+          "asin": "B001IGNGVK"
+        }
+      ],
+      "narrators": [
+        {
+          "id": "bf3a7a31-4183-45f3-b590-5c7bf01b7b73",
+          "name": "Anisha Dadia",
+          "asin": "B0C9M84RG6"
+        }
+      ],
+      "series": [
+        {
+          "id": "68744c68-e35e-4e4e-bd3a-65dd3f4eb95b",
+          "title": "Scholomance",
+          "asin": "B085NVZ46V",
+          "sequence": "1"
+        }
+      ],
+      "createdAt": "2025-12-23T06:38:47.554Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 5,
+    "total": 2,
+    "pages": 1
+  }
+}

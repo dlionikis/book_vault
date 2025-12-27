@@ -1,0 +1,795 @@
+{
+  "id": "045d9384-f41a-4cf5-bda3-96fe2fa3c44f",
+  "asin": "B0B91976NY",
+  "title": "A Binding of Blood",
+  "description": null,
+  "publisherSummary": "<p><b>To study magic at the university, Siobhan sacrificed her name.</b></p> <p><b>She sacrificed her body and her past. </b></p> <p>Magically disguised as a boy named Sebastien, she is learning wondrous secrets of the thaumaturgic sciences. As Sebastien, she mingles with the young nobles who will one day rule their country. But danger is closer than ever, and she cannot escape her past.</p> <p>The coppers investigating the theft of Siobhan’s priceless transformation artifact have given her a new name: the Raven Queen. As Siobhan does favors for the gang that loaned her the university tuition, the Raven Queen’s mystique only grows.</p> <p>And keeps growing...snowballing out of control until Siobhan’s other identity takes on a life of its own, a fear-inducing bogeyman well beyond the truth of her real capabilities.</p> <p>With the whole city out to get her and trouble hounding both sides of her double life, how will Siobhan ever survive to become the world’s most powerful sorcerer?</p>",
+  "runtimeMinutes": 1405,
+  "releaseDate": "2022-08-08T00:00:00.000Z",
+  "publisher": null,
+  "coverUrl": "/api/images/A%20Binding%20of%20Blood%20%5BB0B91976NY%5D/A%20Binding%20of%20Blood%3A%20A%20Practical%20Guide%20to%20Sorcery%2C%20Book%202%20%5BB0B91976NY%5D.jpg",
+  "audioUrl": "/api/audio/A%20Binding%20of%20Blood%20%5BB0B91976NY%5D/A%20Binding%20of%20Blood%3A%20A%20Practical%20Guide%20to%20Sorcery%2C%20Book%202%20%5BB0B91976NY%5D.mp3",
+  "authors": [
+    {
+      "id": "a332fd5c-ede6-439e-ae07-216556121958",
+      "name": "Azalea Ellis",
+      "asin": "B012DLAI0K"
+    }
+  ],
+  "narrators": [
+    {
+      "id": "b9224222-3852-492d-b01c-eeb7ecc34a13",
+      "name": "Gabrielle de Cuir",
+      "asin": null
+    }
+  ],
+  "series": [
+    {
+      "id": "28cf4d10-c9ea-49c9-95e4-d4c7909d68af",
+      "title": "Practical Guide to Sorcery",
+      "asin": "B09MG3GJW4",
+      "sequence": "2"
+    }
+  ],
+  "categories": [
+    {
+      "id": "754b7113-d086-4f8b-94d9-9b736118288e",
+      "name": "Epic",
+      "level": 2,
+      "parentName": "Fantasy"
+    },
+    {
+      "id": "7a287549-7bd1-4c59-a9f8-62d1ce41bf5e",
+      "name": "Fantasy",
+      "level": 1,
+      "parentName": "Science Fiction & Fantasy"
+    }
+  ],
+  "metadata": {
+    "sku": "BK_ACX0_319626",
+    "asin": "B0B91976NY",
+    "plans": [
+      {
+        "end_date": "2099-12-31T00:00:00Z",
+        "plan_name": "AccessViaMusic",
+        "start_date": "1970-01-01T00:00:00Z"
+      }
+    ],
+    "price": {
+      "list_price": {
+        "base": 29.95000076293945,
+        "type": "list",
+        "merchant_id": "A2ZO8JX97D5MN9",
+        "currency_code": "USD"
+      },
+      "credit_price": 1,
+      "lowest_price": {
+        "base": 20.95999908447266,
+        "type": "member",
+        "merchant_id": "A2ZO8JX97D5MN9",
+        "currency_code": "USD"
+      },
+      "ws4v_upsell_price": {
+        "base": 7.489999771118164,
+        "type": "ws4v_upsell",
+        "merchant_id": "A2ZO8JX97D5MN9",
+        "currency_code": "USD"
+      }
+    },
+    "title": "A Binding of Blood",
+    "rating": {
+      "num_reviews": 7,
+      "story_distribution": {
+        "num_ratings": 71,
+        "display_stars": 5,
+        "average_rating": 4.816901408450704,
+        "num_one_star_ratings": 0,
+        "num_two_star_ratings": 0,
+        "num_five_star_ratings": 61,
+        "num_four_star_ratings": 7,
+        "display_average_rating": "4.8",
+        "num_three_star_ratings": 3
+      },
+      "overall_distribution": {
+        "num_ratings": 89,
+        "display_stars": 5,
+        "average_rating": 4.831460674157303,
+        "num_one_star_ratings": 0,
+        "num_two_star_ratings": 0,
+        "num_five_star_ratings": 75,
+        "num_four_star_ratings": 13,
+        "display_average_rating": "4.8",
+        "num_three_star_ratings": 1
+      },
+      "performance_distribution": {
+        "num_ratings": 72,
+        "display_stars": 5,
+        "average_rating": 4.861111111111111,
+        "num_one_star_ratings": 0,
+        "num_two_star_ratings": 1,
+        "num_five_star_ratings": 66,
+        "num_four_star_ratings": 3,
+        "display_average_rating": "4.9",
+        "num_three_star_ratings": 2
+      }
+    },
+    "series": [
+      {
+        "url": "/pd/Practical-Guide-to-Sorcery-Audiobook/B09MG3GJW4",
+        "asin": "B09MG3GJW4",
+        "title": "Practical Guide to Sorcery",
+        "sequence": "2"
+      }
+    ],
+    "authors": [
+      {
+        "asin": "B012DLAI0K",
+        "name": "Azalea Ellis"
+      }
+    ],
+    "is_vvab": false,
+    "language": "english",
+    "sku_lite": "BK_ACX0_319626",
+    "subtitle": "A Practical Guide to Sorcery, Book 2",
+    "narrators": [
+      {
+        "name": "Gabrielle de Cuir"
+      }
+    ],
+    "issue_date": "2022-08-08",
+    "sample_url": "https://samples.audible.com/bk/acx0/319626/bk_acx0_319626_sample.mp3",
+    "ChapterInfo": {
+      "chapters": [
+        {
+          "title": "Opening Credits",
+          "chapters": null,
+          "length_ms": 12886,
+          "start_offset_ms": 0,
+          "start_offset_sec": 0
+        },
+        {
+          "title": "A Practical Guide to Sorcery Recap",
+          "chapters": null,
+          "length_ms": 469321,
+          "start_offset_ms": 12886,
+          "start_offset_sec": 13
+        },
+        {
+          "title": "Chapter 1. Competing for Points",
+          "chapters": null,
+          "length_ms": 2132659,
+          "start_offset_ms": 482207,
+          "start_offset_sec": 482
+        },
+        {
+          "title": "Chapter 2. Paper Spells",
+          "chapters": null,
+          "length_ms": 977211,
+          "start_offset_ms": 2614866,
+          "start_offset_sec": 2615
+        },
+        {
+          "title": "Chapter 3. Sleep Research",
+          "chapters": null,
+          "length_ms": 1210967,
+          "start_offset_ms": 3592077,
+          "start_offset_sec": 3592
+        },
+        {
+          "title": "Chapter 4. Friendships Forged by Accident",
+          "chapters": null,
+          "length_ms": 1417183,
+          "start_offset_ms": 4803044,
+          "start_offset_sec": 4803
+        },
+        {
+          "title": "Chapter 5. The Mysteries of Sleep",
+          "chapters": null,
+          "length_ms": 1942976,
+          "start_offset_ms": 6220227,
+          "start_offset_sec": 6220
+        },
+        {
+          "title": "Chapter 6. Alliance with the Nightmare Pack",
+          "chapters": null,
+          "length_ms": 1358831,
+          "start_offset_ms": 8163203,
+          "start_offset_sec": 8163
+        },
+        {
+          "title": "Chapter 7. Chastisement",
+          "chapters": null,
+          "length_ms": 1917480,
+          "start_offset_ms": 9522034,
+          "start_offset_sec": 9522
+        },
+        {
+          "title": "Chapter 8. Sirens",
+          "chapters": null,
+          "length_ms": 2030701,
+          "start_offset_ms": 11439514,
+          "start_offset_sec": 11440
+        },
+        {
+          "title": "Chapter 9. The Intersection of Transmutation and Transmogrification",
+          "chapters": null,
+          "length_ms": 1484010,
+          "start_offset_ms": 13470215,
+          "start_offset_sec": 13470
+        },
+        {
+          "title": "Chapter 10. Useless Clutter",
+          "chapters": null,
+          "length_ms": 1707270,
+          "start_offset_ms": 14954225,
+          "start_offset_sec": 14954
+        },
+        {
+          "title": "Chapter 11. Unresolved Curiosity",
+          "chapters": null,
+          "length_ms": 1002359,
+          "start_offset_ms": 16661495,
+          "start_offset_sec": 16661
+        },
+        {
+          "title": "Chapter 12. Reverse Scrying",
+          "chapters": null,
+          "length_ms": 2127574,
+          "start_offset_ms": 17663854,
+          "start_offset_sec": 17664
+        },
+        {
+          "title": "Chapter 13. Eagle Tower",
+          "chapters": null,
+          "length_ms": 1283436,
+          "start_offset_ms": 19791428,
+          "start_offset_sec": 19791
+        },
+        {
+          "title": "Chapter 14. Saved by the Enemy",
+          "chapters": null,
+          "length_ms": 1374783,
+          "start_offset_ms": 21074864,
+          "start_offset_sec": 21075
+        },
+        {
+          "title": "Chapter 15. Faulty Deductions",
+          "chapters": null,
+          "length_ms": 2339062,
+          "start_offset_ms": 22449647,
+          "start_offset_sec": 22450
+        },
+        {
+          "title": "Chapter 16. Through a Glass Darkly",
+          "chapters": null,
+          "length_ms": 1430836,
+          "start_offset_ms": 24788709,
+          "start_offset_sec": 24789
+        },
+        {
+          "title": "Chapter 17. Commission to Investigate",
+          "chapters": null,
+          "length_ms": 2990010,
+          "start_offset_ms": 26219545,
+          "start_offset_sec": 26220
+        },
+        {
+          "title": "Chapter 18. A Pact of Stars",
+          "chapters": null,
+          "length_ms": 1874105,
+          "start_offset_ms": 29209555,
+          "start_offset_sec": 29210
+        },
+        {
+          "title": "Chapter 19. Forming a Team",
+          "chapters": null,
+          "length_ms": 905949,
+          "start_offset_ms": 31083660,
+          "start_offset_sec": 31084
+        },
+        {
+          "title": "Chapter 20. Noticing Confusion",
+          "chapters": null,
+          "length_ms": 1870506,
+          "start_offset_ms": 31989609,
+          "start_offset_sec": 31990
+        },
+        {
+          "title": "Chapter 21. The Constitution of Cockroaches",
+          "chapters": null,
+          "length_ms": 1617594,
+          "start_offset_ms": 33860115,
+          "start_offset_sec": 33860
+        },
+        {
+          "title": "Chapter 22. A Simple Solution",
+          "chapters": null,
+          "length_ms": 1160649,
+          "start_offset_ms": 35477709,
+          "start_offset_sec": 35478
+        },
+        {
+          "title": "Chapter 23. Request a Boon",
+          "chapters": null,
+          "length_ms": 1453685,
+          "start_offset_ms": 36638358,
+          "start_offset_sec": 36638
+        },
+        {
+          "title": "Chapter 24. To Slumber but not Rest",
+          "chapters": null,
+          "length_ms": 2171808,
+          "start_offset_ms": 38092043,
+          "start_offset_sec": 38092
+        },
+        {
+          "title": "Chapter 25. Cold Sweat",
+          "chapters": null,
+          "length_ms": 517201,
+          "start_offset_ms": 40263851,
+          "start_offset_sec": 40264
+        },
+        {
+          "title": "Chapter 26. Theoretical Exercises",
+          "chapters": null,
+          "length_ms": 1929717,
+          "start_offset_ms": 40781052,
+          "start_offset_sec": 40781
+        },
+        {
+          "title": "Chapter 27. Snowfall & Spilled Secrets",
+          "chapters": null,
+          "length_ms": 1710915,
+          "start_offset_ms": 42710769,
+          "start_offset_sec": 42711
+        },
+        {
+          "title": "Chapter 28. A Convenient Concoction",
+          "chapters": null,
+          "length_ms": 1954144,
+          "start_offset_ms": 44421684,
+          "start_offset_sec": 44422
+        },
+        {
+          "title": "Chapter 29. An Interview",
+          "chapters": null,
+          "length_ms": 2175036,
+          "start_offset_ms": 46375828,
+          "start_offset_sec": 46376
+        },
+        {
+          "title": "Chapter 30. Secret Thaumaturge Meeting",
+          "chapters": null,
+          "length_ms": 1401092,
+          "start_offset_ms": 48550864,
+          "start_offset_sec": 48551
+        },
+        {
+          "title": "Chapter 31. Attack Strategy",
+          "chapters": null,
+          "length_ms": 1414118,
+          "start_offset_ms": 49951956,
+          "start_offset_sec": 49952
+        },
+        {
+          "title": "Chapter 32. Drills",
+          "chapters": null,
+          "length_ms": 1178644,
+          "start_offset_ms": 51366074,
+          "start_offset_sec": 51366
+        },
+        {
+          "title": "Chapter 33. Old Wives’ Tales",
+          "chapters": null,
+          "length_ms": 1292747,
+          "start_offset_ms": 52544718,
+          "start_offset_sec": 52545
+        },
+        {
+          "title": "Chapter 34. The Penultimate Piece",
+          "chapters": null,
+          "length_ms": 924154,
+          "start_offset_ms": 53837465,
+          "start_offset_sec": 53837
+        },
+        {
+          "title": "Chapter 35. First Fallen",
+          "chapters": null,
+          "length_ms": 1264419,
+          "start_offset_ms": 54761619,
+          "start_offset_sec": 54762
+        },
+        {
+          "title": "Chapter 36. Mid-Terms & Tournament",
+          "chapters": null,
+          "length_ms": 2146150,
+          "start_offset_ms": 56026038,
+          "start_offset_sec": 56026
+        },
+        {
+          "title": "Chapter 37. The Glasshopper",
+          "chapters": null,
+          "length_ms": 1840947,
+          "start_offset_ms": 58172188,
+          "start_offset_sec": 58172
+        },
+        {
+          "title": "Chapter 38. These Violent Delights",
+          "chapters": null,
+          "length_ms": 1392338,
+          "start_offset_ms": 60013135,
+          "start_offset_sec": 60013
+        },
+        {
+          "title": "Chapter 39. Healing",
+          "chapters": null,
+          "length_ms": 2351345,
+          "start_offset_ms": 61405473,
+          "start_offset_sec": 61405
+        },
+        {
+          "title": "Chapter 40. Have Violent Ends",
+          "chapters": null,
+          "length_ms": 1575450,
+          "start_offset_ms": 63756818,
+          "start_offset_sec": 63757
+        },
+        {
+          "title": "Chapter 41. A Sacrifice of Light",
+          "chapters": null,
+          "length_ms": 1900715,
+          "start_offset_ms": 65332268,
+          "start_offset_sec": 65332
+        },
+        {
+          "title": "Chapter 42. Connections",
+          "chapters": null,
+          "length_ms": 2173434,
+          "start_offset_ms": 67232983,
+          "start_offset_sec": 67233
+        },
+        {
+          "title": "Chapter 43. Nerves Wracked",
+          "chapters": null,
+          "length_ms": 1254318,
+          "start_offset_ms": 69406417,
+          "start_offset_sec": 69406
+        },
+        {
+          "title": "Chapter 44. The Siverling Line",
+          "chapters": null,
+          "length_ms": 1762162,
+          "start_offset_ms": 70660735,
+          "start_offset_sec": 70661
+        },
+        {
+          "title": "Chapter 45. Things Go Wrong",
+          "chapters": null,
+          "length_ms": 1826737,
+          "start_offset_ms": 72422897,
+          "start_offset_sec": 72423
+        },
+        {
+          "title": "Chapter 46. Things Get Worse",
+          "chapters": null,
+          "length_ms": 2301260,
+          "start_offset_ms": 74249634,
+          "start_offset_sec": 74250
+        },
+        {
+          "title": "Chapter 47. Blight",
+          "chapters": null,
+          "length_ms": 1055579,
+          "start_offset_ms": 76550894,
+          "start_offset_sec": 76551
+        },
+        {
+          "title": "Chapter 48. Pullulation",
+          "chapters": null,
+          "length_ms": 1223598,
+          "start_offset_ms": 77606473,
+          "start_offset_sec": 77606
+        },
+        {
+          "title": "Chapter 49. The Consolations of Philosophy",
+          "chapters": null,
+          "length_ms": 1312438,
+          "start_offset_ms": 78830071,
+          "start_offset_sec": 78830
+        },
+        {
+          "title": "Chapter 50. Decoherence",
+          "chapters": null,
+          "length_ms": 820035,
+          "start_offset_ms": 80142509,
+          "start_offset_sec": 80143
+        },
+        {
+          "title": "Chapter 51. The Implied Invisible",
+          "chapters": null,
+          "length_ms": 1766481,
+          "start_offset_ms": 80962544,
+          "start_offset_sec": 80963
+        },
+        {
+          "title": "Chapter 52. Hiraeth",
+          "chapters": null,
+          "length_ms": 1526828,
+          "start_offset_ms": 82729025,
+          "start_offset_sec": 82729
+        },
+        {
+          "title": "Thank You for Listening",
+          "chapters": null,
+          "length_ms": 69775,
+          "start_offset_ms": 84255853,
+          "start_offset_sec": 84256
+        },
+        {
+          "title": "End Credits",
+          "chapters": null,
+          "length_ms": 30370,
+          "start_offset_ms": 84325628,
+          "start_offset_sec": 84326
+        }
+      ],
+      "is_accurate": true,
+      "runtime_length_ms": 84355998,
+      "runtime_length_sec": 84356,
+      "brandIntroDurationMs": 3924,
+      "brandOutroDurationMs": 4945
+    },
+    "format_type": "unabridged",
+    "content_type": "Product",
+    "has_children": true,
+    "release_date": "2022-08-08",
+    "asset_details": [],
+    "is_listenable": true,
+    "relationships": [
+      {
+        "sku": "SE_RIES_062057",
+        "url": "/pd/Practical-Guide-to-Sorcery-Audiobook/B09MG3GJW4",
+        "asin": "B09MG3GJW4",
+        "sort": "2",
+        "title": "Practical Guide to Sorcery",
+        "sequence": "2",
+        "sku_lite": "SE_RIES_062057",
+        "relationship_type": "series",
+        "content_delivery_type": "BookSeries",
+        "relationship_to_product": "parent"
+      },
+      {
+        "asin": "B0B91ZBTXZ",
+        "sort": "1",
+        "relationship_type": "component",
+        "relationship_to_product": "child"
+      },
+      {
+        "asin": "B0B92NRGZH",
+        "sort": "2",
+        "relationship_type": "component",
+        "relationship_to_product": "child"
+      }
+    ],
+    "product_images": {
+      "500": "https://m.media-amazon.com/images/I/510SlPSapXL._SL500_.jpg"
+    },
+    "publisher_name": "Seladore Publishing",
+    "ContentReference": {
+      "acr": "CR!D6K9EY0ZG12RZFAJEWEEXX383KWE",
+      "sku": "BK_ACX0_319626",
+      "asin": "B0B91976NY",
+      "codec": "mp4a.40.2",
+      "tempo": "1.0",
+      "version": "42493421",
+      "marketplace": "AF2M0KC94RCEA",
+      "file_version": "1",
+      "content_format": "AAX_44_128",
+      "content_size_in_bytes": 1358688847
+    },
+    "available_codecs": [
+      {
+        "name": "aax_44_64",
+        "format": "Enhanced",
+        "enhanced_codec": "LC_64_44100_stereo",
+        "is_kindle_enhanced": true
+      },
+      {
+        "name": "aax_44_128",
+        "format": "Enhanced",
+        "enhanced_codec": "LC_128_44100_stereo",
+        "is_kindle_enhanced": true
+      },
+      {
+        "name": "aax_22_64",
+        "format": "Enhanced",
+        "enhanced_codec": "LC_64_22050_stereo",
+        "is_kindle_enhanced": true
+      },
+      {
+        "name": "aax_22_32",
+        "format": "Enhanced",
+        "enhanced_codec": "LC_32_22050_stereo",
+        "is_kindle_enhanced": true
+      },
+      {
+        "name": "mp4_22_64",
+        "format": "Enhanced",
+        "enhanced_codec": "mp42264",
+        "is_kindle_enhanced": true
+      },
+      {
+        "name": "mp4_22_32",
+        "format": "Enhanced",
+        "enhanced_codec": "mp42232",
+        "is_kindle_enhanced": true
+      },
+      {
+        "name": "mp4_44_64",
+        "format": "Enhanced",
+        "enhanced_codec": "mp44464",
+        "is_kindle_enhanced": true
+      },
+      {
+        "name": "mp4_44_128",
+        "format": "Enhanced",
+        "enhanced_codec": "mp444128",
+        "is_kindle_enhanced": true
+      },
+      {
+        "name": "aax",
+        "format": "Enhanced",
+        "enhanced_codec": "aax",
+        "is_kindle_enhanced": false
+      }
+    ],
+    "category_ladders": [
+      {
+        "root": "Genres",
+        "ladder": [
+          {
+            "id": "18580606011",
+            "name": "Science Fiction & Fantasy"
+          },
+          {
+            "id": "18580607011",
+            "name": "Fantasy"
+          }
+        ]
+      },
+      {
+        "root": "Genres",
+        "ladder": [
+          {
+            "id": "18580606011",
+            "name": "Science Fiction & Fantasy"
+          },
+          {
+            "id": "18580607011",
+            "name": "Fantasy"
+          },
+          {
+            "id": "18580615011",
+            "name": "Epic"
+          }
+        ]
+      }
+    ],
+    "customer_reviews": [
+      {
+        "id": "012dbe4bcda147aab4cd9975c41631b0",
+        "asin": "B0B91976NY",
+        "body": "this performance, and novel, are absolute perfection. this should be your immediate listen. more words are not required.",
+        "title": "My favorite performance of any book; my favorite series in the genre.",
+        "format": "Freeform",
+        "ratings": {
+          "story_rating": 5,
+          "overall_rating": 5,
+          "performance_rating": 5
+        },
+        "location": "",
+        "author_id": "amzn1.account.AEGF7EHYHTFF7SPS34HNVLU6EXEA",
+        "author_name": "C Lily",
+        "submission_date": "2024-11-11T04:15:42Z",
+        "review_content_scores": {
+          "content_quality": 50,
+          "num_helpful_votes": 0,
+          "num_unhelpful_votes": 0
+        }
+      },
+      {
+        "id": "6ab2778b73a548a192397d8fa7b6eb64",
+        "asin": "B0B91976NY",
+        "body": "I enjoyed this story. I’m very curious to see how Siobhan moves forward and grows more in the next book. ",
+        "title": "I’m very curious",
+        "format": "Freeform",
+        "ratings": {
+          "story_rating": 5,
+          "overall_rating": 5,
+          "performance_rating": 5
+        },
+        "location": "",
+        "author_id": "amzn1.account.AHSHMA5M6UXCT5573WVU5JY4RDHA",
+        "author_name": "JenniAK",
+        "submission_date": "2023-02-21T20:19:05Z",
+        "review_content_scores": {
+          "content_quality": 50,
+          "num_helpful_votes": 0,
+          "num_unhelpful_votes": 0
+        }
+      },
+      {
+        "id": "3894e8d59fcc44348d58b9ab93296605",
+        "asin": "B0B91976NY",
+        "body": "I really like that are some gap in the understand of the magic that leaves the reader open to use their imagination ",
+        "title": "Very open to interpretation ",
+        "format": "Freeform",
+        "ratings": {
+          "story_rating": 5,
+          "overall_rating": 5,
+          "performance_rating": 5
+        },
+        "location": "",
+        "author_id": "amzn1.account.AG5ZWCNGNELLL6JN6PETHCTY75GA",
+        "author_name": "Valo",
+        "submission_date": "2023-02-01T22:06:17Z",
+        "review_content_scores": {
+          "content_quality": 50,
+          "num_helpful_votes": 0,
+          "num_unhelpful_votes": 0
+        }
+      }
+    ],
+    "is_adult_product": false,
+    "publication_name": "Practical Guide to Sorcery",
+    "editorial_reviews": [""],
+    "publisher_summary": "<p><b>To study magic at the university, Siobhan sacrificed her name.</b></p> <p><b>She sacrificed her body and her past. </b></p> <p>Magically disguised as a boy named Sebastien, she is learning wondrous secrets of the thaumaturgic sciences. As Sebastien, she mingles with the young nobles who will one day rule their country. But danger is closer than ever, and she cannot escape her past.</p> <p>The coppers investigating the theft of Siobhan’s priceless transformation artifact have given her a new name: the Raven Queen. As Siobhan does favors for the gang that loaned her the university tuition, the Raven Queen’s mystique only grows.</p> <p>And keeps growing...snowballing out of control until Siobhan’s other identity takes on a life of its own, a fear-inducing bogeyman well beyond the truth of her real capabilities.</p> <p>With the whole city out to get her and trouble hounding both sides of her double life, how will Siobhan ever survive to become the world’s most powerful sorcerer?</p>",
+    "runtime_length_min": 1405,
+    "social_media_images": {
+      "ig_bg": "https://m.media-amazon.com/images/I/510SlPSapXL._SL200_BL80_UR1080,2160.jpg",
+      "twitter": "https://m.media-amazon.com/images/I/510SlPSapXL._SL10_UR1600,800_CR200,50,1024,512_CLa%7C1024,512%7C510SlPSapXL.jpg%7C0,0,1024,512+67,67,376,376_PJAdblSocialShare-Gradientoverlay-twitter-largeasin-0to60,TopLeft,0,0_PJAdblSocialShare-AudibleLogo-Medium,TopLeft,490,223_OU01_ZBLISTENING%20ON,483,152,55,450,AudibleSansMd,32,255,255,255.jpg",
+      "facebook": "https://m.media-amazon.com/images/I/510SlPSapXL._SL10_UR1600,800_CR200,50,1200,630_CLa%7C1200,630%7C510SlPSapXL.jpg%7C0,0,1200,630+82,82,465,465_PJAdblSocialShare-Gradientoverlay-largeasin-0to70,TopLeft,0,0_PJAdblSocialShare-AudibleLogo-Large,TopLeft,600,270_OU01_ZBLISTENING%20ON,617,216,52,500,AudibleSansMd,30,255,255,255.jpg",
+      "ig_sticker": "https://m.media-amazon.com/images/I/71UyRin7-TL._CLa%7C614,913%7C510SlPSapXL.jpg%7C0,0,614,913+70,79,471,473_FMpng_PJAudible-logo-dk,BottomLeft,70,-100_ZAA%20Binding%20of%20Blood,70,560,65,500,AudibleSansSm,42,54,54,54_ZAby%20Azalea%20Ellis,70,640,52,517,AudibleSansRg,32,0,0,0.png",
+      "ig_static_with_bg": "https://m.media-amazon.com/images/I/510SlPSapXL._SL200_BL80_UR1080,2160_CLa%7C1080,2160%7C510SlPSapXL.jpg%7C0,0,1080,2160+288,614,500,500_PJAdblSocialShare-Gradientoverlay-Radial,TopLeft,0,0_PJAdblSocialShare-AudibleLogo-Small,TopLeft,290,461_ZBLISTENING%20ON,290,410,52,500,AudibleSansMd,34,255,255,255_ZBA%20Binding%20of%20Blood,290,1183,52,500,AudibleSansSm,32,255,255,255_ZBAzalea%20Ellis,290,1247,52,500,AudibleSansRg,28,255,255,255.jpg"
+    },
+    "publication_datetime": "2022-08-08T19:19:00Z",
+    "content_delivery_type": "MultiPartBook",
+    "merchandising_summary": "<p>To study magic at the university, Siobhan sacrificed her name. She sacrificed her body and her past. Magically disguised as a boy named Sebastien, she is learning wondrous secrets of the thaumaturgic sciences....</p>",
+    "sort_options_for_reviews": [
+      {
+        "reviews_sort_order_value": "MostHelpful",
+        "reviews_sort_order_string_id": "adbl_productdetail_reviews_sort_MostHelpful"
+      },
+      {
+        "reviews_sort_order_value": "MostRecent",
+        "reviews_sort_order_string_id": "adbl_productdetail_reviews_sort_MostRecent"
+      },
+      {
+        "reviews_sort_order_value": "MostRelevant",
+        "reviews_sort_order_string_id": "adbl_productdetail_reviews_sort_MostRelevant"
+      }
+    ],
+    "thesaurus_subject_keywords": ["literature-and-fiction"],
+    "is_purchasability_suppressed": false,
+    "reasons_for_reporting_review": [
+      {
+        "reported_reason_value": "guideline_violation",
+        "reported_reason_string_id": "adbl_review_reported_reason_guideline_violation"
+      },
+      {
+        "reported_reason_value": "csam",
+        "reported_reason_string_id": "adbl_review_reported_reason_csam"
+      },
+      {
+        "reported_reason_value": "inappropriate_content",
+        "reported_reason_string_id": "adbl_review_reported_reason_inappropriate_content"
+      },
+      {
+        "reported_reason_value": "other_concerning_content",
+        "reported_reason_string_id": "adbl_review_reported_reason_other_concerning_content"
+      }
+    ],
+    "selected_sort_option_for_reviews": "MostHelpful"
+  },
+  "createdAt": "2025-12-23T06:38:47.349Z"
+}
