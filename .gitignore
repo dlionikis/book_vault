@@ -24,6 +24,9 @@ lerna-debug.log*
 .settings/
 .claude/
 
+# Build Server (generated locally, contains user-specific paths)
+buildServer.json
+
 # OS
 Thumbs.db
 Desktop.ini

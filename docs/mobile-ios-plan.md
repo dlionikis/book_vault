@@ -220,14 +220,16 @@ git commit -m "feat: add playlists feature (backend + iOS)"
 
 ### VS Code + Xcode Workflow
 
-**Option A: Dual Monitor** (Recommended)
+> **NEW**: VS Code can now handle iOS development directly with proper tooling! See Option D below.
+
+**Option A: Dual Monitor** (Recommended - Traditional)
 
 ```
 Monitor 1: VS Code (backend code, git, docs)
 Monitor 2: Xcode (iOS) + iOS Simulator
 ```
 
-**Option B: Single Monitor** (Use macOS Desktops)
+**Option B: Single Monitor** (Use macOS Desktops - Traditional)
 
 ```
 Desktop 1: VS Code (backend)
@@ -237,15 +239,92 @@ Desktop 3: Browser (Postman, docs)
 Keyboard: Ctrl + → to switch desktops
 ```
 
-**Option C: VS Code Primary** (Minimal Xcode)
+**Option C: VS Code Primary** (Minimal Xcode - Traditional)
 
 ```
 VS Code: Backend dev, Swift editing, git, docs
 Xcode: Only for building/running iOS app
 
-# Install VS Code Swift extension
-code --install-extension sswg.swift-lang
+# Install official Swift extension
+# Extension ID: swiftlang.swift-vscode
 ```
+
+**Option D: VS Code All-in-One** (⭐ RECOMMENDED - Fully Integrated)
+
+```
+VS Code: Backend + iOS development, git, debugging, all editing
+Xcode: OPTIONAL - Only for Interface Builder/Storyboards (if needed)
+
+# Install required tools
+brew install xcode-build-server
+
+# Install VS Code extensions
+# 1. Official Swift extension: swiftlang.swift-vscode (already installed ✅)
+# 2. Sweetpad extension for iOS support
+```
+
+**VS Code iOS Setup (Option D)**:
+
+This approach enables full iOS development within VS Code, including:
+
+- ✅ Swift code completion and IntelliSense
+- ✅ Build and run iOS apps
+- ✅ Full debugging with breakpoints
+- ✅ GitHub Copilot integration for Swift
+- ✅ Unified backend + iOS workflow
+
+**Configuration Steps**:
+
+1. **Install Sweetpad Extension**:
+   - Open Extensions in VS Code
+   - Search for "Sweetpad"
+   - Install the extension
+
+2. **Configure Workspace** (`.vscode/settings.json`):
+
+   ```json
+   {
+     "sweetpad.build.xcodeProjectPath": "ios/BookVault.xcodeproj",
+     "sweetpad.build.scheme": "BookVault",
+     "sweetpad.build.buildConfiguration": "Debug"
+   }
+   ```
+
+   **Note**: Use `xcodeProjectPath` for `.xcodeproj` files (not `xcodeWorkspacePath`)
+
+3. **Generate Build Server Config**:
+   - Open Command Palette (⌘⇧P)
+   - Run: `Sweetpad: Generate Build Server Config`
+   - Creates `buildServer.json` automatically
+
+4. **Setup Debugging** (`.vscode/launch.json`):
+   - Open Debug pane
+   - Click "create a launch.json file"
+   - Select `Sweetpad (LLDB)` template
+   - Auto-configures iOS debugging
+
+**What Works in VS Code**:
+
+- ✅ Swift syntax highlighting and code completion
+- ✅ Jump to definition, peek definition, find references
+- ✅ Build and run iOS apps directly
+- ✅ Full LLDB debugging (breakpoints, variable inspection, step through)
+- ✅ GitHub Copilot integration (superior to Xcode's Copilot extension)
+- ✅ Git integration and version control
+- ✅ Unified terminal for backend + iOS
+
+**Limitations** (Must use Xcode for):
+
+- ❌ SwiftUI Previews (Xcode-only feature)
+- ❌ Interface Builder / Storyboards (if used)
+- ❌ Asset catalog visual editing (can edit JSON directly)
+- ❌ App Store submission (use Xcode Archive)
+
+**Recommended Workflow**:
+
+- Use VS Code for all development (backend + iOS code editing)
+- Use Xcode only when you need SwiftUI Previews
+- Leverage Copilot for AI-assisted Swift development in VS Code
 
 ### Testing Strategy
 

@@ -1,7 +1,6 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "emitDecoratorMetadata": true,
     "jsx": "react-jsx"
   },
   "include": ["../stories/**/*", "../components/**/*.stories.*", "../.storybook/**/*"],

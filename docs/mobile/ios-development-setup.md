@@ -2,12 +2,20 @@
 
 Quick guide to setting up the iOS development environment.
 
+> **⭐ NEW**: You can now develop iOS apps entirely in VS Code! See [VS Code iOS Setup Guide](vscode-ios-setup.md) for the recommended workflow.
+
 ## Prerequisites
 
 - macOS with Xcode 15+ installed
 - Node.js 18+ (for backend)
 - OpenAPI Generator: `brew install openapi-generator`
 - jq (for test fixtures): `brew install jq`
+
+**Optional (for VS Code iOS development)**:
+
+- xcode-build-server: `brew install xcode-build-server`
+- Sweetpad extension for VS Code
+- Swift extension for VS Code (swiftlang.swift-vscode)
 
 ## Initial Setup
 

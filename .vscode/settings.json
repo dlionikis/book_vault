@@ -1,1 +1,5 @@
-{}
+{
+  "sweetpad.build.xcodeProjectPath": "ios/BookVault.xcodeproj",
+  "sweetpad.build.scheme": "BookVault",
+  "sweetpad.build.buildConfiguration": "Debug"
+}
