@@ -111,6 +111,68 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('error');
       });
     });
+
+    describe('POST /api/auth/register', () => {
+      testFn('should satisfy OpenAPI spec for missing required fields', async () => {
+        const response = await axios.post(
+          `${BASE_URL}/api/auth/register`,
+          { email: 'newuser@test.com' },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            validateStatus: () => true,
+          }
+        );
+
+        expect(response.status).toBe(400);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('error');
+      });
+
+      testFn('should satisfy OpenAPI spec for invalid email format', async () => {
+        const response = await axios.post(
+          `${BASE_URL}/api/auth/register`,
+          { email: 'not-an-email', password: 'validpassword123' },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            validateStatus: () => true,
+          }
+        );
+
+        expect(response.status).toBe(400);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('error');
+      });
+
+      testFn('should satisfy OpenAPI spec for weak password (< 8 chars)', async () => {
+        const response = await axios.post(
+          `${BASE_URL}/api/auth/register`,
+          { email: 'newuser@test.com', password: 'short' },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            validateStatus: () => true,
+          }
+        );
+
+        expect(response.status).toBe(400);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('error');
+      });
+
+      testFn('should satisfy OpenAPI spec for duplicate email', async () => {
+        const response = await axios.post(
+          `${BASE_URL}/api/auth/register`,
+          { email: TEST_USER.email, password: 'validpassword123' },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            validateStatus: () => true,
+          }
+        );
+
+        expect(response.status).toBe(409);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('error');
+      });
+    });
   });
 
   describe('Books Endpoints', () => {
@@ -485,6 +547,152 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('books');
         expect(response.data).toHaveProperty('pagination');
         expect(Array.isArray(response.data.books)).toBe(true);
+      });
+
+      testFn('should return 404 for non-existent author', async () => {
+        const nonExistentId = '00000000-0000-0000-0000-000000000000';
+        const response = await authenticatedRequest(`${BASE_URL}/api/authors/${nonExistentId}`, {
+          method: 'GET',
+        });
+
+        expect(response.status).toBe(404);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('error');
+      });
+    });
+
+    describe('GET /api/series/{id}', () => {
+      let testSeriesId: string;
+
+      beforeAll(async () => {
+        // Get a series ID from the series list
+        const response = await authenticatedRequest(`${BASE_URL}/api/browse/series?limit=1`, {
+          method: 'GET',
+        });
+        if (response.data.results && response.data.results.length > 0) {
+          testSeriesId = response.data.results[0].id;
+        }
+      });
+
+      testFn('should satisfy OpenAPI spec for series details with books', async () => {
+        if (!testSeriesId) {
+          console.warn('No series in database, skipping test');
+          return;
+        }
+
+        const response = await authenticatedRequest(`${BASE_URL}/api/series/${testSeriesId}`, {
+          method: 'GET',
+        });
+
+        expect(response.status).toBe(200);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('id');
+        expect(response.data).toHaveProperty('title');
+        expect(response.data).toHaveProperty('books');
+        expect(response.data).toHaveProperty('pagination');
+        expect(Array.isArray(response.data.books)).toBe(true);
+      });
+
+      testFn('should return 404 for non-existent series', async () => {
+        const nonExistentId = '00000000-0000-0000-0000-000000000000';
+        const response = await authenticatedRequest(`${BASE_URL}/api/series/${nonExistentId}`, {
+          method: 'GET',
+        });
+
+        expect(response.status).toBe(404);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('error');
+      });
+    });
+
+    describe('GET /api/narrators/{id}', () => {
+      let testNarratorId: string;
+
+      beforeAll(async () => {
+        // Get a narrator ID from the narrators list
+        const response = await authenticatedRequest(`${BASE_URL}/api/browse/narrators?limit=1`, {
+          method: 'GET',
+        });
+        if (response.data.results && response.data.results.length > 0) {
+          testNarratorId = response.data.results[0].id;
+        }
+      });
+
+      testFn('should satisfy OpenAPI spec for narrator details with books', async () => {
+        if (!testNarratorId) {
+          console.warn('No narrators in database, skipping test');
+          return;
+        }
+
+        const response = await authenticatedRequest(`${BASE_URL}/api/narrators/${testNarratorId}`, {
+          method: 'GET',
+        });
+
+        expect(response.status).toBe(200);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('id');
+        expect(response.data).toHaveProperty('name');
+        expect(response.data).toHaveProperty('books');
+        expect(response.data).toHaveProperty('pagination');
+        expect(Array.isArray(response.data.books)).toBe(true);
+      });
+
+      testFn('should return 404 for non-existent narrator', async () => {
+        const nonExistentId = '00000000-0000-0000-0000-000000000000';
+        const response = await authenticatedRequest(`${BASE_URL}/api/narrators/${nonExistentId}`, {
+          method: 'GET',
+        });
+
+        expect(response.status).toBe(404);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('error');
+      });
+    });
+
+    describe('GET /api/categories/{id}', () => {
+      let testCategoryId: string;
+
+      beforeAll(async () => {
+        // Get a category ID from the categories list
+        const response = await authenticatedRequest(`${BASE_URL}/api/browse/categories?limit=1`, {
+          method: 'GET',
+        });
+        if (response.data.results && response.data.results.length > 0) {
+          testCategoryId = response.data.results[0].id;
+        }
+      });
+
+      testFn('should satisfy OpenAPI spec for category details with books', async () => {
+        if (!testCategoryId) {
+          console.warn('No categories in database, skipping test');
+          return;
+        }
+
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/categories/${testCategoryId}`,
+          {
+            method: 'GET',
+          }
+        );
+
+        expect(response.status).toBe(200);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('id');
+        expect(response.data).toHaveProperty('name');
+        expect(response.data).toHaveProperty('books');
+        expect(response.data).toHaveProperty('pagination');
+        expect(Array.isArray(response.data.books)).toBe(true);
+      });
+
+      testFn('should return 404 for non-existent category', async () => {
+        const nonExistentId = '00000000-0000-0000-0000-000000000000';
+        const response = await authenticatedRequest(`${BASE_URL}/api/categories/${nonExistentId}`, {
+          method: 'GET',
+        });
+
+        expect(response.status).toBe(404);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('error');
       });
     });
   });
