@@ -59,13 +59,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
-    // Transform the response
+    // Transform the response (OpenAPI compliant - only return spec-defined fields)
     const transformedBook = {
       id: book.id,
       asin: book.asin,
       title: book.title,
       description: book.description,
-      publisherSummary: book.publisherSummary,
       runtimeMinutes: book.runtimeMinutes,
       releaseDate: book.releaseDate,
       publisher: book.publisher,
@@ -90,11 +89,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       categories: book.categories.map((bc) => ({
         id: bc.category.id,
         name: bc.category.name,
-        level: bc.category.level,
-        parentName: bc.category.parent?.name,
       })),
-      metadata: book.metadata,
-      createdAt: book.createdAt,
       ...(includeChapters &&
         book.chapters && {
           chapters: book.chapters.map((chapter) => ({

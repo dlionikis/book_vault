@@ -73,6 +73,182 @@ async function authenticatedRequest(
   });
 }
 
+// Field validation helpers for strict OpenAPI compliance
+type SchemaDefinition = Record<string, { required?: boolean; type?: string }>;
+
+const SCHEMA_DEFINITIONS: Record<string, SchemaDefinition> = {
+  Book: {
+    id: { required: true, type: 'string' },
+    asin: { required: true, type: 'string' },
+    title: { required: true, type: 'string' },
+    description: { required: false, type: 'string' },
+    runtimeMinutes: { required: true, type: 'number' },
+    releaseDate: { required: false, type: 'string' },
+    publisher: { required: false, type: 'string' },
+    coverUrl: { required: true, type: 'string' },
+    audioUrl: { required: true, type: 'string' },
+    authors: { required: true, type: 'array' },
+    narrators: { required: false, type: 'array' },
+    series: { required: false, type: 'array' },
+    categories: { required: false, type: 'array' },
+  },
+  Author: {
+    id: { required: true, type: 'string' },
+    name: { required: true, type: 'string' },
+    asin: { required: false, type: 'string' },
+  },
+  Narrator: {
+    id: { required: true, type: 'string' },
+    name: { required: true, type: 'string' },
+    asin: { required: false, type: 'string' },
+  },
+  SeriesInfo: {
+    id: { required: true, type: 'string' },
+    title: { required: true, type: 'string' },
+    sequence: { required: false, type: 'string' },
+    asin: { required: false, type: 'string' },
+  },
+  Category: {
+    id: { required: true, type: 'string' },
+    name: { required: true, type: 'string' },
+  },
+  AuthorWithBookCount: {
+    id: { required: true, type: 'string' },
+    name: { required: true, type: 'string' },
+    asin: { required: false, type: 'string' },
+    bookCount: { required: true, type: 'number' },
+  },
+  SeriesWithBookCount: {
+    id: { required: true, type: 'string' },
+    title: { required: true, type: 'string' },
+    asin: { required: false, type: 'string' },
+    bookCount: { required: true, type: 'number' },
+  },
+  NarratorWithBookCount: {
+    id: { required: true, type: 'string' },
+    name: { required: true, type: 'string' },
+    asin: { required: false, type: 'string' },
+    bookCount: { required: true, type: 'number' },
+  },
+  CategoryWithBookCount: {
+    id: { required: true, type: 'string' },
+    name: { required: true, type: 'string' },
+    level: { required: false, type: 'number' },
+    bookCount: { required: true, type: 'number' },
+  },
+  AuthorDetail: {
+    id: { required: true, type: 'string' },
+    name: { required: true, type: 'string' },
+    asin: { required: false, type: 'string' },
+    books: { required: true, type: 'array' },
+    pagination: { required: true, type: 'object' },
+  },
+  SeriesDetail: {
+    id: { required: true, type: 'string' },
+    title: { required: true, type: 'string' },
+    asin: { required: false, type: 'string' },
+    books: { required: true, type: 'array' },
+    pagination: { required: true, type: 'object' },
+  },
+  NarratorDetail: {
+    id: { required: true, type: 'string' },
+    name: { required: true, type: 'string' },
+    asin: { required: false, type: 'string' },
+    books: { required: true, type: 'array' },
+    pagination: { required: true, type: 'object' },
+  },
+  CategoryDetail: {
+    id: { required: true, type: 'string' },
+    name: { required: true, type: 'string' },
+    books: { required: true, type: 'array' },
+    pagination: { required: true, type: 'object' },
+  },
+};
+
+/**
+ * Validates that an object contains ONLY the fields defined in the OpenAPI schema.
+ * Catches extra fields like createdAt, updatedAt that shouldn't be exposed.
+ *
+ * @param obj - The object to validate
+ * @param schemaName - Name of the schema from SCHEMA_DEFINITIONS
+ * @param path - Path for nested validation (used in error messages)
+ * @returns Array of validation errors (empty if valid)
+ */
+function validateFields(obj: any, schemaName: string, path = ''): string[] {
+  const schema = SCHEMA_DEFINITIONS[schemaName];
+  if (!schema) {
+    return [`Unknown schema: ${schemaName}`];
+  }
+
+  const errors: string[] = [];
+  const allowedFields = Object.keys(schema);
+  const actualFields = Object.keys(obj);
+
+  // Check for extra fields (the main purpose of this validator)
+  const extraFields = actualFields.filter((field) => !allowedFields.includes(field));
+  if (extraFields.length > 0) {
+    errors.push(
+      `${path ? path + '.' : ''}${schemaName} has extra fields: ${extraFields.join(', ')}`
+    );
+  }
+
+  // Recursively validate nested objects
+  for (const [field, value] of Object.entries(obj)) {
+    const fieldSchema = schema[field];
+    if (!fieldSchema) continue; // Already caught as extra field
+
+    const fieldPath = path ? `${path}.${field}` : field;
+
+    if (Array.isArray(value)) {
+      // Validate array items based on field name
+      const itemSchemaName = getArrayItemSchema(field);
+      if (itemSchemaName) {
+        value.forEach((item, index) => {
+          if (typeof item === 'object' && item !== null) {
+            const nestedErrors = validateFields(item, itemSchemaName, `${fieldPath}[${index}]`);
+            errors.push(...nestedErrors);
+          }
+        });
+      }
+    } else if (typeof value === 'object' && value !== null && field === 'pagination') {
+      // Pagination has its own schema
+      const paginationErrors = validatePagination(value, fieldPath);
+      errors.push(...paginationErrors);
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Get the schema name for array items based on field name.
+ */
+function getArrayItemSchema(fieldName: string): string | null {
+  const mapping: Record<string, string> = {
+    authors: 'Author',
+    narrators: 'Narrator',
+    series: 'SeriesInfo',
+    categories: 'Category',
+    books: 'Book',
+    results: 'unknown', // Depends on endpoint context
+  };
+  return mapping[fieldName] || null;
+}
+
+/**
+ * Validates pagination object structure.
+ */
+function validatePagination(obj: any, path: string): string[] {
+  const allowedFields = ['page', 'limit', 'total', 'pages'];
+  const actualFields = Object.keys(obj);
+  const extraFields = actualFields.filter((field) => !allowedFields.includes(field));
+
+  if (extraFields.length > 0) {
+    return [`${path} has extra fields: ${extraFields.join(', ')}`];
+  }
+  return [];
+}
+
 describe('OpenAPI Contract Tests', () => {
   // Skip all tests if TEST_API_URL is not set (CI/local development)
   const runTests = process.env.RUN_CONTRACT_TESTS === 'true';
@@ -250,6 +426,10 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('audioUrl');
         expect(response.data).toHaveProperty('authors');
         expect(Array.isArray(response.data.authors)).toBe(true);
+
+        // PHASE 2: Strict field validation - catch extra fields
+        const fieldErrors = validateFields(response.data, 'Book');
+        expect(fieldErrors).toEqual([]);
       });
 
       testFn('should return 404 for non-existent book', async () => {
@@ -471,6 +651,10 @@ describe('OpenAPI Contract Tests', () => {
           expect(author).toHaveProperty('id');
           expect(author).toHaveProperty('name');
           expect(author).toHaveProperty('bookCount');
+
+          // PHASE 2: Strict field validation - catch extra fields
+          const fieldErrors = validateFields(author, 'AuthorWithBookCount');
+          expect(fieldErrors).toEqual([]);
         }
       });
     });
@@ -486,6 +670,12 @@ describe('OpenAPI Contract Tests', () => {
         expect(response).toSatisfyApiSpec();
         expect(response.data).toHaveProperty('results');
         expect(response.data).toHaveProperty('pagination');
+
+        if (response.data.results.length > 0) {
+          // PHASE 2: Strict field validation - catch extra fields
+          const fieldErrors = validateFields(response.data.results[0], 'SeriesWithBookCount');
+          expect(fieldErrors).toEqual([]);
+        }
       });
     });
 
@@ -500,6 +690,12 @@ describe('OpenAPI Contract Tests', () => {
         expect(response).toSatisfyApiSpec();
         expect(response.data).toHaveProperty('results');
         expect(response.data).toHaveProperty('pagination');
+
+        if (response.data.results.length > 0) {
+          // PHASE 2: Strict field validation - catch extra fields
+          const fieldErrors = validateFields(response.data.results[0], 'NarratorWithBookCount');
+          expect(fieldErrors).toEqual([]);
+        }
       });
     });
 
@@ -514,6 +710,12 @@ describe('OpenAPI Contract Tests', () => {
         expect(response).toSatisfyApiSpec();
         expect(response.data).toHaveProperty('results');
         expect(response.data).toHaveProperty('pagination');
+
+        if (response.data.results.length > 0) {
+          // PHASE 2: Strict field validation - catch extra fields
+          const fieldErrors = validateFields(response.data.results[0], 'CategoryWithBookCount');
+          expect(fieldErrors).toEqual([]);
+        }
       });
     });
 
@@ -547,6 +749,10 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('books');
         expect(response.data).toHaveProperty('pagination');
         expect(Array.isArray(response.data.books)).toBe(true);
+
+        // PHASE 2: Strict field validation - catch extra fields
+        const fieldErrors = validateFields(response.data, 'AuthorDetail');
+        expect(fieldErrors).toEqual([]);
       });
 
       testFn('should return 404 for non-existent author', async () => {
@@ -591,6 +797,10 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('books');
         expect(response.data).toHaveProperty('pagination');
         expect(Array.isArray(response.data.books)).toBe(true);
+
+        // PHASE 2: Strict field validation - catch extra fields
+        const fieldErrors = validateFields(response.data, 'SeriesDetail');
+        expect(fieldErrors).toEqual([]);
       });
 
       testFn('should return 404 for non-existent series', async () => {
@@ -635,6 +845,10 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('books');
         expect(response.data).toHaveProperty('pagination');
         expect(Array.isArray(response.data.books)).toBe(true);
+
+        // PHASE 2: Strict field validation - catch extra fields
+        const fieldErrors = validateFields(response.data, 'NarratorDetail');
+        expect(fieldErrors).toEqual([]);
       });
 
       testFn('should return 404 for non-existent narrator', async () => {
@@ -682,6 +896,10 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('books');
         expect(response.data).toHaveProperty('pagination');
         expect(Array.isArray(response.data.books)).toBe(true);
+
+        // PHASE 2: Strict field validation - catch extra fields
+        const fieldErrors = validateFields(response.data, 'CategoryDetail');
+        expect(fieldErrors).toEqual([]);
       });
 
       testFn('should return 404 for non-existent category', async () => {
