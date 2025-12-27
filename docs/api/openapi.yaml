@@ -54,6 +54,12 @@ tags:
     description: Browse by author, series, narrator, category
   - name: Library
     description: User's personal library
+  - name: Downloads
+    description: Download management for offline access
+  - name: User
+    description: User account management
+  - name: Health
+    description: API health and monitoring
 
 components:
   securitySchemes:
@@ -1531,3 +1537,886 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /api/library/check:
+    get:
+      operationId: checkLibrary
+      tags: [Library]
+      summary: Check if book is in user's library
+      parameters:
+        - name: bookId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Book ID to check
+      responses:
+        '200':
+          description: Library check result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [inLibrary]
+                properties:
+                  inLibrary:
+                    type: boolean
+                    example: true
+        '400':
+          description: Missing book ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/library/lists:
+    get:
+      operationId: getUserLists
+      tags: [Library]
+      summary: Get all user lists with book counts
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User's lists
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [lists]
+                properties:
+                  lists:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, bookCount, createdAt, updatedAt]
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                          example: 'To Read'
+                        description:
+                          type: string
+                          nullable: true
+                          example: 'Books I want to read next'
+                        bookCount:
+                          type: integer
+                          minimum: 0
+                          example: 12
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      operationId: createList
+      tags: [Library]
+      summary: Create new list
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: 'To Read'
+                description:
+                  type: string
+                  example: 'Books I want to read next'
+      responses:
+        '201':
+          description: List created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name, bookCount, createdAt, updatedAt]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                    example: 'To Read'
+                  description:
+                    type: string
+                    nullable: true
+                    example: 'Books I want to read next'
+                  bookCount:
+                    type: integer
+                    minimum: 0
+                    example: 0
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '400':
+          description: Missing list name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/library/lists/{id}:
+    put:
+      operationId: updateList
+      tags: [Library]
+      summary: Update list metadata
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: List ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: 'To Read'
+                description:
+                  type: string
+                  example: 'Books I want to read next'
+      responses:
+        '200':
+          description: List updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name, bookCount, createdAt, updatedAt]
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  description:
+                    type: string
+                    nullable: true
+                  bookCount:
+                    type: integer
+                    minimum: 0
+                  createdAt:
+                    type: string
+                    format: date-time
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '403':
+          description: Not your list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: List not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      operationId: deleteList
+      tags: [Library]
+      summary: Delete list
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: List ID
+      responses:
+        '200':
+          description: List deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '403':
+          description: Not your list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: List not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/library/lists/{id}/books:
+    post:
+      operationId: addBookToList
+      tags: [Library]
+      summary: Add book to list
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: List ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookId]
+              properties:
+                bookId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Book added to list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '403':
+          description: Not your list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: List or book not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      operationId: removeBookFromList
+      tags: [Library]
+      summary: Remove book from list
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: List ID
+        - name: bookId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Book ID to remove
+      responses:
+        '200':
+          description: Book removed from list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '403':
+          description: Not your list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: List not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/library/lists/{id}/reorder:
+    put:
+      operationId: reorderList
+      tags: [Library]
+      summary: Reorder books in list
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: List ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bookIds]
+              properties:
+                bookIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Array of book IDs in desired order
+      responses:
+        '200':
+          description: List reordered
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, updated]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  updated:
+                    type: integer
+                    example: 10
+        '403':
+          description: Not your list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: List not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/library/series/{seriesId}:
+    post:
+      operationId: addSeriesToLibrary
+      tags: [Library]
+      summary: Add all books in series to library
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: seriesId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Series ID
+      responses:
+        '200':
+          description: Books added to library
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, added, total]
+                properties:
+                  message:
+                    type: string
+                    example: 'Added 5 books to library'
+                  added:
+                    type: integer
+                    minimum: 0
+                    example: 5
+                  total:
+                    type: integer
+                    minimum: 0
+                    example: 5
+        '404':
+          description: Series not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      operationId: removeSeriesFromLibrary
+      tags: [Library]
+      summary: Remove all books in series from library
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: seriesId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Series ID
+      responses:
+        '200':
+          description: Books removed from library
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, removed]
+                properties:
+                  message:
+                    type: string
+                    example: 'Removed 5 books from library'
+                  removed:
+                    type: integer
+                    minimum: 0
+                    example: 5
+        '404':
+          description: Series not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Progress endpoints
+  /api/progress/batch:
+    post:
+      operationId: batchUpdateProgress
+      tags: [Progress]
+      summary: Batch update user progress for offline sync
+      description: |
+        Accepts array of progress updates with timestamps for conflict resolution.
+        Only updates if client timestamp is newer than server timestamp.
+
+        **Supports both authentication methods**:
+        - Session cookies (web)
+        - Bearer token (mobile)
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [updates]
+              properties:
+                updates:
+                  type: array
+                  items:
+                    type: object
+                    required: [bookId, positionSeconds, timestamp]
+                    properties:
+                      bookId:
+                        type: string
+                        format: uuid
+                      positionSeconds:
+                        type: number
+                        format: double
+                        minimum: 0
+                      timestamp:
+                        type: string
+                        format: date-time
+                        description: Client timestamp for conflict resolution
+      responses:
+        '200':
+          description: Batch update results
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [updated, conflicts, details]
+                properties:
+                  updated:
+                    type: integer
+                    minimum: 0
+                    example: 5
+                    description: Number of successful updates
+                  conflicts:
+                    type: integer
+                    minimum: 0
+                    example: 1
+                    description: Number of conflicts (server timestamp newer)
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      required: [bookId, status]
+                      properties:
+                        bookId:
+                          type: string
+                          format: uuid
+                        status:
+                          type: string
+                          enum: [updated, conflict]
+        '400':
+          description: Invalid request (missing updates array)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Search endpoints
+  /api/search/suggestions:
+    get:
+      operationId: getSearchSuggestions
+      tags: [Search]
+      summary: Get search suggestions (autocomplete)
+      description: |
+        Returns top 5 books, 3 authors, and 2 narrators matching query.
+        Minimum 2 characters required.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+          description: Search query
+      responses:
+        '200':
+          description: Search suggestions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [books, authors, narrators]
+                properties:
+                  books:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, title, coverUrl]
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        title:
+                          type: string
+                        coverUrl:
+                          type: string
+                          format: uri
+                  authors:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name]
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                  narrators:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name]
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+        '400':
+          description: Query too short
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Download endpoints
+  /api/downloads:
+    get:
+      operationId: getDownloadHistory
+      tags: [Downloads]
+      summary: Get download history
+      description: |
+        Returns recent 50 downloads with daily count for rate limiting info.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Download history
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [downloads, dailyCount]
+                properties:
+                  downloads:
+                    type: array
+                    items:
+                      type: object
+                      required: [bookId, bookTitle, downloadedAt]
+                      properties:
+                        bookId:
+                          type: string
+                          format: uuid
+                        bookTitle:
+                          type: string
+                        downloadedAt:
+                          type: string
+                          format: date-time
+                        deviceId:
+                          type: string
+                          nullable: true
+                  dailyCount:
+                    type: integer
+                    minimum: 0
+                    example: 3
+                    description: Downloads in last 24 hours
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/downloads/{bookId}:
+    post:
+      operationId: generateDownloadUrl
+      tags: [Downloads]
+      summary: Generate pre-signed download URL
+      description: |
+        Generates a pre-signed S3 URL for downloading audiobook file.
+        URL expires in 1 hour. Rate limited to 10 downloads per day.
+
+        **Requires S3 configuration** - returns 501 if S3 not enabled.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Book ID to download
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                deviceId:
+                  type: string
+                  description: Optional device identifier
+      responses:
+        '200':
+          description: Download URL generated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [downloadUrl, expiresAt, fileSize]
+                properties:
+                  downloadUrl:
+                    type: string
+                    format: uri
+                    description: Pre-signed S3 URL (expires in 1 hour)
+                  expiresAt:
+                    type: string
+                    format: date-time
+                    description: URL expiration time
+                  fileSize:
+                    type: integer
+                    minimum: 0
+                    description: File size in bytes
+        '400':
+          description: Book has no audio file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Download limit exceeded (10/day)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '501':
+          description: Downloads require S3 configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/downloads/{bookId}/check:
+    get:
+      operationId: checkDownloadEligibility
+      tags: [Downloads]
+      summary: Check if user can download book
+      description: |
+        Verifies book exists and user is eligible to download.
+        Currently returns true for all books (MVP).
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Book ID to check
+      responses:
+        '200':
+          description: Eligibility check result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [eligible]
+                properties:
+                  eligible:
+                    type: boolean
+                    example: true
+        '404':
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # User endpoints
+  /api/user/password:
+    put:
+      operationId: updatePassword
+      tags: [User]
+      summary: Update user password
+      description: |
+        Validates current password and updates to new password.
+        New password must be at least 8 characters.
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                  format: password
+                newPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+      responses:
+        '200':
+          description: Password updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: 'Password updated successfully'
+        '400':
+          description: Invalid request (current password wrong or new password too short)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Health check
+  /api/health:
+    get:
+      operationId: healthCheck
+      tags: [Health]
+      summary: API health check
+      description: Returns 200 OK if server is running
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: 'ok'

@@ -96,6 +96,98 @@ export interface paths {
     /** Remove book from user's library */
     delete: operations["removeFromLibrary"];
   };
+  "/api/library/check": {
+    /** Check if book is in user's library */
+    get: operations["checkLibrary"];
+  };
+  "/api/library/lists": {
+    /** Get all user lists with book counts */
+    get: operations["getUserLists"];
+    /** Create new list */
+    post: operations["createList"];
+  };
+  "/api/library/lists/{id}": {
+    /** Update list metadata */
+    put: operations["updateList"];
+    /** Delete list */
+    delete: operations["deleteList"];
+  };
+  "/api/library/lists/{id}/books": {
+    /** Add book to list */
+    post: operations["addBookToList"];
+    /** Remove book from list */
+    delete: operations["removeBookFromList"];
+  };
+  "/api/library/lists/{id}/reorder": {
+    /** Reorder books in list */
+    put: operations["reorderList"];
+  };
+  "/api/library/series/{seriesId}": {
+    /** Add all books in series to library */
+    post: operations["addSeriesToLibrary"];
+    /** Remove all books in series from library */
+    delete: operations["removeSeriesFromLibrary"];
+  };
+  "/api/progress/batch": {
+    /**
+     * Batch update user progress for offline sync
+     * @description Accepts array of progress updates with timestamps for conflict resolution.
+     * Only updates if client timestamp is newer than server timestamp.
+     *
+     * **Supports both authentication methods**:
+     * - Session cookies (web)
+     * - Bearer token (mobile)
+     */
+    post: operations["batchUpdateProgress"];
+  };
+  "/api/search/suggestions": {
+    /**
+     * Get search suggestions (autocomplete)
+     * @description Returns top 5 books, 3 authors, and 2 narrators matching query.
+     * Minimum 2 characters required.
+     */
+    get: operations["getSearchSuggestions"];
+  };
+  "/api/downloads": {
+    /**
+     * Get download history
+     * @description Returns recent 50 downloads with daily count for rate limiting info.
+     */
+    get: operations["getDownloadHistory"];
+  };
+  "/api/downloads/{bookId}": {
+    /**
+     * Generate pre-signed download URL
+     * @description Generates a pre-signed S3 URL for downloading audiobook file.
+     * URL expires in 1 hour. Rate limited to 10 downloads per day.
+     *
+     * **Requires S3 configuration** - returns 501 if S3 not enabled.
+     */
+    post: operations["generateDownloadUrl"];
+  };
+  "/api/downloads/{bookId}/check": {
+    /**
+     * Check if user can download book
+     * @description Verifies book exists and user is eligible to download.
+     * Currently returns true for all books (MVP).
+     */
+    get: operations["checkDownloadEligibility"];
+  };
+  "/api/user/password": {
+    /**
+     * Update user password
+     * @description Validates current password and updates to new password.
+     * New password must be at least 8 characters.
+     */
+    put: operations["updatePassword"];
+  };
+  "/api/health": {
+    /**
+     * API health check
+     * @description Returns 200 OK if server is running
+     */
+    get: operations["healthCheck"];
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -1139,6 +1231,666 @@ export interface operations {
       404: {
         content: {
           "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Check if book is in user's library */
+  checkLibrary: {
+    parameters: {
+      query: {
+        /** @description Book ID to check */
+        bookId: string;
+      };
+    };
+    responses: {
+      /** @description Library check result */
+      200: {
+        content: {
+          "application/json": {
+            /** @example true */
+            inLibrary: boolean;
+          };
+        };
+      };
+      /** @description Missing book ID */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Get all user lists with book counts */
+  getUserLists: {
+    responses: {
+      /** @description User's lists */
+      200: {
+        content: {
+          "application/json": {
+            lists: ({
+                /** Format: uuid */
+                id: string;
+                /** @example To Read */
+                name: string;
+                /** @example Books I want to read next */
+                description?: string | null;
+                /** @example 12 */
+                bookCount: number;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                updatedAt: string;
+              })[];
+          };
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Create new list */
+  createList: {
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @example To Read */
+          name: string;
+          /** @example Books I want to read next */
+          description?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description List created */
+      201: {
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            /** @example To Read */
+            name: string;
+            /** @example Books I want to read next */
+            description?: string | null;
+            /** @example 0 */
+            bookCount: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+          };
+        };
+      };
+      /** @description Missing list name */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Update list metadata */
+  updateList: {
+    parameters: {
+      path: {
+        /** @description List ID */
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @example To Read */
+          name?: string;
+          /** @example Books I want to read next */
+          description?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description List updated */
+      200: {
+        content: {
+          "application/json": {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description?: string | null;
+            bookCount: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+          };
+        };
+      };
+      /** @description Not your list */
+      403: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description List not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Delete list */
+  deleteList: {
+    parameters: {
+      path: {
+        /** @description List ID */
+        id: string;
+      };
+    };
+    responses: {
+      /** @description List deleted */
+      200: {
+        content: {
+          "application/json": {
+            /** @example true */
+            success: boolean;
+          };
+        };
+      };
+      /** @description Not your list */
+      403: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description List not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Add book to list */
+  addBookToList: {
+    parameters: {
+      path: {
+        /** @description List ID */
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: uuid */
+          bookId: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Book added to list */
+      201: {
+        content: {
+          "application/json": {
+            /** @example true */
+            success: boolean;
+          };
+        };
+      };
+      /** @description Not your list */
+      403: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description List or book not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Remove book from list */
+  removeBookFromList: {
+    parameters: {
+      query: {
+        /** @description Book ID to remove */
+        bookId: string;
+      };
+      path: {
+        /** @description List ID */
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Book removed from list */
+      200: {
+        content: {
+          "application/json": {
+            /** @example true */
+            success: boolean;
+          };
+        };
+      };
+      /** @description Not your list */
+      403: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description List not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Reorder books in list */
+  reorderList: {
+    parameters: {
+      path: {
+        /** @description List ID */
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @description Array of book IDs in desired order */
+          bookIds: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description List reordered */
+      200: {
+        content: {
+          "application/json": {
+            /** @example true */
+            success: boolean;
+            /** @example 10 */
+            updated: number;
+          };
+        };
+      };
+      /** @description Not your list */
+      403: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description List not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Add all books in series to library */
+  addSeriesToLibrary: {
+    parameters: {
+      path: {
+        /** @description Series ID */
+        seriesId: string;
+      };
+    };
+    responses: {
+      /** @description Books added to library */
+      200: {
+        content: {
+          "application/json": {
+            /** @example Added 5 books to library */
+            message: string;
+            /** @example 5 */
+            added: number;
+            /** @example 5 */
+            total: number;
+          };
+        };
+      };
+      /** @description Series not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /** Remove all books in series from library */
+  removeSeriesFromLibrary: {
+    parameters: {
+      path: {
+        /** @description Series ID */
+        seriesId: string;
+      };
+    };
+    responses: {
+      /** @description Books removed from library */
+      200: {
+        content: {
+          "application/json": {
+            /** @example Removed 5 books from library */
+            message: string;
+            /** @example 5 */
+            removed: number;
+          };
+        };
+      };
+      /** @description Series not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /**
+   * Batch update user progress for offline sync
+   * @description Accepts array of progress updates with timestamps for conflict resolution.
+   * Only updates if client timestamp is newer than server timestamp.
+   *
+   * **Supports both authentication methods**:
+   * - Session cookies (web)
+   * - Bearer token (mobile)
+   */
+  batchUpdateProgress: {
+    requestBody: {
+      content: {
+        "application/json": {
+          updates: {
+              /** Format: uuid */
+              bookId: string;
+              /** Format: double */
+              positionSeconds: number;
+              /**
+               * Format: date-time
+               * @description Client timestamp for conflict resolution
+               */
+              timestamp: string;
+            }[];
+        };
+      };
+    };
+    responses: {
+      /** @description Batch update results */
+      200: {
+        content: {
+          "application/json": {
+            /**
+             * @description Number of successful updates
+             * @example 5
+             */
+            updated: number;
+            /**
+             * @description Number of conflicts (server timestamp newer)
+             * @example 1
+             */
+            conflicts: number;
+            details: ({
+                /** Format: uuid */
+                bookId: string;
+                /** @enum {string} */
+                status: "updated" | "conflict";
+              })[];
+          };
+        };
+      };
+      /** @description Invalid request (missing updates array) */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Rate limit exceeded */
+      429: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /**
+   * Get search suggestions (autocomplete)
+   * @description Returns top 5 books, 3 authors, and 2 narrators matching query.
+   * Minimum 2 characters required.
+   */
+  getSearchSuggestions: {
+    parameters: {
+      query: {
+        /** @description Search query */
+        q: string;
+      };
+    };
+    responses: {
+      /** @description Search suggestions */
+      200: {
+        content: {
+          "application/json": {
+            books: {
+                /** Format: uuid */
+                id: string;
+                title: string;
+                /** Format: uri */
+                coverUrl: string;
+              }[];
+            authors: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+              }[];
+            narrators: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+              }[];
+          };
+        };
+      };
+      /** @description Query too short */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /**
+   * Get download history
+   * @description Returns recent 50 downloads with daily count for rate limiting info.
+   */
+  getDownloadHistory: {
+    responses: {
+      /** @description Download history */
+      200: {
+        content: {
+          "application/json": {
+            downloads: ({
+                /** Format: uuid */
+                bookId: string;
+                bookTitle: string;
+                /** Format: date-time */
+                downloadedAt: string;
+                deviceId?: string | null;
+              })[];
+            /**
+             * @description Downloads in last 24 hours
+             * @example 3
+             */
+            dailyCount: number;
+          };
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /**
+   * Generate pre-signed download URL
+   * @description Generates a pre-signed S3 URL for downloading audiobook file.
+   * URL expires in 1 hour. Rate limited to 10 downloads per day.
+   *
+   * **Requires S3 configuration** - returns 501 if S3 not enabled.
+   */
+  generateDownloadUrl: {
+    parameters: {
+      path: {
+        /** @description Book ID to download */
+        bookId: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": {
+          /** @description Optional device identifier */
+          deviceId?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Download URL generated */
+      200: {
+        content: {
+          "application/json": {
+            /**
+             * Format: uri
+             * @description Pre-signed S3 URL (expires in 1 hour)
+             */
+            downloadUrl: string;
+            /**
+             * Format: date-time
+             * @description URL expiration time
+             */
+            expiresAt: string;
+            /** @description File size in bytes */
+            fileSize: number;
+          };
+        };
+      };
+      /** @description Book has no audio file */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Book not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Download limit exceeded (10/day) */
+      429: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Downloads require S3 configuration */
+      501: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /**
+   * Check if user can download book
+   * @description Verifies book exists and user is eligible to download.
+   * Currently returns true for all books (MVP).
+   */
+  checkDownloadEligibility: {
+    parameters: {
+      path: {
+        /** @description Book ID to check */
+        bookId: string;
+      };
+    };
+    responses: {
+      /** @description Eligibility check result */
+      200: {
+        content: {
+          "application/json": {
+            /** @example true */
+            eligible: boolean;
+          };
+        };
+      };
+      /** @description Book not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /**
+   * Update user password
+   * @description Validates current password and updates to new password.
+   * New password must be at least 8 characters.
+   */
+  updatePassword: {
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: password */
+          currentPassword: string;
+          /** Format: password */
+          newPassword: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Password updated successfully */
+      200: {
+        content: {
+          "application/json": {
+            /** @example Password updated successfully */
+            message: string;
+          };
+        };
+      };
+      /** @description Invalid request (current password wrong or new password too short) */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description User not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /**
+   * API health check
+   * @description Returns 200 OK if server is running
+   */
+  healthCheck: {
+    responses: {
+      /** @description Server is healthy */
+      200: {
+        content: {
+          "application/json": {
+            /** @example ok */
+            status: string;
+          };
         };
       };
     };
