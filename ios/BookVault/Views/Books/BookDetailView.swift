@@ -275,9 +275,9 @@ struct FlowLayout: Layout {
             publisher: "Sample Publisher",
             coverUrl: "https://via.placeholder.com/300x450",
             audioUrl: "https://example.com/audio.mp3",
-            authors: [Author(id: UUID(), asin: "A123", name: "John Doe")],
-            narrators: [Narrator(id: UUID(), asin: "N123", name: "Jane Smith")],
-            series: [SeriesInfo(id: UUID(), asin: "S123", title: "Sample Series", sequence: "1")],
+            authors: [Author(id: UUID(), name: "John Doe", asin: "A123")],
+            narrators: [Narrator(id: UUID(), name: "Jane Smith", asin: "N123")],
+            series: [SeriesInfo(id: UUID(), title: "Sample Series", sequence: "1", asin: "S123")],
             categories: [Category(id: UUID(), name: "Fiction")]
         ))
     }

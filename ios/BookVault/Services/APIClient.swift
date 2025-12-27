@@ -248,7 +248,7 @@ class APIClient {
     }
 
     /// Update user's progress for a book
-    func updateProgress(bookId: UUID, positionSeconds: Int) async throws -> UpdateProgress200Response {
+    func updateProgress(bookId: UUID, positionSeconds: Double) async throws -> UpdateProgress200Response {
         let requestBody = UpdateProgressRequest(bookId: bookId, positionSeconds: positionSeconds)
         let request = try createRequest(
             path: "/api/progress",
@@ -261,7 +261,7 @@ class APIClient {
     }
 
     /// Set book completion status
-    func setProgressStatus(bookId: UUID, status: String) async throws -> SetProgressStatus200Response {
+    func setProgressStatus(bookId: UUID, status: SetProgressStatusRequest.Status) async throws -> SetProgressStatus200Response {
         let requestBody = SetProgressStatusRequest(bookId: bookId, status: status)
         let request = try createRequest(
             path: "/api/progress",
