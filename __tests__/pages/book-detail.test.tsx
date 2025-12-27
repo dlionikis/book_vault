@@ -4,6 +4,19 @@ import { notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/db';
 
+// Mock react-markdown (ES module that causes Jest issues)
+jest.mock('react-markdown', () => {
+  return function ReactMarkdown({ children }: { children: string }) {
+    // Simple markdown to HTML conversion for testing
+    let html = children || '';
+    // Convert **text** to <strong>text</strong>
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Convert *text* to <em>text</em>
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    return <div data-testid="markdown" dangerouslySetInnerHTML={{ __html: html }} />;
+  };
+});
+
 // Mock Prisma Client
 jest.mock('@/lib/db', () => ({
   prisma: {

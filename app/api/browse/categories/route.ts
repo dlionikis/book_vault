@@ -44,12 +44,11 @@ export async function GET(request: NextRequest) {
       prisma.category.count(),
     ]);
 
-    // Transform to include book count and parent name
+    // Transform to include book count and level (OpenAPI compliant)
     const transformedCategories = categories.map((category) => ({
       id: category.id,
       name: category.name,
       level: category.level,
-      parentName: category.parent?.name || null,
       bookCount: category._count.books,
     }));
 

@@ -176,7 +176,7 @@ model UserProgress {
   id              String   @id @default(uuid())
   userId          String   @map("user_id")
   bookId          String   @map("book_id")
-  positionSeconds Int      @default(0) @map("position_seconds")
+  positionSeconds Float    @default(0) @map("position_seconds")
   completed       Boolean  @default(false)
   lastPlayed      DateTime @default(now()) @map("last_played")
 

@@ -62,7 +62,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       }),
     ]);
 
-    // Transform book data to include full URLs and proper structure
+    // Transform book data to include full URLs and proper structure (OpenAPI compliant)
     const booksWithUrls = bookSeriesEntries.map((entry) => {
       const book = entry.book;
       return {
@@ -70,7 +70,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         asin: book.asin,
         title: book.title,
         description: book.description,
-        publisherSummary: book.publisherSummary,
         runtimeMinutes: book.runtimeMinutes,
         releaseDate: book.releaseDate,
         publisher: book.publisher,
@@ -92,14 +91,15 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
           asin: bs.series.asin,
           sequence: bs.sequence,
         })),
-        createdAt: book.createdAt.toISOString(),
       };
     });
 
     const totalPages = Math.ceil(total / limit);
 
     return NextResponse.json({
-      ...series,
+      id: series.id,
+      title: series.title,
+      asin: series.asin,
       books: booksWithUrls,
       pagination: {
         page,

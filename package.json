@@ -10,8 +10,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:contract": "concurrently --kill-others --success first \"npm run dev\" \"npm run test:contract:wait\"",
-    "test:contract:wait": "wait-on http://localhost:3000 && RUN_CONTRACT_TESTS=true npm test -- openapi-contract",
+    "test:contract": "node scripts/check-port.js 3000 && concurrently --kill-others --success first \"npm run dev\" \"npm run test:contract:wait\"",
+    "test:contract:wait": "wait-on http://localhost:3000 && RUN_CONTRACT_TESTS=true npm test -- __tests__/api",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
@@ -20,7 +20,7 @@
     "security:audit": "npm audit --production",
     "security:fix": "npm audit fix",
     "validate": "npm run format:check && npm run lint && npm run type-check && npm run test",
-    "validate:full": "npm run format:check && npm run lint && npm run type-check && npm run api:validate && npm run api:check-drift && npm test",
+    "validate:full": "npm run format:check && npm run lint && npm run type-check && npm run api:validate && npm run api:check-drift && npm run api:check-coverage && npm test",
     "prepare": "husky",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -37,6 +37,7 @@
     "api:watch:ts": "nodemon --watch docs/api/openapi.yaml --exec 'npm run api:generate:ts'",
     "api:watch:swift": "nodemon --watch docs/api/openapi.yaml --exec 'npm run api:generate:swift'",
     "api:check-drift": "npm run api:generate:ts && git diff --exit-code lib/api-types.ts",
+    "api:check-coverage": "tsx scripts/check-endpoint-coverage.ts",
     "docs:generate": "npm run api:generate && npm run api:docs",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
@@ -55,7 +56,7 @@
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
     "turndown": "^7.2.2",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@redocly/cli": "^1.25.14",

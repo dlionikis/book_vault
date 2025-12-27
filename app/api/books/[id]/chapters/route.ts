@@ -40,7 +40,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // If chapters already exist in database, return them
     if (book.chapters.length > 0) {
       return NextResponse.json({
-        chapters: book.chapters,
+        chapters: book.chapters.map((ch) => ({
+          id: ch.id,
+          title: ch.title,
+          startTime: ch.startTime,
+          endTime: ch.endTime,
+          index: ch.chapterNumber,
+        })),
         source: 'database',
       });
     }
@@ -105,7 +111,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
           orderBy: { chapterNumber: 'asc' },
         });
         return NextResponse.json({
-          chapters: existingChapters,
+          chapters: existingChapters.map((ch) => ({
+            id: ch.id,
+            title: ch.title,
+            startTime: ch.startTime,
+            endTime: ch.endTime,
+            index: ch.chapterNumber,
+          })),
           source: 'database',
         });
       }
@@ -119,7 +131,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     });
 
     return NextResponse.json({
-      chapters: savedChapters,
+      chapters: savedChapters.map((ch) => ({
+        id: ch.id,
+        title: ch.title,
+        startTime: ch.startTime,
+        endTime: ch.endTime,
+        index: ch.chapterNumber,
+      })),
       source: 'extracted',
     });
   } catch (error) {

@@ -154,3 +154,10 @@ storybook-static
 
 # Generated API documentation (HTML is regenerated, types are committed)
 docs/api/api-reference.html
+
+# iOS build artifacts and backups
+ios/BookVault.xcodeproj.backup/
+ios/build/
+ios/DerivedData/
+*.xcuserstate
+*.xcuserdatad/

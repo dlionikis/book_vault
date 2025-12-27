@@ -41,7 +41,7 @@ describe('POST /api/auth/mobile/logout', () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.success).toBe(true);
+    expect(data.message).toBe('Logged out successfully');
     expect(prisma.refreshToken.deleteMany).toHaveBeenCalledWith({
       where: { token: 'token-to-delete' },
     });
@@ -59,6 +59,6 @@ describe('POST /api/auth/mobile/logout', () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.success).toBe(true);
+    expect(data.message).toBe('Logged out successfully');
   });
 });
