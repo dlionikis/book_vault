@@ -22,22 +22,22 @@ This plan prepares the Book Vault backend for iOS development by completing the 
 
 **What's Missing**:
 
-- ⏳ Mobile auth endpoints in OpenAPI spec
-- ⏳ Shared test fixtures for iOS
-- ⏳ iOS project structure
-- ⏳ Swift code generation setup
+- ✅ Mobile auth endpoints in OpenAPI spec (Phase 1 complete)
+- ⏳ Shared test fixtures for iOS (Phase 2 - TBD)
+- ✅ iOS project structure (Phase 3 complete)
+- ✅ Swift code generation setup (Phase 4 complete)
 
 ---
 
 ## Success Criteria
 
-- [ ] All mobile auth endpoints documented in OpenAPI spec
-- [ ] OpenAPI spec validates with zero warnings
-- [ ] 6+ shared test fixtures created from real API responses
-- [ ] iOS project structure created in monorepo
-- [ ] Swift code generation working (`npm run api:generate:swift`)
-- [ ] Generated Swift models compile (basic validation)
-- [ ] Documentation updated with iOS setup instructions
+- [x] All mobile auth endpoints documented in OpenAPI spec
+- [x] OpenAPI spec validates with zero warnings
+- [ ] 6+ shared test fixtures created from real API responses (Phase 2 - TBD)
+- [x] iOS project structure created in monorepo
+- [x] Swift code generation working (`npm run api:generate:swift`)
+- [x] Generated Swift models compile (basic validation)
+- [ ] Documentation updated with iOS setup instructions (Phase 5 - next)
 - [ ] All changes committed and ready for iOS Phase 1
 
 ---
