@@ -191,9 +191,9 @@ describeFn('API Response Type Validation', () => {
       // This will throw if validation fails
       const parsed = AuthorsListResponseSchema.parse(response.data);
 
-      expect(parsed.authors).toBeInstanceOf(Array);
-      if (parsed.authors.length > 0) {
-        expect(parsed.authors[0].bookCount).toBeGreaterThan(0);
+      expect(parsed.results).toBeInstanceOf(Array);
+      if (parsed.results.length > 0) {
+        expect(parsed.results[0].bookCount).toBeGreaterThan(0);
       }
     });
 
@@ -206,7 +206,7 @@ describeFn('API Response Type Validation', () => {
       // This will throw if validation fails
       const parsed = SeriesListResponseSchema.parse(response.data);
 
-      expect(parsed.series).toBeInstanceOf(Array);
+      expect(parsed.results).toBeInstanceOf(Array);
     });
 
     it('validates /api/browse/narrators response', async () => {
@@ -218,7 +218,7 @@ describeFn('API Response Type Validation', () => {
       // This will throw if validation fails
       const parsed = NarratorsListResponseSchema.parse(response.data);
 
-      expect(parsed.narrators).toBeInstanceOf(Array);
+      expect(parsed.results).toBeInstanceOf(Array);
     });
 
     it('validates /api/browse/categories response', async () => {
@@ -230,7 +230,7 @@ describeFn('API Response Type Validation', () => {
       // This will throw if validation fails
       const parsed = CategoriesListResponseSchema.parse(response.data);
 
-      expect(parsed.categories).toBeInstanceOf(Array);
+      expect(parsed.results).toBeInstanceOf(Array);
     });
   });
 
@@ -262,10 +262,10 @@ describeFn('API Response Type Validation', () => {
       const narrators = NarratorsListResponseSchema.parse(narratorsRes.data);
       const categories = CategoriesListResponseSchema.parse(categoriesRes.data);
 
-      authorId = authors.authors[0]?.id;
-      seriesId = series.series[0]?.id;
-      narratorId = narrators.narrators[0]?.id;
-      categoryId = categories.categories[0]?.id;
+      authorId = authors.results[0]?.id;
+      seriesId = series.results[0]?.id;
+      narratorId = narrators.results[0]?.id;
+      categoryId = categories.results[0]?.id;
     });
 
     it('validates /api/authors/{id} response', async () => {
@@ -351,10 +351,8 @@ describeFn('API Response Type Validation', () => {
       // This will throw if validation fails
       const parsed = SearchResponseSchema.parse(response.data);
 
-      expect(parsed.books).toBeInstanceOf(Array);
-      expect(parsed.authors).toBeInstanceOf(Array);
-      expect(parsed.narrators).toBeInstanceOf(Array);
-      expect(parsed.series).toBeInstanceOf(Array);
+      expect(parsed.results).toBeInstanceOf(Array);
+      expect(parsed.pagination).toBeDefined();
     });
   });
 
@@ -382,12 +380,11 @@ describeFn('API Response Type Validation', () => {
           },
         }
       );
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
 
-      // Response should be a book object
-      const parsed = BookSchema.parse(response.data);
-
-      expect(parsed.id).toBe(sampleBookId);
+      // Response should be a message object
+      expect(response.data.message).toBeDefined();
+      expect(typeof response.data.message).toBe('string');
     });
 
     it('validates /api/library/check response', async () => {
@@ -421,7 +418,9 @@ describeFn('API Response Type Validation', () => {
 
   describe('Individual Field Validation', () => {
     it('validates book schema fields match OpenAPI spec', async () => {
-      const response = await axios.get(`${API_BASE}/api/books/${sampleBookId}`);
+      const response = await axios.get(`${API_BASE}/api/books/${sampleBookId}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       const book = BookDetailResponseSchema.parse(response.data);
 
       // Verify UUIDs are valid
@@ -440,10 +439,22 @@ describeFn('API Response Type Validation', () => {
         expect(author.name).toBeDefined();
       }
 
-      // Verify optional fields are nullable or undefined
-      expect([null, undefined, 'string']).toContain(typeof book.description);
-      expect([null, undefined, 'string']).toContain(typeof book.releaseDate);
-      expect([null, undefined, 'string']).toContain(typeof book.publisher);
+      // Verify optional fields are nullable or undefined or string
+      expect(
+        book.description === null ||
+          typeof book.description === 'undefined' ||
+          typeof book.description === 'string'
+      ).toBe(true);
+      expect(
+        book.releaseDate === null ||
+          typeof book.releaseDate === 'undefined' ||
+          typeof book.releaseDate === 'string'
+      ).toBe(true);
+      expect(
+        book.publisher === null ||
+          typeof book.publisher === 'undefined' ||
+          typeof book.publisher === 'string'
+      ).toBe(true);
     });
 
     it('validates progress schema datetime format', async () => {

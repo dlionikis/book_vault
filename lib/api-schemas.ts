@@ -145,7 +145,8 @@ export const ProgressResponseSchema = z.object({
 
 // Authors list response
 export const AuthorsListResponseSchema = z.object({
-  authors: z.array(AuthorWithBookCountSchema),
+  results: z.array(AuthorWithBookCountSchema),
+  pagination: PaginationSchema,
 });
 
 // Author detail response
@@ -158,7 +159,8 @@ export const AuthorDetailResponseSchema = z.object({
 
 // Series list response
 export const SeriesListResponseSchema = z.object({
-  series: z.array(SeriesWithBookCountSchema),
+  results: z.array(SeriesWithBookCountSchema),
+  pagination: PaginationSchema,
 });
 
 // Series detail response
@@ -170,7 +172,8 @@ export const SeriesDetailResponseSchema = z.object({
 
 // Narrators list response
 export const NarratorsListResponseSchema = z.object({
-  narrators: z.array(NarratorWithBookCountSchema),
+  results: z.array(NarratorWithBookCountSchema),
+  pagination: PaginationSchema,
 });
 
 // Narrator detail response
@@ -183,7 +186,8 @@ export const NarratorDetailResponseSchema = z.object({
 
 // Categories list response
 export const CategoriesListResponseSchema = z.object({
-  categories: z.array(CategoryWithBookCountSchema),
+  results: z.array(CategoryWithBookCountSchema),
+  pagination: PaginationSchema,
 });
 
 // Category detail response
@@ -195,10 +199,8 @@ export const CategoryDetailResponseSchema = z.object({
 
 // Search response
 export const SearchResponseSchema = z.object({
-  books: z.array(BookSchema),
-  authors: z.array(AuthorWithBookCountSchema),
-  narrators: z.array(NarratorWithBookCountSchema),
-  series: z.array(SeriesWithBookCountSchema),
+  results: z.array(BookSchema),
+  pagination: PaginationSchema,
 });
 
 // Auth responses

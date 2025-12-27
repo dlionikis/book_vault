@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { getCoverUrl, getAudioUrl } from '@/lib/media';
 
 // GET /api/library - Get user's library books
 export async function GET(request: NextRequest) {
@@ -60,6 +61,9 @@ export async function GET(request: NextRequest) {
 
     const books = libraryBooks.map((lb) => ({
       ...lb.book,
+      // Transform URLs to absolute URLs
+      coverUrl: getCoverUrl(lb.book.coverUrl),
+      audioUrl: getAudioUrl(lb.book.audioUrl),
       // Flatten nested join table structures to match OpenAPI spec
       authors: lb.book.authors.map((ba) => ({
         id: ba.author.id,
