@@ -69,8 +69,10 @@ async function getAuthToken(): Promise<string> {
 }
 
 // Helper to get a sample book ID
-async function getSampleBookId(): Promise<string> {
-  const response = await axios.get(`${API_BASE}/api/books?limit=1`);
+async function getSampleBookId(authToken: string): Promise<string> {
+  const response = await axios.get(`${API_BASE}/api/books?limit=1`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+  });
 
   if (response.status !== 200) {
     throw new Error(`Failed to fetch books: ${response.status}`);
@@ -95,12 +97,14 @@ describeFn('API Response Type Validation', () => {
 
   beforeAll(async () => {
     authToken = await getAuthToken();
-    sampleBookId = await getSampleBookId();
+    sampleBookId = await getSampleBookId(authToken);
   });
 
   describe('Books API', () => {
     it('validates /api/books response', async () => {
-      const response = await axios.get(`${API_BASE}/api/books?page=1&limit=10`);
+      const response = await axios.get(`${API_BASE}/api/books?page=1&limit=10`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       expect(response.status).toBe(200);
 
       // This will throw if validation fails
@@ -112,7 +116,9 @@ describeFn('API Response Type Validation', () => {
     });
 
     it('validates /api/books/{id} response', async () => {
-      const response = await axios.get(`${API_BASE}/api/books/${sampleBookId}`);
+      const response = await axios.get(`${API_BASE}/api/books/${sampleBookId}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       expect(response.status).toBe(200);
 
       // This will throw if validation fails
@@ -124,7 +130,9 @@ describeFn('API Response Type Validation', () => {
     });
 
     it('validates /api/books/{id}/chapters response', async () => {
-      const response = await axios.get(`${API_BASE}/api/books/${sampleBookId}/chapters`);
+      const response = await axios.get(`${API_BASE}/api/books/${sampleBookId}/chapters`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       expect(response.status).toBe(200);
 
       // This will throw if validation fails
@@ -175,7 +183,9 @@ describeFn('API Response Type Validation', () => {
 
   describe('Browse API', () => {
     it('validates /api/browse/authors response', async () => {
-      const response = await axios.get(`${API_BASE}/api/browse/authors`);
+      const response = await axios.get(`${API_BASE}/api/browse/authors`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       expect(response.status).toBe(200);
 
       // This will throw if validation fails
@@ -188,7 +198,9 @@ describeFn('API Response Type Validation', () => {
     });
 
     it('validates /api/browse/series response', async () => {
-      const response = await axios.get(`${API_BASE}/api/browse/series`);
+      const response = await axios.get(`${API_BASE}/api/browse/series`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       expect(response.status).toBe(200);
 
       // This will throw if validation fails
@@ -198,7 +210,9 @@ describeFn('API Response Type Validation', () => {
     });
 
     it('validates /api/browse/narrators response', async () => {
-      const response = await axios.get(`${API_BASE}/api/browse/narrators`);
+      const response = await axios.get(`${API_BASE}/api/browse/narrators`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       expect(response.status).toBe(200);
 
       // This will throw if validation fails
@@ -208,7 +222,9 @@ describeFn('API Response Type Validation', () => {
     });
 
     it('validates /api/browse/categories response', async () => {
-      const response = await axios.get(`${API_BASE}/api/browse/categories`);
+      const response = await axios.get(`${API_BASE}/api/browse/categories`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       expect(response.status).toBe(200);
 
       // This will throw if validation fails
@@ -227,10 +243,18 @@ describeFn('API Response Type Validation', () => {
     beforeAll(async () => {
       // Get sample IDs from browse endpoints
       const [authorsRes, seriesRes, narratorsRes, categoriesRes] = await Promise.all([
-        axios.get(`${API_BASE}/api/browse/authors`),
-        axios.get(`${API_BASE}/api/browse/series`),
-        axios.get(`${API_BASE}/api/browse/narrators`),
-        axios.get(`${API_BASE}/api/browse/categories`),
+        axios.get(`${API_BASE}/api/browse/authors`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        }),
+        axios.get(`${API_BASE}/api/browse/series`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        }),
+        axios.get(`${API_BASE}/api/browse/narrators`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        }),
+        axios.get(`${API_BASE}/api/browse/categories`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        }),
       ]);
 
       const authors = AuthorsListResponseSchema.parse(authorsRes.data);
@@ -250,7 +274,9 @@ describeFn('API Response Type Validation', () => {
         return;
       }
 
-      const response = await axios.get(`${API_BASE}/api/authors/${authorId}`);
+      const response = await axios.get(`${API_BASE}/api/authors/${authorId}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       expect(response.status).toBe(200);
 
       // This will throw if validation fails
@@ -266,7 +292,9 @@ describeFn('API Response Type Validation', () => {
         return;
       }
 
-      const response = await axios.get(`${API_BASE}/api/series/${seriesId}`);
+      const response = await axios.get(`${API_BASE}/api/series/${seriesId}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       expect(response.status).toBe(200);
 
       // This will throw if validation fails
@@ -282,7 +310,9 @@ describeFn('API Response Type Validation', () => {
         return;
       }
 
-      const response = await axios.get(`${API_BASE}/api/narrators/${narratorId}`);
+      const response = await axios.get(`${API_BASE}/api/narrators/${narratorId}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       expect(response.status).toBe(200);
 
       // This will throw if validation fails
@@ -298,7 +328,9 @@ describeFn('API Response Type Validation', () => {
         return;
       }
 
-      const response = await axios.get(`${API_BASE}/api/categories/${categoryId}`);
+      const response = await axios.get(`${API_BASE}/api/categories/${categoryId}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       expect(response.status).toBe(200);
 
       // This will throw if validation fails
@@ -311,7 +343,9 @@ describeFn('API Response Type Validation', () => {
 
   describe('Search API', () => {
     it('validates /api/search response', async () => {
-      const response = await axios.get(`${API_BASE}/api/search?q=${encodeURIComponent('the')}`);
+      const response = await axios.get(`${API_BASE}/api/search?q=${encodeURIComponent('the')}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       expect(response.status).toBe(200);
 
       // This will throw if validation fails
