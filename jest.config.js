@@ -28,7 +28,8 @@ const customJestConfig = {
   testPathIgnorePatterns: ['/node_modules/', '/.next/'],
   transformIgnorePatterns: [
     // Transform all jose packages (including nested ones in next-auth and openid-client)
-    'node_modules/(?!(.*/)?jose($|/))',
+    // Also transform react-markdown and its dependencies (all ES modules)
+    'node_modules/(?!((.*/)?jose($|/)|react-markdown|remark-.*|micromark.*|mdast-.*|unist-.*|unified|bail|is-plain-obj|trough|vfile|vfile-message|devlop))',
   ],
 };
 
