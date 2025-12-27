@@ -311,12 +311,12 @@ Cleanup: Remove v1 endpoints after iOS migration complete
 
 ### iOS (Swift)
 
-**Status**: ✅ Tooling ready (openapi-generator installed)
+**Status**: ✅ Complete
 **Command**: `npm run api:generate:swift`
 **Output**: `ios/BookVault/Generated/Models/`
 **Tooling**: `openapi-generator` (Homebrew)
 
-**Action Required**: Create OpenAPI spec (Phase 1), create iOS project
+**Verification**: 47 Swift models generated and compiling successfully
 
 ---
 
@@ -324,19 +324,20 @@ Cleanup: Remove v1 endpoints after iOS migration complete
 
 ### Shared Test Fixtures
 
-**Status**: ⏳ Not started
+**Status**: ✅ Complete
 **Location**: `test-fixtures/`
 
-**Files to Create**:
+**Files Created** (7 fixtures, 76K total):
 
-- `books-list.json` - Sample paginated book list
-- `book-detail.json` - Full book with all relations
-- `user-progress.json` - Sample progress data
-- `chapters-list.json` - Sample chapter data
-- `search-results.json` - Sample search response
-- `author-books.json` - Sample author with books
+- `books-list.json` (11K) - Paginated book list
+- `book-detail.json` (27K) - Full book with all relations
+- `user-progress.json` (71B) - User progress data
+- `chapters-list.json` (101B) - Chapter metadata
+- `search-results.json` (5.8K) - Search results
+- `author-books.json` (9.8K) - Author with books
+- `browse-authors.json` (1.1K) - Browse authors list
 
-**Action Required**: Create test fixtures from real data (anonymized)
+**Verification**: All fixtures validated as valid JSON and ready for testing
 
 ---
 

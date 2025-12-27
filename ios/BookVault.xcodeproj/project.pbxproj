@@ -7,21 +7,22 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A1000001000000000000001 /* BookVaultApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1100001000000000000001 /* BookVaultApp.swift */; };
-		A1000002000000000000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1100002000000000000001 /* ContentView.swift */; };
-		A1000003000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1100003000000000000001 /* Assets.xcassets */; };
+		AA0000010000000000000001 /* BookVaultApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000020000000000000001 /* BookVaultApp.swift */; };
+		AA0000030000000000000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000040000000000000001 /* ContentView.swift */; };
+		AA0000050000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000060000000000000001 /* Assets.xcassets */; };
+		AA0000070000000000000001 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000080000000000000001 /* Preview Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		A1000000000000000000001 /* BookVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BookVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		A1100001000000000000001 /* BookVaultApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookVaultApp.swift; sourceTree = "<group>"; };
-		A1100002000000000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		A1100003000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A1100004000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA0000010000000000000002 /* BookVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BookVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000020000000000000001 /* BookVaultApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookVaultApp.swift; sourceTree = "<group>"; };
+		AA0000040000000000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		AA0000060000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA0000080000000000000001 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		A1200000000000000000001 /* Frameworks */ = {
+		AA0000090000000000000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -31,83 +32,51 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		A1300000000000000000001 = {
+		AA0000100000000000000001 = {
 			isa = PBXGroup;
 			children = (
-				A1300001000000000000001 /* BookVault */,
-				A1300002000000000000001 /* Products */,
+				AA0000110000000000000001 /* BookVault */,
+				AA0000120000000000000001 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		A1300001000000000000001 /* BookVault */ = {
+		AA0000110000000000000001 /* BookVault */ = {
 			isa = PBXGroup;
 			children = (
-				A1100001000000000000001 /* BookVaultApp.swift */,
-				A1300003000000000000001 /* Views */,
-				A1300004000000000000001 /* Services */,
-				A1300005000000000000001 /* Models */,
-				A1300006000000000000001 /* Generated */,
-				A1100003000000000000001 /* Assets.xcassets */,
-				A1100004000000000000001 /* Info.plist */,
+				AA0000020000000000000001 /* BookVaultApp.swift */,
+				AA0000040000000000000001 /* ContentView.swift */,
+				AA0000060000000000000001 /* Assets.xcassets */,
+				AA0000130000000000000001 /* Preview Content */,
 			);
 			path = BookVault;
 			sourceTree = "<group>";
 		};
-		A1300002000000000000001 /* Products */ = {
+		AA0000120000000000000001 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A1000000000000000000001 /* BookVault.app */,
+				AA0000010000000000000002 /* BookVault.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		A1300003000000000000001 /* Views */ = {
+		AA0000130000000000000001 /* Preview Content */ = {
 			isa = PBXGroup;
 			children = (
-				A1100002000000000000001 /* ContentView.swift */,
+				AA0000080000000000000001 /* Preview Assets.xcassets */,
 			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		A1300004000000000000001 /* Services */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
-		A1300005000000000000001 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
-		A1300006000000000000001 /* Generated */ = {
-			isa = PBXGroup;
-			children = (
-				A1300007000000000000001 /* Models */,
-			);
-			path = Generated;
-			sourceTree = "<group>";
-		};
-		A1300007000000000000001 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Models;
+			path = "Preview Content";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A1400000000000000000001 /* BookVault */ = {
+		AA0000140000000000000001 /* BookVault */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A1500000000000000000001 /* Build configuration list for PBXNativeTarget "BookVault" */;
+			buildConfigurationList = AA0000150000000000000001 /* Build configuration list for PBXNativeTarget "BookVault" */;
 			buildPhases = (
-				A1400001000000000000001 /* Sources */,
-				A1200000000000000000001 /* Frameworks */,
-				A1400002000000000000001 /* Resources */,
+				AA0000160000000000000001 /* Sources */,
+				AA0000090000000000000001 /* Frameworks */,
+				AA0000170000000000000001 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -115,25 +84,25 @@
 			);
 			name = BookVault;
 			productName = BookVault;
-			productReference = A1000000000000000000001 /* BookVault.app */;
+			productReference = AA0000010000000000000002 /* BookVault.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		A1600000000000000000001 /* Project object */ = {
+		AA0000180000000000000001 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
-					A1400000000000000000001 = {
+					AA0000140000000000000001 = {
 						CreatedOnToolsVersion = 15.0;
 					};
 				};
 			};
-			buildConfigurationList = A1500001000000000000001 /* Build configuration list for PBXProject "BookVault" */;
+			buildConfigurationList = AA0000190000000000000001 /* Build configuration list for PBXProject "BookVault" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -141,41 +110,42 @@
 				en,
 				Base,
 			);
-			mainGroup = A1300000000000000000001;
-			productRefGroup = A1300002000000000000001 /* Products */;
+			mainGroup = AA0000100000000000000001;
+			productRefGroup = AA0000120000000000000001 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A1400000000000000000001 /* BookVault */,
+				AA0000140000000000000001 /* BookVault */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		A1400002000000000000001 /* Resources */ = {
+		AA0000170000000000000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1000003000000000000001 /* Assets.xcassets in Resources */,
+				AA0000070000000000000001 /* Preview Assets.xcassets in Resources */,
+				AA0000050000000000000001 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		A1400001000000000000001 /* Sources */ = {
+		AA0000160000000000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1000002000000000000001 /* ContentView.swift in Sources */,
-				A1000001000000000000001 /* BookVaultApp.swift in Sources */,
+				AA0000030000000000000001 /* ContentView.swift in Sources */,
+				AA0000010000000000000001 /* BookVaultApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		A1500002000000000000001 /* Debug */ = {
+		AA0000200000000000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -238,7 +208,7 @@
 			};
 			name = Debug;
 		};
-		A1500003000000000000001 /* Release */ = {
+		AA0000210000000000000001 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -294,29 +264,28 @@
 			};
 			name = Release;
 		};
-		A1500004000000000000001 /* Debug */ = {
+		AA0000220000000000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_ASSET_PATHS = "\"BookVault/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = BookVault/Info.plist;
+				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bookvault.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bookvault.BookVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -324,29 +293,28 @@
 			};
 			name = Debug;
 		};
-		A1500005000000000000001 /* Release */ = {
+		AA0000230000000000000001 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_ASSET_PATHS = "\"BookVault/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = BookVault/Info.plist;
+				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bookvault.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bookvault.BookVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -357,25 +325,25 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A1500000000000000000001 /* Build configuration list for PBXNativeTarget "BookVault" */ = {
+		AA0000150000000000000001 /* Build configuration list for PBXNativeTarget "BookVault" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				A1500004000000000000001 /* Debug */,
-				A1500005000000000000001 /* Release */,
+				AA0000220000000000000001 /* Debug */,
+				AA0000230000000000000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A1500001000000000000001 /* Build configuration list for PBXProject "BookVault" */ = {
+		AA0000190000000000000001 /* Build configuration list for PBXProject "BookVault" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				A1500002000000000000001 /* Debug */,
-				A1500003000000000000001 /* Release */,
+				AA0000200000000000000001 /* Debug */,
+				AA0000210000000000000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = A1600000000000000000001 /* Project object */;
+	rootObject = AA0000180000000000000001 /* Project object */;
 }

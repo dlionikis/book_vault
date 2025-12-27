@@ -1,3 +1,10 @@
+//
+//  BookVaultApp.swift
+//  BookVault
+//
+//  Created by Claude Code on 12/26/25.
+//
+
 import SwiftUI
 
 @main

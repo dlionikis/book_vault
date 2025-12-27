@@ -1,0 +1,52 @@
+{
+  "results": [
+    {
+      "id": "894d78e4-3d23-45cc-a225-bc049194a650",
+      "name": "Andrew Rowe",
+      "asin": "B00TKVOI3A",
+      "bookCount": 1
+    },
+    {
+      "id": "a332fd5c-ede6-439e-ae07-216556121958",
+      "name": "Azalea Ellis",
+      "asin": "B012DLAI0K",
+      "bookCount": 4
+    },
+    {
+      "id": "1455c0b4-31f9-4c7c-9e1a-76453a05dfb8",
+      "name": "Glynn Stewart",
+      "asin": "B00HC1WWW4",
+      "bookCount": 1
+    },
+    {
+      "id": "604eace2-2dac-4f5d-92e7-cea86cce72bd",
+      "name": "Naomi Novik",
+      "asin": "B001IGNGVK",
+      "bookCount": 1
+    },
+    {
+      "id": "03d58fd0-c1f5-4f4e-b85f-f62bea38e019",
+      "name": "Rachel Aaron",
+      "asin": "B004FRLQXE",
+      "bookCount": 1
+    },
+    {
+      "id": "0351695d-6346-46ff-baaf-ae8c5135704b",
+      "name": "Raymond E. Feist",
+      "asin": "B000AQU2EI",
+      "bookCount": 1
+    },
+    {
+      "id": "8773cfca-7ee4-452c-86fa-0e00dcf282f7",
+      "name": "V. E. Schwab",
+      "asin": "B00MLKA3WM",
+      "bookCount": 2
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 7,
+    "pages": 1
+  }
+}

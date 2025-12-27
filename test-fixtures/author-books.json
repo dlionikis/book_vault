@@ -1,0 +1,162 @@
+{
+  "id": "a332fd5c-ede6-439e-ae07-216556121958",
+  "asin": "B012DLAI0K",
+  "name": "Azalea Ellis",
+  "createdAt": "2025-12-23T06:38:47.320Z",
+  "books": [
+    {
+      "id": "045d9384-f41a-4cf5-bda3-96fe2fa3c44f",
+      "asin": "B0B91976NY",
+      "title": "A Binding of Blood",
+      "description": null,
+      "publisherSummary": "<p><b>To study magic at the university, Siobhan sacrificed her name.</b></p> <p><b>She sacrificed her body and her past. </b></p> <p>Magically disguised as a boy named Sebastien, she is learning wondrous secrets of the thaumaturgic sciences. As Sebastien, she mingles with the young nobles who will one day rule their country. But danger is closer than ever, and she cannot escape her past.</p> <p>The coppers investigating the theft of Siobhan’s priceless transformation artifact have given her a new name: the Raven Queen. As Siobhan does favors for the gang that loaned her the university tuition, the Raven Queen’s mystique only grows.</p> <p>And keeps growing...snowballing out of control until Siobhan’s other identity takes on a life of its own, a fear-inducing bogeyman well beyond the truth of her real capabilities.</p> <p>With the whole city out to get her and trouble hounding both sides of her double life, how will Siobhan ever survive to become the world’s most powerful sorcerer?</p>",
+      "runtimeMinutes": 1405,
+      "releaseDate": "2022-08-08T00:00:00.000Z",
+      "publisher": null,
+      "coverUrl": "/api/images/A%20Binding%20of%20Blood%20%5BB0B91976NY%5D/A%20Binding%20of%20Blood%3A%20A%20Practical%20Guide%20to%20Sorcery%2C%20Book%202%20%5BB0B91976NY%5D.jpg",
+      "audioUrl": "/api/audio/A%20Binding%20of%20Blood%20%5BB0B91976NY%5D/A%20Binding%20of%20Blood%3A%20A%20Practical%20Guide%20to%20Sorcery%2C%20Book%202%20%5BB0B91976NY%5D.mp3",
+      "authors": [
+        {
+          "id": "a332fd5c-ede6-439e-ae07-216556121958",
+          "asin": "B012DLAI0K",
+          "name": "Azalea Ellis",
+          "createdAt": "2025-12-23T06:38:47.320Z"
+        }
+      ],
+      "narrators": [
+        {
+          "id": "b9224222-3852-492d-b01c-eeb7ecc34a13",
+          "asin": null,
+          "name": "Gabrielle de Cuir",
+          "createdAt": "2025-12-23T06:38:47.326Z"
+        }
+      ],
+      "series": [
+        {
+          "id": "28cf4d10-c9ea-49c9-95e4-d4c7909d68af",
+          "title": "Practical Guide to Sorcery",
+          "asin": "B09MG3GJW4",
+          "sequence": "2"
+        }
+      ],
+      "createdAt": "2025-12-23T06:38:47.349Z"
+    },
+    {
+      "id": "33d8c9a9-d893-4b5a-aa96-37e1b63a7c20",
+      "asin": "B09MDHW9FD",
+      "title": "A Conjuring of Ravens",
+      "description": null,
+      "publisherSummary": "<p><b>In a world where magic is a science, Siobhan Naught is a genius.</b></p> <p><b>But even geniuses need schooling.</b></p> <p>Siobhan has just been banned from the country's only magical university. As the unwitting accomplice to the theft of a priceless magical artifact, she has suddenly become a wanted criminal. There are fates worse than death, and if caught, she will face them. Unwilling to give up on her dream of becoming the world's most powerful sorcerer, she resolves to do whatever it takes to change her fate.</p> <p>Even if it means magically disguising herself as a boy and indebting herself to a gang of criminals to pay for university tuition.</p> <p>With the coppers after her, the pressure of trying to keep her spot in the devilishly competitive magic classes, and the gang calling in favors to repay her debts, Siobhan will need every drop of magic she can channel.</p>",
+      "runtimeMinutes": 1037,
+      "releaseDate": "2021-12-30T00:00:00.000Z",
+      "publisher": null,
+      "coverUrl": "/api/images/A%20Conjuring%20of%20Ravens%20%5BB09MDHW9FD%5D/A%20Conjuring%20of%20Ravens%3A%20A%20Magepunk%20Progression%20Fantasy%20(A%20Practical%20Guide%20to%20Sorcery%2C%20Book%201)%20%5BB09MDHW9FD%5D.jpg",
+      "audioUrl": "/api/audio/A%20Conjuring%20of%20Ravens%20%5BB09MDHW9FD%5D/A%20Conjuring%20of%20Ravens%3A%20A%20Magepunk%20Progression%20Fantasy%20(A%20Practical%20Guide%20to%20Sorcery%2C%20Book%201)%20%5BB09MDHW9FD%5D.mp3",
+      "authors": [
+        {
+          "id": "a332fd5c-ede6-439e-ae07-216556121958",
+          "asin": "B012DLAI0K",
+          "name": "Azalea Ellis",
+          "createdAt": "2025-12-23T06:38:47.320Z"
+        }
+      ],
+      "narrators": [
+        {
+          "id": "b9224222-3852-492d-b01c-eeb7ecc34a13",
+          "asin": null,
+          "name": "Gabrielle de Cuir",
+          "createdAt": "2025-12-23T06:38:47.326Z"
+        }
+      ],
+      "series": [
+        {
+          "id": "28cf4d10-c9ea-49c9-95e4-d4c7909d68af",
+          "title": "Practical Guide to Sorcery",
+          "asin": "B09MG3GJW4",
+          "sequence": "1"
+        }
+      ],
+      "createdAt": "2025-12-23T06:38:47.456Z"
+    },
+    {
+      "id": "0894209f-1995-47ab-b391-acf00ad6896c",
+      "asin": "B0D7X1PTDS",
+      "title": "A Foreboding of Woe",
+      "description": null,
+      "publisherSummary": "<p><b>The Raven Queen...</b></p> <p><b>Siobhan didn't choose this name.</b></p> <p><b>But now she will take control of it.</b></p> <p>The secrets of this world are deeper and darker than Siobhan knew, and those she once trusted seem strange and sinister. But her Will is as abyssal as the ocean, and she is determined to uncover the truth.</p> <p>As Sebastien's reputation begins to bloom with its own light, new eyes turn her way. With new magic and old plans come to fruition, she feels the inklings of true power within her grasp.</p> <p>But there is a storm waiting beneath the placid surface of the ocean...</p> <p>And old enemies have not forgotten her.</p> <p>Running has not worked for Siobhan, and so the Raven Queen will stop running, and instead advance. She hopes to strip away any power they hold over her, but as she uncovers secrets and unravels mysteries, things may not go as planned. Will Siobhan and the few allies she has bound to her side be able to stand against the might of their enemies?</p> <p>Get it now.</p>",
+      "runtimeMinutes": 1813,
+      "releaseDate": "2024-06-24T00:00:00.000Z",
+      "publisher": null,
+      "coverUrl": "/api/images/A%20Foreboding%20of%20Woe%20%5BB0D7X1PTDS%5D/A%20Foreboding%20of%20Woe%3A%20A%20Practical%20Guide%20to%20Sorcery%2C%20Book%204%20%5BB0D7X1PTDS%5D.jpg",
+      "audioUrl": "/api/audio/A%20Foreboding%20of%20Woe%20%5BB0D7X1PTDS%5D/A%20Foreboding%20of%20Woe%3A%20A%20Practical%20Guide%20to%20Sorcery%2C%20Book%204%20%5BB0D7X1PTDS%5D.mp3",
+      "authors": [
+        {
+          "id": "a332fd5c-ede6-439e-ae07-216556121958",
+          "asin": "B012DLAI0K",
+          "name": "Azalea Ellis",
+          "createdAt": "2025-12-23T06:38:47.320Z"
+        }
+      ],
+      "narrators": [
+        {
+          "id": "b9224222-3852-492d-b01c-eeb7ecc34a13",
+          "asin": null,
+          "name": "Gabrielle de Cuir",
+          "createdAt": "2025-12-23T06:38:47.326Z"
+        }
+      ],
+      "series": [
+        {
+          "id": "28cf4d10-c9ea-49c9-95e4-d4c7909d68af",
+          "title": "Practical Guide to Sorcery",
+          "asin": "B09MG3GJW4",
+          "sequence": "4"
+        }
+      ],
+      "createdAt": "2025-12-23T06:38:47.578Z"
+    },
+    {
+      "id": "8ad8dd1d-216a-49d4-9ceb-afd2e6c3ec77",
+      "asin": "B0C544TVBY",
+      "title": "A Sacrifice of Light",
+      "description": null,
+      "publisherSummary": "<p><b>Magic requires knowledge...<br /> <br /> It requires precision...<br /> <br /> But most of all, it requires a sheer force of will strong enough to break reality.<br /> </b><br /> Siobhan still dreams of becoming the world's most powerful sorcerer. But she has once again been forced to face the horrifyingly dark side of their world. When a miscast spell can turn you into a city-killing monster out of nightmares, nowhere and nothing is truly safe.<br /> <br /> As the Verdant Stag gang grows more powerful, the fearsome reputation of her alter ego, the Raven Queen, blooms with them until it seems to gain a life of its own.<br /> <br /> As Sebastien, her magically transformed alternate identity, she has to deal with the fallout of her other self's actions. She needs to keep her two lives separate, but they are melting perilously close together, and she worries that she will lose herself entirely.<br /> <br /> Worse, she might not even realize it until she wakes up and sees a stranger in the mirror.<br /> <br /> That has happened before, after all.<br /> <br /> As Siobhan's grandfather once told her, \"Magic always has its price. Beware that you do not sacrifice more than you can bear to lose.\"<br /> <br /> You'll love <i>A Sacrifice of Light</i> because of the compelling characters, detailed magic system, and layer upon layer of mystery.<br /> <br /> Get it now.</p>",
+      "runtimeMinutes": 1499,
+      "releaseDate": "2023-05-12T00:00:00.000Z",
+      "publisher": null,
+      "coverUrl": "/api/images/A%20Sacrifice%20of%20Light%20%5BB0C544TVBY%5D/A%20Sacrifice%20of%20Light%3A%20A%20Practical%20Guide%20to%20Sorcery%2C%20Book%203%20%5BB0C544TVBY%5D.jpg",
+      "audioUrl": "/api/audio/A%20Sacrifice%20of%20Light%20%5BB0C544TVBY%5D/A%20Sacrifice%20of%20Light%3A%20A%20Practical%20Guide%20to%20Sorcery%2C%20Book%203%20%5BB0C544TVBY%5D.mp3",
+      "authors": [
+        {
+          "id": "a332fd5c-ede6-439e-ae07-216556121958",
+          "asin": "B012DLAI0K",
+          "name": "Azalea Ellis",
+          "createdAt": "2025-12-23T06:38:47.320Z"
+        }
+      ],
+      "narrators": [
+        {
+          "id": "b9224222-3852-492d-b01c-eeb7ecc34a13",
+          "asin": null,
+          "name": "Gabrielle de Cuir",
+          "createdAt": "2025-12-23T06:38:47.326Z"
+        }
+      ],
+      "series": [
+        {
+          "id": "28cf4d10-c9ea-49c9-95e4-d4c7909d68af",
+          "title": "Practical Guide to Sorcery",
+          "asin": "B09MG3GJW4",
+          "sequence": "3"
+        }
+      ],
+      "createdAt": "2025-12-23T06:38:47.589Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 4,
+    "pages": 1
+  }
+}
