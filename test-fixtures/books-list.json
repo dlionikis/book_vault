@@ -1,0 +1,202 @@
+{
+  "books": [
+    {
+      "id": "045d9384-f41a-4cf5-bda3-96fe2fa3c44f",
+      "asin": "B0B91976NY",
+      "title": "A Binding of Blood",
+      "description": "<p><b>To study magic at the university, Siobhan sacrificed her name.</b></p> <p><b>She sacrificed her body and her past. </b></p> <p>Magically disguised as a boy named Sebastien, she is learning wondrous secrets of the thaumaturgic sciences. As Sebastien, she mingles with the young nobles who will one day rule their country. But danger is closer than ever, and she cannot escape her past.</p> <p>The coppers investigating the theft of Siobhan’s priceless transformation artifact have given her a new name: the Raven Queen. As Siobhan does favors for the gang that loaned her the university tuition, the Raven Queen’s mystique only grows.</p> <p>And keeps growing...snowballing out of control until Siobhan’s other identity takes on a life of its own, a fear-inducing bogeyman well beyond the truth of her real capabilities.</p> <p>With the whole city out to get her and trouble hounding both sides of her double life, how will Siobhan ever survive to become the world’s most powerful sorcerer?</p>",
+      "runtimeMinutes": 1405,
+      "releaseDate": "2022-08-08",
+      "publisher": null,
+      "coverUrl": "/api/images/A%20Binding%20of%20Blood%20%5BB0B91976NY%5D/A%20Binding%20of%20Blood%3A%20A%20Practical%20Guide%20to%20Sorcery%2C%20Book%202%20%5BB0B91976NY%5D.jpg",
+      "audioUrl": "/api/audio/A%20Binding%20of%20Blood%20%5BB0B91976NY%5D/A%20Binding%20of%20Blood%3A%20A%20Practical%20Guide%20to%20Sorcery%2C%20Book%202%20%5BB0B91976NY%5D.mp3",
+      "authors": [
+        {
+          "id": "a332fd5c-ede6-439e-ae07-216556121958",
+          "asin": "B012DLAI0K",
+          "name": "Azalea Ellis",
+          "createdAt": "2025-12-23T06:38:47.320Z"
+        }
+      ],
+      "narrators": [
+        {
+          "id": "b9224222-3852-492d-b01c-eeb7ecc34a13",
+          "asin": null,
+          "name": "Gabrielle de Cuir",
+          "createdAt": "2025-12-23T06:38:47.326Z"
+        }
+      ],
+      "series": [
+        {
+          "id": "28cf4d10-c9ea-49c9-95e4-d4c7909d68af",
+          "title": "Practical Guide to Sorcery",
+          "asin": "B09MG3GJW4",
+          "sequence": "2"
+        }
+      ],
+      "categories": []
+    },
+    {
+      "id": "6d211133-3b31-41b4-8b83-191121cee02a",
+      "asin": "B0F15GBHXM",
+      "title": "A Brief History of Chronomancy",
+      "description": "<p><b>Corin Cadence is on the run.</b></p> <p>After meeting with the Emerald Council, Corin has made himself some new enemies—most notably the Dalenos Six, a group of the most powerful representatives of the nation of Dalenos.</p> <p>He's also made a dangerous deal.</p> <p>A place of safety, if he can reach it. One where he can finally have one of the resources he needs most: time.</p> <p>But while that strange place may hold the key for Corin to make his final preparations for a long-awaited rescue mission, it also holds hidden dangers. And one final secret tied to the Cadence household. One that could shake the very foundations of everything Corin has been raised to believe.</p>",
+      "runtimeMinutes": 870,
+      "releaseDate": "2025-07-22",
+      "publisher": null,
+      "coverUrl": "/api/images/A%20Brief%20History%20of%20Chronomancy%20%5BB0F15GBHXM%5D/A%20Brief%20History%20of%20Chronomancy%3A%20Arcane%20Ascension%2C%20Book%206%20%5BB0F15GBHXM%5D.jpg",
+      "audioUrl": "/api/audio/A%20Brief%20History%20of%20Chronomancy%20%5BB0F15GBHXM%5D/A%20Brief%20History%20of%20Chronomancy%3A%20Arcane%20Ascension%2C%20Book%206%20%5BB0F15GBHXM%5D.mp3",
+      "authors": [
+        {
+          "id": "894d78e4-3d23-45cc-a225-bc049194a650",
+          "asin": "B00TKVOI3A",
+          "name": "Andrew Rowe",
+          "createdAt": "2025-12-23T06:38:47.377Z"
+        }
+      ],
+      "narrators": [
+        {
+          "id": "4c90b1b8-5450-47aa-804e-9655c125e962",
+          "asin": null,
+          "name": "Nick Podehl",
+          "createdAt": "2025-12-23T06:38:47.378Z"
+        }
+      ],
+      "series": [
+        {
+          "id": "338f6524-471b-4e29-8984-f48f585aed59",
+          "title": "Arcane Ascension",
+          "asin": "B0731RZ6L7",
+          "sequence": "6"
+        }
+      ],
+      "categories": []
+    },
+    {
+      "id": "59780b81-d7a4-4661-8666-005d5da8cc2d",
+      "asin": "B01N9V499O",
+      "title": "A Conjuring of Light",
+      "description": "<p>Londons fall and kingdoms rise while darkness sweeps the Maresh Empire, and the fraught balance of magic blossoms into dangerous territory while heroes struggle. The direct sequel to <i>A Gathering of Shadows</i>, and the final audiobook in the Shades of Magic epic fantasy series, <i>A Conjuring of Light</i> sees the newly minted <i>New York Times</i> best-selling author V. E. Schwab reach a thrilling conclusion concerning the fate of beloved protagonists - and old foes. </p> <p><b>Shades of Magic series</b> <br /> 1. <i>A Darker Shade of Magic</i> <br /> 2. <i>A Gathering of Shadows</i> <br /> 3. <i>A Conjuring of Light</i> </p>",
+      "runtimeMinutes": 1143,
+      "releaseDate": "2017-02-21",
+      "publisher": null,
+      "coverUrl": "/api/images/A%20Conjuring%20of%20Light%20%5BB01N9V499O%5D/A%20Conjuring%20of%20Light%3A%20Shades%20of%20Magic%2C%20Book%203%20%5BB01N9V499O%5D.jpg",
+      "audioUrl": "/api/audio/A%20Conjuring%20of%20Light%20%5BB01N9V499O%5D/A%20Conjuring%20of%20Light%3A%20Shades%20of%20Magic%2C%20Book%203%20%5BB01N9V499O%5D.mp3",
+      "authors": [
+        {
+          "id": "8773cfca-7ee4-452c-86fa-0e00dcf282f7",
+          "asin": "B00MLKA3WM",
+          "name": "V. E. Schwab",
+          "createdAt": "2025-12-23T06:38:47.409Z"
+        }
+      ],
+      "narrators": [
+        {
+          "id": "95fa4bfd-bf2a-47d3-87a8-48daa65d3011",
+          "asin": null,
+          "name": "Kate Reading",
+          "createdAt": "2025-12-23T06:38:47.410Z"
+        },
+        {
+          "id": "50855078-c408-4a85-ba31-039048465a8c",
+          "asin": null,
+          "name": "Michael Kramer",
+          "createdAt": "2025-12-23T06:38:47.412Z"
+        }
+      ],
+      "series": [
+        {
+          "id": "4df09138-aa9b-4da9-a732-d4962f9bf8e7",
+          "title": "A Darker Shade of Magic",
+          "asin": "B00VY0C50S",
+          "sequence": "3"
+        }
+      ],
+      "categories": []
+    },
+    {
+      "id": "33d8c9a9-d893-4b5a-aa96-37e1b63a7c20",
+      "asin": "B09MDHW9FD",
+      "title": "A Conjuring of Ravens",
+      "description": "<p><b>In a world where magic is a science, Siobhan Naught is a genius.</b></p> <p><b>But even geniuses need schooling.</b></p> <p>Siobhan has just been banned from the country's only magical university. As the unwitting accomplice to the theft of a priceless magical artifact, she has suddenly become a wanted criminal. There are fates worse than death, and if caught, she will face them. Unwilling to give up on her dream of becoming the world's most powerful sorcerer, she resolves to do whatever it takes to change her fate.</p> <p>Even if it means magically disguising herself as a boy and indebting herself to a gang of criminals to pay for university tuition.</p> <p>With the coppers after her, the pressure of trying to keep her spot in the devilishly competitive magic classes, and the gang calling in favors to repay her debts, Siobhan will need every drop of magic she can channel.</p>",
+      "runtimeMinutes": 1037,
+      "releaseDate": "2021-12-30",
+      "publisher": null,
+      "coverUrl": "/api/images/A%20Conjuring%20of%20Ravens%20%5BB09MDHW9FD%5D/A%20Conjuring%20of%20Ravens%3A%20A%20Magepunk%20Progression%20Fantasy%20(A%20Practical%20Guide%20to%20Sorcery%2C%20Book%201)%20%5BB09MDHW9FD%5D.jpg",
+      "audioUrl": "/api/audio/A%20Conjuring%20of%20Ravens%20%5BB09MDHW9FD%5D/A%20Conjuring%20of%20Ravens%3A%20A%20Magepunk%20Progression%20Fantasy%20(A%20Practical%20Guide%20to%20Sorcery%2C%20Book%201)%20%5BB09MDHW9FD%5D.mp3",
+      "authors": [
+        {
+          "id": "a332fd5c-ede6-439e-ae07-216556121958",
+          "asin": "B012DLAI0K",
+          "name": "Azalea Ellis",
+          "createdAt": "2025-12-23T06:38:47.320Z"
+        }
+      ],
+      "narrators": [
+        {
+          "id": "b9224222-3852-492d-b01c-eeb7ecc34a13",
+          "asin": null,
+          "name": "Gabrielle de Cuir",
+          "createdAt": "2025-12-23T06:38:47.326Z"
+        }
+      ],
+      "series": [
+        {
+          "id": "28cf4d10-c9ea-49c9-95e4-d4c7909d68af",
+          "title": "Practical Guide to Sorcery",
+          "asin": "B09MG3GJW4",
+          "sequence": "1"
+        }
+      ],
+      "categories": []
+    },
+    {
+      "id": "ae5df434-6367-40bd-aefd-44222d552cc4",
+      "asin": "1039400736",
+      "title": "A Darker Magic",
+      "description": "<p><b>A bloody war has ended in restored peace. The shield of Martian magic guards the stars...two centuries of spell and steel to ward all humanity. </b></p> <p>Two years ago, Lieutenant Commander Roslyn Chambers stood witness to the surrender of the last remnants of the Republic. Fueled by atrocity against Mage and mundane alike, the secessionists who waged war against the Protectorate of Mars are finally defeated. Now, a special commission from the Mage-Queen of Mars takes Roslyn deep into the former Republic to hunt the architects of that atrocity. Mages who betrayed their own, the creators of Project Prometheus must be brought to justice. But hidden from even the Republic, Prometheus has woven magic and technology together once more. Here, hidden from all prying eyes, they have created a monster...one that even a Protectorate forged by the spell must call black magic.</p>",
+      "runtimeMinutes": 482,
+      "releaseDate": "2021-05-18",
+      "publisher": null,
+      "coverUrl": "/api/images/A%20Darker%20Magic%20%5B1039400736%5D/A%20Darker%20Magic%3A%20Mage-Officer%20of%20Mars%2C%20Book%201%20%5B1039400736%5D.jpg",
+      "audioUrl": "/api/audio/A%20Darker%20Magic%20%5B1039400736%5D/A%20Darker%20Magic%3A%20Mage-Officer%20of%20Mars%2C%20Book%201%20%5B1039400736%5D.mp3",
+      "authors": [
+        {
+          "id": "1455c0b4-31f9-4c7c-9e1a-76453a05dfb8",
+          "asin": "B00HC1WWW4",
+          "name": "Glynn Stewart",
+          "createdAt": "2025-12-23T06:38:47.469Z"
+        }
+      ],
+      "narrators": [
+        {
+          "id": "09b5e451-243e-43c5-ae93-a734a95e0271",
+          "asin": null,
+          "name": "Jeffrey Kafer",
+          "createdAt": "2025-12-23T06:38:47.470Z"
+        }
+      ],
+      "series": [
+        {
+          "id": "9fa4cfe4-6b61-499f-91be-64b0ded707ba",
+          "title": "Mage-Officer of Mars",
+          "asin": "B0932LQS9Z",
+          "sequence": "1"
+        },
+        {
+          "id": "8aa2c109-4f59-45d2-ad28-b6bd3c6f04e2",
+          "title": "Starship's Mage",
+          "asin": "B0195SUQ6A",
+          "sequence": "10"
+        }
+      ],
+      "categories": []
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 5,
+    "total": 11,
+    "pages": 3
+  }
+}

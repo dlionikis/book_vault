@@ -635,13 +635,32 @@ When starting a new session:
 
 **Backend is mobile-ready**: See "AWS Deployment Readiness" section above.
 
-### iOS Mobile App (Post-Deployment)
+### iOS Mobile App (Pre-Development Complete)
 
 **Technology**: Native Swift + SwiftUI
 
-**Status**: Planning complete, implementation post-deployment
+**Status**: ✅ Pre-development setup complete, ready for Phase 1 implementation
 
-**Full plan**: See [docs/mobile-ios-plan.md](docs/mobile-ios-plan.md) for:
+**Getting Started**:
+
+```bash
+# Generate Swift models from OpenAPI spec
+npm run api:generate:swift
+
+# Watch for OpenAPI changes
+npm run api:watch
+
+# Open Xcode
+open ios/BookVault.xcodeproj
+```
+
+**Test Fixtures**: Shared JSON fixtures for backend and iOS testing in `test-fixtures/`
+
+- `books-list.json`, `book-detail.json`, `user-progress.json`, etc.
+
+**Development Workflow**: See [docs/mobile/ios-development-setup.md](docs/mobile/ios-development-setup.md)
+
+**Full Implementation Plan**: See [docs/mobile-ios-plan.md](docs/mobile-ios-plan.md) for:
 
 - 8 phased implementation steps
 - Technical architecture
