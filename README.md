@@ -116,6 +116,26 @@ npm run docs:generate  # Generate types + documentation
 
 See [docs/openapi-implementation-plan.md](docs/openapi-implementation-plan.md) for details.
 
+## iOS Mobile App
+
+Native iOS app for Book Vault (pre-development setup complete).
+
+**Status**: ✅ Pre-development complete, ready for Phase 1 implementation
+**Technology**: Swift + SwiftUI
+**Location**: `ios/BookVault/`
+
+**Getting Started**:
+
+```bash
+# Generate Swift models from OpenAPI spec
+npm run api:generate:swift
+
+# Open Xcode project
+open ios/BookVault.xcodeproj
+```
+
+See [docs/mobile-ios-plan.md](docs/mobile-ios-plan.md) for implementation plan and [docs/mobile/ios-development-setup.md](docs/mobile/ios-development-setup.md) for setup instructions.
+
 ## Documentation
 
 Comprehensive documentation is available in the [`docs/`](docs/) directory:
@@ -175,7 +195,7 @@ This is an **AI-first development project**, meaning:
 - User progress tracking
 - Custom book lists
 - AWS deployment
-- iOS mobile app
+- iOS mobile app (pre-development complete, ready for Phase 1)
 
 ## Getting Started
 

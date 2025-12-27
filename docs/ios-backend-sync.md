@@ -311,12 +311,12 @@ Cleanup: Remove v1 endpoints after iOS migration complete
 
 ### iOS (Swift)
 
-**Status**: ✅ Tooling ready (openapi-generator installed)
+**Status**: ✅ Complete
 **Command**: `npm run api:generate:swift`
 **Output**: `ios/BookVault/Generated/Models/`
 **Tooling**: `openapi-generator` (Homebrew)
 
-**Action Required**: Create OpenAPI spec (Phase 1), create iOS project
+**Verification**: 47 Swift models generated and compiling successfully
 
 ---
 
