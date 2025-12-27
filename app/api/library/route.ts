@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!library) {
-      return NextResponse.json({ books: [] });
+      return NextResponse.json({ books: [], total: 0 });
     }
 
     // Get books in library with full details
