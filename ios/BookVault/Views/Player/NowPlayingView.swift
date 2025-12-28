@@ -10,7 +10,6 @@ import SwiftUI
 
 struct NowPlayingView: View {
     @StateObject private var audioPlayer = AudioPlayerManager.shared
-    @Environment(\.dismiss) var dismiss
 
     // State for showing speed picker
     @State private var showingSpeedPicker = false
@@ -30,23 +29,12 @@ struct NowPlayingView: View {
                 .ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // Close button
-                    HStack {
-                        Spacer()
-                        Button {
-                            dismiss()
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 16)
-                    .frame(height: geometry.size.height * 0.08)
+                    // Top spacer for drag indicator
+                    Spacer()
+                        .frame(height: geometry.size.height * 0.05)
 
                     if let book = audioPlayer.currentBook {
-                        // Cover art - 35% of screen height
+                        // Cover art - 40% of screen height (increased from 35%)
                         AsyncImage(url: URL(string: book.coverUrl)) { phase in
                             switch phase {
                             case .empty:
@@ -71,7 +59,7 @@ struct NowPlayingView: View {
                                 EmptyView()
                             }
                         }
-                        .frame(height: geometry.size.height * 0.35)
+                        .frame(height: geometry.size.height * 0.40)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
                         .padding(.horizontal, 40)

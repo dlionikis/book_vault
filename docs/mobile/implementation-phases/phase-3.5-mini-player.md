@@ -600,10 +600,12 @@ func play(book: Book) {
 
 Phase 3.5 is complete when:
 
-✅ Mini player appears when playback starts
+✅ Mini player appears when playback starts (from any screen)
 ✅ Mini player disappears when playback stops
-✅ Tapping mini player navigates to full player
+✅ Tapping mini player expands to full player (sheet presentation)
+✅ Swiping down on full player collapses to mini player
 ✅ Play/pause button works from mini player
+✅ BookDetailView "Play" button starts playback (shows mini player, not full screen)
 ✅ Cover art loads with authentication
 ✅ Text truncates properly on all screen sizes
 ✅ Works on all tabs and deep navigation
@@ -611,6 +613,22 @@ Phase 3.5 is complete when:
 ✅ Accessibility labels work with VoiceOver
 ✅ Looks good in dark mode and light mode
 ✅ No layout issues on iPhone SE to iPad
+
+## Updated UX Flow (Post-Fix)
+
+**Before (Problematic):**
+
+1. BookDetailView → Tap "Play" → Full screen player (`.fullScreenCover`)
+2. Tap X → Dismiss → Mini player doesn't appear
+3. User can't see what's playing or control playback
+
+**After (Fixed - Matches Spotify/Apple Music):**
+
+1. BookDetailView → Tap "Play" → Audio starts → Mini player slides up
+2. Tap mini player → Full player expands (sheet)
+3. Swipe down → Full player collapses to mini player
+4. Mini player persists everywhere
+5. Navigate anywhere → Mini player still visible
 
 ---
 

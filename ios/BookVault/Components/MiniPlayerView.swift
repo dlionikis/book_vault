@@ -12,10 +12,13 @@ import SwiftUI
 struct MiniPlayerView: View {
     @ObservedObject var audioManager = AudioPlayerManager.shared
     @Environment(\.colorScheme) var colorScheme
+    @State private var showingFullPlayer = false
 
     var body: some View {
         if let book = audioManager.currentBook {
-            NavigationLink(destination: NowPlayingView()) {
+            Button(action: {
+                showingFullPlayer = true
+            }) {
                 HStack(spacing: 12) {
                     // Cover Art
                     coverArt(for: book)
@@ -59,6 +62,10 @@ struct MiniPlayerView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Now playing: \(book.title)")
             .accessibilityHint("Tap to open full player")
+            .sheet(isPresented: $showingFullPlayer) {
+                NowPlayingView()
+                    .presentationDragIndicator(.visible)
+            }
         }
     }
 

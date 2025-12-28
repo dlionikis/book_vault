@@ -10,7 +10,6 @@ import SwiftUI
 struct BookDetailView: View {
     let book: Book
     @StateObject private var audioPlayer = AudioPlayerManager.shared
-    @State private var showingNowPlaying = false
 
     var body: some View {
         ScrollView {
@@ -158,7 +157,7 @@ struct BookDetailView: View {
                     // Play button
                     Button {
                         audioPlayer.play(book: book)
-                        showingNowPlaying = true
+                        // Mini player will appear automatically
                     } label: {
                         HStack {
                             Image(systemName: audioPlayer.currentBook?.id == book.id && audioPlayer.isPlaying ? "pause.fill" : "play.fill")
@@ -177,9 +176,6 @@ struct BookDetailView: View {
             .padding(.vertical)
         }
         .navigationBarTitleDisplayMode(.inline)
-        .fullScreenCover(isPresented: $showingNowPlaying) {
-            NowPlayingView()
-        }
     }
 
     private func formatDate(_ date: Date) -> String {
