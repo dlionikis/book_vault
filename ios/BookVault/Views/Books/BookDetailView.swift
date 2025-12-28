@@ -10,6 +10,7 @@ import SwiftUI
 struct BookDetailView: View {
     let book: Book
     @StateObject private var audioPlayer = AudioPlayerManager.shared
+    @State private var showingNowPlaying = false
 
     var body: some View {
         ScrollView {
@@ -156,12 +157,17 @@ struct BookDetailView: View {
 
                     // Play button
                     Button {
-                        if audioPlayer.currentBook?.id == book.id {
-                            // Same book - toggle play/pause
-                            audioPlayer.togglePlayPause()
+                        if audioPlayer.currentBook?.id == book.id && audioPlayer.isPlaying {
+                            // Same book and playing - just pause (don't show player)
+                            audioPlayer.pause()
                         } else {
-                            // Different book - start playing
-                            audioPlayer.play(book: book)
+                            // Start playing or resume, and show full player
+                            if audioPlayer.currentBook?.id != book.id {
+                                audioPlayer.play(book: book)
+                            } else {
+                                audioPlayer.resume()
+                            }
+                            showingNowPlaying = true
                         }
                     } label: {
                         HStack {
@@ -181,6 +187,10 @@ struct BookDetailView: View {
             .padding(.vertical)
         }
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingNowPlaying) {
+            NowPlayingView()
+                .presentationDragIndicator(.visible)
+        }
     }
 
     private func formatDate(_ date: Date) -> String {
