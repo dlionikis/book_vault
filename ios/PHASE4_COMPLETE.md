@@ -193,12 +193,14 @@ struct SaveProgressRequest: Codable {
 
 #### Progress Saving
 
-- [ ] Start playing a book
-- [ ] Verify progress auto-saves every 10 seconds (check debug logs)
+- [x] Start playing a book
+- [x] Verify progress auto-saves every 10 seconds (check debug logs)
 - [ ] Pause playback
 - [ ] Verify progress saves immediately on pause
 - [ ] Resume playback
 - [ ] Verify timer restarts and continues auto-saving
+
+**Initial Testing (Dec 28, 2025)**: ✅ Progress auto-save confirmed working
 
 #### Cross-Platform Sync
 
@@ -248,6 +250,11 @@ struct SaveProgressRequest: Codable {
 3. **Conflict Resolution**:
    - Uses timestamp-based resolution
    - Last write wins (no manual conflict UI)
+
+4. **Token Refresh**:
+   - JWT tokens expire after 1 hour
+   - App requires manual re-login when token expires
+   - Future: Implement automatic token refresh in APIClient (Phase 5 enhancement)
 
 ---
 
