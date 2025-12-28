@@ -656,28 +656,34 @@ class AudioPlayerManager: ObservableObject {
     // MARK: - Progress Sync
 
     private func startProgressSaveTimer() {
-        // Stop existing timer if any
-        stopProgressSaveTimer()
+        // Ensure we're on the main thread for RunLoop access
+        DispatchQueue.main.async { [weak self] in
+            // Stop existing timer if any
+            self?.progressSaveTimer?.invalidate()
 
-        #if DEBUG
-        print("⏰ Starting progress save timer (10s intervals)")
-        #endif
+            #if DEBUG
+            print("⏰ Starting progress save timer (10s intervals)")
+            #endif
 
-        // Create timer that fires every 10 seconds
-        progressSaveTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                await self?.saveProgress()
+            // Create timer that fires every 10 seconds
+            // Must be on main thread to be added to RunLoop.main
+            self?.progressSaveTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    await self?.saveProgress()
+                }
             }
         }
     }
 
     private func stopProgressSaveTimer() {
-        progressSaveTimer?.invalidate()
-        progressSaveTimer = nil
+        DispatchQueue.main.async { [weak self] in
+            self?.progressSaveTimer?.invalidate()
+            self?.progressSaveTimer = nil
 
-        #if DEBUG
-        print("⏸️ Stopped progress save timer")
-        #endif
+            #if DEBUG
+            print("⏸️ Stopped progress save timer")
+            #endif
+        }
     }
 
     @MainActor
