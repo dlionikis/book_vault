@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { getCoverUrl, getAudioUrl } from '@/lib/media';
-import { htmlToMarkdown } from '@/lib/html-to-markdown';
+import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
 import type { components } from '@/lib/api-types';
 
 type Book = components['schemas']['Book'];
@@ -39,85 +38,14 @@ export async function GET(request: NextRequest) {
       prisma.book.findMany({
         skip,
         take: limit,
-        include: {
-          authors: {
-            include: {
-              author: true,
-            },
-            orderBy: {
-              author: {
-                name: 'asc',
-              },
-            },
-          },
-          narrators: {
-            include: {
-              narrator: true,
-            },
-            orderBy: {
-              narrator: {
-                name: 'asc',
-              },
-            },
-          },
-          series: {
-            include: {
-              series: true,
-            },
-            orderBy: {
-              series: {
-                title: 'asc',
-              },
-            },
-          },
-          categories: {
-            include: {
-              category: true,
-            },
-            orderBy: {
-              category: {
-                name: 'asc',
-              },
-            },
-          },
-        },
+        include: BOOK_INCLUDE,
         orderBy,
       }),
       prisma.book.count(),
     ]);
 
     // Transform the response to match OpenAPI Book schema
-    let transformedBooks: Book[] = books.map((book) => ({
-      id: book.id,
-      asin: book.asin,
-      title: book.title,
-      description: htmlToMarkdown(book.publisherSummary), // Convert HTML to Markdown
-      runtimeMinutes: book.runtimeMinutes ?? 0,
-      releaseDate: book.releaseDate?.toISOString().split('T')[0] ?? null,
-      publisher: book.publisher,
-      coverUrl: getCoverUrl(book.coverUrl) ?? '',
-      audioUrl: getAudioUrl(book.audioUrl) ?? '',
-      authors: book.authors.map((ba) => ({
-        id: ba.author.id,
-        name: ba.author.name,
-        asin: ba.author.asin,
-      })),
-      narrators: book.narrators.map((bn) => ({
-        id: bn.narrator.id,
-        name: bn.narrator.name,
-        asin: bn.narrator.asin,
-      })),
-      series: book.series.map((bs) => ({
-        id: bs.series.id,
-        title: bs.series.title,
-        asin: bs.series.asin,
-        sequence: bs.sequence,
-      })),
-      categories: book.categories.map((bc) => ({
-        id: bc.category.id,
-        name: bc.category.name,
-      })),
-    }));
+    let transformedBooks: Book[] = books.map(transformBook);
 
     // Apply client-side sorting for author/narrator/series
     if (sort === 'author') {
