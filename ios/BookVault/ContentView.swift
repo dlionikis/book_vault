@@ -72,12 +72,10 @@ struct ContentView: View {
                 // Fetch and load chapters in background
                 let chapterManager = ChapterManager()
                 let chapters = await chapterManager.fetchChapters(bookId: mostRecent.book.id.uuidString)
-                await audioPlayer.updateChapters(chapters)
+                audioPlayer.updateChapters(chapters)
             }
         } catch {
-            #if DEBUG
-            print("Failed to load most recently played book: \(error)")
-            #endif
+            DebugLogger.error("Failed to load most recently played book", error: error)
         }
     }
 }

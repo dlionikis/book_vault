@@ -79,9 +79,7 @@ class AudioPlayerManager: ObservableObject {
 
             try audioSession.setActive(true)
 
-            #if DEBUG
-            print("🎵 Audio session configured for background playback")
-            #endif
+            DebugLogger.audio("Audio session configured for background playback")
 
             // Setup interruption handling
             setupInterruptionObserver()
@@ -90,7 +88,7 @@ class AudioPlayerManager: ObservableObject {
             setupRouteChangeObserver()
 
         } catch {
-            print("❌ Failed to set up audio session: \(error)")
+            DebugLogger.error("Failed to set up audio session", error: error)
             self.error = error
         }
     }
@@ -179,9 +177,7 @@ class AudioPlayerManager: ObservableObject {
             return .success
         }
 
-        #if DEBUG
-        print("🎵 Remote command center configured")
-        #endif
+        DebugLogger.audio("Remote command center configured")
     }
 
     private func updateNowPlayingInfo() {
@@ -215,9 +211,7 @@ class AudioPlayerManager: ObservableObject {
 
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
 
-        #if DEBUG
-        print("🎵 Updated Now Playing info: \(book.title)")
-        #endif
+        DebugLogger.audio("Updated Now Playing info: \(book.title)")
     }
 
     private func loadCoverImage(from urlString: String) async -> UIImage? {
@@ -233,9 +227,7 @@ class AudioPlayerManager: ObservableObject {
             let (data, _) = try await URLSession.shared.data(for: request)
             return UIImage(data: data)
         } catch {
-            #if DEBUG
-            print("❌ Failed to load cover image: \(error)")
-            #endif
+            DebugLogger.error("Failed to load cover image", error: error)
             return nil
         }
     }
@@ -264,9 +256,7 @@ class AudioPlayerManager: ObservableObject {
         Task {
             // Ensure we have authentication token
             guard let token = AuthManager.shared.token else {
-                #if DEBUG
-                print("❌ AudioPlayerManager: No authentication token")
-                #endif
+                DebugLogger.error("AudioPlayerManager: No authentication token")
                 self.error = NSError(
                     domain: "AudioPlayerManager",
                     code: 401,
@@ -276,16 +266,12 @@ class AudioPlayerManager: ObservableObject {
                 return
             }
 
-            #if DEBUG
-            print("🎵 AudioPlayerManager: Starting playback for \(book.title)")
-            print("🎵 Audio URL: \(book.audioUrl)")
-            #endif
+            DebugLogger.audio("Starting playback for \(book.title)")
+            DebugLogger.verbose("Audio URL: \(book.audioUrl)")
 
             // Create URL with custom scheme for resource loader interception
             guard let url = URL(string: book.audioUrl) else {
-                #if DEBUG
-                print("❌ AudioPlayerManager: Invalid audio URL: \(book.audioUrl)")
-                #endif
+                DebugLogger.error("Invalid audio URL: \(book.audioUrl)")
                 self.error = NSError(
                     domain: "AudioPlayerManager",
                     code: 400,
@@ -297,9 +283,7 @@ class AudioPlayerManager: ObservableObject {
 
             // Convert http:// to bookvault:// so resource loader can intercept
             guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-                #if DEBUG
-                print("❌ AudioPlayerManager: Invalid URL components")
-                #endif
+                DebugLogger.error("Invalid URL components")
                 self.isLoading = false
                 return
             }
@@ -311,16 +295,12 @@ class AudioPlayerManager: ObservableObject {
             }
 
             guard let customSchemeURL = components.url else {
-                #if DEBUG
-                print("❌ AudioPlayerManager: Failed to create custom scheme URL")
-                #endif
+                DebugLogger.error("Failed to create custom scheme URL")
                 self.isLoading = false
                 return
             }
 
-            #if DEBUG
-            print("🎵 Custom scheme URL: \(customSchemeURL.absoluteString)")
-            #endif
+            DebugLogger.verbose("Custom scheme URL: \(customSchemeURL.absoluteString)")
 
             // Create resource loader delegate
             self.resourceLoaderDelegate = AuthenticatedAVAssetResourceLoaderDelegate(authToken: token)
@@ -346,9 +326,7 @@ class AudioPlayerManager: ObservableObject {
 
             // Fetch saved progress before starting playback
             if let savedProgress = try? await self.progressManager.fetchProgress(for: book.id.uuidString) {
-                #if DEBUG
-                print("📍 Loaded saved position: \(savedProgress.positionSeconds)s")
-                #endif
+                DebugLogger.database("Loaded saved position: \(savedProgress.positionSeconds)s")
 
                 // If book is not completed and has saved position, seek to it
                 if !savedProgress.completed && savedProgress.positionSeconds > 0 {
@@ -390,13 +368,9 @@ class AudioPlayerManager: ObservableObject {
                         positionSeconds: currentTime
                     )
                     lastSavedPosition = currentTime
-                    #if DEBUG
-                    print("💾 Progress saved on pause: \(currentTime)s")
-                    #endif
+                    DebugLogger.database("Progress saved on pause: \(currentTime)s")
                 } catch {
-                    #if DEBUG
-                    print("❌ Failed to save progress on pause: \(error.localizedDescription)")
-                    #endif
+                    DebugLogger.error("Failed to save progress on pause", error: error)
                 }
             }
         }
@@ -498,13 +472,9 @@ class AudioPlayerManager: ObservableObject {
                         for: book.id.uuidString,
                         positionSeconds: currentTime
                     )
-                    #if DEBUG
-                    print("💾 Final progress saved: \(currentTime)s")
-                    #endif
+                    DebugLogger.database("Final progress saved: \(currentTime)s")
                 } catch {
-                    #if DEBUG
-                    print("❌ Failed to save final progress: \(error.localizedDescription)")
-                    #endif
+                    DebugLogger.error("Failed to save final progress", error: error)
                 }
             }
         }
@@ -542,9 +512,7 @@ class AudioPlayerManager: ObservableObject {
             if let currentChapter = self.getCurrentChapter() {
                 if self.currentChapterId != currentChapter.id {
                     self.currentChapterId = currentChapter.id
-                    #if DEBUG
-                    print("📖 Chapter changed: \(currentChapter.title)")
-                    #endif
+                    DebugLogger.audio("Chapter changed: \(currentChapter.title)")
                 }
             }
         }
@@ -556,22 +524,16 @@ class AudioPlayerManager: ObservableObject {
             .sink { [weak self] status in
                 guard let self = self else { return }
 
-                #if DEBUG
-                print("🎵 AVPlayerItem status: \(status.rawValue)")
-                #endif
+                DebugLogger.verbose("AVPlayerItem status: \(status.rawValue)")
 
                 if status == .readyToPlay {
-                    #if DEBUG
-                    print("🎵 Duration: \(playerItem.duration.seconds) seconds")
-                    #endif
+                    DebugLogger.audio("Duration: \(playerItem.duration.seconds) seconds")
                     self.duration = playerItem.duration.seconds
                     self.isLoading = false
 
                     // Seek to saved position if available
                     if self.lastSavedPosition > 0 {
-                        #if DEBUG
-                        print("📍 Seeking to saved position: \(self.lastSavedPosition)s")
-                        #endif
+                        DebugLogger.audio("Seeking to saved position: \(self.lastSavedPosition)s")
                         let cmTime = CMTime(seconds: self.lastSavedPosition, preferredTimescale: 1000)
                         self.player?.seek(to: cmTime) { _ in
                             // Start playback after seek completes
@@ -590,9 +552,7 @@ class AudioPlayerManager: ObservableObject {
                         }
                     } else {
                         // Start playback now that we're ready
-                        #if DEBUG
-                        print("🎵 AudioPlayerManager: Starting playback...")
-                        #endif
+                        DebugLogger.audio("Starting playback...")
                         self.player?.play()
 
                         // Set playback rate after calling play()
@@ -609,15 +569,11 @@ class AudioPlayerManager: ObservableObject {
                         self.startProgressSaveTimer()
                     }
 
-                    #if DEBUG
-                    print("🎵 AudioPlayerManager: Player rate: \(self.player?.rate ?? 0)")
-                    print("🎵 AudioPlayerManager: Player timeControlStatus: \(self.player?.timeControlStatus.rawValue ?? -1)")
-                    #endif
+                    DebugLogger.verbose("Player rate: \(self.player?.rate ?? 0)")
+                    DebugLogger.verbose("Player timeControlStatus: \(self.player?.timeControlStatus.rawValue ?? -1)")
 
                 } else if status == .failed {
-                    #if DEBUG
-                    print("❌ AVPlayerItem failed: \(playerItem.error?.localizedDescription ?? "unknown error")")
-                    #endif
+                    DebugLogger.error("AVPlayerItem failed", error: playerItem.error)
                     self.error = playerItem.error
                     self.isLoading = false
                 }
@@ -641,9 +597,7 @@ class AudioPlayerManager: ObservableObject {
         switch type {
         case .began:
             // Interruption began (phone call, alarm, etc.)
-            #if DEBUG
-            print("🎵 Audio interruption began - pausing playback")
-            #endif
+            DebugLogger.audio("Audio interruption began - pausing playback")
             Task { @MainActor in
                 pause()
             }
@@ -657,17 +611,13 @@ class AudioPlayerManager: ObservableObject {
             let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
 
             if options.contains(.shouldResume) {
-                #if DEBUG
-                print("🎵 Audio interruption ended - resuming playback")
-                #endif
+                DebugLogger.audio("Audio interruption ended - resuming playback")
                 // Resume playback
                 Task { @MainActor in
                     resume()
                 }
             } else {
-                #if DEBUG
-                print("🎵 Audio interruption ended - not resuming")
-                #endif
+                DebugLogger.audio("Audio interruption ended - not resuming")
             }
 
         @unknown default:
@@ -685,24 +635,18 @@ class AudioPlayerManager: ObservableObject {
         switch reason {
         case .oldDeviceUnavailable:
             // Headphones were unplugged or Bluetooth device disconnected
-            #if DEBUG
-            print("🎵 Audio route changed - device unavailable, pausing playback")
-            #endif
+            DebugLogger.audio("Audio route changed - device unavailable, pausing playback")
             Task { @MainActor in
                 pause()
             }
 
         case .newDeviceAvailable:
             // New audio device connected
-            #if DEBUG
-            print("🎵 Audio route changed - new device available")
-            #endif
+            DebugLogger.audio("Audio route changed - new device available")
             // Optionally resume playback here if desired
 
         default:
-            #if DEBUG
-            print("🎵 Audio route changed - reason: \(reason.rawValue)")
-            #endif
+            DebugLogger.verbose("Audio route changed - reason: \(reason.rawValue)")
             break
         }
     }
@@ -715,9 +659,7 @@ class AudioPlayerManager: ObservableObject {
             // Stop existing timer if any
             self?.progressSaveTimer?.invalidate()
 
-            #if DEBUG
-            print("⏰ Starting progress save timer (10s intervals)")
-            #endif
+            DebugLogger.database("Starting progress save timer (10s intervals)")
 
             // Create timer that fires every 10 seconds
             // Must be on main thread to be added to RunLoop.main
@@ -734,9 +676,7 @@ class AudioPlayerManager: ObservableObject {
             self?.progressSaveTimer?.invalidate()
             self?.progressSaveTimer = nil
 
-            #if DEBUG
-            print("⏸️ Stopped progress save timer")
-            #endif
+            DebugLogger.database("Stopped progress save timer")
         }
     }
 
@@ -754,13 +694,9 @@ class AudioPlayerManager: ObservableObject {
             )
             lastSavedPosition = currentTime
 
-            #if DEBUG
-            print("💾 Auto-saved progress: \(currentTime)s")
-            #endif
+            DebugLogger.database("Auto-saved progress: \(currentTime)s")
         } catch {
-            #if DEBUG
-            print("❌ Failed to save progress: \(error.localizedDescription)")
-            #endif
+            DebugLogger.error("Failed to save progress", error: error)
         }
     }
 

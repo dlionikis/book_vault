@@ -191,9 +191,7 @@ struct BookGridItem: View {
             userProgress = try await ProgressManager.shared.fetchProgress(for: book.id.uuidString)
         } catch {
             // Silently fail - progress is optional
-            #if DEBUG
-            print("Failed to fetch progress for book \(book.id): \(error)")
-            #endif
+            DebugLogger.verbose("Failed to fetch progress for book \(book.id): \(error)")
         }
     }
 
@@ -338,9 +336,7 @@ struct ContinueListeningCard: View {
         do {
             userProgress = try await ProgressManager.shared.fetchProgress(for: book.id.uuidString)
         } catch {
-            #if DEBUG
-            print("Failed to fetch progress for book \(book.id): \(error)")
-            #endif
+            DebugLogger.verbose("Failed to fetch progress for book \(book.id): \(error)")
         }
     }
 

@@ -168,7 +168,7 @@ struct BookDetailView: View {
                                 // Phase 5: Fetch chapters in background (non-blocking)
                                 Task {
                                     let chapters = await chapterManager.fetchChapters(bookId: book.id.uuidString)
-                                    await audioPlayer.updateChapters(chapters)
+                                    audioPlayer.updateChapters(chapters)
                                 }
                             } else {
                                 audioPlayer.resume()

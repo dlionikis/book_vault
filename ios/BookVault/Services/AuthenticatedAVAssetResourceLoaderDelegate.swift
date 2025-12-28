@@ -29,26 +29,18 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
 
     func resourceLoader(_ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
 
-        #if DEBUG
-        print("🔄 Resource loader: Request received")
-        #endif
+        DebugLogger.verbose("Resource loader: Request received")
 
         guard let url = loadingRequest.request.url else {
-            #if DEBUG
-            print("❌ Resource loader: No URL in request")
-            #endif
+            DebugLogger.error("Resource loader: No URL in request")
             return false
         }
 
-        #if DEBUG
-        print("🔄 Resource loader: URL = \(url.absoluteString)")
-        #endif
+        DebugLogger.verbose("Resource loader: URL = \(url.absoluteString)")
 
         // Convert custom scheme back to http/https
         guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            #if DEBUG
-            print("❌ Resource loader: Failed to create URL components")
-            #endif
+            DebugLogger.error("Resource loader: Failed to create URL components")
             return false
         }
 
@@ -60,15 +52,11 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
         }
 
         guard let actualURL = components.url else {
-            #if DEBUG
-            print("❌ Resource loader: Failed to convert URL")
-            #endif
+            DebugLogger.error("Resource loader: Failed to convert URL")
             return false
         }
 
-        #if DEBUG
-        print("🔄 Resource loader: Actual URL = \(actualURL.absoluteString)")
-        #endif
+        DebugLogger.verbose("Resource loader: Actual URL = \(actualURL.absoluteString)")
 
         // Create request with auth header
         var request = URLRequest(url: actualURL)
@@ -85,25 +73,19 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
             request.setValue("bytes=\(offset)-\(rangeEnd)", forHTTPHeaderField: "Range")
         }
 
-        #if DEBUG
-        print("🔄 Resource loader: Starting request...")
-        #endif
+        DebugLogger.verbose("Resource loader: Starting request...")
 
         let task = session.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
 
             if let error = error {
-                #if DEBUG
-                print("❌ Resource loader: Request failed - \(error.localizedDescription)")
-                #endif
+                DebugLogger.error("Resource loader: Request failed", error: error)
                 loadingRequest.finishLoading(with: error)
                 return
             }
 
             if let response = response as? HTTPURLResponse {
-                #if DEBUG
-                print("🔄 Resource loader: Response status \(response.statusCode)")
-                #endif
+                DebugLogger.verbose("Resource loader: Response status \(response.statusCode)")
                 loadingRequest.response = response
 
                 // Fill content information
@@ -121,9 +103,7 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
                         let components = contentRange.split(separator: "/")
                         if components.count == 2, let totalSize = Int64(components[1]) {
                             contentInfoRequest.contentLength = totalSize
-                            #if DEBUG
-                            print("🔄 Resource loader: Total size from Content-Range: \(totalSize)")
-                            #endif
+                            DebugLogger.verbose("Resource loader: Total size from Content-Range: \(totalSize)")
                         } else {
                             contentInfoRequest.contentLength = response.expectedContentLength
                         }
@@ -138,9 +118,7 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
             }
 
             loadingRequest.finishLoading()
-            #if DEBUG
-            print("✅ Resource loader: Request completed successfully")
-            #endif
+            DebugLogger.verbose("Resource loader: Request completed successfully")
 
             // Cleanup
             self.loadingRequests.removeValue(forKey: url.absoluteString)

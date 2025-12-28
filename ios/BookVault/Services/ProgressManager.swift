@@ -11,12 +11,11 @@ import Combine
 
 /// Manages user progress sync with backend API
 /// This is a lightweight wrapper around APIClient for progress-related operations
-@MainActor
 class ProgressManager: ObservableObject {
     static let shared = ProgressManager()
 
-    @Published var isLoading = false
-    @Published var error: Error?
+    @MainActor @Published var isLoading = false
+    @MainActor @Published var error: Error?
 
     private let apiClient = APIClient.shared
 
@@ -25,6 +24,7 @@ class ProgressManager: ObservableObject {
     /// Fetch user's progress for a book
     /// - Parameter bookId: The book's UUID string
     /// - Returns: UserProgress with position and completion status
+    @MainActor
     func fetchProgress(for bookId: String) async throws -> UserProgress {
         isLoading = true
         defer { isLoading = false }
@@ -35,15 +35,11 @@ class ProgressManager: ObservableObject {
             ])
         }
 
-        #if DEBUG
-        print("🔄 Fetching progress for book: \(bookId)")
-        #endif
+        DebugLogger.database("Fetching progress for book: \(bookId)")
 
         let response = try await apiClient.fetchProgress(bookId: uuid)
 
-        #if DEBUG
-        print("✅ Fetched progress: \(response.positionSeconds)s, completed: \(response.completed)")
-        #endif
+        DebugLogger.database("Fetched progress: \(response.positionSeconds)s, completed: \(response.completed)")
 
         // Convert API response to UserProgress
         return UserProgress(
@@ -60,6 +56,7 @@ class ProgressManager: ObservableObject {
     ///   - timestamp: Optional timestamp for conflict resolution (not currently used by APIClient)
     /// - Returns: SaveProgressResponse with updated status
     @discardableResult
+    @MainActor
     func saveProgress(
         for bookId: String,
         positionSeconds: Double,
@@ -71,19 +68,15 @@ class ProgressManager: ObservableObject {
             ])
         }
 
-        #if DEBUG
-        print("💾 Saving progress: \(positionSeconds)s for book: \(bookId)")
-        #endif
+        DebugLogger.database("Saving progress: \(positionSeconds)s for book: \(bookId)")
 
         let response = try await apiClient.updateProgress(bookId: uuid, positionSeconds: positionSeconds)
 
-        #if DEBUG
         if response.updated {
-            print("✅ Progress saved successfully")
+            DebugLogger.success("Progress saved successfully")
         } else {
-            print("⚠️ Progress not updated (conflict detected)")
+            DebugLogger.warning("Progress not updated (conflict detected)")
         }
-        #endif
 
         // Convert API response to SaveProgressResponse
         let formatter = ISO8601DateFormatter()
@@ -99,6 +92,7 @@ class ProgressManager: ObservableObject {
 
     /// Mark a book as completed
     /// - Parameter bookId: The book's UUID string
+    @MainActor
     func markCompleted(bookId: String) async throws {
         guard let uuid = UUID(uuidString: bookId) else {
             throw NSError(domain: "ProgressManager", code: 400, userInfo: [
@@ -106,15 +100,14 @@ class ProgressManager: ObservableObject {
             ])
         }
 
-        #if DEBUG
-        print("✅ Marking book as completed: \(bookId)")
-        #endif
+        DebugLogger.database("Marking book as completed: \(bookId)")
 
         _ = try await apiClient.setProgressStatus(bookId: uuid, status: .completed)
     }
 
     /// Reset a book's progress (mark as not started)
     /// - Parameter bookId: The book's UUID string
+    @MainActor
     func resetProgress(bookId: String) async throws {
         guard let uuid = UUID(uuidString: bookId) else {
             throw NSError(domain: "ProgressManager", code: 400, userInfo: [
@@ -122,9 +115,7 @@ class ProgressManager: ObservableObject {
             ])
         }
 
-        #if DEBUG
-        print("🔄 Resetting progress for book: \(bookId)")
-        #endif
+        DebugLogger.database("Resetting progress for book: \(bookId)")
 
         _ = try await apiClient.setProgressStatus(bookId: uuid, status: .notStarted)
     }

@@ -47,14 +47,8 @@ class APIClient {
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
 
-    // Debug logging flag - automatically enabled for DEBUG builds
-    private let enableDebugLogging: Bool = {
-        #if DEBUG
-        return true  // Enable in debug builds
-        #else
-        return false // Disable in release builds
-        #endif
-    }()
+    // Note: Debug logging now handled by DebugLogger class
+    // No need for custom flag anymore
 
     // Token storage (will be managed by AuthManager)
     var accessToken: String?
@@ -64,11 +58,9 @@ class APIClient {
         // FORCE localhost for all builds during development
         let urlString = "http://localhost:3000"
 
-        #if DEBUG
-        print("🌐 APIClient initialized with base URL: \(urlString)")
-        #endif
-
         self.baseURL = URL(string: urlString)!
+
+        DebugLogger.network("APIClient initialized with base URL: \(urlString)")
 
         // Configure JSON decoder with custom date handling
         self.decoder = JSONDecoder()
@@ -152,15 +144,13 @@ class APIClient {
             throw APIError.invalidResponse
         }
 
-        // Debug logging (only in DEBUG builds)
-        if enableDebugLogging {
-            print("📡 API Response:")
-            print("   URL: \(request.url?.absoluteString ?? "unknown")")
-            print("   Status: \(httpResponse.statusCode)")
-            if let responseString = String(data: data, encoding: .utf8) {
-                print("   Body: \(responseString)") // Full response for debugging
-            }
-        }
+        // Debug logging (automatically disabled in release builds)
+        let responseBody = String(data: data, encoding: .utf8)
+        DebugLogger.apiResponse(
+            path: request.url?.absoluteString ?? "unknown",
+            statusCode: httpResponse.statusCode,
+            body: responseBody
+        )
 
         // Handle HTTP error codes
         switch httpResponse.statusCode {
@@ -169,25 +159,21 @@ class APIClient {
             do {
                 return try decoder.decode(T.self, from: data)
             } catch {
-                // Detailed error logging in debug mode
-                if enableDebugLogging {
-                    print("❌ Decoding Error: \(error)")
-                    if let decodingError = error as? DecodingError {
-                        switch decodingError {
-                        case .keyNotFound(let key, let context):
-                            print("   Missing key: \(key.stringValue)")
-                            print("   Context: \(context.debugDescription)")
-                        case .typeMismatch(let type, let context):
-                            print("   Type mismatch: expected \(type)")
-                            print("   Context: \(context.debugDescription)")
-                        case .valueNotFound(let type, let context):
-                            print("   Value not found: \(type)")
-                            print("   Context: \(context.debugDescription)")
-                        case .dataCorrupted(let context):
-                            print("   Data corrupted: \(context.debugDescription)")
-                        @unknown default:
-                            print("   Unknown decoding error")
-                        }
+                // Detailed error logging (automatically disabled in release builds)
+                DebugLogger.error("Failed to decode API response", error: error)
+
+                if let decodingError = error as? DecodingError {
+                    switch decodingError {
+                    case .keyNotFound(let key, let context):
+                        DebugLogger.error("Missing key: \(key.stringValue) | Context: \(context.debugDescription)")
+                    case .typeMismatch(let type, let context):
+                        DebugLogger.error("Type mismatch: expected \(type) | Context: \(context.debugDescription)")
+                    case .valueNotFound(let type, let context):
+                        DebugLogger.error("Value not found: \(type) | Context: \(context.debugDescription)")
+                    case .dataCorrupted(let context):
+                        DebugLogger.error("Data corrupted: \(context.debugDescription)")
+                    @unknown default:
+                        DebugLogger.error("Unknown decoding error")
                     }
                 }
                 throw APIError.decodingError(error)
