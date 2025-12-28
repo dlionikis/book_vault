@@ -64,7 +64,7 @@ class AudioPlayerManager: ObservableObject {
             try audioSession.setCategory(
                 .playback,
                 mode: .spokenAudio,
-                options: [.allowBluetooth, .allowBluetoothA2DP, .allowAirPlay]
+                options: [.allowBluetoothA2DP, .allowAirPlay]
             )
 
             try audioSession.setActive(true)
@@ -179,7 +179,7 @@ class AudioPlayerManager: ObservableObject {
         // Basic metadata
         nowPlayingInfo[MPMediaItemPropertyTitle] = book.title
         nowPlayingInfo[MPMediaItemPropertyArtist] = book.authors.map { $0.name }.joined(separator: ", ")
-        nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = book.series.first?.title ?? "Audiobook"
+        nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = book.series?.first?.title ?? "Audiobook"
 
         // Playback information
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
@@ -187,7 +187,7 @@ class AudioPlayerManager: ObservableObject {
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? playbackRate : 0.0
 
         // Cover artwork (load asynchronously)
-        Task {
+        Task { @MainActor in
             if let coverImage = await loadCoverImage(from: book.coverUrl) {
                 let artwork = MPMediaItemArtwork(boundsSize: coverImage.size) { _ in
                     return coverImage
@@ -205,12 +205,12 @@ class AudioPlayerManager: ObservableObject {
     }
 
     private func loadCoverImage(from urlString: String) async -> UIImage? {
-        guard let url = URL(string: urlString) else { return nil }
+        guard let coverUrl = URL(string: urlString) else { return nil }
 
         do {
             // Add authentication header for cover image
-            var request = URLRequest(url: url)
-            if let token = AuthManager.shared.token {
+            var request = URLRequest(url: coverUrl)
+            if let token = await AuthManager.shared.token {
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
 
