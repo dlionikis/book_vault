@@ -481,8 +481,51 @@ struct PlaybackSpeedPicker: View {
     }
 }
 
-// MARK: - Preview
+// MARK: - Previews
 
-#Preview {
+#Preview("Playing - With Chapters") {
     NowPlayingView()
+        .onAppear {
+            let manager = AudioPlayerManager.shared
+            manager.play(book: .mockStandard)
+            manager.updateChapters(Chapter.mockChapters)
+            manager.currentTime = 2000 // In Chapter 2
+        }
+}
+
+#Preview("Playing - No Chapters") {
+    NowPlayingView()
+        .onAppear {
+            let manager = AudioPlayerManager.shared
+            manager.play(book: .mockMinimal)
+            manager.updateChapters([])
+        }
+}
+
+#Preview("Paused") {
+    NowPlayingView()
+        .onAppear {
+            let manager = AudioPlayerManager.shared
+            manager.play(book: .mockLongTitle)
+            manager.updateChapters(Chapter.mockChapters)
+            manager.pause()
+        }
+}
+
+#Preview("No Book Loaded") {
+    NowPlayingView()
+        .onAppear {
+            let manager = AudioPlayerManager.shared
+            manager.stop()
+        }
+}
+
+#Preview("Dark Mode") {
+    NowPlayingView()
+        .onAppear {
+            let manager = AudioPlayerManager.shared
+            manager.play(book: .mockStandard)
+            manager.updateChapters(Chapter.mockChapters)
+        }
+        .preferredColorScheme(.dark)
 }

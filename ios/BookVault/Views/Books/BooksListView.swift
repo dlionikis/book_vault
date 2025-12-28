@@ -431,6 +431,49 @@ struct ProgressIndicator: View {
     }
 }
 
-#Preview {
+// MARK: - Previews
+
+#Preview("Empty State") {
     BooksListView()
+}
+
+#Preview("Grid Item - Standard") {
+    NavigationView {
+        ScrollView {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 200))], spacing: 20) {
+                NavigationLink(destination: BookDetailView(book: .mockStandard)) {
+                    BookGridItem(book: .mockStandard)
+                }
+                NavigationLink(destination: BookDetailView(book: .mockLongTitle)) {
+                    BookGridItem(book: .mockLongTitle)
+                }
+                NavigationLink(destination: BookDetailView(book: .mockMultipleAuthors)) {
+                    BookGridItem(book: .mockMultipleAuthors)
+                }
+                NavigationLink(destination: BookDetailView(book: .mockMinimal)) {
+                    BookGridItem(book: .mockMinimal)
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Library")
+    }
+}
+
+#Preview("Dark Mode") {
+    NavigationView {
+        ScrollView {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 200))], spacing: 20) {
+                NavigationLink(destination: BookDetailView(book: .mockStandard)) {
+                    BookGridItem(book: .mockStandard)
+                }
+                NavigationLink(destination: BookDetailView(book: .mockLongTitle)) {
+                    BookGridItem(book: .mockLongTitle)
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Library")
+    }
+    .preferredColorScheme(.dark)
 }

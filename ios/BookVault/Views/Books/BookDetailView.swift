@@ -297,22 +297,35 @@ struct FlowLayout: Layout {
     }
 }
 
-#Preview {
+// MARK: - Previews
+
+#Preview("Standard Book") {
     NavigationView {
-        BookDetailView(book: Book(
-            id: UUID(),
-            asin: "B123456",
-            title: "Sample Audiobook",
-            description: "This is a sample description of an audiobook.",
-            runtimeMinutes: 480,
-            releaseDate: Date(),
-            publisher: "Sample Publisher",
-            coverUrl: "https://via.placeholder.com/300x450",
-            audioUrl: "https://example.com/audio.mp3",
-            authors: [Author(id: UUID(), name: "John Doe", asin: "A123")],
-            narrators: [Narrator(id: UUID(), name: "Jane Smith", asin: "N123")],
-            series: [SeriesInfo(id: UUID(), title: "Sample Series", sequence: "1", asin: "S123")],
-            categories: [Category(id: UUID(), name: "Fiction")]
-        ))
+        BookDetailView(book: .mockStandard)
     }
+}
+
+#Preview("Long Title with Series") {
+    NavigationView {
+        BookDetailView(book: .mockLongTitle)
+    }
+}
+
+#Preview("Minimal Book") {
+    NavigationView {
+        BookDetailView(book: .mockMinimal)
+    }
+}
+
+#Preview("Multiple Authors") {
+    NavigationView {
+        BookDetailView(book: .mockMultipleAuthors)
+    }
+}
+
+#Preview("Dark Mode") {
+    NavigationView {
+        BookDetailView(book: .mockStandard)
+    }
+    .preferredColorScheme(.dark)
 }

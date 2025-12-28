@@ -205,33 +205,8 @@ private struct ChapterButtonStyle: ButtonStyle {
 
 #Preview("With Chapters") {
     ChapterListView(
-        chapters: [
-            Chapter(
-                id: UUID(),
-                title: "Chapter 1: A Place for Demons",
-                startTime: 0,
-                endTime: 1806.5,
-                duration: 1806.5,
-                index: 0
-            ),
-            Chapter(
-                id: UUID(),
-                title: "Chapter 2: The Beginning of the End",
-                startTime: 1806.5,
-                endTime: 3612.0,
-                duration: 1805.5,
-                index: 1
-            ),
-            Chapter(
-                id: UUID(),
-                title: "Chapter 3: A Very Long Chapter Title That Should Wrap to Multiple Lines",
-                startTime: 3612.0,
-                endTime: 5418.0,
-                duration: 1806.0,
-                index: 2
-            )
-        ],
-        currentChapterId: UUID(),
+        chapters: Chapter.mockChapters,
+        currentChapterId: Chapter.mockChapter2.id,
         onChapterTap: { _ in }
     )
 }
@@ -242,4 +217,29 @@ private struct ChapterButtonStyle: ButtonStyle {
         currentChapterId: nil,
         onChapterTap: { _ in }
     )
+}
+
+#Preview("Single Chapter") {
+    ChapterListView(
+        chapters: [Chapter.mockChapter1],
+        currentChapterId: Chapter.mockChapter1.id,
+        onChapterTap: { _ in }
+    )
+}
+
+#Preview("Many Chapters") {
+    ChapterListView(
+        chapters: Array(repeating: Chapter.mockChapters, count: 4).flatMap { $0 },
+        currentChapterId: Chapter.mockChapter3.id,
+        onChapterTap: { _ in }
+    )
+}
+
+#Preview("Dark Mode") {
+    ChapterListView(
+        chapters: Chapter.mockChapters,
+        currentChapterId: Chapter.mockChapter2.id,
+        onChapterTap: { _ in }
+    )
+    .preferredColorScheme(.dark)
 }

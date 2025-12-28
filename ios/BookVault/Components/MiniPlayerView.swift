@@ -92,19 +92,50 @@ struct MiniPlayerView: View {
     }
 }
 
-// MARK: - Preview
+// MARK: - Previews
 
-#Preview("Mini Player - Playing", traits: .sizeThatFitsLayout) {
+#Preview("Playing", traits: .sizeThatFitsLayout) {
     VStack {
         Spacer()
         MiniPlayerView()
     }
+    .onAppear {
+        let manager = AudioPlayerManager.shared
+        manager.play(book: .mockStandard)
+    }
 }
 
-#Preview("Mini Player - Dark Mode", traits: .sizeThatFitsLayout) {
+#Preview("Paused", traits: .sizeThatFitsLayout) {
     VStack {
         Spacer()
         MiniPlayerView()
+    }
+    .onAppear {
+        let manager = AudioPlayerManager.shared
+        manager.play(book: .mockLongTitle)
+        manager.pause()
+    }
+}
+
+#Preview("Long Title", traits: .sizeThatFitsLayout) {
+    VStack {
+        Spacer()
+        MiniPlayerView()
+    }
+    .onAppear {
+        let manager = AudioPlayerManager.shared
+        manager.play(book: .mockLongTitle)
+    }
+}
+
+#Preview("Dark Mode", traits: .sizeThatFitsLayout) {
+    VStack {
+        Spacer()
+        MiniPlayerView()
+    }
+    .onAppear {
+        let manager = AudioPlayerManager.shared
+        manager.play(book: .mockStandard)
     }
     .preferredColorScheme(.dark)
 }

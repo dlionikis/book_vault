@@ -118,6 +118,13 @@ struct LoginView: View {
     }
 }
 
-#Preview {
+// MARK: - Previews
+
+#Preview("Default") {
     LoginView()
+}
+
+#Preview("Dark Mode") {
+    LoginView()
+        .preferredColorScheme(.dark)
 }

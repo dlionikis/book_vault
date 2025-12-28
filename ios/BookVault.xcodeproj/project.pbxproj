@@ -37,6 +37,7 @@
 		83FBA4EB518106B855919653 /* ChapterManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35A41D938656BA710F410348 /* ChapterManager.swift */; };
 		842665D8DF2E8F51931FCA9D /* GetUserLists200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EF7E9C4198781AD4DC0AE71 /* GetUserLists200Response.swift */; };
 		882216D12E3B9537B0EEB2F7 /* UpdateProgress200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16ACA1F44FB4601CFCAE0ACD /* UpdateProgress200Response.swift */; };
+		88D7CF1015FE72651A147C41 /* MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EBC40FF7EC2C18644492E92 /* MockData.swift */; };
 		89EE06A02EF4B094A2654BEB /* BatchUpdateProgressRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A74D57A5BC18D96438D69E0 /* BatchUpdateProgressRequest.swift */; };
 		8A4F17B54EBAF0C52C222D68 /* LoginMobileRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50FD28FC1A87C71A657E8C5 /* LoginMobileRequest.swift */; };
 		8B5B541C2B1F7ECE14FD8907 /* GetSearchSuggestions200ResponseAuthorsInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF1E641E72C554FEC3B6D648 /* GetSearchSuggestions200ResponseAuthorsInner.swift */; };
@@ -103,6 +104,7 @@
 
 /* Begin PBXFileReference section */
 		07066B5D8307687A6ABC47D6 /* AddToLibraryRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToLibraryRequest.swift; sourceTree = "<group>"; };
+		0EBC40FF7EC2C18644492E92 /* MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockData.swift; sourceTree = "<group>"; };
 		0F49B915ADAE6FC4D22FF490 /* UserProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProgress.swift; sourceTree = "<group>"; };
 		110040226A56C1501F8EC4EE /* SetProgressStatus200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetProgressStatus200Response.swift; sourceTree = "<group>"; };
 		132DF1231C3270E6D147EC99 /* NarratorWithBookCount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NarratorWithBookCount.swift; sourceTree = "<group>"; };
@@ -297,6 +299,7 @@
 			children = (
 				1FFF5A73653FF94DEC587D67 /* BookVaultApp.swift */,
 				E77F939BBACEC89FB5EA35A9 /* ContentView.swift */,
+				0EBC40FF7EC2C18644492E92 /* MockData.swift */,
 				23FB26F0B5F034779CA444A0 /* Components */,
 				A14EBCE113DFB4697DDEDA04 /* Models */,
 				5C6B49A6AD7421F7B91511AD /* Services */,
@@ -522,6 +525,7 @@
 				04A96D4505A47FA75482AC39 /* LogoutMobile200Response.swift in Sources */,
 				F59365CF57A87CB7894BF4A0 /* LogoutMobileRequest.swift in Sources */,
 				CD21E17A0FD368922EA9FFC0 /* MiniPlayerView.swift in Sources */,
+				88D7CF1015FE72651A147C41 /* MockData.swift in Sources */,
 				F8D6852406507515264E8B11 /* ModelError.swift in Sources */,
 				A17A3F59D79869DDFF6B6E75 /* Models.swift in Sources */,
 				8F9F563B2DE94883F330959D /* Narrator.swift in Sources */,
