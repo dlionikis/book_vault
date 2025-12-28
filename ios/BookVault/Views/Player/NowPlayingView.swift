@@ -14,6 +14,9 @@ struct NowPlayingView: View {
     // State for showing speed picker
     @State private var showingSpeedPicker = false
 
+    // Phase 5: State for showing chapter list
+    @State private var showingChapterList = false
+
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -89,31 +92,83 @@ struct NowPlayingView: View {
 
                         // Progress bar and time labels - 10% of screen height
                         VStack(spacing: 8) {
-                            ProgressBarView(
-                                currentTime: audioPlayer.currentTime,
-                                duration: audioPlayer.duration,
-                                onSeek: { time in
-                                    audioPlayer.seek(to: time)
+                            // Phase 5: Current chapter indicator (tappable)
+                            if let currentChapter = audioPlayer.getCurrentChapter() {
+                                Button {
+                                    showingChapterList = true
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "book.fill")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                        Text(currentChapter.title)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                        Spacer()
+                                        Text("Chapter \(currentChapter.index)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                        Image(systemName: "chevron.down")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
-                            )
-                            .padding(.horizontal, 32)
-
-                            HStack {
-                                Text(formatTime(audioPlayer.currentTime))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Text(formatTime(audioPlayer.duration))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                .padding(.horizontal, 32)
+                                .padding(.bottom, 4)
                             }
-                            .padding(.horizontal, 32)
+
+                            // Chapter-scoped progress bar
+                            if let currentChapter = audioPlayer.getCurrentChapter() {
+                                ProgressBarView(
+                                    currentTime: audioPlayer.currentTime - currentChapter.startTime,
+                                    duration: currentChapter.duration,
+                                    onSeek: { chapterRelativeTime in
+                                        audioPlayer.seek(to: currentChapter.startTime + chapterRelativeTime)
+                                    }
+                                )
+                                .padding(.horizontal, 32)
+
+                                HStack {
+                                    Text(formatTime(audioPlayer.currentTime - currentChapter.startTime))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Text(formatTime(currentChapter.duration))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding(.horizontal, 32)
+                            } else {
+                                // Fallback: Full book progress (no chapters)
+                                ProgressBarView(
+                                    currentTime: audioPlayer.currentTime,
+                                    duration: audioPlayer.duration,
+                                    onSeek: { time in
+                                        audioPlayer.seek(to: time)
+                                    }
+                                )
+                                .padding(.horizontal, 32)
+
+                                HStack {
+                                    Text(formatTime(audioPlayer.currentTime))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Text(formatTime(audioPlayer.duration))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding(.horizontal, 32)
+                            }
                         }
                         .frame(height: geometry.size.height * 0.1)
 
                         // Playback controls - 15% of screen height
                         PlaybackControlsView(
                             isPlaying: audioPlayer.isPlaying,
+                            chapters: audioPlayer.chapters,
+                            currentChapterId: audioPlayer.currentChapterId,
                             onPlayPause: {
                                 audioPlayer.togglePlayPause()
                             },
@@ -122,6 +177,33 @@ struct NowPlayingView: View {
                             },
                             onSkipForward: {
                                 audioPlayer.skipForward(seconds: 30)
+                            },
+                            onPreviousChapter: {
+                                // Smart back: restart chapter if >30s in, otherwise go to previous
+                                if let currentChapter = audioPlayer.getCurrentChapter() {
+                                    let positionInChapter = audioPlayer.currentTime - currentChapter.startTime
+
+                                    // If more than 30 seconds into chapter, restart current chapter
+                                    if positionInChapter > 30 {
+                                        audioPlayer.seek(to: currentChapter.startTime)
+                                    }
+                                    // Otherwise, go to previous chapter
+                                    else if let currentIndex = audioPlayer.chapters.firstIndex(where: { $0.id == currentChapter.id }),
+                                            currentIndex > 0 {
+                                        audioPlayer.skipToChapter(audioPlayer.chapters[currentIndex - 1])
+                                    }
+                                    // If at first chapter and within first 30s, just go to start
+                                    else {
+                                        audioPlayer.seek(to: currentChapter.startTime)
+                                    }
+                                }
+                            },
+                            onNextChapter: {
+                                if let currentChapter = audioPlayer.getCurrentChapter(),
+                                   let currentIndex = audioPlayer.chapters.firstIndex(where: { $0.id == currentChapter.id }),
+                                   currentIndex < audioPlayer.chapters.count - 1 {
+                                    audioPlayer.skipToChapter(audioPlayer.chapters[currentIndex + 1])
+                                }
                             }
                         )
                         .frame(height: geometry.size.height * 0.15)
@@ -182,6 +264,18 @@ struct NowPlayingView: View {
                     }
                 }
             }
+        }
+        .navigationTitle("Now Playing")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingChapterList) {
+            ChapterListView(
+                chapters: audioPlayer.chapters,
+                currentChapterId: audioPlayer.currentChapterId,
+                onChapterTap: { chapter in
+                    audioPlayer.skipToChapter(chapter)
+                    showingChapterList = false
+                }
+            )
         }
         .sheet(isPresented: $showingSpeedPicker) {
             PlaybackSpeedPicker(
@@ -280,12 +374,44 @@ struct ProgressBarView: View {
 
 struct PlaybackControlsView: View {
     let isPlaying: Bool
+    let chapters: [Chapter]
+    let currentChapterId: UUID?
     let onPlayPause: () -> Void
     let onSkipBackward: () -> Void
     let onSkipForward: () -> Void
+    let onPreviousChapter: () -> Void
+    let onNextChapter: () -> Void
+
+    var canGoPreviousChapter: Bool {
+        guard let currentChapterId = currentChapterId,
+              let currentIndex = chapters.firstIndex(where: { $0.id == currentChapterId }) else {
+            return false
+        }
+        return currentIndex > 0
+    }
+
+    var canGoNextChapter: Bool {
+        guard let currentChapterId = currentChapterId,
+              let currentIndex = chapters.firstIndex(where: { $0.id == currentChapterId }) else {
+            return false
+        }
+        return currentIndex < chapters.count - 1
+    }
 
     var body: some View {
-        HStack(spacing: 32) {
+        HStack(spacing: 20) {
+            // Previous chapter (only show if chapters available)
+            if !chapters.isEmpty {
+                Button(action: onPreviousChapter) {
+                    Label("Previous Chapter", systemImage: "backward.end.fill")
+                        .labelStyle(.iconOnly)
+                        .font(.system(size: 28))
+                        .foregroundStyle(canGoPreviousChapter ? Color.primary : Color.secondary.opacity(0.3))
+                }
+                .disabled(!canGoPreviousChapter)
+                .frame(width: 44, height: 44)
+            }
+
             // Skip backward 30s
             Button(action: onSkipBackward) {
                 Image(systemName: "gobackward.30")
@@ -305,6 +431,18 @@ struct PlaybackControlsView: View {
                 Image(systemName: "goforward.30")
                     .font(.system(size: 32))
                     .foregroundStyle(.primary)
+            }
+
+            // Next chapter (only show if chapters available)
+            if !chapters.isEmpty {
+                Button(action: onNextChapter) {
+                    Label("Next Chapter", systemImage: "forward.end.fill")
+                        .labelStyle(.iconOnly)
+                        .font(.system(size: 28))
+                        .foregroundStyle(canGoNextChapter ? Color.primary : Color.secondary.opacity(0.3))
+                }
+                .disabled(!canGoNextChapter)
+                .frame(width: 44, height: 44)
             }
         }
     }

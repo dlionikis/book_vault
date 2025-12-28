@@ -662,8 +662,8 @@ Find the OpenAPI/API contract section and update:
 ```markdown
 # Book Vault
 
-[![API Contract](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/api.yml/badge.svg)](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/api.yml)
-[![Storybook](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/storybook.yml/badge.svg)](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/storybook.yml)
+[![API Contract](https://github.com/dlionikis/book_vault/actions/workflows/api.yml/badge.svg)](https://github.com/dlionikis/book_vault/actions/workflows/api.yml)
+[![Storybook](https://github.com/dlionikis/book_vault/actions/workflows/storybook.yml/badge.svg)](https://github.com/dlionikis/book_vault/actions/workflows/storybook.yml)
 
 Personal audiobook library for managing and streaming audiobooks from Libation.
 
@@ -697,7 +697,7 @@ Every PR and push to `main` runs:
 **Status Badge**:
 
 ```markdown
-[![API Contract](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/api.yml/badge.svg)](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/api.yml)
+[![API Contract](https://github.com/dlionikis/book_vault/actions/workflows/api.yml/badge.svg)](https://github.com/dlionikis/book_vault/actions/workflows/api.yml)
 ```
 ````
 

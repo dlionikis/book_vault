@@ -10,6 +10,7 @@ import SwiftUI
 struct BookDetailView: View {
     let book: Book
     @StateObject private var audioPlayer = AudioPlayerManager.shared
+    @StateObject private var chapterManager = ChapterManager()
     @State private var showingNowPlaying = false
 
     var body: some View {
@@ -164,6 +165,11 @@ struct BookDetailView: View {
                             // Start playing or resume, and show full player
                             if audioPlayer.currentBook?.id != book.id {
                                 audioPlayer.play(book: book)
+                                // Phase 5: Fetch chapters in background (non-blocking)
+                                Task {
+                                    let chapters = await chapterManager.fetchChapters(bookId: book.id.uuidString)
+                                    await audioPlayer.updateChapters(chapters)
+                                }
                             } else {
                                 audioPlayer.resume()
                             }

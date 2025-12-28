@@ -315,6 +315,11 @@ export interface components {
        * @example 1806.5
        */
       endTime: number;
+      /**
+       * Format: double
+       * @example 1806.5
+       */
+      duration: number;
       /** @example 0 */
       index: number;
     };
