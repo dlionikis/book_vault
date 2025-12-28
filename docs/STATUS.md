@@ -2,36 +2,57 @@
 
 ## Current State
 
-Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing. iOS mobile app development is progressing with Phase 3.5 (Mini Player UI) complete.
+Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing. iOS mobile app development has completed Phase 3 (Background Audio) and Phase 3.5 (Mini Player UI) with full integration merged to main.
 
 ### Recent Accomplishments
 
-#### iOS Phase 3.5: Mini Player UI (December 27, 2025)
+#### iOS Phase 3 & 3.5: Background Audio + Mini Player (December 27, 2025) ✅ MERGED
 
-- ✅ Implemented persistent mini player bar at bottom of all screens
-- ✅ Shows cover art, book title/author, and play/pause button
-- ✅ Tap-to-expand navigation to full player
-- ✅ Smooth slide-up/down animations
-- ✅ Dark mode support with appropriate shadows
-- ✅ Uses `.safeAreaInset()` for automatic content padding
-- ✅ Cached cover image in AudioPlayerManager for mini player
-- ✅ Zero warnings, builds successfully on Xcode
-- **Impact**: Provides persistent playback controls and visibility across all screens
-- **Files**: `ios/BookVault/Components/MiniPlayerView.swift`, updated `AudioPlayerManager.swift` and `BooksListView.swift`
-- **Documentation**: `docs/mobile/implementation-phases/phase-3.5-mini-player.md`
-
-#### iOS Phase 3: Background Audio & Lock Screen Controls (December 27, 2025)
+**Phase 3: Background Audio & Lock Screen Controls**
 
 - ✅ Background audio playback (audio continues when app is minimized)
-- ✅ Lock screen controls (play/pause/skip on lock screen)
+- ✅ Lock screen controls (play/pause/skip forward/skip backward)
 - ✅ Lock screen metadata display (cover art, title, author, progress)
+- ✅ Lock screen scrubbing support (change playback position)
 - ✅ Audio interruption handling (phone calls, alarms)
 - ✅ Route change handling (headphone disconnect)
 - ✅ MPNowPlayingInfoCenter integration
 - ✅ MPRemoteCommandCenter integration
-- **Impact**: Professional audio app experience with full background playback support
-- **Files**: Enhanced `AudioPlayerManager.swift`, configured `Info.plist`
-- **Branch**: `feature/ios-phase3.5-mini-player` (based on merged `feature/ios-phase3-background-audio`)
+- ✅ AVAudioSession configured for .playback + .spokenAudio
+
+**Phase 3.5: Mini Player UI**
+
+- ✅ Persistent mini player bar at bottom of all authenticated screens
+- ✅ Shows cover art (40x40pt), book title/author, and play/pause button
+- ✅ Sheet presentation for full player (Spotify/Apple Music UX pattern)
+- ✅ Swipe-to-dismiss full player reveals mini player underneath
+- ✅ Smooth animations with .spring() for mini player appearance
+- ✅ Dark mode support with appropriate shadows and contrast
+- ✅ Uses `.safeAreaInset()` at ContentView root for universal visibility
+- ✅ Cached cover image in AudioPlayerManager for instant mini player rendering
+- ✅ Play/pause toggle logic on book detail page
+- ✅ Thread-safe UI updates with @MainActor annotations
+
+**Technical Improvements:**
+
+- Added @MainActor to play(), resume(), pause(), togglePlayPause() for UI thread safety
+- Wrapped MPRemoteCommandCenter callbacks in Task { @MainActor in } blocks
+- Enhanced AudioPlayerManager with currentBookCoverImage property
+- Moved mini player from BooksListView to ContentView for universal visibility
+- Refined button behavior: pause without showing player vs. play/resume with player
+
+**Bug Fixes:**
+
+- Fixed play/pause toggle not working on book detail page
+- Fixed mini player not appearing immediately after starting playback
+- Fixed sheet presentation not showing on Play button tap
+- Fixed mini player not visible on NavigationView children (BookDetailView)
+- Resolved main actor isolation errors in async callbacks
+
+- **Impact**: Professional iOS audiobook app with background playback, lock screen controls, and persistent mini player UI matching industry standards (Spotify/Apple Music)
+- **Files**: `MiniPlayerView.swift` (new), enhanced `AudioPlayerManager.swift`, updated `ContentView.swift`, `BookDetailView.swift`, `NowPlayingView.swift`
+- **Merged**: Commit a03625f (includes both Phase 3 and Phase 3.5)
+- **Documentation**: `docs/mobile/implementation-phases/phase-3.5-mini-player.md`, `ios/PHASE3_TESTING.md`
 
 #### Dual Authentication Implementation (December 26, 2025)
 
@@ -324,5 +345,5 @@ All documentation is up to date:
 
 ---
 
-**Last Updated**: December 26, 2025, 2:00 PM CST
-**Next Review**: December 27, 2025
+**Last Updated**: December 27, 2025, 1:30 PM CST
+**Next Review**: December 28, 2025
