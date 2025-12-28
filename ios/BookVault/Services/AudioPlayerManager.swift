@@ -31,6 +31,7 @@ class AudioPlayerManager: ObservableObject {
     private var player: AVPlayer?
     private var timeObserver: Any?
     private var cancellables = Set<AnyCancellable>()
+    private var resourceLoaderDelegate: AuthenticatedAVAssetResourceLoaderDelegate?
 
     // MARK: - Computed Properties
 
@@ -94,6 +95,9 @@ class AudioPlayerManager: ObservableObject {
         Task { @MainActor in
             // Ensure we have authentication token
             guard let token = AuthManager.shared.token else {
+                #if DEBUG
+                print("❌ AudioPlayerManager: No authentication token")
+                #endif
                 self.error = NSError(
                     domain: "AudioPlayerManager",
                     code: 401,
@@ -103,8 +107,16 @@ class AudioPlayerManager: ObservableObject {
                 return
             }
 
-            // Create URL request with authentication
-            guard let url = URL(string: book.audioUrl) else {
+            #if DEBUG
+            print("🎵 AudioPlayerManager: Starting playback for \(book.title)")
+            print("🎵 Audio URL: \(book.audioUrl)")
+            #endif
+
+            // Create URL with custom scheme for resource loader interception
+            guard var url = URL(string: book.audioUrl) else {
+                #if DEBUG
+                print("❌ AudioPlayerManager: Invalid audio URL: \(book.audioUrl)")
+                #endif
                 self.error = NSError(
                     domain: "AudioPlayerManager",
                     code: 400,
@@ -114,11 +126,43 @@ class AudioPlayerManager: ObservableObject {
                 return
             }
 
-            var request = URLRequest(url: url)
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            // Convert http:// to bookvault:// so resource loader can intercept
+            guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+                #if DEBUG
+                print("❌ AudioPlayerManager: Invalid URL components")
+                #endif
+                self.isLoading = false
+                return
+            }
 
-            // Create AVAsset with headers
-            let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": request.allHTTPHeaderFields ?? [:]])
+            if components.scheme == "http" {
+                components.scheme = "bookvault"
+            } else if components.scheme == "https" {
+                components.scheme = "bookvaults"
+            }
+
+            guard let customSchemeURL = components.url else {
+                #if DEBUG
+                print("❌ AudioPlayerManager: Failed to create custom scheme URL")
+                #endif
+                self.isLoading = false
+                return
+            }
+
+            #if DEBUG
+            print("🎵 Custom scheme URL: \(customSchemeURL.absoluteString)")
+            #endif
+
+            // Create resource loader delegate
+            self.resourceLoaderDelegate = AuthenticatedAVAssetResourceLoaderDelegate(authToken: token)
+
+            // Create AVAsset with resource loader
+            let asset = AVURLAsset(url: customSchemeURL)
+            asset.resourceLoader.setDelegate(
+                self.resourceLoaderDelegate,
+                queue: DispatchQueue(label: "com.bookvault.resourceloader")
+            )
+
             let playerItem = AVPlayerItem(asset: asset)
 
             // Create or replace player
@@ -128,20 +172,14 @@ class AudioPlayerManager: ObservableObject {
                 self.player?.replaceCurrentItem(with: playerItem)
             }
 
-            // Set initial playback rate and volume
-            self.player?.rate = self.playbackRate
+            // Set initial volume
             self.player?.volume = self.volume
 
             // Setup time observer
             self.setupTimeObserver()
 
-            // Setup duration observer
+            // Setup duration observer and start playback when ready
             self.setupDurationObserver(for: playerItem)
-
-            // Start playing
-            self.player?.play()
-            self.isPlaying = true
-            self.isLoading = false
         }
     }
 
@@ -234,12 +272,43 @@ class AudioPlayerManager: ObservableObject {
         // Observe status to get duration
         playerItem.publisher(for: \.status)
             .sink { [weak self] status in
+                guard let self = self else { return }
+
+                #if DEBUG
+                print("🎵 AVPlayerItem status: \(status.rawValue)")
+                #endif
+
                 if status == .readyToPlay {
-                    self?.duration = playerItem.duration.seconds
-                    self?.isLoading = false
+                    #if DEBUG
+                    print("🎵 Duration: \(playerItem.duration.seconds) seconds")
+                    #endif
+                    self.duration = playerItem.duration.seconds
+                    self.isLoading = false
+
+                    // Start playback now that we're ready
+                    #if DEBUG
+                    print("🎵 AudioPlayerManager: Starting playback...")
+                    #endif
+                    self.player?.play()
+
+                    // Set playback rate after calling play()
+                    if self.playbackRate != 1.0 {
+                        self.player?.rate = self.playbackRate
+                    }
+
+                    self.isPlaying = true
+
+                    #if DEBUG
+                    print("🎵 AudioPlayerManager: Player rate: \(self.player?.rate ?? 0)")
+                    print("🎵 AudioPlayerManager: Player timeControlStatus: \(self.player?.timeControlStatus.rawValue ?? -1)")
+                    #endif
+
                 } else if status == .failed {
-                    self?.error = playerItem.error
-                    self?.isLoading = false
+                    #if DEBUG
+                    print("❌ AVPlayerItem failed: \(playerItem.error?.localizedDescription ?? "unknown error")")
+                    #endif
+                    self.error = playerItem.error
+                    self.isLoading = false
                 }
             }
             .store(in: &cancellables)

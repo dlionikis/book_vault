@@ -16,20 +16,20 @@ struct NowPlayingView: View {
     @State private var showingSpeedPicker = false
 
     var body: some View {
-        ZStack {
-            // Background gradient
-            LinearGradient(
-                colors: [
-                    Color.blue.opacity(0.3),
-                    Color.purple.opacity(0.3)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+        GeometryReader { geometry in
+            ZStack {
+                // Background gradient
+                LinearGradient(
+                    colors: [
+                        Color.blue.opacity(0.3),
+                        Color.purple.opacity(0.3)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: 0) {
                     // Close button
                     HStack {
                         Spacer()
@@ -42,9 +42,11 @@ struct NowPlayingView: View {
                         }
                     }
                     .padding(.horizontal)
+                    .padding(.top, 16)
+                    .frame(height: geometry.size.height * 0.08)
 
                     if let book = audioPlayer.currentBook {
-                        // Cover art
+                        // Cover art - 35% of screen height
                         AsyncImage(url: URL(string: book.coverUrl)) { phase in
                             switch phase {
                             case .empty:
@@ -69,53 +71,59 @@ struct NowPlayingView: View {
                                 EmptyView()
                             }
                         }
-                        .frame(maxWidth: 400, maxHeight: 400)
+                        .frame(height: geometry.size.height * 0.35)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
                         .padding(.horizontal, 40)
 
-                        // Book title
-                        Text(book.title)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-
-                        // Authors
-                        if !book.authors.isEmpty {
-                            Text(book.authors.map { $0.name }.joined(separator: ", "))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                        // Book title and author - 12% of screen height
+                        VStack(spacing: 4) {
+                            Text(book.title)
+                                .font(.title3)
+                                .fontWeight(.bold)
                                 .multilineTextAlignment(.center)
-                        }
+                                .lineLimit(2)
+                                .padding(.horizontal)
 
-                        Spacer().frame(height: 20)
-
-                        // Progress bar
-                        ProgressBarView(
-                            currentTime: audioPlayer.currentTime,
-                            duration: audioPlayer.duration,
-                            onSeek: { time in
-                                audioPlayer.seek(to: time)
+                            if !book.authors.isEmpty {
+                                Text(book.authors.map { $0.name }.joined(separator: ", "))
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(1)
                             }
-                        )
-                        .padding(.horizontal, 32)
-
-                        // Time labels
-                        HStack {
-                            Text(formatTime(audioPlayer.currentTime))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Text(formatTime(audioPlayer.duration))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
                         }
-                        .padding(.horizontal, 32)
+                        .frame(height: geometry.size.height * 0.12)
 
-                        Spacer().frame(height: 24)
+                        // Spacer to push controls down
+                        Spacer()
+                            .frame(height: geometry.size.height * 0.03)
 
-                        // Playback controls
+                        // Progress bar and time labels - 10% of screen height
+                        VStack(spacing: 8) {
+                            ProgressBarView(
+                                currentTime: audioPlayer.currentTime,
+                                duration: audioPlayer.duration,
+                                onSeek: { time in
+                                    audioPlayer.seek(to: time)
+                                }
+                            )
+                            .padding(.horizontal, 32)
+
+                            HStack {
+                                Text(formatTime(audioPlayer.currentTime))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(formatTime(audioPlayer.duration))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.horizontal, 32)
+                        }
+                        .frame(height: geometry.size.height * 0.1)
+
+                        // Playback controls - 15% of screen height
                         PlaybackControlsView(
                             isPlaying: audioPlayer.isPlaying,
                             onPlayPause: {
@@ -128,29 +136,16 @@ struct NowPlayingView: View {
                                 audioPlayer.skipForward(seconds: 30)
                             }
                         )
+                        .frame(height: geometry.size.height * 0.15)
                         .padding(.horizontal, 32)
 
-                        Spacer().frame(height: 24)
-
-                        // Playback speed and volume controls
-                        HStack(spacing: 40) {
-                            // Playback speed button
-                            Button {
-                                showingSpeedPicker = true
-                            } label: {
-                                VStack(spacing: 4) {
-                                    Image(systemName: "gauge.with.dots.needle.67percent")
-                                        .font(.title3)
-                                    Text("\(String(format: "%.1fx", audioPlayer.playbackRate))")
-                                        .font(.caption)
-                                }
-                            }
-                            .foregroundStyle(.primary)
-
+                        // Volume and Speed controls - 10% of screen height
+                        HStack(spacing: 20) {
                             // Volume control
-                            VStack(spacing: 8) {
+                            HStack(spacing: 12) {
                                 Image(systemName: volumeIcon(for: audioPlayer.volume))
-                                    .font(.title3)
+                                    .font(.body)
+                                    .frame(width: 24)
                                 Slider(
                                     value: Binding(
                                         get: { audioPlayer.volume },
@@ -158,12 +153,33 @@ struct NowPlayingView: View {
                                     ),
                                     in: 0...1
                                 )
-                                .frame(width: 150)
                             }
+
+                            // Playback speed button (compact)
+                            Button {
+                                showingSpeedPicker = true
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "speedometer")
+                                        .font(.body)
+                                    Text(String(format: "%.2gx", audioPlayer.playbackRate))
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .frame(minWidth: 32)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.blue.opacity(0.15))
+                                .cornerRadius(8)
+                            }
+                            .foregroundStyle(.primary)
                         }
+                        .frame(height: geometry.size.height * 0.1)
                         .padding(.horizontal, 32)
 
+                        // Bottom spacer - 8% of screen height
                         Spacer()
+                            .frame(height: geometry.size.height * 0.08)
                     } else {
                         // No book loaded
                         VStack(spacing: 16) {
@@ -177,7 +193,6 @@ struct NowPlayingView: View {
                         .frame(maxHeight: .infinity)
                     }
                 }
-                .padding(.vertical)
             }
         }
         .sheet(isPresented: $showingSpeedPicker) {
@@ -282,25 +297,25 @@ struct PlaybackControlsView: View {
     let onSkipForward: () -> Void
 
     var body: some View {
-        HStack(spacing: 40) {
+        HStack(spacing: 32) {
             // Skip backward 30s
             Button(action: onSkipBackward) {
                 Image(systemName: "gobackward.30")
-                    .font(.system(size: 36))
+                    .font(.system(size: 32))
                     .foregroundStyle(.primary)
             }
 
             // Play/Pause
             Button(action: onPlayPause) {
                 Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 80))
+                    .font(.system(size: 64))
                     .foregroundStyle(.primary)
             }
 
             // Skip forward 30s
             Button(action: onSkipForward) {
                 Image(systemName: "goforward.30")
-                    .font(.system(size: 36))
+                    .font(.system(size: 32))
                     .foregroundStyle(.primary)
             }
         }
