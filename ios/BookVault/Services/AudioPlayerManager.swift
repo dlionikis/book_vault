@@ -5,6 +5,7 @@
 //  Created by Claude Code on 12/27/25.
 //  Phase 2: Audio Playback (Basic)
 //  Phase 3: Background Audio & Lock Screen Controls
+//  Phase 4: Progress Sync
 //
 
 import Foundation
@@ -35,6 +36,9 @@ class AudioPlayerManager: ObservableObject {
     private var timeObserver: Any?
     private var cancellables = Set<AnyCancellable>()
     private var resourceLoaderDelegate: AuthenticatedAVAssetResourceLoaderDelegate?
+    private var progressSaveTimer: Timer?
+    private var progressManager = ProgressManager.shared
+    private var lastSavedPosition: TimeInterval = 0
 
     // MARK: - Computed Properties
 
@@ -335,6 +339,18 @@ class AudioPlayerManager: ObservableObject {
             // Set initial volume
             self.player?.volume = self.volume
 
+            // Fetch saved progress before starting playback
+            if let savedProgress = try? await self.progressManager.fetchProgress(for: book.id.uuidString) {
+                #if DEBUG
+                print("📍 Loaded saved position: \(savedProgress.positionSeconds)s")
+                #endif
+
+                // If book is not completed and has saved position, seek to it
+                if !savedProgress.completed && savedProgress.positionSeconds > 0 {
+                    self.lastSavedPosition = savedProgress.positionSeconds
+                }
+            }
+
             // Setup time observer
             self.setupTimeObserver()
 
@@ -349,6 +365,7 @@ class AudioPlayerManager: ObservableObject {
         player?.play()
         isPlaying = true
         updateNowPlayingInfo()
+        startProgressSaveTimer()
     }
 
     /// Pause playback
@@ -357,6 +374,27 @@ class AudioPlayerManager: ObservableObject {
         player?.pause()
         isPlaying = false
         updateNowPlayingInfo()
+        stopProgressSaveTimer()
+
+        // Save progress immediately when pausing
+        if let book = currentBook, currentTime > 0 {
+            Task {
+                do {
+                    try await progressManager.saveProgress(
+                        for: book.id.uuidString,
+                        positionSeconds: currentTime
+                    )
+                    lastSavedPosition = currentTime
+                    #if DEBUG
+                    print("💾 Progress saved on pause: \(currentTime)s")
+                    #endif
+                } catch {
+                    #if DEBUG
+                    print("❌ Failed to save progress on pause: \(error.localizedDescription)")
+                    #endif
+                }
+            }
+        }
     }
 
     /// Toggle play/pause
@@ -408,7 +446,28 @@ class AudioPlayerManager: ObservableObject {
     }
 
     /// Stop playback and cleanup
+    @MainActor
     func stop() {
+        // Save final progress before stopping
+        if let book = currentBook, currentTime > 0 {
+            Task {
+                do {
+                    try await progressManager.saveProgress(
+                        for: book.id.uuidString,
+                        positionSeconds: currentTime
+                    )
+                    #if DEBUG
+                    print("💾 Final progress saved: \(currentTime)s")
+                    #endif
+                } catch {
+                    #if DEBUG
+                    print("❌ Failed to save final progress: \(error.localizedDescription)")
+                    #endif
+                }
+            }
+        }
+
+        stopProgressSaveTimer()
         player?.pause()
         player?.replaceCurrentItem(with: nil)
         currentBook = nil
@@ -416,6 +475,7 @@ class AudioPlayerManager: ObservableObject {
         isPlaying = false
         currentTime = 0
         duration = 0
+        lastSavedPosition = 0
     }
 
     // MARK: - Private Methods
@@ -453,21 +513,47 @@ class AudioPlayerManager: ObservableObject {
                     self.duration = playerItem.duration.seconds
                     self.isLoading = false
 
-                    // Start playback now that we're ready
-                    #if DEBUG
-                    print("🎵 AudioPlayerManager: Starting playback...")
-                    #endif
-                    self.player?.play()
+                    // Seek to saved position if available
+                    if self.lastSavedPosition > 0 {
+                        #if DEBUG
+                        print("📍 Seeking to saved position: \(self.lastSavedPosition)s")
+                        #endif
+                        let cmTime = CMTime(seconds: self.lastSavedPosition, preferredTimescale: 1000)
+                        self.player?.seek(to: cmTime) { _ in
+                            // Start playback after seek completes
+                            self.player?.play()
 
-                    // Set playback rate after calling play()
-                    if self.playbackRate != 1.0 {
-                        self.player?.rate = self.playbackRate
+                            // Set playback rate after calling play()
+                            if self.playbackRate != 1.0 {
+                                self.player?.rate = self.playbackRate
+                            }
+
+                            self.isPlaying = true
+                            self.updateNowPlayingInfo()
+
+                            // Start auto-save timer
+                            self.startProgressSaveTimer()
+                        }
+                    } else {
+                        // Start playback now that we're ready
+                        #if DEBUG
+                        print("🎵 AudioPlayerManager: Starting playback...")
+                        #endif
+                        self.player?.play()
+
+                        // Set playback rate after calling play()
+                        if self.playbackRate != 1.0 {
+                            self.player?.rate = self.playbackRate
+                        }
+
+                        self.isPlaying = true
+
+                        // Update lock screen metadata
+                        self.updateNowPlayingInfo()
+
+                        // Start auto-save timer
+                        self.startProgressSaveTimer()
                     }
-
-                    self.isPlaying = true
-
-                    // Update lock screen metadata
-                    self.updateNowPlayingInfo()
 
                     #if DEBUG
                     print("🎵 AudioPlayerManager: Player rate: \(self.player?.rate ?? 0)")
@@ -567,10 +653,62 @@ class AudioPlayerManager: ObservableObject {
         }
     }
 
+    // MARK: - Progress Sync
+
+    private func startProgressSaveTimer() {
+        // Stop existing timer if any
+        stopProgressSaveTimer()
+
+        #if DEBUG
+        print("⏰ Starting progress save timer (10s intervals)")
+        #endif
+
+        // Create timer that fires every 10 seconds
+        progressSaveTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                await self?.saveProgress()
+            }
+        }
+    }
+
+    private func stopProgressSaveTimer() {
+        progressSaveTimer?.invalidate()
+        progressSaveTimer = nil
+
+        #if DEBUG
+        print("⏸️ Stopped progress save timer")
+        #endif
+    }
+
+    @MainActor
+    private func saveProgress() async {
+        guard let book = currentBook else { return }
+
+        // Only save if position has changed significantly (> 1 second)
+        guard abs(currentTime - lastSavedPosition) > 1.0 else { return }
+
+        do {
+            try await progressManager.saveProgress(
+                for: book.id.uuidString,
+                positionSeconds: currentTime
+            )
+            lastSavedPosition = currentTime
+
+            #if DEBUG
+            print("💾 Auto-saved progress: \(currentTime)s")
+            #endif
+        } catch {
+            #if DEBUG
+            print("❌ Failed to save progress: \(error.localizedDescription)")
+            #endif
+        }
+    }
+
     private func cleanup() {
         if let observer = timeObserver {
             player?.removeTimeObserver(observer)
         }
+        stopProgressSaveTimer()
         cancellables.removeAll()
         NotificationCenter.default.removeObserver(self)
     }
