@@ -8,7 +8,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     joinTableModel: prisma.bookAuthor,
     idFieldName: 'authorId',
     entityName: 'Author',
-    getResponseFields: (author) => ({
+    getResponseFields: (author: any) => ({
       id: author.id,
       name: author.name,
       asin: author.asin,
