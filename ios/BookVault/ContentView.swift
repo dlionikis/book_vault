@@ -20,48 +20,61 @@ struct ContentView: View {
     @State private var selectedTab: Tab = .library
 
     var body: some View {
-        Group {
-            if authManager.isAuthenticated {
-                // User is logged in - show tab view
-                TabView(selection: $selectedTab) {
-                    BooksListView()
-                        .tabItem {
-                            Label("Library", systemImage: "books.vertical")
-                        }
-                        .tag(Tab.library)
+        ZStack(alignment: .bottom) {
+            Group {
+                if authManager.isAuthenticated {
+                    // User is logged in - show tab view
+                    TabView(selection: $selectedTab) {
+                        BooksListView()
+                            .tabItem {
+                                Label("Library", systemImage: "books.vertical")
+                            }
+                            .tag(Tab.library)
 
-                    BrowseView()
-                        .tabItem {
-                            Label("Browse", systemImage: "square.grid.2x2")
-                        }
-                        .tag(Tab.browse)
+                        BrowseView()
+                            .tabItem {
+                                Label("Browse", systemImage: "square.grid.2x2")
+                            }
+                            .tag(Tab.browse)
 
-                    SearchView()
-                        .tabItem {
-                            Label("Search", systemImage: "magnifyingglass")
-                        }
-                        .tag(Tab.search)
-                }
-                .task {
-                    // Auto-load most recently played book on first appearance
-                    if !hasLoadedInitialBook && audioPlayer.currentBook == nil {
-                        await loadMostRecentlyPlayedBook()
-                        hasLoadedInitialBook = true
+                        SearchView()
+                            .tabItem {
+                                Label("Search", systemImage: "magnifyingglass")
+                            }
+                            .tag(Tab.search)
                     }
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        // Add spacing for mini player when it's showing
+                        if audioPlayer.currentBook != nil {
+                            Color.clear
+                                .frame(height: 64)
+                        }
+                    }
+                    .task {
+                        // Auto-load most recently played book on first appearance
+                        if !hasLoadedInitialBook && audioPlayer.currentBook == nil {
+                            await loadMostRecentlyPlayedBook()
+                            hasLoadedInitialBook = true
+                        }
+                    }
+                } else {
+                    // User is not logged in - show login screen
+                    LoginView()
                 }
-            } else {
-                // User is not logged in - show login screen
-                LoginView()
             }
-        }
-        .animation(.default, value: authManager.isAuthenticated)
-        .safeAreaInset(edge: .bottom) {
+            .animation(.default, value: authManager.isAuthenticated)
+
+            // Mini player overlay - appears above tab bar
             if audioPlayer.currentBook != nil {
-                MiniPlayerView()
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                VStack(spacing: 0) {
+                    Spacer()
+                    MiniPlayerView()
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.spring(response: 0.3, dampingFraction: 0.8), value: audioPlayer.currentBook != nil)
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: audioPlayer.currentBook != nil)
+        .ignoresSafeArea(.keyboard)
     }
 
     private func loadMostRecentlyPlayedBook() async {
