@@ -123,8 +123,9 @@ struct BookDetailView: View {
                                         .font(.caption)
                                         .foregroundColor(.secondary)
 
-                                    FlowLayout(spacing: 6) {
-                                        ForEach(categories, id: \.id) { category in
+                                    // Use simple wrapping for now
+                                    HStack(alignment: .top, spacing: 6) {
+                                        ForEach(categories.prefix(3), id: \.id) { category in
                                             Text(category.name)
                                                 .font(.caption)
                                                 .padding(.horizontal, 10)
@@ -132,6 +133,11 @@ struct BookDetailView: View {
                                                 .background(Color.blue.opacity(0.1))
                                                 .foregroundColor(.blue)
                                                 .clipShape(Capsule())
+                                        }
+                                        if categories.count > 3 {
+                                            Text("+\(categories.count - 3)")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
                                         }
                                     }
                                 }
