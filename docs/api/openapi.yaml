@@ -228,7 +228,7 @@ components:
 
     Chapter:
       type: object
-      required: [id, title, startTime, endTime, index]
+      required: [id, title, startTime, endTime, duration, index]
       properties:
         id:
           type: string
@@ -242,6 +242,11 @@ components:
           minimum: 0
           example: 0
         endTime:
+          type: number
+          format: double
+          minimum: 0
+          example: 1806.5
+        duration:
           type: number
           format: double
           minimum: 0

@@ -62,28 +62,6 @@ struct BooksListView: View {
                     .padding()
                 } else {
                     VStack(alignment: .leading, spacing: 20) {
-                        // Continue Listening section
-                        if !viewModel.inProgressBooks.isEmpty {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Continue Listening")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .padding(.horizontal)
-
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    LazyHStack(spacing: 16) {
-                                        ForEach(viewModel.inProgressBooks, id: \.id) { book in
-                                            NavigationLink(destination: BookDetailView(book: book)) {
-                                                ContinueListeningCard(book: book)
-                                            }
-                                            .buttonStyle(.plain)
-                                        }
-                                    }
-                                    .padding(.horizontal)
-                                }
-                            }
-                        }
-
                         // All Books grid
                         VStack(alignment: .leading, spacing: 12) {
                             Text("All Books")
@@ -235,13 +213,11 @@ struct BookGridItem: View {
 @MainActor
 class BooksListViewModel: ObservableObject {
     @Published var books: [Book] = []
-    @Published var inProgressBooks: [Book] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var hasMorePages = true
 
     private let apiClient = APIClient.shared
-    private let progressManager = ProgressManager.shared
     private var currentPage = 1
     private let pageSize = 20
     private var totalPages = 1
@@ -259,38 +235,10 @@ class BooksListViewModel: ObservableObject {
             self.totalPages = response.pagination.pages
             self.hasMorePages = currentPage < totalPages
             isLoading = false
-
-            // Load in-progress books
-            await loadInProgressBooks()
         } catch {
             isLoading = false
             errorMessage = error.localizedDescription
         }
-    }
-
-    private func loadInProgressBooks() async {
-        // Fetch progress for all current books
-        var booksWithProgress: [(book: Book, progress: UserProgress)] = []
-
-        for book in books.prefix(50) {  // Limit to first 50 for performance
-            if let progress = try? await progressManager.fetchProgress(for: book.id.uuidString) {
-                // Only include books that are in progress (not completed, and have position > 0)
-                if !progress.completed && progress.positionSeconds > 0 {
-                    booksWithProgress.append((book, progress))
-                }
-            }
-        }
-
-        // Sort by last played (most recent first)
-        booksWithProgress.sort { lhs, rhs in
-            guard let lhsDate = lhs.progress.lastPlayed, let rhsDate = rhs.progress.lastPlayed else {
-                return false
-            }
-            return lhsDate > rhsDate
-        }
-
-        // Take top 5 most recently played
-        self.inProgressBooks = booksWithProgress.prefix(5).map { $0.book }
     }
 
     func loadMoreBooks() async {

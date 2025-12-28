@@ -2,9 +2,55 @@
 
 ## Current State
 
-Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing. iOS mobile app development has completed Phase 4 (Progress Sync) with full cross-platform progress synchronization between iOS and web.
+Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing. iOS mobile app development has completed Phase 5 (Chapter Navigation) with full chapter browsing and navigation capabilities.
 
 ### Recent Accomplishments
+
+#### iOS Phase 5: Chapter Navigation (December 28, 2025) ✅ COMPLETE
+
+**Core Features:**
+
+- ✅ ChapterManager service for fetching and caching chapters from API
+- ✅ AudioPlayerManager enhanced with automatic chapter tracking during playback
+- ✅ ChapterListView UI component with current chapter highlighting
+- ✅ Sheet presentation from Now Playing screen (Chapters button)
+- ✅ Skip to chapter functionality with smooth seeking
+- ✅ Empty state handling for books without chapters
+- ✅ Accessibility support (VoiceOver labels, Dynamic Type, tap targets)
+
+**Technical Improvements:**
+
+- ✅ Fixed backend bug: Added `duration` field to chapter API responses (was causing "NaN" in web app)
+- ✅ Updated OpenAPI spec: Chapter schema now requires duration field
+- ✅ Auto-generated Swift models include duration property
+- ✅ Non-blocking chapter fetch (playback starts immediately, chapters load in background)
+- ✅ In-memory caching by book ID (prevents redundant API calls)
+- ✅ Silent failures with graceful degradation (chapters are optional)
+- ✅ Thread-safe with @MainActor annotations throughout
+- ✅ Automatic current chapter tracking via time observer
+
+**Files Created:**
+
+- `ios/BookVault/Services/ChapterManager.swift` (103 lines)
+- `ios/BookVault/Views/NowPlaying/ChapterListView.swift` (205 lines)
+- `docs/mobile/implementation-phases/phase-5-chapter-navigation.md` (detailed plan)
+- `ios/PHASE5_COMPLETE.md` (completion log)
+
+**Files Modified:**
+
+- `app/api/books/[id]/chapters/route.ts` - Added duration to responses
+- `docs/api/openapi.yaml` - Updated Chapter schema
+- `ios/BookVault/Services/AudioPlayerManager.swift` - Chapter tracking
+- `ios/BookVault/Views/Player/NowPlayingView.swift` - Chapters button
+- `ios/BookVault/Views/Books/BookDetailView.swift` - Chapter fetching
+
+**Testing:** Manual testing checklist created, ready for device testing
+
+**Impact**: iOS app now has full chapter navigation parity with web app, enabling quick navigation within audiobooks
+
+**Next**: Phase 6 (Search & Browse) or begin comprehensive testing of Phases 1-5
+
+**Documentation**: `ios/PHASE5_COMPLETE.md`, `docs/mobile/implementation-phases/phase-5-chapter-navigation.md`
 
 #### iOS Phase 4: Progress Sync (December 28, 2025) ✅ MERGED
 

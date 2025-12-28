@@ -1,7 +1,7 @@
 # Book Vault
 
-[![API Contract](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/api.yml/badge.svg)](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/api.yml)
-[![Storybook](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/storybook.yml/badge.svg)](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/storybook.yml)
+[![API Contract](https://github.com/dlionikis/book_vault/actions/workflows/api.yml/badge.svg)](https://github.com/dlionikis/book_vault/actions/workflows/api.yml)
+[![Storybook](https://github.com/dlionikis/book_vault/actions/workflows/storybook.yml/badge.svg)](https://github.com/dlionikis/book_vault/actions/workflows/storybook.yml)
 
 A personal audiobook library web application for hosting and managing audiobooks from Audible, processed through Libation.
 

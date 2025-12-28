@@ -6,6 +6,7 @@
 //  Phase 2: Audio Playback (Basic)
 //  Phase 3: Background Audio & Lock Screen Controls
 //  Phase 4: Progress Sync
+//  Phase 5: Chapter Navigation
 //
 
 import Foundation
@@ -29,6 +30,10 @@ class AudioPlayerManager: ObservableObject {
     @Published var isLoading = false
     @Published var error: Error?
     @Published var currentBookCoverImage: UIImage?
+
+    // Phase 5: Chapter Navigation
+    @Published var chapters: [Chapter] = []
+    @Published var currentChapterId: UUID? = nil
 
     // MARK: - Private Properties
 
@@ -445,6 +450,43 @@ class AudioPlayerManager: ObservableObject {
         player?.volume = volume
     }
 
+    // MARK: - Chapter Navigation (Phase 5)
+
+    /// Get the current chapter based on playback position
+    /// - Returns: The current chapter, or nil if no chapters or not in any chapter
+    func getCurrentChapter() -> Chapter? {
+        guard !chapters.isEmpty else { return nil }
+
+        return chapters.first { chapter in
+            currentTime >= chapter.startTime && currentTime < chapter.endTime
+        }
+    }
+
+    /// Skip to a specific chapter
+    /// - Parameter chapter: The chapter to skip to
+    func skipToChapter(_ chapter: Chapter) {
+        seek(to: chapter.startTime)
+    }
+
+    /// Update chapters for the current book
+    /// - Parameter chapters: Array of chapters to set
+    @MainActor
+    func updateChapters(_ chapters: [Chapter]) {
+        self.chapters = chapters
+
+        // Update current chapter immediately
+        if let currentChapter = getCurrentChapter() {
+            self.currentChapterId = currentChapter.id
+        }
+    }
+
+    /// Clear chapters (called when stopping playback)
+    @MainActor
+    func clearChapters() {
+        self.chapters = []
+        self.currentChapterId = nil
+    }
+
     /// Stop playback and cleanup
     @MainActor
     func stop() {
@@ -476,6 +518,7 @@ class AudioPlayerManager: ObservableObject {
         currentTime = 0
         duration = 0
         lastSavedPosition = 0
+        clearChapters()  // Phase 5: Clear chapters
     }
 
     // MARK: - Private Methods
@@ -492,7 +535,18 @@ class AudioPlayerManager: ObservableObject {
             forInterval: interval,
             queue: .main
         ) { [weak self] time in
-            self?.currentTime = time.seconds
+            guard let self = self else { return }
+            self.currentTime = time.seconds
+
+            // Update current chapter (Phase 5)
+            if let currentChapter = self.getCurrentChapter() {
+                if self.currentChapterId != currentChapter.id {
+                    self.currentChapterId = currentChapter.id
+                    #if DEBUG
+                    print("📖 Chapter changed: \(currentChapter.title)")
+                    #endif
+                }
+            }
         }
     }
 

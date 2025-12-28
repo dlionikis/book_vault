@@ -77,8 +77,15 @@ class APIClient {
             let container = try decoder.singleValueContainer()
             let dateString = try container.decode(String.self)
 
-            // Try ISO8601 format first (e.g., "2022-08-08T00:00:00Z")
+            // Try ISO8601 format first (e.g., "2022-08-08T00:00:00Z" or "2025-12-28T19:07:21.367Z")
             let iso8601Formatter = ISO8601DateFormatter()
+            iso8601Formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = iso8601Formatter.date(from: dateString) {
+                return date
+            }
+
+            // Try without fractional seconds (fallback for older formats)
+            iso8601Formatter.formatOptions = [.withInternetDateTime]
             if let date = iso8601Formatter.date(from: dateString) {
                 return date
             }

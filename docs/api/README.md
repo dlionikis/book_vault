@@ -96,7 +96,7 @@ Every PR and push to `main` runs:
 **Status Badge**:
 
 ```markdown
-[![API Contract](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/api.yml/badge.svg)](https://github.com/YOUR_USERNAME/book_vault/actions/workflows/api.yml)
+[![API Contract](https://github.com/dlionikis/book_vault/actions/workflows/api.yml/badge.svg)](https://github.com/dlionikis/book_vault/actions/workflows/api.yml)
 ```
 
 ### Pre-commit Hooks
