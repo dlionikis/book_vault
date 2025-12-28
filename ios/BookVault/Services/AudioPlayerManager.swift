@@ -27,6 +27,7 @@ class AudioPlayerManager: ObservableObject {
     @Published var volume: Float = 1.0
     @Published var isLoading = false
     @Published var error: Error?
+    @Published var currentBookCoverImage: UIImage?
 
     // MARK: - Private Properties
 
@@ -238,6 +239,11 @@ class AudioPlayerManager: ObservableObject {
         isLoading = true
         currentBook = book
 
+        // Load cover image for mini player
+        Task { @MainActor in
+            currentBookCoverImage = await loadCoverImage(from: book.coverUrl)
+        }
+
         // Get token and setup player asynchronously
         Task { @MainActor in
             // Ensure we have authentication token
@@ -260,7 +266,7 @@ class AudioPlayerManager: ObservableObject {
             #endif
 
             // Create URL with custom scheme for resource loader interception
-            guard var url = URL(string: book.audioUrl) else {
+            guard let url = URL(string: book.audioUrl) else {
                 #if DEBUG
                 print("❌ AudioPlayerManager: Invalid audio URL: \(book.audioUrl)")
                 #endif
@@ -396,6 +402,7 @@ class AudioPlayerManager: ObservableObject {
         player?.pause()
         player?.replaceCurrentItem(with: nil)
         currentBook = nil
+        currentBookCoverImage = nil
         isPlaying = false
         currentTime = 0
         duration = 0

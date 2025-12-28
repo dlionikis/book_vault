@@ -10,6 +10,7 @@ import SwiftUI
 struct BooksListView: View {
     @StateObject private var viewModel = BooksListViewModel()
     @StateObject private var authManager = AuthManager.shared
+    @ObservedObject private var audioPlayer = AudioPlayerManager.shared
 
     private let columns = [
         GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
@@ -99,10 +100,17 @@ struct BooksListView: View {
             .refreshable {
                 await viewModel.refreshBooks()
             }
+            .safeAreaInset(edge: .bottom) {
+                if audioPlayer.currentBook != nil {
+                    MiniPlayerView()
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
         }
         .task {
             await viewModel.loadBooks()
         }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: audioPlayer.currentBook != nil)
     }
 }
 

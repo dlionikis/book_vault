@@ -46,6 +46,7 @@
 		C596537B461098A2BAD2B473 /* Author.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CCA3952507448577D85CEC4 /* Author.swift */; };
 		C872A7153E801C18742FE42F /* GetLibrary200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4258DBBBEA33992BD07FD667 /* GetLibrary200Response.swift */; };
 		CA845E06B758C58879A0AD5E /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54FC39529303A45403BCA016 /* AuthManager.swift */; };
+		CD21E17A0FD368922EA9FFC0 /* MiniPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB970120BA73B8BE4BFC867F /* MiniPlayerView.swift */; };
 		D09804227E9F7211882BCA9E /* SeriesInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 963AA06A67A788033B25A561 /* SeriesInfo.swift */; };
 		D23A58D902543DD40716462B /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565EB10A433D84C38A29D829 /* APIClient.swift */; };
 		D2CB914C16DA0208253C77A6 /* ListBooks200ResponsePagination.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6E7E69ACAA3BF25ECD5ED74 /* ListBooks200ResponsePagination.swift */; };
@@ -126,6 +127,7 @@
 		E3B920B956758DE5C4BFE7F4 /* UpdateProgressRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateProgressRequest.swift; sourceTree = "<group>"; };
 		E77F939BBACEC89FB5EA35A9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		EB4EC87875670C7997E4F92D /* git_push.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = git_push.sh; sourceTree = "<group>"; };
+		EB970120BA73B8BE4BFC867F /* MiniPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayerView.swift; sourceTree = "<group>"; };
 		EE124ECDE4162E1DCA86A304 /* CategoryWithBookCount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryWithBookCount.swift; sourceTree = "<group>"; };
 		FC21293CAC5761CB0960EF96 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		FD87363780646D678A13C4F5 /* ListAuthors200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListAuthors200Response.swift; sourceTree = "<group>"; };
@@ -139,6 +141,14 @@
 				BFFEE5014DD48F10276BCAB9 /* NowPlayingView.swift */,
 			);
 			path = Player;
+			sourceTree = "<group>";
+		};
+		23FB26F0B5F034779CA444A0 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				EB970120BA73B8BE4BFC867F /* MiniPlayerView.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		2A436899B818EC89A2ED7D4C /* Views */ = {
@@ -201,6 +211,7 @@
 			children = (
 				1FFF5A73653FF94DEC587D67 /* BookVaultApp.swift */,
 				E77F939BBACEC89FB5EA35A9 /* ContentView.swift */,
+				23FB26F0B5F034779CA444A0 /* Components */,
 				5C6B49A6AD7421F7B91511AD /* Services */,
 				2A436899B818EC89A2ED7D4C /* Views */,
 			);
@@ -372,6 +383,7 @@
 				B0C54D44776BD2715A4F9004 /* LoginView.swift in Sources */,
 				04A96D4505A47FA75482AC39 /* LogoutMobile200Response.swift in Sources */,
 				F59365CF57A87CB7894BF4A0 /* LogoutMobileRequest.swift in Sources */,
+				CD21E17A0FD368922EA9FFC0 /* MiniPlayerView.swift in Sources */,
 				F8D6852406507515264E8B11 /* ModelError.swift in Sources */,
 				A17A3F59D79869DDFF6B6E75 /* Models.swift in Sources */,
 				8F9F563B2DE94883F330959D /* Narrator.swift in Sources */,
