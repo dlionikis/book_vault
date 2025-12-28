@@ -276,6 +276,20 @@ struct SaveProgressRequest: Codable {
    - Fixed type conversions between generated API models and UserProgress
    - Eliminated code duplication (102 lines removed)
 
+6. **fc22e17** - `fix(api): normalize bookId to lowercase in progress endpoints`
+   - Added UUID normalization to /api/progress endpoints
+   - Fixed foreign key constraint failures from case-sensitive UUID matching
+
+7. **a6c1f3d** - `fix(ios): ensure progress timer runs on main RunLoop`
+   - Wrapped timer creation in DispatchQueue.main.async
+   - Ensures reliable 10-second auto-save timer
+
+8. **0856213** - `feat(api): add UUID normalization across all endpoints`
+   - Created normalizeUuid() utility in lib/api-utils.ts
+   - Applied to 13 API endpoints (books, library, authors, narrators, series, categories, progress)
+   - Makes all endpoints case-insensitive for UUIDs
+   - Database stores IDs as lowercase text, API now handles any case
+
 ---
 
 ## Next Steps
