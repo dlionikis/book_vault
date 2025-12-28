@@ -4,11 +4,13 @@
 //
 //  Created by Claude Code on 12/27/25.
 //  Phase 2: Audio Playback (Basic)
+//  Phase 3: Background Audio & Lock Screen Controls
 //
 
 import Foundation
 import AVFoundation
 import Combine
+import MediaPlayer
 
 /// Manages audio playback using AVPlayer
 /// Provides playback controls, progress tracking, and state management
@@ -45,6 +47,7 @@ class AudioPlayerManager: ObservableObject {
     private init() {
         setupAudioSession()
         setupNotifications()
+        setupRemoteCommandCenter()
     }
 
     deinit {
@@ -55,14 +58,29 @@ class AudioPlayerManager: ObservableObject {
 
     private func setupAudioSession() {
         do {
-            try AVAudioSession.sharedInstance().setCategory(
+            let audioSession = AVAudioSession.sharedInstance()
+
+            // Configure for background audio playback
+            try audioSession.setCategory(
                 .playback,
                 mode: .spokenAudio,
-                options: []
+                options: [.allowBluetooth, .allowBluetoothA2DP, .allowAirPlay]
             )
-            try AVAudioSession.sharedInstance().setActive(true)
+
+            try audioSession.setActive(true)
+
+            #if DEBUG
+            print("🎵 Audio session configured for background playback")
+            #endif
+
+            // Setup interruption handling
+            setupInterruptionObserver()
+
+            // Setup route change handling
+            setupRouteChangeObserver()
+
         } catch {
-            print("Failed to set up audio session: \(error)")
+            print("❌ Failed to set up audio session: \(error)")
             self.error = error
         }
     }
@@ -75,6 +93,135 @@ class AudioPlayerManager: ObservableObject {
             name: .AVPlayerItemDidPlayToEndTime,
             object: nil
         )
+    }
+
+    private func setupInterruptionObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleInterruption),
+            name: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+    }
+
+    private func setupRouteChangeObserver() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleRouteChange),
+            name: AVAudioSession.routeChangeNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+    }
+
+    private func setupRemoteCommandCenter() {
+        let commandCenter = MPRemoteCommandCenter.shared()
+
+        // Play command
+        commandCenter.playCommand.isEnabled = true
+        commandCenter.playCommand.addTarget { [weak self] _ in
+            self?.resume()
+            return .success
+        }
+
+        // Pause command
+        commandCenter.pauseCommand.isEnabled = true
+        commandCenter.pauseCommand.addTarget { [weak self] _ in
+            self?.pause()
+            return .success
+        }
+
+        // Toggle play/pause
+        commandCenter.togglePlayPauseCommand.isEnabled = true
+        commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
+            self?.togglePlayPause()
+            return .success
+        }
+
+        // Skip forward (30 seconds)
+        commandCenter.skipForwardCommand.isEnabled = true
+        commandCenter.skipForwardCommand.preferredIntervals = [30]
+        commandCenter.skipForwardCommand.addTarget { [weak self] _ in
+            self?.skipForward(seconds: 30)
+            return .success
+        }
+
+        // Skip backward (30 seconds)
+        commandCenter.skipBackwardCommand.isEnabled = true
+        commandCenter.skipBackwardCommand.preferredIntervals = [30]
+        commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
+            self?.skipBackward(seconds: 30)
+            return .success
+        }
+
+        // Change playback position (scrubbing on lock screen)
+        commandCenter.changePlaybackPositionCommand.isEnabled = true
+        commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
+            guard let event = event as? MPChangePlaybackPositionCommandEvent else {
+                return .commandFailed
+            }
+            self?.seek(to: event.positionTime)
+            return .success
+        }
+
+        #if DEBUG
+        print("🎵 Remote command center configured")
+        #endif
+    }
+
+    private func updateNowPlayingInfo() {
+        guard let book = currentBook else {
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            return
+        }
+
+        var nowPlayingInfo = [String: Any]()
+
+        // Basic metadata
+        nowPlayingInfo[MPMediaItemPropertyTitle] = book.title
+        nowPlayingInfo[MPMediaItemPropertyArtist] = book.authors.map { $0.name }.joined(separator: ", ")
+        nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = book.series.first?.title ?? "Audiobook"
+
+        // Playback information
+        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
+        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? playbackRate : 0.0
+
+        // Cover artwork (load asynchronously)
+        Task {
+            if let coverImage = await loadCoverImage(from: book.coverUrl) {
+                let artwork = MPMediaItemArtwork(boundsSize: coverImage.size) { _ in
+                    return coverImage
+                }
+                nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
+                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+            }
+        }
+
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+
+        #if DEBUG
+        print("🎵 Updated Now Playing info: \(book.title)")
+        #endif
+    }
+
+    private func loadCoverImage(from urlString: String) async -> UIImage? {
+        guard let url = URL(string: urlString) else { return nil }
+
+        do {
+            // Add authentication header for cover image
+            var request = URLRequest(url: url)
+            if let token = AuthManager.shared.token {
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+
+            let (data, _) = try await URLSession.shared.data(for: request)
+            return UIImage(data: data)
+        } catch {
+            #if DEBUG
+            print("❌ Failed to load cover image: \(error)")
+            #endif
+            return nil
+        }
     }
 
     // MARK: - Public Methods
@@ -187,12 +334,14 @@ class AudioPlayerManager: ObservableObject {
     func resume() {
         player?.play()
         isPlaying = true
+        updateNowPlayingInfo()
     }
 
     /// Pause playback
     func pause() {
         player?.pause()
         isPlaying = false
+        updateNowPlayingInfo()
     }
 
     /// Toggle play/pause
@@ -210,6 +359,7 @@ class AudioPlayerManager: ObservableObject {
         player?.seek(to: cmTime) { [weak self] completed in
             if completed {
                 self?.currentTime = time
+                self?.updateNowPlayingInfo()
             }
         }
     }
@@ -232,6 +382,7 @@ class AudioPlayerManager: ObservableObject {
         if isPlaying {
             player?.rate = rate
         }
+        updateNowPlayingInfo()
     }
 
     /// Set volume
@@ -298,6 +449,9 @@ class AudioPlayerManager: ObservableObject {
 
                     self.isPlaying = true
 
+                    // Update lock screen metadata
+                    self.updateNowPlayingInfo()
+
                     #if DEBUG
                     print("🎵 AudioPlayerManager: Player rate: \(self.player?.rate ?? 0)")
                     print("🎵 AudioPlayerManager: Player timeControlStatus: \(self.player?.timeControlStatus.rawValue ?? -1)")
@@ -318,6 +472,76 @@ class AudioPlayerManager: ObservableObject {
         isPlaying = false
         currentTime = 0
         // Could auto-advance to next book in series here
+    }
+
+    @objc private func handleInterruption(notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+            return
+        }
+
+        switch type {
+        case .began:
+            // Interruption began (phone call, alarm, etc.)
+            #if DEBUG
+            print("🎵 Audio interruption began - pausing playback")
+            #endif
+            pause()
+
+        case .ended:
+            // Interruption ended
+            guard let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt else {
+                return
+            }
+
+            let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+
+            if options.contains(.shouldResume) {
+                #if DEBUG
+                print("🎵 Audio interruption ended - resuming playback")
+                #endif
+                // Resume playback
+                resume()
+            } else {
+                #if DEBUG
+                print("🎵 Audio interruption ended - not resuming")
+                #endif
+            }
+
+        @unknown default:
+            break
+        }
+    }
+
+    @objc private func handleRouteChange(notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let reasonValue = userInfo[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else {
+            return
+        }
+
+        switch reason {
+        case .oldDeviceUnavailable:
+            // Headphones were unplugged or Bluetooth device disconnected
+            #if DEBUG
+            print("🎵 Audio route changed - device unavailable, pausing playback")
+            #endif
+            pause()
+
+        case .newDeviceAvailable:
+            // New audio device connected
+            #if DEBUG
+            print("🎵 Audio route changed - new device available")
+            #endif
+            // Optionally resume playback here if desired
+
+        default:
+            #if DEBUG
+            print("🎵 Audio route changed - reason: \(reason.rawValue)")
+            #endif
+            break
+        }
     }
 
     private func cleanup() {
