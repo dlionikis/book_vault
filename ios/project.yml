@@ -30,6 +30,8 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: 'UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight'
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: 'UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight'
+        # Background Modes - Enable audio playback in background
+        INFOPLIST_KEY_UIBackgroundModes: 'audio'
         # App Transport Security - Allow local HTTPS dev server with self-signed cert
         INFOPLIST_KEY_NSAppTransportSecurity: |
           <dict>

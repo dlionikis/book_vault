@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
+    @ObservedObject private var audioPlayer = AudioPlayerManager.shared
 
     var body: some View {
         Group {
@@ -21,6 +22,13 @@ struct ContentView: View {
             }
         }
         .animation(.default, value: authManager.isAuthenticated)
+        .safeAreaInset(edge: .bottom) {
+            if audioPlayer.currentBook != nil {
+                MiniPlayerView()
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: audioPlayer.currentBook != nil)
     }
 }
 

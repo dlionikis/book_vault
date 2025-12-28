@@ -1,10 +1,37 @@
-# Project Status - December 26, 2025
+# Project Status - December 27, 2025
 
 ## Current State
 
-Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing.
+Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing. iOS mobile app development is progressing with Phase 3.5 (Mini Player UI) complete.
 
 ### Recent Accomplishments
+
+#### iOS Phase 3.5: Mini Player UI (December 27, 2025)
+
+- ✅ Implemented persistent mini player bar at bottom of all screens
+- ✅ Shows cover art, book title/author, and play/pause button
+- ✅ Tap-to-expand navigation to full player
+- ✅ Smooth slide-up/down animations
+- ✅ Dark mode support with appropriate shadows
+- ✅ Uses `.safeAreaInset()` for automatic content padding
+- ✅ Cached cover image in AudioPlayerManager for mini player
+- ✅ Zero warnings, builds successfully on Xcode
+- **Impact**: Provides persistent playback controls and visibility across all screens
+- **Files**: `ios/BookVault/Components/MiniPlayerView.swift`, updated `AudioPlayerManager.swift` and `BooksListView.swift`
+- **Documentation**: `docs/mobile/implementation-phases/phase-3.5-mini-player.md`
+
+#### iOS Phase 3: Background Audio & Lock Screen Controls (December 27, 2025)
+
+- ✅ Background audio playback (audio continues when app is minimized)
+- ✅ Lock screen controls (play/pause/skip on lock screen)
+- ✅ Lock screen metadata display (cover art, title, author, progress)
+- ✅ Audio interruption handling (phone calls, alarms)
+- ✅ Route change handling (headphone disconnect)
+- ✅ MPNowPlayingInfoCenter integration
+- ✅ MPRemoteCommandCenter integration
+- **Impact**: Professional audio app experience with full background playback support
+- **Files**: Enhanced `AudioPlayerManager.swift`, configured `Info.plist`
+- **Branch**: `feature/ios-phase3.5-mini-player` (based on merged `feature/ios-phase3-background-audio`)
 
 #### Dual Authentication Implementation (December 26, 2025)
 

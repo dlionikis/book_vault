@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -46,6 +46,7 @@
 		C596537B461098A2BAD2B473 /* Author.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CCA3952507448577D85CEC4 /* Author.swift */; };
 		C872A7153E801C18742FE42F /* GetLibrary200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4258DBBBEA33992BD07FD667 /* GetLibrary200Response.swift */; };
 		CA845E06B758C58879A0AD5E /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54FC39529303A45403BCA016 /* AuthManager.swift */; };
+		CD21E17A0FD368922EA9FFC0 /* MiniPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB970120BA73B8BE4BFC867F /* MiniPlayerView.swift */; };
 		D09804227E9F7211882BCA9E /* SeriesInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 963AA06A67A788033B25A561 /* SeriesInfo.swift */; };
 		D23A58D902543DD40716462B /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565EB10A433D84C38A29D829 /* APIClient.swift */; };
 		D2CB914C16DA0208253C77A6 /* ListBooks200ResponsePagination.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6E7E69ACAA3BF25ECD5ED74 /* ListBooks200ResponsePagination.swift */; };
@@ -95,14 +96,14 @@
 		587BBF1432034EF20D6F0978 /* Chapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Chapter.swift; sourceTree = "<group>"; };
 		5E9AF054D6E542B441C1C0E8 /* AuthorWithBookCount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorWithBookCount.swift; sourceTree = "<group>"; };
 		5F15A745E95A423467AC9244 /* AuthenticatedAVAssetResourceLoaderDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticatedAVAssetResourceLoaderDelegate.swift; sourceTree = "<group>"; };
-		629C326881A7EE770079585A /* .gitkeep */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitkeep; sourceTree = "<group>"; };
+		629C326881A7EE770079585A /* .gitkeep */ = {isa = PBXFileReference; path = .gitkeep; sourceTree = "<group>"; };
 		63FA221E0EDFA43263495324 /* ListSeries200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListSeries200Response.swift; sourceTree = "<group>"; };
 		652872E519729A22268A1DA3 /* LoginMobile200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginMobile200Response.swift; sourceTree = "<group>"; };
 		6D3D60EE986911B47A91EFC2 /* AddToLibrary200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToLibrary200Response.swift; sourceTree = "<group>"; };
 		738DFFEAFA91F30C27AEC39D /* GetCategory200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetCategory200Response.swift; sourceTree = "<group>"; };
 		82FAAAB45B6696549871451D /* BooksListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BooksListView.swift; sourceTree = "<group>"; };
 		864A15F8124FC77C372D5521 /* BookDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDetailView.swift; sourceTree = "<group>"; };
-		892F66C1BDD1DF19C1D3F7A6 /* BookVault.podspec */ = {isa = PBXFileReference; lastKnownFileType = text; path = BookVault.podspec; sourceTree = "<group>"; };
+		892F66C1BDD1DF19C1D3F7A6 /* BookVault.podspec */ = {isa = PBXFileReference; path = BookVault.podspec; sourceTree = "<group>"; };
 		8D02B5FF2DF4BBC98EADBF8C /* Book.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Book.swift; sourceTree = "<group>"; };
 		8EFD79F799C012860F9795B2 /* SearchAll200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchAll200Response.swift; sourceTree = "<group>"; };
 		963AA06A67A788033B25A561 /* SeriesInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesInfo.swift; sourceTree = "<group>"; };
@@ -114,11 +115,11 @@
 		B01DA9D637484B54621208C0 /* GetBookChapters200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetBookChapters200Response.swift; sourceTree = "<group>"; };
 		B464DE345A8CE05DB8C53AA0 /* VerifyToken200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifyToken200Response.swift; sourceTree = "<group>"; };
 		B6E7E69ACAA3BF25ECD5ED74 /* ListBooks200ResponsePagination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListBooks200ResponsePagination.swift; sourceTree = "<group>"; };
-		BDE6622495B1304AE8CAB40F /* Cartfile */ = {isa = PBXFileReference; lastKnownFileType = text; path = Cartfile; sourceTree = "<group>"; };
-		BE977EF025B734C88E47A1B2 /* BookVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BookVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BDE6622495B1304AE8CAB40F /* Cartfile */ = {isa = PBXFileReference; path = Cartfile; sourceTree = "<group>"; };
+		BE977EF025B734C88E47A1B2 /* BookVault.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BookVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFFEE5014DD48F10276BCAB9 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
 		CAFFDCB54B6EABB247EE760E /* Narrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Narrator.swift; sourceTree = "<group>"; };
-		CDBB887D99A5D569F27F7283 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		CDBB887D99A5D569F27F7283 /* .gitignore */ = {isa = PBXFileReference; path = .gitignore; sourceTree = "<group>"; };
 		D2691AC8DCAEC877FE3A76AB /* RegisterUser201Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterUser201Response.swift; sourceTree = "<group>"; };
 		D407056A8964778D3DFF3FA4 /* LogoutMobileRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogoutMobileRequest.swift; sourceTree = "<group>"; };
 		D8DB4844CCD3B17010EB7FD0 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -126,6 +127,7 @@
 		E3B920B956758DE5C4BFE7F4 /* UpdateProgressRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateProgressRequest.swift; sourceTree = "<group>"; };
 		E77F939BBACEC89FB5EA35A9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		EB4EC87875670C7997E4F92D /* git_push.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = git_push.sh; sourceTree = "<group>"; };
+		EB970120BA73B8BE4BFC867F /* MiniPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayerView.swift; sourceTree = "<group>"; };
 		EE124ECDE4162E1DCA86A304 /* CategoryWithBookCount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryWithBookCount.swift; sourceTree = "<group>"; };
 		FC21293CAC5761CB0960EF96 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		FD87363780646D678A13C4F5 /* ListAuthors200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListAuthors200Response.swift; sourceTree = "<group>"; };
@@ -139,6 +141,14 @@
 				BFFEE5014DD48F10276BCAB9 /* NowPlayingView.swift */,
 			);
 			path = Player;
+			sourceTree = "<group>";
+		};
+		23FB26F0B5F034779CA444A0 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				EB970120BA73B8BE4BFC867F /* MiniPlayerView.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		2A436899B818EC89A2ED7D4C /* Views */ = {
@@ -201,6 +211,7 @@
 			children = (
 				1FFF5A73653FF94DEC587D67 /* BookVaultApp.swift */,
 				E77F939BBACEC89FB5EA35A9 /* ContentView.swift */,
+				23FB26F0B5F034779CA444A0 /* Components */,
 				5C6B49A6AD7421F7B91511AD /* Services */,
 				2A436899B818EC89A2ED7D4C /* Views */,
 			);
@@ -311,6 +322,7 @@
 			);
 			mainGroup = 979A14EB985C9096BD04568D;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -371,6 +383,7 @@
 				B0C54D44776BD2715A4F9004 /* LoginView.swift in Sources */,
 				04A96D4505A47FA75482AC39 /* LogoutMobile200Response.swift in Sources */,
 				F59365CF57A87CB7894BF4A0 /* LogoutMobileRequest.swift in Sources */,
+				CD21E17A0FD368922EA9FFC0 /* MiniPlayerView.swift in Sources */,
 				F8D6852406507515264E8B11 /* ModelError.swift in Sources */,
 				A17A3F59D79869DDFF6B6E75 /* Models.swift in Sources */,
 				8F9F563B2DE94883F330959D /* Narrator.swift in Sources */,
@@ -406,13 +419,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = N2EH33DR7Z;
 				ENABLE_LOCALIZATION_STRING_GENERATION = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSAppTransportSecurity = "<dict>\n  <key>NSAllowsArbitraryLoads</key>\n  <true/>\n</dict>\n";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UIBackgroundModes = audio;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -498,13 +511,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = N2EH33DR7Z;
 				ENABLE_LOCALIZATION_STRING_GENERATION = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSAppTransportSecurity = "<dict>\n  <key>NSAllowsArbitraryLoads</key>\n  <true/>\n</dict>\n";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UIBackgroundModes = audio;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";

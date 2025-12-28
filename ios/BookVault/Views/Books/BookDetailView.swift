@@ -157,8 +157,18 @@ struct BookDetailView: View {
 
                     // Play button
                     Button {
-                        audioPlayer.play(book: book)
-                        showingNowPlaying = true
+                        if audioPlayer.currentBook?.id == book.id && audioPlayer.isPlaying {
+                            // Same book and playing - just pause (don't show player)
+                            audioPlayer.pause()
+                        } else {
+                            // Start playing or resume, and show full player
+                            if audioPlayer.currentBook?.id != book.id {
+                                audioPlayer.play(book: book)
+                            } else {
+                                audioPlayer.resume()
+                            }
+                            showingNowPlaying = true
+                        }
                     } label: {
                         HStack {
                             Image(systemName: audioPlayer.currentBook?.id == book.id && audioPlayer.isPlaying ? "pause.fill" : "play.fill")
@@ -177,8 +187,9 @@ struct BookDetailView: View {
             .padding(.vertical)
         }
         .navigationBarTitleDisplayMode(.inline)
-        .fullScreenCover(isPresented: $showingNowPlaying) {
+        .sheet(isPresented: $showingNowPlaying) {
             NowPlayingView()
+                .presentationDragIndicator(.visible)
         }
     }
 
