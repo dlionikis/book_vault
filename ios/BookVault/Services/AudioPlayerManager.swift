@@ -120,21 +120,27 @@ class AudioPlayerManager: ObservableObject {
         // Play command
         commandCenter.playCommand.isEnabled = true
         commandCenter.playCommand.addTarget { [weak self] _ in
-            self?.resume()
+            Task { @MainActor in
+                self?.resume()
+            }
             return .success
         }
 
         // Pause command
         commandCenter.pauseCommand.isEnabled = true
         commandCenter.pauseCommand.addTarget { [weak self] _ in
-            self?.pause()
+            Task { @MainActor in
+                self?.pause()
+            }
             return .success
         }
 
         // Toggle play/pause
         commandCenter.togglePlayPauseCommand.isEnabled = true
         commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
-            self?.togglePlayPause()
+            Task { @MainActor in
+                self?.togglePlayPause()
+            }
             return .success
         }
 
@@ -228,6 +234,7 @@ class AudioPlayerManager: ObservableObject {
     // MARK: - Public Methods
 
     /// Load and play a book
+    @MainActor
     func play(book: Book) {
         // If same book, just resume
         if currentBook?.id == book.id {
@@ -240,12 +247,12 @@ class AudioPlayerManager: ObservableObject {
         currentBook = book
 
         // Load cover image for mini player
-        Task { @MainActor in
+        Task {
             currentBookCoverImage = await loadCoverImage(from: book.coverUrl)
         }
 
         // Get token and setup player asynchronously
-        Task { @MainActor in
+        Task {
             // Ensure we have authentication token
             guard let token = AuthManager.shared.token else {
                 #if DEBUG
@@ -337,6 +344,7 @@ class AudioPlayerManager: ObservableObject {
     }
 
     /// Resume playback
+    @MainActor
     func resume() {
         player?.play()
         isPlaying = true
@@ -344,6 +352,7 @@ class AudioPlayerManager: ObservableObject {
     }
 
     /// Pause playback
+    @MainActor
     func pause() {
         player?.pause()
         isPlaying = false
@@ -351,6 +360,7 @@ class AudioPlayerManager: ObservableObject {
     }
 
     /// Toggle play/pause
+    @MainActor
     func togglePlayPause() {
         if isPlaying {
             pause()
@@ -494,7 +504,9 @@ class AudioPlayerManager: ObservableObject {
             #if DEBUG
             print("🎵 Audio interruption began - pausing playback")
             #endif
-            pause()
+            Task { @MainActor in
+                pause()
+            }
 
         case .ended:
             // Interruption ended
@@ -509,7 +521,9 @@ class AudioPlayerManager: ObservableObject {
                 print("🎵 Audio interruption ended - resuming playback")
                 #endif
                 // Resume playback
-                resume()
+                Task { @MainActor in
+                    resume()
+                }
             } else {
                 #if DEBUG
                 print("🎵 Audio interruption ended - not resuming")
@@ -534,7 +548,9 @@ class AudioPlayerManager: ObservableObject {
             #if DEBUG
             print("🎵 Audio route changed - device unavailable, pausing playback")
             #endif
-            pause()
+            Task { @MainActor in
+                pause()
+            }
 
         case .newDeviceAvailable:
             // New audio device connected

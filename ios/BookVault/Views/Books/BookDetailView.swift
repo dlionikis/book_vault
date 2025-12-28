@@ -156,8 +156,13 @@ struct BookDetailView: View {
 
                     // Play button
                     Button {
-                        audioPlayer.play(book: book)
-                        // Mini player will appear automatically
+                        if audioPlayer.currentBook?.id == book.id {
+                            // Same book - toggle play/pause
+                            audioPlayer.togglePlayPause()
+                        } else {
+                            // Different book - start playing
+                            audioPlayer.play(book: book)
+                        }
                     } label: {
                         HStack {
                             Image(systemName: audioPlayer.currentBook?.id == book.id && audioPlayer.isPlaying ? "pause.fill" : "play.fill")
