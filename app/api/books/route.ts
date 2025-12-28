@@ -70,6 +70,16 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          categories: {
+            include: {
+              category: true,
+            },
+            orderBy: {
+              category: {
+                name: 'asc',
+              },
+            },
+          },
         },
         orderBy,
       }),
@@ -103,7 +113,10 @@ export async function GET(request: NextRequest) {
         asin: bs.series.asin,
         sequence: bs.sequence,
       })),
-      categories: [], // TODO: Add categories when implemented
+      categories: book.categories.map((bc) => ({
+        id: bc.category.id,
+        name: bc.category.name,
+      })),
     }));
 
     // Apply client-side sorting for author/narrator/series
