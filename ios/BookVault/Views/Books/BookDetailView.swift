@@ -16,6 +16,30 @@ struct BookDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                // DEBUG: Print book data
+                let _ = {
+                    print("=== BOOK DETAIL DEBUG ===")
+                    print("Book ID: \(book.id)")
+                    print("Book Title: \(book.title)")
+                    print("Categories count: \(book.categories?.count ?? 0)")
+                    if let categories = book.categories {
+                        print("Categories:")
+                        for (index, category) in categories.enumerated() {
+                            print("  [\(index)] ID: \(category.id), Name: \(category.name)")
+                        }
+                    } else {
+                        print("Categories is nil")
+                    }
+
+                    // Pretty print the full JSON
+                    if let jsonData = try? JSONEncoder().encode(book),
+                       let jsonString = String(data: jsonData, encoding: .utf8) {
+                        print("\nFull Book JSON:")
+                        print(jsonString)
+                    }
+                    print("=== END DEBUG ===\n")
+                }()
+
                 // Cover image
                 AsyncImage(url: URL(string: book.coverUrl)) { phase in
                     switch phase {
