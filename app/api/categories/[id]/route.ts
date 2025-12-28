@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
+import { normalizeUuid } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   // Check both auth methods
@@ -14,6 +15,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Normalize UUID
+  const categoryId = normalizeUuid(params.id);
+  if (!categoryId) {
+    return NextResponse.json({ error: 'Invalid category ID format' }, { status: 400 });
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1');
@@ -21,7 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const skip = (page - 1) * limit;
 
     const category = await prisma.category.findUnique({
-      where: { id: params.id },
+      where: { id: categoryId },
       include: {
         parent: true,
       },
@@ -34,7 +41,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // Get books in this category with their relationships
     const [bookCategoryEntries, total] = await Promise.all([
       prisma.bookCategory.findMany({
-        where: { categoryId: params.id },
+        where: { categoryId },
         skip,
         take: limit,
         include: {
@@ -65,7 +72,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         },
       }),
       prisma.bookCategory.count({
-        where: { categoryId: params.id },
+        where: { categoryId },
       }),
     ]);
 

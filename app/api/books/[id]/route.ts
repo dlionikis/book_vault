@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
+import { normalizeUuid } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   // Check both auth methods
@@ -14,12 +15,17 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
+    const bookId = normalizeUuid(params.id);
+    if (!bookId) {
+      return NextResponse.json({ error: 'Invalid book ID' }, { status: 400 });
+    }
+
     // Check if chapters should be included
     const url = new URL(request.url);
     const includeChapters = url.searchParams.get('include') === 'chapters';
 
     const book = await prisma.book.findUnique({
-      where: { id: params.id },
+      where: { id: bookId },
       include: {
         authors: {
           include: {

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
+import { normalizeUuid } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   // Check both auth methods
@@ -14,6 +15,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Normalize UUID
+  const narratorId = normalizeUuid(params.id);
+  if (!narratorId) {
+    return NextResponse.json({ error: 'Invalid narrator ID format' }, { status: 400 });
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1');
@@ -21,7 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const skip = (page - 1) * limit;
 
     const narrator = await prisma.narrator.findUnique({
-      where: { id: params.id },
+      where: { id: narratorId },
     });
 
     if (!narrator) {
@@ -31,7 +38,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // Get books by this narrator with their relationships
     const [bookNarratorEntries, total] = await Promise.all([
       prisma.bookNarrator.findMany({
-        where: { narratorId: params.id },
+        where: { narratorId },
         skip,
         take: limit,
         include: {
@@ -62,7 +69,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         },
       }),
       prisma.bookNarrator.count({
-        where: { narratorId: params.id },
+        where: { narratorId },
       }),
     ]);
 
