@@ -110,31 +110,39 @@ struct BooksListView: View {
 
 struct BookGridItem: View {
     let book: Book
+    @State private var userProgress: UserProgress?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Cover image
-            AsyncImage(url: URL(string: book.coverUrl)) { phase in
-                switch phase {
-                case .empty:
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.2))
-                        .overlay {
-                            ProgressView()
-                        }
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                case .failure:
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.2))
-                        .overlay {
-                            Image(systemName: "book.fill")
-                                .foregroundColor(.gray)
-                        }
-                @unknown default:
-                    EmptyView()
+            // Cover image with progress overlay
+            ZStack(alignment: .bottom) {
+                AsyncImage(url: URL(string: book.coverUrl)) { phase in
+                    switch phase {
+                    case .empty:
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                            .overlay {
+                                ProgressView()
+                            }
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                    case .failure:
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                            .overlay {
+                                Image(systemName: "book.fill")
+                                    .foregroundColor(.gray)
+                            }
+                    @unknown default:
+                        EmptyView()
+                    }
+                }
+
+                // Progress indicator
+                if let progress = userProgress {
+                    ProgressIndicator(progress: progress, runtimeMinutes: book.runtimeMinutes)
                 }
             }
             .frame(height: 200)
@@ -161,6 +169,21 @@ struct BookGridItem: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
+        }
+        .task {
+            // Fetch progress for this book
+            await fetchProgress()
+        }
+    }
+
+    private func fetchProgress() async {
+        do {
+            userProgress = try await ProgressManager.shared.fetchProgress(for: book.id.uuidString)
+        } catch {
+            // Silently fail - progress is optional
+            #if DEBUG
+            print("Failed to fetch progress for book \(book.id): \(error)")
+            #endif
         }
     }
 
@@ -228,6 +251,56 @@ class BooksListViewModel: ObservableObject {
 
     func refreshBooks() async {
         await loadBooks()
+    }
+}
+
+// MARK: - Progress Indicator
+
+struct ProgressIndicator: View {
+    let progress: UserProgress
+    let runtimeMinutes: Int
+
+    private var progressPercentage: Double {
+        let totalSeconds = Double(runtimeMinutes * 60)
+        guard totalSeconds > 0 else { return 0 }
+        return min(progress.positionSeconds / totalSeconds, 1.0)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Progress bar
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    // Background
+                    Rectangle()
+                        .fill(Color.black.opacity(0.3))
+
+                    // Progress
+                    Rectangle()
+                        .fill(Color.blue)
+                        .frame(width: geometry.size.width * progressPercentage)
+                }
+            }
+            .frame(height: 4)
+
+            // Completed badge
+            if progress.completed {
+                HStack {
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption2)
+                        Text("Completed")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.green)
+                }
+            }
+        }
     }
 }
 
