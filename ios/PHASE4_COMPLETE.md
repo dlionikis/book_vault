@@ -268,6 +268,14 @@ struct SaveProgressRequest: Codable {
    - Horizontal scrolling carousel
    - ViewModel enhancements for filtering/sorting
 
+4. **c6142cd** - `fix(ios): add missing Combine import to ProgressManager`
+   - Added Combine framework import for @Published properties
+
+5. **ce3ed52** - `fix(ios): resolve ProgressManager build errors`
+   - Refactored to use APIClient's existing methods instead of manual HTTP requests
+   - Fixed type conversions between generated API models and UserProgress
+   - Eliminated code duplication (102 lines removed)
+
 ---
 
 ## Next Steps
