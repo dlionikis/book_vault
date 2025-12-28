@@ -290,6 +290,11 @@ struct SaveProgressRequest: Codable {
    - Makes all endpoints case-insensitive for UUIDs
    - Database stores IDs as lowercase text, API now handles any case
 
+9. **7377f4f** - `fix(ios): handle fractional seconds in ISO8601 date parsing`
+   - Configure ISO8601DateFormatter with .withFractionalSeconds
+   - Fixes decoding error in SaveProgressResponse
+   - Applied to both UserProgress decoder and SaveProgressRequest encoder
+
 ---
 
 ## Next Steps
