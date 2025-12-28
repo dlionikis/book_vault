@@ -17,11 +17,14 @@ export async function GET(request: NextRequest) {
 
   try {
     const searchParams = request.nextUrl.searchParams;
-    const bookId = searchParams.get('bookId');
+    let bookId = searchParams.get('bookId');
 
     if (!bookId) {
       return NextResponse.json({ error: 'Book ID is required' }, { status: 400 });
     }
+
+    // Normalize UUID to lowercase (database IDs are stored as lowercase text)
+    bookId = bookId.toLowerCase();
 
     const progress = await prisma.userProgress.findUnique({
       where: {
@@ -71,11 +74,14 @@ export async function POST(request: NextRequest) {
   try {
     const startTime = Date.now();
     const body = await request.json();
-    const { bookId, positionSeconds, timestamp } = body;
+    let { bookId, positionSeconds, timestamp } = body;
 
     if (!bookId || positionSeconds === undefined) {
       return NextResponse.json({ error: 'Book ID and position are required' }, { status: 400 });
     }
+
+    // Normalize UUID to lowercase (database IDs are stored as lowercase text)
+    bookId = bookId.toLowerCase();
 
     // Use provided timestamp or current time
     const updateTime = timestamp ? new Date(timestamp) : new Date();
@@ -170,11 +176,14 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { bookId, status } = body;
+    let { bookId, status } = body;
 
     if (!bookId || !status) {
       return NextResponse.json({ error: 'Book ID and status are required' }, { status: 400 });
     }
+
+    // Normalize UUID to lowercase (database IDs are stored as lowercase text)
+    bookId = bookId.toLowerCase();
 
     if (status !== 'completed' && status !== 'not-started') {
       return NextResponse.json(
