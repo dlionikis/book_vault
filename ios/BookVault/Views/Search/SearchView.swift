@@ -1,0 +1,464 @@
+//
+//  SearchView.swift
+//  BookVault
+//
+//  Created by Claude Code on 12/28/25.
+//
+
+import SwiftUI
+
+/// Main search screen with autocomplete suggestions and results
+struct SearchView: View {
+    @StateObject private var searchManager = SearchManager.shared
+    @State private var searchText = ""
+    @State private var suggestions: GetSearchSuggestions200Response?
+    @State private var searchResults: SearchAll200Response?
+    @State private var isLoading = false
+    @State private var currentPage = 1
+    @State private var errorMessage: String?
+    @State private var isSearching = false
+    @FocusState private var isSearchFieldFocused: Bool
+
+    private let columns = [
+        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
+    ]
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Search bar
+                HStack(spacing: 12) {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+
+                        TextField("Search audiobooks...", text: $searchText)
+                            .textFieldStyle(.plain)
+                            .focused($isSearchFieldFocused)
+                            .autocapitalization(.none)
+                            .autocorrectionDisabled()
+                            .submitLabel(.search)
+                            .onSubmit {
+                                performSearch()
+                            }
+                            .onChange(of: searchText) { newValue in
+                                handleSearchTextChange(newValue)
+                            }
+                            .accessibilityLabel("Search audiobooks")
+
+                        if !searchText.isEmpty {
+                            Button {
+                                clearSearch()
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                            .accessibilityLabel("Clear search")
+                        }
+                    }
+                    .padding(10)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(10)
+
+                    if isSearching {
+                        Button("Cancel") {
+                            clearSearch()
+                            isSearchFieldFocused = false
+                        }
+                    }
+                }
+                .padding()
+
+                Divider()
+
+                // Content area
+                ScrollView {
+                    if isLoading && searchResults == nil {
+                        // Loading state
+                        ProgressView("Searching...")
+                            .padding(.top, 100)
+                            .accessibilityLabel("Searching for books")
+                    } else if let error = errorMessage {
+                        // Error state
+                        VStack(spacing: 16) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 48))
+                                .foregroundColor(.orange)
+
+                            Text("Search Error")
+                                .font(.headline)
+
+                            Text(error)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+
+                            Button("Try Again") {
+                                performSearch()
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        .padding()
+                    } else if let results = searchResults {
+                        // Search results
+                        searchResultsView(results)
+                    } else if !searchText.isEmpty, let suggestions = suggestions {
+                        // Suggestions while typing
+                        suggestionsView(suggestions)
+                    } else {
+                        // Empty state
+                        emptyStateView
+                    }
+                }
+            }
+            .navigationTitle("Search")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .onAppear {
+            // Auto-focus search field when view appears
+            isSearchFieldFocused = true
+        }
+    }
+
+    // MARK: - Suggestions View
+
+    @ViewBuilder
+    private func suggestionsView(_ suggestions: GetSearchSuggestions200Response) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if !suggestions.books.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Books")
+                        .font(.headline)
+                        .padding(.horizontal)
+
+                    ForEach(suggestions.books, id: \.id) { book in
+                        NavigationLink(destination: BookDetailLoader(bookId: book.id.uuidString)) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "book.fill")
+                                    .foregroundColor(.accentColor)
+                                    .frame(width: 24)
+
+                                Text(book.title)
+                                    .font(.body)
+                                    .lineLimit(1)
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Book: \(book.title)")
+                    }
+                }
+            }
+
+            if !suggestions.authors.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Authors")
+                        .font(.headline)
+                        .padding(.horizontal)
+
+                    ForEach(suggestions.authors, id: \.id) { author in
+                        NavigationLink(destination: AuthorDetailView(authorId: author.id.uuidString)) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "person.fill")
+                                    .foregroundColor(.accentColor)
+                                    .frame(width: 24)
+
+                                Text(author.name)
+                                    .font(.body)
+                                    .lineLimit(1)
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Author: \(author.name)")
+                    }
+                }
+            }
+
+            if !suggestions.narrators.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Narrators")
+                        .font(.headline)
+                        .padding(.horizontal)
+
+                    ForEach(suggestions.narrators, id: \.id) { narrator in
+                        NavigationLink(destination: NarratorDetailView(narratorId: narrator.id.uuidString)) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "mic.fill")
+                                    .foregroundColor(.accentColor)
+                                    .frame(width: 24)
+
+                                Text(narrator.name)
+                                    .font(.body)
+                                    .lineLimit(1)
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Narrator: \(narrator.name)")
+                    }
+                }
+            }
+        }
+        .padding(.vertical)
+    }
+
+    // MARK: - Search Results View
+
+    @ViewBuilder
+    private func searchResultsView(_ results: SearchAll200Response) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if results.results.isEmpty {
+                // No results
+                VStack(spacing: 16) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+
+                    Text("No Books Found")
+                        .font(.headline)
+
+                    Text("No results found for '\(searchText)'")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 60)
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("\(results.pagination.total) results for '\(searchText)'")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+
+                    LazyVGrid(columns: columns, spacing: 20) {
+                        ForEach(results.results, id: \.id) { book in
+                            NavigationLink(destination: BookDetailView(book: book)) {
+                                BookGridItem(book: book)
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        // Load more indicator
+                        if results.pagination.page < results.pagination.pages {
+                            ProgressView()
+                                .gridCellColumns(columns.count)
+                                .onAppear {
+                                    loadMoreResults()
+                                }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .padding(.vertical)
+            }
+        }
+    }
+
+    // MARK: - Empty State View
+
+    @ViewBuilder
+    private var emptyStateView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 60))
+                .foregroundColor(.secondary)
+
+            VStack(spacing: 8) {
+                Text("Search Your Library")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+
+                Text("Find books by title, author, narrator, or series")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Divider()
+                .padding(.horizontal, 40)
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Browse by category:")
+                    .font(.headline)
+
+                NavigationLink(destination: AuthorListView()) {
+                    browseShortcut(icon: "person.fill", title: "Authors")
+                }
+
+                NavigationLink(destination: SeriesListView()) {
+                    browseShortcut(icon: "books.vertical.fill", title: "Series")
+                }
+
+                NavigationLink(destination: NarratorListView()) {
+                    browseShortcut(icon: "mic.fill", title: "Narrators")
+                }
+
+                NavigationLink(destination: CategoryListView()) {
+                    browseShortcut(icon: "tag.fill", title: "Categories")
+                }
+            }
+            .padding(.horizontal, 40)
+        }
+        .padding(.top, 60)
+    }
+
+    @ViewBuilder
+    private func browseShortcut(icon: String, title: String) -> some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundColor(.accentColor)
+                .frame(width: 24)
+
+            Text(title)
+                .font(.body)
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+    }
+
+    // MARK: - Search Actions
+
+    /// Handles changes to the search text (for suggestions)
+    private func handleSearchTextChange(_ newValue: String) {
+        isSearching = !newValue.isEmpty
+
+        // Clear results when text changes
+        searchResults = nil
+        errorMessage = nil
+
+        // Don't fetch suggestions if text is empty
+        guard !newValue.isEmpty else {
+            suggestions = nil
+            return
+        }
+
+        // Fetch suggestions with debouncing
+        Task {
+            do {
+                let result = try await searchManager.getSearchSuggestions(query: newValue)
+                // Only update if the search text hasn't changed
+                if searchText == newValue {
+                    suggestions = result
+                }
+            } catch is CancellationError {
+                // Ignore cancellation errors from debouncing
+            } catch {
+                DebugLogger.error("Failed to fetch suggestions", error: error)
+            }
+        }
+    }
+
+    /// Performs a full search
+    private func performSearch() {
+        guard !searchText.isEmpty else { return }
+
+        isLoading = true
+        errorMessage = nil
+        suggestions = nil // Clear suggestions when performing full search
+        currentPage = 1
+
+        Task {
+            do {
+                let result = try await searchManager.search(query: searchText, page: currentPage)
+                searchResults = result
+                isSearchFieldFocused = false // Dismiss keyboard
+            } catch {
+                DebugLogger.error("Search failed", error: error)
+                errorMessage = error.localizedDescription
+            }
+
+            isLoading = false
+        }
+    }
+
+    /// Loads more search results (pagination)
+    private func loadMoreResults() {
+        guard let results = searchResults,
+              results.pagination.page < results.pagination.pages,
+              !isLoading else {
+            return
+        }
+
+        isLoading = true
+        currentPage += 1
+
+        Task {
+            do {
+                let moreResults = try await searchManager.search(query: searchText, page: currentPage)
+
+                // Append new results to existing ones
+                var updatedResults = results
+                updatedResults.results.append(contentsOf: moreResults.results)
+                updatedResults.pagination = moreResults.pagination
+
+                searchResults = updatedResults
+            } catch {
+                DebugLogger.error("Failed to load more results", error: error)
+                // Don't show error for pagination failures, just stop loading
+            }
+
+            isLoading = false
+        }
+    }
+
+    /// Clears the search
+    private func clearSearch() {
+        searchText = ""
+        searchResults = nil
+        suggestions = nil
+        errorMessage = nil
+        isSearching = false
+        currentPage = 1
+    }
+}
+
+// MARK: - Previews
+
+struct SearchView_Previews: PreviewProvider {
+    static var previews: some View {
+        Group {
+            // Empty state
+            SearchView()
+                .previewDisplayName("Search View (Empty)")
+
+            // Dark mode
+            SearchView()
+                .preferredColorScheme(.dark)
+                .previewDisplayName("Search View (Dark)")
+        }
+    }
+}

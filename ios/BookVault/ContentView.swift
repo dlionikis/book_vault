@@ -7,23 +7,48 @@
 
 import SwiftUI
 
+enum Tab {
+    case library
+    case browse
+    case search
+}
+
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
     @ObservedObject private var audioPlayer = AudioPlayerManager.shared
     @State private var hasLoadedInitialBook = false
+    @State private var selectedTab: Tab = .library
 
     var body: some View {
         Group {
             if authManager.isAuthenticated {
-                // User is logged in - show books list
-                BooksListView()
-                    .task {
-                        // Auto-load most recently played book on first appearance
-                        if !hasLoadedInitialBook && audioPlayer.currentBook == nil {
-                            await loadMostRecentlyPlayedBook()
-                            hasLoadedInitialBook = true
+                // User is logged in - show tab view
+                TabView(selection: $selectedTab) {
+                    BooksListView()
+                        .tabItem {
+                            Label("Library", systemImage: "books.vertical")
                         }
+                        .tag(Tab.library)
+
+                    BrowseView()
+                        .tabItem {
+                            Label("Browse", systemImage: "square.grid.2x2")
+                        }
+                        .tag(Tab.browse)
+
+                    SearchView()
+                        .tabItem {
+                            Label("Search", systemImage: "magnifyingglass")
+                        }
+                        .tag(Tab.search)
+                }
+                .task {
+                    // Auto-load most recently played book on first appearance
+                    if !hasLoadedInitialBook && audioPlayer.currentBook == nil {
+                        await loadMostRecentlyPlayedBook()
+                        hasLoadedInitialBook = true
                     }
+                }
             } else {
                 // User is not logged in - show login screen
                 LoginView()
