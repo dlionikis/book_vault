@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import Combine
 
 /// Manages user progress sync with backend API
 @MainActor
