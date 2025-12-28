@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { createReadStream, statSync } from 'fs';
 import { join } from 'path';
 import { getAbsoluteMediaPath, validateMediaPath } from '@/lib/media';
@@ -8,9 +8,13 @@ import { isS3Enabled, streamS3ObjectWithRange, getS3ObjectMetadata } from '@/lib
 
 export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
   try {
-    // Authentication check - users must be logged in to stream audio
+    // Authentication check - support both session cookies (web) and Bearer tokens (mobile)
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const tokenUser = await getAuthUserFromRequest(request);
+
+    const user = session?.user || tokenUser;
+
+    if (!user) {
       return NextResponse.json(
         { error: 'Authentication required to access audio files' },
         { status: 401 }
@@ -19,7 +23,7 @@ export async function GET(request: NextRequest, { params }: { params: { path: st
 
     const filePath = params.path.join('/');
     const range = request.headers.get('range');
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Log range requests for monitoring (helpful for debugging iOS seeking issues)
     if (range) {

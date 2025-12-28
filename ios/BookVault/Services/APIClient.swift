@@ -61,24 +61,14 @@ class APIClient {
 
     private init() {
         // Determine the appropriate base URL
-        // In iOS simulator, localhost actually works and resolves to the host Mac
-        // The simulator's network is bridged to the host's network stack
-        #if targetEnvironment(simulator)
-        // For simulator: localhost works and connects to host machine
+        // FORCE localhost for all builds during development
         let urlString = "http://localhost:3000"
-        #else
-        // For physical device: would need to use actual server URL
-        // TODO: Use environment variable or configuration for production
-        let urlString = "http://localhost:3000"
+
+        #if DEBUG
+        print("🌐 APIClient initialized with base URL: \(urlString)")
         #endif
 
         self.baseURL = URL(string: urlString)!
-
-        // Configure session
-        let configuration = URLSessionConfiguration.default
-        configuration.timeoutIntervalForRequest = 30
-        configuration.timeoutIntervalForResource = 300
-        self.session = URLSession(configuration: configuration)
 
         // Configure JSON decoder with custom date handling
         self.decoder = JSONDecoder()
@@ -108,6 +98,12 @@ class APIClient {
         // Configure JSON encoder
         self.encoder = JSONEncoder()
         self.encoder.dateEncodingStrategy = .iso8601
+
+        // Initialize URLSession with standard configuration
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 30
+        configuration.timeoutIntervalForResource = 300
+        self.session = URLSession(configuration: configuration)
     }
 
     // MARK: - Private Helpers

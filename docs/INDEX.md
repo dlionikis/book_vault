@@ -88,6 +88,9 @@
 
 | File                                                               | Purpose                                     | Tokens |
 | ------------------------------------------------------------------ | ------------------------------------------- | ------ |
+| [mobile/ios-development-setup.md](mobile/ios-development-setup.md) | iOS development environment setup           | ~1,500 |
+| [mobile/xcodegen-guide.md](mobile/xcodegen-guide.md)               | **XcodeGen: How to add files to Xcode**     | ~3,000 |
+| [mobile/vscode-ios-setup.md](mobile/vscode-ios-setup.md)           | VS Code for iOS development (optional)      | ~3,000 |
 | [mobile/implementation-phases.md](mobile/implementation-phases.md) | 8 phases with acceptance criteria           | ~1,500 |
 | [mobile/architecture.md](mobile/architecture.md)                   | SwiftUI + MVVM architecture, file structure | ~3,800 |
 | [mobile/api-integration.md](mobile/api-integration.md)             | Swift API client implementation examples    | ~4,000 |
