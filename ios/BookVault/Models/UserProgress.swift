@@ -28,6 +28,7 @@ struct UserProgress: Codable {
         // lastPlayed can be null in the API response
         if let lastPlayedString = try container.decodeIfPresent(String.self, forKey: .lastPlayed) {
             let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             lastPlayed = formatter.date(from: lastPlayedString)
         } else {
             lastPlayed = nil
@@ -53,6 +54,7 @@ struct SaveProgressRequest: Codable {
 
         if let timestamp = timestamp {
             let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             self.timestamp = formatter.string(from: timestamp)
         } else {
             self.timestamp = nil
