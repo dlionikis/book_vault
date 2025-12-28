@@ -113,27 +113,25 @@ struct BookDetailView: View {
 
                         // Categories
                         if let categories = book.categories, !categories.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "tag")
-                                        .foregroundColor(.blue)
-                                        .frame(width: 24)
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: "tag")
+                                    .foregroundColor(.blue)
+                                    .frame(width: 24)
 
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        Text("Categories")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Categories")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
 
-                                        FlowLayout(spacing: 6) {
-                                            ForEach(categories, id: \.id) { category in
-                                                Text(category.name)
-                                                    .font(.caption)
-                                                    .padding(.horizontal, 10)
-                                                    .padding(.vertical, 4)
-                                                    .background(Color.blue.opacity(0.1))
-                                                    .foregroundColor(.blue)
-                                                    .clipShape(Capsule())
-                                            }
+                                    FlowLayout(spacing: 6) {
+                                        ForEach(categories, id: \.id) { category in
+                                            Text(category.name)
+                                                .font(.caption)
+                                                .padding(.horizontal, 10)
+                                                .padding(.vertical, 4)
+                                                .background(Color.blue.opacity(0.1))
+                                                .foregroundColor(.blue)
+                                                .clipShape(Capsule())
                                         }
                                     }
                                 }
