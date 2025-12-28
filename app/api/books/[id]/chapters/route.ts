@@ -4,6 +4,7 @@ import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { extractChapters, isFFProbeAvailable } from '@/lib/audio-metadata';
 import { getAbsoluteMediaPath } from '@/lib/media';
+import { normalizeUuid } from '@/lib/api-utils';
 import path from 'path';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -16,10 +17,15 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const id = normalizeUuid(params.id);
+  if (!id) {
+    return NextResponse.json({ error: 'Invalid book ID' }, { status: 400 });
+  }
+
   try {
     // Get book with audioUrl
     const book = await prisma.book.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         audioUrl: true,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { normalizeUuid } from '@/lib/api-utils';
 
 // GET /api/library/check?bookId=xxx - Check if book is in library
 export async function GET(request: NextRequest) {
@@ -15,9 +16,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ inLibrary: false });
     }
 
-    const bookId = request.nextUrl.searchParams.get('bookId');
+    const bookId = normalizeUuid(request.nextUrl.searchParams.get('bookId'));
     if (!bookId) {
-      return NextResponse.json({ error: 'Book ID is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid book ID' }, { status: 400 });
     }
 
     // Get user's library

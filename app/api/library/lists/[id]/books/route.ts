@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { normalizeUuid } from '@/lib/api-utils';
 
 // POST /api/library/lists/[id]/books - Add book to list
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -15,12 +16,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: listId } = params;
-    const body = await request.json();
-    const { bookId } = body;
+    const listId = normalizeUuid(params.id);
+    if (!listId) {
+      return NextResponse.json({ error: 'Invalid list ID' }, { status: 400 });
+    }
 
-    if (!bookId || typeof bookId !== 'string') {
-      return NextResponse.json({ error: 'Book ID is required' }, { status: 400 });
+    const body = await request.json();
+    const bookId = normalizeUuid(body.bookId);
+
+    if (!bookId) {
+      return NextResponse.json({ error: 'Invalid book ID' }, { status: 400 });
     }
 
     // Verify list belongs to user
@@ -79,12 +84,16 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: listId } = params;
+    const listId = normalizeUuid(params.id);
+    if (!listId) {
+      return NextResponse.json({ error: 'Invalid list ID' }, { status: 400 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const bookId = searchParams.get('bookId');
+    const bookId = normalizeUuid(searchParams.get('bookId'));
 
     if (!bookId) {
-      return NextResponse.json({ error: 'Book ID is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid book ID' }, { status: 400 });
     }
 
     // Verify list belongs to user

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { normalizeUuid } from '@/lib/api-utils';
 
 // GET /api/progress?bookId=xxx - Get user's progress for a book
 export async function GET(request: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const searchParams = request.nextUrl.searchParams;
-    const bookId = searchParams.get('bookId');
+    const bookId = normalizeUuid(searchParams.get('bookId'));
 
     if (!bookId) {
       return NextResponse.json({ error: 'Book ID is required' }, { status: 400 });
@@ -71,7 +72,8 @@ export async function POST(request: NextRequest) {
   try {
     const startTime = Date.now();
     const body = await request.json();
-    const { bookId, positionSeconds, timestamp } = body;
+    const { positionSeconds, timestamp } = body;
+    const bookId = normalizeUuid(body.bookId);
 
     if (!bookId || positionSeconds === undefined) {
       return NextResponse.json({ error: 'Book ID and position are required' }, { status: 400 });
@@ -170,7 +172,8 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { bookId, status } = body;
+    const { status } = body;
+    const bookId = normalizeUuid(body.bookId);
 
     if (!bookId || !status) {
       return NextResponse.json({ error: 'Book ID and status are required' }, { status: 400 });

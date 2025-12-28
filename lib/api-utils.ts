@@ -83,3 +83,19 @@ export function parsePagination(
 
   return { page, limit, skip };
 }
+
+/**
+ * Normalize UUID to lowercase for database queries
+ * Database stores UUIDs as lowercase text, but clients may send uppercase.
+ * This ensures case-insensitive UUID matching.
+ *
+ * @param uuid - UUID string in any case
+ * @returns Lowercase UUID string, or original value if null/undefined
+ *
+ * @example
+ * normalizeUuid('6D211133-3B31-41B4-8B83-191121CEE02A') // '6d211133-3b31-41b4-8b83-191121cee02a'
+ * normalizeUuid(null) // null
+ */
+export function normalizeUuid(uuid: string | null | undefined): string | null | undefined {
+  return uuid ? uuid.toLowerCase() : uuid;
+}

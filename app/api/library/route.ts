@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
+import { normalizeUuid } from '@/lib/api-utils';
 
 // GET /api/library - Get user's library books
 export async function GET(request: NextRequest) {
@@ -103,10 +104,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { bookId } = await request.json();
+    const body = await request.json();
+    const bookId = normalizeUuid(body.bookId);
 
     if (!bookId) {
-      return NextResponse.json({ error: 'Book ID is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid book ID' }, { status: 400 });
     }
 
     // Get or create user's library list

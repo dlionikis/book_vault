@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { normalizeUuid } from '@/lib/api-utils';
 
 // PUT /api/library/lists/[id] - Update list metadata
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
@@ -15,7 +16,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    // Normalize UUID
+    const id = normalizeUuid(params.id);
+    if (!id) {
+      return NextResponse.json({ error: 'Invalid list ID format' }, { status: 400 });
+    }
     const body = await request.json();
     const { name, description } = body;
 
@@ -75,7 +80,11 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    // Normalize UUID
+    const id = normalizeUuid(params.id);
+    if (!id) {
+      return NextResponse.json({ error: 'Invalid list ID format' }, { status: 400 });
+    }
 
     // Verify list belongs to user
     const existingList = await prisma.userList.findUnique({

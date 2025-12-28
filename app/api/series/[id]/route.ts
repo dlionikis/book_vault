@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
+import { normalizeUuid } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   // Check both auth methods
@@ -14,6 +15,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Normalize UUID
+  const seriesId = normalizeUuid(params.id);
+  if (!seriesId) {
+    return NextResponse.json({ error: 'Invalid series ID format' }, { status: 400 });
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1');
@@ -21,7 +28,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const skip = (page - 1) * limit;
 
     const series = await prisma.series.findUnique({
-      where: { id: params.id },
+      where: { id: seriesId },
     });
 
     if (!series) {
@@ -31,7 +38,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // Get books in this series with their relationships
     const [bookSeriesEntries, total] = await Promise.all([
       prisma.bookSeries.findMany({
-        where: { seriesId: params.id },
+        where: { seriesId },
         skip,
         take: limit,
         include: {
@@ -58,7 +65,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         orderBy: [{ sequence: 'asc' }],
       }),
       prisma.bookSeries.count({
-        where: { seriesId: params.id },
+        where: { seriesId },
       }),
     ]);
 
