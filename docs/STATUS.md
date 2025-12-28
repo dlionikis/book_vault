@@ -1,10 +1,52 @@
-# Project Status - December 27, 2025
+# Project Status - December 28, 2025
 
 ## Current State
 
-Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing. iOS mobile app development has completed Phase 3 (Background Audio) and Phase 3.5 (Mini Player UI) with full integration merged to main.
+Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing. iOS mobile app development has completed Phase 4 (Progress Sync) with full cross-platform progress synchronization between iOS and web.
 
 ### Recent Accomplishments
+
+#### iOS Phase 4: Progress Sync (December 28, 2025) ✅ MERGED
+
+**Core Features:**
+
+- ✅ Backend integration with progress API endpoints (GET/POST/PUT /api/progress)
+- ✅ Auto-save progress every 10 seconds during playback (smart saving: only when position changes > 1s)
+- ✅ Load saved position on playback start (seamless resume across devices)
+- ✅ Progress indicators on book cards (blue progress bars + green completion badges)
+- ✅ Continue Listening section with horizontal scrolling carousel (top 5 recent books)
+- ✅ Cross-platform sync between iOS and web (unified progress tracking)
+
+**Technical Improvements:**
+
+- ✅ UUID normalization across all 13 API endpoints (case-insensitive matching)
+- ✅ ISO8601 date parsing with fractional seconds support (.withFractionalSeconds)
+- ✅ Thread-safe with @MainActor annotations throughout
+- ✅ Silent failures with graceful degradation (won't break UI if API fails)
+- ✅ Performance optimized (Continue Listening checks first 50 books only)
+- ✅ Timer reliability with DispatchQueue.main.async wrapper
+
+**Files Modified:**
+
+- `ios/BookVault/Models/UserProgress.swift` (new) - Progress data models
+- `ios/BookVault/Services/ProgressManager.swift` (new) - API client for progress endpoints
+- `ios/BookVault/Services/AudioPlayerManager.swift` - Auto-save integration
+- `ios/BookVault/Views/Books/BooksListView.swift` - Progress indicators + Continue Listening
+- `lib/api-utils.ts` - UUID normalization utility
+- 13 API endpoint files - Applied normalizeUuid() for case-insensitive UUIDs
+
+**Known Limitations:**
+
+- JWT tokens expire after 1 hour (requires manual re-login)
+- Continue Listening limited to first 50 books for performance
+- Requires network connection (offline support planned for Phase 8)
+
+**Testing:** Initial progress auto-save confirmed working, cross-platform sync validated
+
+**Impact**: iOS app now has full feature parity with web for progress tracking, enabling seamless cross-device listening experience
+
+**Merged**: Commit 1a7bf0b - Phase 4 complete with 9 commits
+**Documentation**: `ios/PHASE4_COMPLETE.md`
 
 #### iOS Phase 3 & 3.5: Background Audio + Mini Player (December 27, 2025) ✅ MERGED
 
