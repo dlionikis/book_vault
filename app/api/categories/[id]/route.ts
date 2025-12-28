@@ -62,6 +62,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
                   series: true,
                 },
               },
+              categories: {
+                include: {
+                  category: true,
+                },
+              },
             },
           },
         },
@@ -104,6 +109,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
           title: bs.series.title,
           asin: bs.series.asin,
           sequence: bs.sequence,
+        })),
+        categories: book.categories.map((bc) => ({
+          id: bc.category.id,
+          name: bc.category.name,
         })),
       };
     });
