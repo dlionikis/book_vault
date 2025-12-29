@@ -273,21 +273,30 @@ class DownloadManager: NSObject, ObservableObject {
             method: "GET"
         )
 
+        DebugLogger.download("Checking eligibility: \(request.url?.absoluteString ?? "nil")")
+
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw DownloadError.networkError("Invalid response")
         }
 
+        DebugLogger.download("Eligibility response: HTTP \(httpResponse.statusCode)")
+
         switch httpResponse.statusCode {
         case 200:
             let result = try JSONDecoder().decode(CheckDownloadEligibility200Response.self, from: data)
+            DebugLogger.download("Eligibility result: \(result.eligible)")
             return result.eligible
         case 401:
             throw DownloadError.unauthorized
         case 429:
             throw DownloadError.rateLimitExceeded
         default:
+            // Log response body for debugging
+            if let responseBody = String(data: data, encoding: .utf8) {
+                DebugLogger.error("Eligibility check failed: \(responseBody)")
+            }
             throw DownloadError.networkError("HTTP \(httpResponse.statusCode)")
         }
     }

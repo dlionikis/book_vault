@@ -4,11 +4,9 @@ import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isS3Enabled, generatePresignedUrl, getS3ObjectMetadata } from '@/lib/s3';
 import { checkDownloadLimit } from '@/lib/rate-limit';
+import { normalizeUuid } from '@/lib/api-utils';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { bookId: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { bookId: string } }) {
   try {
     // Check both auth methods
     const session = await getServerSession(authOptions);
@@ -16,13 +14,11 @@ export async function POST(
     const user = session?.user || mobileUser;
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { bookId } = params;
+    const normalizedBookId = normalizeUuid(bookId) as string;
 
     // Parse request body
     const body = await request.json();
@@ -30,7 +26,7 @@ export async function POST(
 
     // Verify book exists
     const book = await prisma.book.findUnique({
-      where: { id: bookId },
+      where: { id: normalizedBookId },
       select: {
         id: true,
         audioUrl: true,
@@ -38,17 +34,11 @@ export async function POST(
     });
 
     if (!book) {
-      return NextResponse.json(
-        { error: 'Book not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
     if (!book.audioUrl) {
-      return NextResponse.json(
-        { error: 'Book has no audio file' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Book has no audio file' }, { status: 400 });
     }
 
     // Check eligibility (for MVP: always eligible, future: check library, quota)
@@ -57,18 +47,12 @@ export async function POST(
     // Check rate limit (max 10 downloads per day)
     const withinLimit = await checkDownloadLimit(user.id);
     if (!withinLimit) {
-      return NextResponse.json(
-        { error: 'Download limit exceeded (10/day)' },
-        { status: 429 }
-      );
+      return NextResponse.json({ error: 'Download limit exceeded (10/day)' }, { status: 429 });
     }
 
     // Check if S3 is configured
     if (!isS3Enabled()) {
-      return NextResponse.json(
-        { error: 'Downloads require S3 configuration' },
-        { status: 501 }
-      );
+      return NextResponse.json({ error: 'Downloads require S3 configuration' }, { status: 501 });
     }
 
     // Generate pre-signed URL
@@ -98,9 +82,6 @@ export async function POST(
     });
   } catch (error) {
     console.error('Download URL generation error:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate download URL' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to generate download URL' }, { status: 500 });
   }
 }
