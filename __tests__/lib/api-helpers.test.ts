@@ -26,6 +26,12 @@ jest.mock('@/lib/api-utils', () => ({
     if (!id || id === 'invalid-uuid') return null;
     return id;
   }),
+  buildPagination: jest.fn((page, limit, total) => ({
+    page,
+    limit,
+    total,
+    pages: Math.ceil(total / limit),
+  })),
 }));
 
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>;

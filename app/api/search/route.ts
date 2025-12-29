@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
-import { parseBookFields, parsePagination } from '@/lib/api-utils';
+import { parseBookFields, parsePagination, buildPagination } from '@/lib/api-utils';
 import { transformBook } from '@/lib/book-transformer';
 
 export async function GET(request: NextRequest) {
@@ -159,12 +159,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       results: transformedBooks,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: buildPagination(page, limit, total),
     });
   } catch (error) {
     console.error('Error searching books:', error);

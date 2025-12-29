@@ -2,7 +2,7 @@
 
 > **Purpose**: Quick onboarding reference for Claude Code sessions. Read this first to understand the project instantly.
 
-**Last Updated**: December 26, 2025
+**Last Updated**: December 28, 2025
 **Status**: Production-ready with S3 streaming support
 **Test Status**: 207 tests passing (23 OpenAPI contract tests + 184 unit tests)
 
@@ -643,6 +643,8 @@ When starting a new session:
 
 **Status**: ✅ Pre-development setup complete, ready for Phase 1 implementation
 
+**Note**: User Lists feature moved to post-launch (nice to have, not essential for initial release)
+
 **Getting Started**:
 
 ```bash
@@ -669,7 +671,7 @@ open ios/BookVault.xcodeproj
 
 **Full Implementation Plan**: See [docs/mobile-ios-plan.md](docs/mobile-ios-plan.md) for:
 
-- 8 phased implementation steps
+- 7 phased implementation steps (User Lists moved to post-launch)
 - Technical architecture
 - API integration patterns
 - Testing strategy

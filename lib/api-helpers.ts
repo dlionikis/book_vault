@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
-import { normalizeUuid } from '@/lib/api-utils';
+import { normalizeUuid, buildPagination } from '@/lib/api-utils';
 
 /**
  * Configuration for entity detail endpoints that return paginated books.
@@ -141,19 +141,11 @@ export async function handleEntityDetailWithBooks<TEntity>(
     // 6. Transform book data to include full URLs and proper structure
     const booksWithUrls = joinEntries.map((entry: any) => transformBook(entry.book));
 
-    // 7. Calculate total pages
-    const pages = Math.ceil(total / limit);
-
-    // 8. Build and return response
+    // 7. Build and return response
     return NextResponse.json({
       ...config.getResponseFields(entity),
       books: booksWithUrls,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages,
-      },
+      pagination: buildPagination(page, limit, total),
     });
   } catch (error) {
     console.error(`Error fetching ${config.entityName.toLowerCase()}:`, error);

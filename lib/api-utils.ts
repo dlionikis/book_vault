@@ -99,3 +99,57 @@ export function parsePagination(
 export function normalizeUuid(uuid: string | null | undefined): string | null | undefined {
   return uuid ? uuid.toLowerCase() : uuid;
 }
+
+/**
+ * Type guard to validate UUID format and ensure non-null type
+ * Checks both truthiness and proper UUID format (8-4-4-4-12 hex pattern)
+ *
+ * @param uuid - UUID string to validate
+ * @returns True if valid UUID format, false otherwise (with type narrowing)
+ *
+ * @example
+ * const id = normalizeUuid(params.id);
+ * if (!isValidUuid(id)) {
+ *   return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
+ * }
+ * // TypeScript now knows id is string (not string | null | undefined)
+ */
+export function isValidUuid(uuid: string | null | undefined): uuid is string {
+  if (!uuid) return false;
+
+  // UUID v4 format: 8-4-4-4-12 hexadecimal characters
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
+/**
+ * Pagination result interface
+ */
+export interface PaginationResult {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+/**
+ * Build pagination object with calculated page count
+ * Centralizes the pagination calculation logic used across all paginated endpoints
+ *
+ * @param page - Current page number (1-based)
+ * @param limit - Items per page
+ * @param total - Total number of items
+ * @returns Pagination object with calculated pages
+ *
+ * @example
+ * const pagination = buildPagination(1, 20, 157);
+ * // { page: 1, limit: 20, total: 157, pages: 8 }
+ */
+export function buildPagination(page: number, limit: number, total: number): PaginationResult {
+  return {
+    page,
+    limit,
+    total,
+    pages: Math.ceil(total / limit),
+  };
+}

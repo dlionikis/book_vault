@@ -3,10 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
+import { buildPagination } from '@/lib/api-utils';
 import type { components } from '@/lib/api-types';
 
 type Book = components['schemas']['Book'];
-type Pagination = components['schemas']['Pagination'];
 
 export async function GET(request: NextRequest) {
   // Check both auth methods
@@ -68,16 +68,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const pagination: Pagination = {
-      page,
-      limit,
-      total,
-      pages: Math.ceil(total / limit),
-    };
-
     return NextResponse.json({
       books: transformedBooks,
-      pagination,
+      pagination: buildPagination(page, limit, total),
     });
   } catch (error) {
     console.error('Error fetching books:', error);

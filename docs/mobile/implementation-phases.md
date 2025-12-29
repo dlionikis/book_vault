@@ -1,8 +1,8 @@
 # iOS Implementation Phases
 
-**Last Updated**: December 25, 2025
+**Last Updated**: December 28, 2025
 
-> **TL;DR**: 8 phased rollout with clear acceptance criteria and stop points for each phase.
+> **TL;DR**: 7 phased rollout with clear acceptance criteria and stop points for each phase. User Lists moved to post-launch (nice to have, not essential).
 
 ---
 
@@ -152,31 +152,7 @@
 
 ---
 
-## Phase 7: User Lists
-
-**Objective**: Users can create and manage custom lists
-
-**Key Tasks**:
-
-- My Library screen (show user's added books)
-- Add/remove books from library
-- Custom lists UI (Want to Listen, Favorites)
-- Create/edit/delete lists
-- Drag-to-reorder books in lists
-- Sync with `/api/library/*` endpoints
-
-**Acceptance Criteria**:
-
-- User can add/remove books from library
-- User can create custom lists
-- User can reorder books in lists
-- Lists sync between web and mobile
-
-**Stop Point**: Test list management, verify sync
-
----
-
-## Phase 8: Offline Downloads (Optional)
+## Phase 7: Offline Downloads (Optional)
 
 **Objective**: Users can download books for offline listening
 
@@ -200,6 +176,32 @@
 
 ---
 
+## Post-Launch: User Lists (Deferred)
+
+**Status**: Moved to post-launch - nice to have, not essential for initial release
+
+**Objective**: Users can create and manage custom lists
+
+**Key Tasks**:
+
+- My Library screen (show user's added books)
+- Add/remove books from library
+- Custom lists UI (Want to Listen, Favorites)
+- Create/edit/delete lists
+- Drag-to-reorder books in lists
+- Sync with `/api/library/*` endpoints
+
+**Acceptance Criteria**:
+
+- User can add/remove books from library
+- User can create custom lists
+- User can reorder books in lists
+- Lists sync between web and mobile
+
+**Implementation Notes**: Will require backend API development first (see [roadmap/user-lists.md](../roadmap/user-lists.md))
+
+---
+
 ## Phase Dependencies
 
 ```
@@ -211,18 +213,19 @@ Phase 3 (Background Audio)  ← Must complete before Phase 4
     ↓
 Phase 4 (Progress Sync)
     ↓
-Phase 5 (Chapters)  ← Independent of Phase 6/7
+Phase 5 (Chapters)  ← Independent of Phase 6
     ↓
-Phase 6 (Search)    ← Independent of Phase 7
+Phase 6 (Search)
     ↓
-Phase 7 (Lists)
-    ↓
-Phase 8 (Offline)   ← Optional, can be deferred
+Phase 7 (Offline)   ← Optional, can be deferred
+
+Post-Launch: User Lists (deferred)
 ```
 
 **Critical Path**: Phases 1-4 must be completed in order
-**Parallel Work**: Phases 5-7 can be developed independently after Phase 4
-**Optional**: Phase 8 can be added post-launch
+**Parallel Work**: Phases 5-6 can be developed independently after Phase 4
+**Optional**: Phase 7 can be added post-launch if needed
+**Post-Launch**: User Lists - requires backend API development first
 
 ---
 

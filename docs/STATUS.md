@@ -2,7 +2,7 @@
 
 ## Current State
 
-Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing. iOS mobile app development has completed Phase 5 (Chapter Navigation) with full chapter browsing and navigation capabilities.
+Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing. iOS mobile app development has completed Phase 6 (Search & Browse) with full search and browse functionality across all entity types.
 
 ### Recent Accomplishments
 
@@ -33,6 +33,83 @@ Book Vault is a functional personal audiobook library with comprehensive browsin
 - Better code consistency and reliability
 
 **Documentation**: See `docs/refactoring/entity-detail-endpoints-dry-plan.md`
+
+#### iOS Phase 6: Search & Browse (December 28, 2025) ✅ COMPLETE
+
+**Goal**: Enable comprehensive search and browse functionality for discovering audiobooks
+
+**Core Features:**
+
+**Search**:
+
+- ✅ SearchManager service with in-memory caching (5-minute TTL)
+- ✅ Real-time autocomplete suggestions (debounced 300ms)
+- ✅ Full-text search across books, authors, narrators, series
+- ✅ SearchView with autocomplete dropdown
+- ✅ Pagination and infinite scroll for search results
+- ✅ Empty states and error handling with retry
+- ✅ Search field focus management
+
+**Browse**:
+
+- ✅ BrowseView with four category tiles (Authors, Series, Narrators, Categories)
+- ✅ Dynamic counts for each browse category
+- ✅ AuthorListView & AuthorDetailView with alphabetical sorting and book counts
+- ✅ SeriesListView & SeriesDetailView with books in sequence order
+- ✅ NarratorListView & NarratorDetailView with alphabetical sorting
+- ✅ CategoryListView & CategoryDetailView with hierarchical browsing
+- ✅ Alphabetical section headers (A, B, C, etc.)
+- ✅ Pull-to-refresh on all list views
+- ✅ Local search filtering within lists
+
+**Technical Implementation:**
+
+- ✅ SearchManager caching strategy: 5min for search results, 10min for browse lists
+- ✅ Memory warning handling to clear caches automatically
+- ✅ APIClient.baseURL changed from private to internal for SearchManager access
+- ✅ BookDetailLoader helper component for loading books by ID
+- ✅ Consistent navigation patterns across all browse views
+- ✅ VoiceOver accessibility throughout all new screens
+
+**Files Created:**
+
+- `ios/BookVault/Services/SearchManager.swift` (550+ lines) - Centralized search/browse service
+- `ios/BookVault/Views/Search/SearchView.swift` (400+ lines) - Main search interface
+- `ios/BookVault/Views/Browse/BrowseView.swift` (200+ lines) - Browse categories hub
+- `ios/BookVault/Views/Browse/AuthorListView.swift` (250+ lines)
+- `ios/BookVault/Views/Browse/AuthorDetailView.swift` (200+ lines)
+- `ios/BookVault/Views/Browse/SeriesListView.swift` (250+ lines)
+- `ios/BookVault/Views/Browse/SeriesDetailView.swift` (200+ lines)
+- `ios/BookVault/Views/Browse/NarratorListView.swift` (250+ lines)
+- `ios/BookVault/Views/Browse/NarratorDetailView.swift` (200+ lines)
+- `ios/BookVault/Views/Browse/CategoryListView.swift` (250+ lines)
+- `ios/BookVault/Views/Browse/CategoryDetailView.swift` (200+ lines)
+- `ios/BookVault/Views/Books/BookDetailLoader.swift` (80 lines) - Helper for book ID navigation
+
+**Files Modified:**
+
+- `ios/BookVault/ContentView.swift` - Added Browse and Search tabs to TabView
+- `ios/BookVault/Services/APIClient.swift` - Made baseURL internal (was private)
+
+**Bug Fixes During Development:**
+
+- ✅ Fixed OpenAPI spec nullable fields alignment with database schema
+- ✅ Fixed categories missing from search endpoint response
+- ✅ Fixed optional Book fields handling after OpenAPI spec update
+- ✅ Resolved search and browse functionality issues
+
+**Testing:** All search and browse flows manually tested and working
+
+**Impact**: iOS app now has complete discovery features, enabling users to find audiobooks through multiple pathways (search, browse by author/series/narrator/category)
+
+**Next**: Phase 7 (Offline Downloads) - optional, can be deferred post-launch
+
+**Merged**: PR #43 - "iOS Phase 6: Search & Browse Implementation with Bug Fixes"
+
+**Documentation**:
+
+- Implementation plan: `docs/mobile/implementation-phases/phase-7-offline-downloads.md` (next phase)
+- Overall phases: `docs/mobile/implementation-phases.md`
 
 #### iOS Phase 5: Chapter Navigation (December 28, 2025) ✅ COMPLETE
 
@@ -76,7 +153,7 @@ Book Vault is a functional personal audiobook library with comprehensive browsin
 
 **Impact**: iOS app now has full chapter navigation parity with web app, enabling quick navigation within audiobooks
 
-**Next**: Phase 6 (Search & Browse) or begin comprehensive testing of Phases 1-5
+**Next**: Phase 6 (Search & Browse) ✅ COMPLETED
 
 **Documentation**: `ios/PHASE5_COMPLETE.md`, `docs/mobile/implementation-phases/phase-5-chapter-navigation.md`
 
