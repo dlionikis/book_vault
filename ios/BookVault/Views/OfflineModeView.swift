@@ -69,11 +69,18 @@ struct OfflineModeView: View {
 
                 // Action buttons
                 VStack(spacing: 12) {
-                    // Retry connection button - switches to Catalog if connected
+                    // Retry connection button - refreshes network status and switches tab if connected
                     Button {
+                        DebugLogger.network("Retry button tapped - current isConnected: \(networkMonitor.isConnected)")
+                        // Force refresh the network status
+                        networkMonitor.refreshStatus()
                         // Check if we're actually connected now
+                        DebugLogger.network("After refresh - isConnected: \(networkMonitor.isConnected)")
                         if networkMonitor.isConnected {
+                            DebugLogger.network("Connected! Switching to Catalog tab")
                             selectedTab = .catalog
+                        } else {
+                            DebugLogger.network("Still offline after refresh")
                         }
                     } label: {
                         HStack {

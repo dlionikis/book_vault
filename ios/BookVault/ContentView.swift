@@ -78,7 +78,8 @@ struct ContentView: View {
                         }
                         .tag(Tab.settings)
                 }
-                .onChange(of: networkMonitor.isConnected) { _, isConnected in
+                .onChange(of: networkMonitor.isConnected) { oldValue, isConnected in
+                    DebugLogger.network("onChange triggered: \(oldValue) -> \(isConnected)")
                     handleNetworkChange(isOnline: isConnected)
                 }
                 .task {
@@ -110,12 +111,16 @@ struct ContentView: View {
 
     /// Handle tab transitions when network state changes
     private func handleNetworkChange(isOnline: Bool) {
+        DebugLogger.network("handleNetworkChange called with isOnline: \(isOnline), currentTab: \(selectedTab)")
         if isOnline {
             // Going online: restore previous tab if it was Catalog/Browse/Search
+            DebugLogger.network("Going online - selectedTab: \(selectedTab), previousOnlineTab: \(String(describing: previousOnlineTab))")
             if selectedTab == .offline {
                 if let previousTab = previousOnlineTab {
+                    DebugLogger.network("Restoring previous tab: \(previousTab)")
                     selectedTab = previousTab
                 } else {
+                    DebugLogger.network("No previous tab, switching to catalog")
                     selectedTab = .catalog
                 }
             }
@@ -124,6 +129,7 @@ struct ContentView: View {
             // Going offline: switch from Catalog/Browse/Search to Offline tab
             let onlineOnlyTabs: [Tab] = [.catalog, .browse, .search]
             if onlineOnlyTabs.contains(selectedTab) {
+                DebugLogger.network("Going offline - saving current tab: \(selectedTab)")
                 previousOnlineTab = selectedTab
                 selectedTab = .offline
             }
