@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { parsePagination } from '@/lib/api-utils';
+import { parsePagination, buildPagination } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   // Check both auth methods
@@ -49,12 +49,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       results: transformedSeries,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: buildPagination(page, limit, total),
     });
   } catch (error) {
     console.error('Error fetching series:', error);

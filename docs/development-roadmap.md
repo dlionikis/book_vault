@@ -1,38 +1,15 @@
 # Development Roadmap
 
-**Last Updated**: December 25, 2025
+**Last Updated**: December 28, 2025
 **Current Phase**: Phase 4 - Enhancement & Features Complete
 
-> **TL;DR**: Core app complete with auth, progress tracking, dark mode. Next priorities: User Lists → AWS Deployment → iOS App.
+> **TL;DR**: Core app complete with auth, progress tracking, dark mode. Next priorities: AWS Deployment → iOS App → User Lists (post-launch).
 
 ---
 
 ## 🎯 Current Focus (Next 2 Weeks)
 
-### 1. User Lists Feature 📚
-
-**Priority**: HIGH - Next major feature
-**Status**: Not started
-
-Allow users to organize books into custom collections:
-
-- "Want to Listen", "Favorites", "Currently Listening"
-- Custom user-created lists
-- Drag-to-reorder books within lists
-
-**API endpoints needed**:
-
-- `POST /api/lists` - Create list
-- `GET /api/lists` - Get user's lists
-- `POST /api/lists/[id]/books` - Add book to list
-- `DELETE /api/lists/[id]/books/[bookId]` - Remove book from list
-- `PUT /api/lists/[id]/reorder` - Reorder books
-
-**See**: [roadmap/user-lists.md](roadmap/user-lists.md) for detailed implementation plan
-
----
-
-### 2. Deployment Preparation 🚀
+### 1. Deployment Preparation 🚀
 
 **Priority**: HIGH - Required before production launch
 **Status**: Backend mobile-ready, infrastructure planning needed
@@ -51,9 +28,11 @@ Allow users to organize books into custom collections:
 
 ---
 
+---
+
 ## 📅 Upcoming (Next Month)
 
-### 3. AWS Deployment
+### 2. AWS Deployment
 
 **Infrastructure**:
 
@@ -68,13 +47,13 @@ Allow users to organize books into custom collections:
 
 ---
 
-### 4. iOS Native App 📱
+### 3. iOS Native App 📱
 
 **Status**: Planning complete, implementation post-deployment
 **Technology**: Native Swift + SwiftUI
 **Timeline**: Start after AWS deployment
 
-**Implementation**: 8 phased rollout
+**Implementation**: 7 phased rollout (User Lists moved to post-launch)
 
 1. Auth & Browsing
 2. Audio Playback (Basic)
@@ -82,8 +61,7 @@ Allow users to organize books into custom collections:
 4. Progress Sync
 5. Chapter Navigation
 6. Search & Browse
-7. User Lists Sync
-8. Offline Downloads
+7. Offline Downloads
 
 **Backend is ready**: JWT auth, RESTful JSON API, S3 streaming with range requests
 
@@ -91,7 +69,30 @@ Allow users to organize books into custom collections:
 
 ---
 
-## 🔮 Future Ideas (Backlog)
+## 🔮 Future Ideas (Post-Launch)
+
+### User Lists Feature 📚
+
+**Priority**: Post-launch enhancement
+**Status**: Deferred - nice to have, not essential for launch
+
+Allow users to organize books into custom collections:
+
+- "Want to Listen", "Favorites", "Currently Listening"
+- Custom user-created lists
+- Drag-to-reorder books within lists
+
+**API endpoints needed**:
+
+- `POST /api/lists` - Create list
+- `GET /api/lists` - Get user's lists
+- `POST /api/lists/[id]/books` - Add book to list
+- `DELETE /api/lists/[id]/books/[bookId]` - Remove book from list
+- `PUT /api/lists/[id]/reorder` - Reorder books
+
+**See**: [roadmap/user-lists.md](roadmap/user-lists.md) for detailed implementation plan
+
+---
 
 ### Enhanced Search
 
@@ -179,10 +180,10 @@ Allow users to organize books into custom collections:
 
 ### Next Milestones
 
-- 🎯 User lists functional
 - 🎯 Deployed to AWS production
-- 🎯 iOS app Phase 1 complete (auth & browsing)
+- 🎯 iOS app Phase 1-6 complete (all features except offline)
 - 🎯 50+ books imported
+- 🎯 User lists functional (post-launch)
 
 ---
 

@@ -267,6 +267,14 @@ export interface components {
       series?: components["schemas"]["SeriesInfo"][];
       categories?: components["schemas"]["Category"][];
     };
+    LibraryBook: components["schemas"]["Book"] & {
+      /**
+       * Format: date-time
+       * @description Timestamp when book was added to library
+       * @example 2025-12-28T10:30:00Z
+       */
+      addedAt: string;
+    };
     Author: {
       /** Format: uuid */
       id: string;
@@ -1174,7 +1182,7 @@ export interface operations {
       200: {
         content: {
           "application/json": {
-            books: components["schemas"]["Book"][];
+            books: components["schemas"]["LibraryBook"][];
             /** @example 42 */
             total: number;
           };

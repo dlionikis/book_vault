@@ -96,3 +96,25 @@ export function transformBook(book: BookWithIncludes) {
     })),
   };
 }
+
+/**
+ * Transform a library book (from UserListBook join table) to API response format
+ *
+ * Extends the standard book transformation with library-specific fields like addedAt.
+ * Used by GET /api/library endpoint to return books with their library metadata.
+ *
+ * @param libraryBook - UserListBook entry with nested book and addedAt timestamp
+ * @returns Transformed book with addedAt field
+ *
+ * @example
+ * const libraryBooks = await prisma.userListBook.findMany({
+ *   include: { book: { include: BOOK_INCLUDE } }
+ * });
+ * const transformed = libraryBooks.map(transformLibraryBook);
+ */
+export function transformLibraryBook(libraryBook: { book: BookWithIncludes; addedAt: Date }) {
+  return {
+    ...transformBook(libraryBook.book),
+    addedAt: libraryBook.addedAt.toISOString(),
+  };
+}

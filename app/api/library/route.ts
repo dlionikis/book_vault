@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { getCoverUrl, getAudioUrl } from '@/lib/media';
 import { normalizeUuid } from '@/lib/api-utils';
+import { BOOK_INCLUDE, transformLibraryBook } from '@/lib/book-transformer';
 
 // GET /api/library - Get user's library books
 export async function GET(request: NextRequest) {
@@ -36,23 +36,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         book: {
-          include: {
-            authors: {
-              include: {
-                author: true,
-              },
-            },
-            narrators: {
-              include: {
-                narrator: true,
-              },
-            },
-            series: {
-              include: {
-                series: true,
-              },
-            },
-          },
+          include: BOOK_INCLUDE,
         },
       },
       orderBy: {
@@ -60,30 +44,8 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const books = libraryBooks.map((lb) => ({
-      ...lb.book,
-      // Transform URLs to absolute URLs
-      coverUrl: getCoverUrl(lb.book.coverUrl),
-      audioUrl: getAudioUrl(lb.book.audioUrl),
-      // Flatten nested join table structures to match OpenAPI spec
-      authors: lb.book.authors.map((ba) => ({
-        id: ba.author.id,
-        name: ba.author.name,
-        asin: ba.author.asin,
-      })),
-      narrators: lb.book.narrators.map((bn) => ({
-        id: bn.narrator.id,
-        name: bn.narrator.name,
-        asin: bn.narrator.asin,
-      })),
-      series: lb.book.series.map((bs) => ({
-        id: bs.series.id,
-        title: bs.series.title,
-        asin: bs.series.asin,
-        sequence: bs.sequence, // Preserve sequence from join table
-      })),
-      addedAt: lb.addedAt,
-    }));
+    // Transform using centralized library book transformer
+    const books = libraryBooks.map(transformLibraryBook);
 
     return NextResponse.json({ books, total: books.length });
   } catch (error) {

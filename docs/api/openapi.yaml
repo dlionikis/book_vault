@@ -170,6 +170,18 @@ components:
           items:
             $ref: '#/components/schemas/Category'
 
+    LibraryBook:
+      allOf:
+        - $ref: '#/components/schemas/Book'
+        - type: object
+          required: [addedAt]
+          properties:
+            addedAt:
+              type: string
+              format: date-time
+              description: Timestamp when book was added to library
+              example: '2025-12-28T10:30:00Z'
+
     Author:
       type: object
       required: [id, name]
@@ -1455,7 +1467,7 @@ paths:
                   books:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Book'
+                      $ref: '#/components/schemas/LibraryBook'
                   total:
                     type: integer
                     minimum: 0

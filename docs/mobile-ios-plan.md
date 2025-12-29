@@ -2,7 +2,7 @@
 
 **Status**: Planning
 **Priority**: Post-deployment
-**Last Updated**: December 25, 2025
+**Last Updated**: December 28, 2025
 
 > **TL;DR (30 seconds)**
 >
@@ -10,9 +10,10 @@
 > - **Backend**: ✅ Already mobile-ready (JWT, REST API, S3 streaming)
 > - **Development**: Monorepo with OpenAPI-driven code generation
 > - **Workflow**: VS Code (backend) + Xcode (iOS) with shared API contracts
-> - **Plan**: 8 phased rollout (Auth → Playback → Background → Sync → Lists → Offline)
+> - **Plan**: 7 phased rollout (Auth → Playback → Background → Sync → Chapters → Search → Offline)
 > - **Timeline**: Start after AWS deployment
 > - **Key features**: AVPlayer streaming, background audio, offline downloads, progress sync
+> - **Note**: User Lists deferred to post-launch (nice to have, not essential)
 
 **Jump to**: [Development Workflow](#development-workflow) · [Technology Decision](#technology-decision) · [Implementation Phases](#implementation-phases)
 
@@ -513,8 +514,9 @@ The web app backend is **fully prepared** for mobile:
 4. **Phase 4**: Progress Sync
 5. **Phase 5**: Chapter Navigation
 6. **Phase 6**: Search & Browse
-7. **Phase 7**: User Lists
-8. **Phase 8**: Offline Downloads (Optional)
+7. **Phase 7**: Offline Downloads (Optional)
+
+**Post-Launch**: User Lists (deferred - nice to have, not essential)
 
 ## Architecture
 
