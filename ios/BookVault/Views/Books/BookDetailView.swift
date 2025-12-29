@@ -9,37 +9,12 @@ import SwiftUI
 
 struct BookDetailView: View {
     let book: Book
-    @StateObject private var audioPlayer = AudioPlayerManager.shared
     @StateObject private var chapterManager = ChapterManager()
     @State private var showingNowPlaying = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // DEBUG: Print book data
-                let _ = {
-                    print("=== BOOK DETAIL DEBUG ===")
-                    print("Book ID: \(book.id)")
-                    print("Book Title: \(book.title)")
-                    print("Categories count: \(book.categories?.count ?? 0)")
-                    if let categories = book.categories {
-                        print("Categories:")
-                        for (index, category) in categories.enumerated() {
-                            print("  [\(index)] ID: \(category.id), Name: \(category.name)")
-                        }
-                    } else {
-                        print("Categories is nil")
-                    }
-
-                    // Pretty print the full JSON
-                    if let jsonData = try? JSONEncoder().encode(book),
-                       let jsonString = String(data: jsonData, encoding: .utf8) {
-                        print("\nFull Book JSON:")
-                        print(jsonString)
-                    }
-                    print("=== END DEBUG ===\n")
-                }()
-
                 // Cover image
                 AsyncImage(url: URL(string: book.coverUrl ?? "")) { phase in
                     switch phase {
@@ -194,36 +169,12 @@ struct BookDetailView: View {
                         }
                     }
 
-                    // Play button
-                    Button {
-                        if audioPlayer.currentBook?.id == book.id && audioPlayer.isPlaying {
-                            // Same book and playing - just pause (don't show player)
-                            audioPlayer.pause()
-                        } else {
-                            // Start playing or resume, and show full player
-                            if audioPlayer.currentBook?.id != book.id {
-                                audioPlayer.play(book: book)
-                                // Phase 5: Fetch chapters in background (non-blocking)
-                                Task {
-                                    let chapters = await chapterManager.fetchChapters(bookId: book.id.uuidString)
-                                    audioPlayer.updateChapters(chapters)
-                                }
-                            } else {
-                                audioPlayer.resume()
-                            }
-                            showingNowPlaying = true
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: audioPlayer.currentBook?.id == book.id && audioPlayer.isPlaying ? "pause.fill" : "play.fill")
-                            Text(audioPlayer.currentBook?.id == book.id && audioPlayer.isPlaying ? "Playing" : "Play Audiobook")
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
+                    // Play button (isolated to prevent unnecessary parent re-renders)
+                    BookPlayButton(
+                        book: book,
+                        chapterManager: chapterManager,
+                        showingNowPlaying: $showingNowPlaying
+                    )
                     .padding(.top, 8)
                 }
                 .padding(.horizontal)
@@ -234,6 +185,17 @@ struct BookDetailView: View {
         .sheet(isPresented: $showingNowPlaying) {
             NowPlayingView()
                 .presentationDragIndicator(.visible)
+        }
+        .onAppear {
+            // DEBUG: Log book data once when view appears (only in debug builds)
+            DebugLogger.ui("📖 Book Detail Appeared: \(book.title) (ID: \(book.id))")
+            DebugLogger.verbose("Categories: \(book.categories?.map { $0.name }.joined(separator: ", ") ?? "none")")
+
+            // Dump full JSON only if verbose logging is enabled
+            if let jsonData = try? JSONEncoder().encode(book),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                DebugLogger.verbose("Full Book JSON:\n\(jsonString)")
+            }
         }
     }
 
@@ -250,6 +212,53 @@ struct BookDetailView: View {
             return "\(hours) hour\(hours == 1 ? "" : "s") \(mins) min"
         } else {
             return "\(mins) minutes"
+        }
+    }
+}
+
+// MARK: - Book Play Button
+
+/// Isolated play button component that observes audio player state
+/// This prevents BookDetailView from re-rendering on every audio player update
+struct BookPlayButton: View {
+    let book: Book
+    @ObservedObject var chapterManager: ChapterManager
+    @Binding var showingNowPlaying: Bool
+    @ObservedObject private var audioPlayer = AudioPlayerManager.shared
+
+    private var isCurrentBookPlaying: Bool {
+        audioPlayer.currentBook?.id == book.id && audioPlayer.isPlaying
+    }
+
+    var body: some View {
+        Button {
+            if isCurrentBookPlaying {
+                // Same book and playing - just pause (don't show player)
+                audioPlayer.pause()
+            } else {
+                // Start playing or resume, and show full player
+                if audioPlayer.currentBook?.id != book.id {
+                    audioPlayer.play(book: book)
+                    // Fetch chapters in background (non-blocking)
+                    Task {
+                        let chapters = await chapterManager.fetchChapters(bookId: book.id.uuidString)
+                        audioPlayer.updateChapters(chapters)
+                    }
+                } else {
+                    audioPlayer.resume()
+                }
+                showingNowPlaying = true
+            }
+        } label: {
+            HStack {
+                Image(systemName: isCurrentBookPlaying ? "pause.fill" : "play.fill")
+                Text(isCurrentBookPlaying ? "Playing" : "Play Audiobook")
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.blue)
+            .foregroundColor(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }
 }
