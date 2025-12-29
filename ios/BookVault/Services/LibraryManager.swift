@@ -187,7 +187,7 @@ class LibraryManager: ObservableObject {
     @MainActor
     func refreshCache() async throws {
         DebugLogger.database("Force refreshing library cache")
-        try await fetchLibraryBooks(forceRefresh: true)
+        _ = try await fetchLibraryBooks(forceRefresh: true)
     }
 
     // MARK: - Private Helpers

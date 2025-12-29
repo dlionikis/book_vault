@@ -68,7 +68,7 @@ struct LibraryView: View {
 
                         Button {
                             // Navigate to Catalog tab
-                            selectedTab = .library  // Will be .catalog in Phase 6
+                            selectedTab = .catalog
                         } label: {
                             Text("Browse Catalog")
                                 .fontWeight(.semibold)
@@ -115,17 +115,6 @@ struct LibraryView: View {
                 }
             }
             .navigationTitle("Library")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        Task {
-                            await authManager.logout()
-                        }
-                    } label: {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                    }
-                }
-            }
             .refreshable {
                 await viewModel.refreshLibrary()
             }

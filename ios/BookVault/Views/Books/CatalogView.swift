@@ -96,17 +96,6 @@ struct CatalogView: View {
                 }
             }
             .navigationTitle("Catalog")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        Task {
-                            await authManager.logout()
-                        }
-                    } label: {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                    }
-                }
-            }
             .refreshable {
                 await viewModel.refreshBooks()
             }
