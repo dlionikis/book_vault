@@ -42,7 +42,7 @@ enum APIError: LocalizedError {
 class APIClient {
     static let shared = APIClient()
 
-    private let baseURL: URL
+    let baseURL: URL  // Changed from private to allow SearchManager access
     private let session: URLSession
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder

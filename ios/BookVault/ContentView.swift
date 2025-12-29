@@ -7,36 +7,65 @@
 
 import SwiftUI
 
+enum Tab {
+    case library
+    case browse
+    case search
+}
+
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
     @ObservedObject private var audioPlayer = AudioPlayerManager.shared
     @State private var hasLoadedInitialBook = false
+    @State private var selectedTab: Tab = .library
 
     var body: some View {
-        Group {
-            if authManager.isAuthenticated {
-                // User is logged in - show books list
-                BooksListView()
-                    .task {
-                        // Auto-load most recently played book on first appearance
-                        if !hasLoadedInitialBook && audioPlayer.currentBook == nil {
-                            await loadMostRecentlyPlayedBook()
-                            hasLoadedInitialBook = true
+        if authManager.isAuthenticated {
+            // User is logged in - show tab view with mini player
+            ZStack(alignment: .bottom) {
+                TabView(selection: $selectedTab) {
+                    BooksListView()
+                        .tabItem {
+                            Label("Library", systemImage: "books.vertical")
                         }
+                        .tag(Tab.library)
+
+                    BrowseView()
+                        .tabItem {
+                            Label("Browse", systemImage: "square.grid.2x2")
+                        }
+                        .tag(Tab.browse)
+
+                    SearchView()
+                        .tabItem {
+                            Label("Search", systemImage: "magnifyingglass")
+                        }
+                        .tag(Tab.search)
+                }
+                .task {
+                    // Auto-load most recently played book on first appearance
+                    if !hasLoadedInitialBook && audioPlayer.currentBook == nil {
+                        await loadMostRecentlyPlayedBook()
+                        hasLoadedInitialBook = true
                     }
-            } else {
-                // User is not logged in - show login screen
-                LoginView()
-            }
-        }
-        .animation(.default, value: authManager.isAuthenticated)
-        .safeAreaInset(edge: .bottom) {
-            if audioPlayer.currentBook != nil {
-                MiniPlayerView()
+                }
+
+                // Mini player overlay - floats above tab bar
+                if audioPlayer.currentBook != nil {
+                    VStack(spacing: 0) {
+                        Spacer()
+                        MiniPlayerView()
+                            .padding(.bottom, 49) // Tab bar height
+                    }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: audioPlayer.currentBook != nil)
+                }
             }
+            .ignoresSafeArea(.keyboard)
+        } else {
+            // User is not logged in - show login screen
+            LoginView()
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: audioPlayer.currentBook != nil)
     }
 
     private func loadMostRecentlyPlayedBook() async {

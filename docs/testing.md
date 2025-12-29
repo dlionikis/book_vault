@@ -15,6 +15,18 @@ npm run test:watch
 
 # Run tests with coverage report
 npm run test:coverage
+
+# Run OpenAPI contract tests (starts dev server, runs tests, stops server)
+npm run test:contract
+
+# Run specific test file
+npm test -- __tests__/api/openapi-contract.test.ts
+
+# Run tests matching a pattern
+npm test -- -t "book schema"
+
+# Run a specific test by name
+npm test -- --testNamePattern="validates book schema fields match OpenAPI spec"
 ```
 
 ## Test Structure

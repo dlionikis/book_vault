@@ -200,7 +200,7 @@ class AudioPlayerManager: ObservableObject {
 
         // Cover artwork (load asynchronously)
         Task { @MainActor in
-            if let coverImage = await loadCoverImage(from: book.coverUrl) {
+            if let coverImage = await loadCoverImage(from: book.coverUrl ?? "") {
                 let artwork = MPMediaItemArtwork(boundsSize: coverImage.size) { _ in
                     return coverImage
                 }
@@ -249,7 +249,7 @@ class AudioPlayerManager: ObservableObject {
 
         // Load cover image for mini player
         Task {
-            currentBookCoverImage = await loadCoverImage(from: book.coverUrl)
+            currentBookCoverImage = await loadCoverImage(from: book.coverUrl ?? "")
         }
 
         // Get token and setup player asynchronously
@@ -267,11 +267,11 @@ class AudioPlayerManager: ObservableObject {
             }
 
             DebugLogger.audio("Starting playback for \(book.title)")
-            DebugLogger.verbose("Audio URL: \(book.audioUrl)")
+            DebugLogger.verbose("Audio URL: \(book.audioUrl ?? "")")
 
             // Create URL with custom scheme for resource loader interception
-            guard let url = URL(string: book.audioUrl) else {
-                DebugLogger.error("Invalid audio URL: \(book.audioUrl)")
+            guard let url = URL(string: book.audioUrl ?? "") else {
+                DebugLogger.error("Invalid audio URL: \(book.audioUrl ?? "")")
                 self.error = NSError(
                     domain: "AudioPlayerManager",
                     code: 400,

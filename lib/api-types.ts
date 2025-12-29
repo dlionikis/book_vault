@@ -244,7 +244,7 @@ export interface components {
       /** @example Told in Kvothe's own voice, this is the tale of the magically gifted young man... */
       description?: string | null;
       /** @example 1068 */
-      runtimeMinutes: number;
+      runtimeMinutes?: number | null;
       /**
        * Format: date
        * @example 2008-04-01
@@ -256,12 +256,12 @@ export interface components {
        * Format: uri
        * @example https://book-vault-media.s3.amazonaws.com/covers/B002V5D1CG.jpg
        */
-      coverUrl: string;
+      coverUrl?: string | null;
       /**
        * Format: uri
        * @example https://book-vault-media.s3.amazonaws.com/audio/B002V5D1CG.m4b
        */
-      audioUrl: string;
+      audioUrl?: string | null;
       authors: components["schemas"]["Author"][];
       narrators?: components["schemas"]["Narrator"][];
       series?: components["schemas"]["SeriesInfo"][];

@@ -16,8 +16,32 @@ struct BookDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                // DEBUG: Print book data
+                let _ = {
+                    print("=== BOOK DETAIL DEBUG ===")
+                    print("Book ID: \(book.id)")
+                    print("Book Title: \(book.title)")
+                    print("Categories count: \(book.categories?.count ?? 0)")
+                    if let categories = book.categories {
+                        print("Categories:")
+                        for (index, category) in categories.enumerated() {
+                            print("  [\(index)] ID: \(category.id), Name: \(category.name)")
+                        }
+                    } else {
+                        print("Categories is nil")
+                    }
+
+                    // Pretty print the full JSON
+                    if let jsonData = try? JSONEncoder().encode(book),
+                       let jsonString = String(data: jsonData, encoding: .utf8) {
+                        print("\nFull Book JSON:")
+                        print(jsonString)
+                    }
+                    print("=== END DEBUG ===\n")
+                }()
+
                 // Cover image
-                AsyncImage(url: URL(string: book.coverUrl)) { phase in
+                AsyncImage(url: URL(string: book.coverUrl ?? "")) { phase in
                     switch phase {
                     case .empty:
                         Rectangle()
@@ -88,7 +112,7 @@ struct BookDetailView: View {
                         MetadataRow(
                             icon: "clock",
                             label: "Runtime",
-                            value: formatRuntime(book.runtimeMinutes)
+                            value: formatRuntime(book.runtimeMinutes ?? 0)
                         )
 
                         if let publisher = book.publisher {
@@ -107,6 +131,39 @@ struct BookDetailView: View {
                                         label: "Series",
                                         value: "\(seriesInfo.title) #\(seriesInfo.sequence ?? "?")"
                                     )
+                                }
+                            }
+                        }
+
+                        // Categories
+                        if let categories = book.categories, !categories.isEmpty {
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: "tag")
+                                    .foregroundColor(.blue)
+                                    .frame(width: 24)
+
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Categories")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+
+                                    // Use simple wrapping for now
+                                    HStack(alignment: .top, spacing: 6) {
+                                        ForEach(categories.prefix(3), id: \.id) { category in
+                                            Text(category.name)
+                                                .font(.caption)
+                                                .padding(.horizontal, 10)
+                                                .padding(.vertical, 4)
+                                                .background(Color.blue.opacity(0.1))
+                                                .foregroundColor(.blue)
+                                                .clipShape(Capsule())
+                                        }
+                                        if categories.count > 3 {
+                                            Text("+\(categories.count - 3)")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -133,25 +190,6 @@ struct BookDetailView: View {
                                 Text(description)
                                     .font(.body)
                                     .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-
-                    // Categories
-                    if let categories = book.categories, !categories.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Categories")
-                                .font(.headline)
-                            FlowLayout(spacing: 8) {
-                                ForEach(categories, id: \.id) { category in
-                                    Text(category.name)
-                                        .font(.caption)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.blue.opacity(0.1))
-                                        .foregroundColor(.blue)
-                                        .clipShape(Capsule())
-                                }
                             }
                         }
                     }

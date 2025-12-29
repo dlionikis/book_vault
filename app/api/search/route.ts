@@ -4,6 +4,7 @@ import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
 import { parseBookFields, parsePagination } from '@/lib/api-utils';
+import { transformBook } from '@/lib/book-transformer';
 
 export async function GET(request: NextRequest) {
   // Check both auth methods
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
   }
   try {
     const searchParams = request.nextUrl.searchParams;
-    const query = searchParams.get('q') || '';
+    const query = (searchParams.get('q') || '').trim();
     const fieldsParam = searchParams.get('fields');
     const { page, limit, skip } = parsePagination(
       searchParams.get('page'),
@@ -122,6 +123,11 @@ export async function GET(request: NextRequest) {
                   series: true,
                 },
               },
+              categories: {
+                include: {
+                  category: true,
+                },
+              },
             },
             orderBy: {
               title: 'asc',
@@ -148,47 +154,8 @@ export async function GET(request: NextRequest) {
           }
           return result;
         })
-      : // Otherwise, return full transformed books
-        books.map((book) => {
-          // Type assertion for the full book with includes
-          const fullBook = book as typeof book & {
-            authors: Array<{ author: { id: string; name: string; asin: string | null } }>;
-            narrators: Array<{ narrator: { id: string; name: string; asin: string | null } }>;
-            series: Array<{
-              series: { id: string; title: string; asin: string | null };
-              sequence: string | null;
-            }>;
-          };
-
-          return {
-            id: fullBook.id,
-            asin: fullBook.asin,
-            title: fullBook.title,
-            publisherSummary: fullBook.publisherSummary,
-            runtimeMinutes: fullBook.runtimeMinutes,
-            releaseDate: fullBook.releaseDate,
-            publisher: fullBook.publisher,
-            coverUrl: getCoverUrl(fullBook.coverUrl),
-            audioUrl: getAudioUrl(fullBook.audioUrl),
-            authors: fullBook.authors.map((ba) => ({
-              id: ba.author.id,
-              name: ba.author.name,
-              asin: ba.author.asin,
-            })),
-            narrators: fullBook.narrators.map((bn) => ({
-              id: bn.narrator.id,
-              name: bn.narrator.name,
-              asin: bn.narrator.asin,
-            })),
-            series: fullBook.series.map((bs) => ({
-              id: bs.series.id,
-              title: bs.series.title,
-              asin: bs.series.asin,
-              sequence: bs.sequence,
-            })),
-            createdAt: fullBook.createdAt,
-          };
-        });
+      : // Otherwise, return full transformed books using centralized transformer
+        books.map((book) => transformBook(book as any));
 
     return NextResponse.json({
       results: transformedBooks,

@@ -6,6 +6,34 @@ Book Vault is a functional personal audiobook library with comprehensive browsin
 
 ### Recent Accomplishments
 
+#### API Code Quality: Entity Detail Endpoints DRY Refactor (December 28, 2025) ✅ COMPLETE
+
+**Goal**: Eliminate duplication across entity detail endpoints (authors, narrators, series, categories)
+
+**Results:**
+
+- ✅ Created generic `handleEntityDetailWithBooks()` helper in `lib/api-helpers.ts` (165 lines)
+- ✅ Added 21 comprehensive unit tests for helper (100% passing)
+- ✅ Refactored 4 endpoints using configuration-based approach:
+  - `GET /api/authors/{id}`: 82 lines → 17 lines (-79%)
+  - `GET /api/narrators/{id}`: 82 lines → 17 lines (-79%)
+  - `GET /api/series/{id}`: 78 lines → 19 lines (-76%)
+  - `GET /api/categories/{id}`: 84 lines → 18 lines (-79%)
+- ✅ **Code reduction**: 326 lines → 236 lines (~28% reduction, ~90 lines eliminated)
+- ✅ **Test coverage**: +21 tests (283 passing, up from 262)
+- ✅ 100% backward compatible (no API changes)
+- ✅ All contract tests passing (110/110)
+
+**Benefits:**
+
+- Single point of maintenance for auth, pagination, error handling
+- Type-safe configuration-based approach
+- Demonstrates customization: series uses sequence ordering, categories include parent relation
+- Easier to extend (new entity types can reuse pattern)
+- Better code consistency and reliability
+
+**Documentation**: See `docs/refactoring/entity-detail-endpoints-dry-plan.md`
+
 #### iOS Phase 5: Chapter Navigation (December 28, 2025) ✅ COMPLETE
 
 **Core Features:**

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { getCoverUrl, getAudioUrl } from '@/lib/media';
+import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
 import { normalizeUuid } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
@@ -27,30 +27,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const book = await prisma.book.findUnique({
       where: { id: bookId },
       include: {
-        authors: {
-          include: {
-            author: true,
-          },
-        },
-        narrators: {
-          include: {
-            narrator: true,
-          },
-        },
-        series: {
-          include: {
-            series: true,
-          },
-        },
-        categories: {
-          include: {
-            category: {
-              include: {
-                parent: true,
-              },
-            },
-          },
-        },
+        ...BOOK_INCLUDE,
         chapters: includeChapters
           ? {
               orderBy: {
@@ -67,35 +44,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     // Transform the response (OpenAPI compliant - only return spec-defined fields)
     const transformedBook = {
-      id: book.id,
-      asin: book.asin,
-      title: book.title,
-      description: book.description,
-      runtimeMinutes: book.runtimeMinutes,
-      releaseDate: book.releaseDate,
-      publisher: book.publisher,
-      coverUrl: getCoverUrl(book.coverUrl),
-      audioUrl: getAudioUrl(book.audioUrl),
-      authors: book.authors.map((ba) => ({
-        id: ba.author.id,
-        name: ba.author.name,
-        asin: ba.author.asin,
-      })),
-      narrators: book.narrators.map((bn) => ({
-        id: bn.narrator.id,
-        name: bn.narrator.name,
-        asin: bn.narrator.asin,
-      })),
-      series: book.series.map((bs) => ({
-        id: bs.series.id,
-        title: bs.series.title,
-        asin: bs.series.asin,
-        sequence: bs.sequence,
-      })),
-      categories: book.categories.map((bc) => ({
-        id: bc.category.id,
-        name: bc.category.name,
-      })),
+      ...transformBook(book),
       ...(includeChapters &&
         book.chapters && {
           chapters: book.chapters.map((chapter) => ({

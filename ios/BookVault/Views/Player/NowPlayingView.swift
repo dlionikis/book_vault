@@ -38,7 +38,7 @@ struct NowPlayingView: View {
 
                     if let book = audioPlayer.currentBook {
                         // Cover art - 40% of screen height (increased from 35%)
-                        AsyncImage(url: URL(string: book.coverUrl)) { phase in
+                        AsyncImage(url: URL(string: book.coverUrl ?? "")) { phase in
                             switch phase {
                             case .empty:
                                 Rectangle()

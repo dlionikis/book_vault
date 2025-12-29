@@ -126,7 +126,7 @@ struct BookGridItem: View {
         VStack(alignment: .leading, spacing: 8) {
             // Cover image with progress overlay
             ZStack(alignment: .bottom) {
-                AsyncImage(url: URL(string: book.coverUrl)) { phase in
+                AsyncImage(url: URL(string: book.coverUrl ?? "")) { phase in
                     switch phase {
                     case .empty:
                         Rectangle()
@@ -152,7 +152,7 @@ struct BookGridItem: View {
 
                 // Progress indicator
                 if let progress = userProgress {
-                    ProgressIndicator(progress: progress, runtimeMinutes: book.runtimeMinutes)
+                    ProgressIndicator(progress: progress, runtimeMinutes: book.runtimeMinutes ?? 0)
                 }
             }
             .frame(height: 200)
@@ -175,7 +175,7 @@ struct BookGridItem: View {
                 }
 
                 // Runtime
-                Text(formatRuntime(book.runtimeMinutes))
+                Text(formatRuntime(book.runtimeMinutes ?? 0))
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
@@ -272,7 +272,7 @@ struct ContinueListeningCard: View {
         VStack(alignment: .leading, spacing: 8) {
             // Cover image
             ZStack(alignment: .bottomLeading) {
-                AsyncImage(url: URL(string: book.coverUrl)) { phase in
+                AsyncImage(url: URL(string: book.coverUrl ?? "")) { phase in
                     switch phase {
                     case .success(let image):
                         image
@@ -296,7 +296,7 @@ struct ContinueListeningCard: View {
                 if let progress = userProgress {
                     VStack(spacing: 0) {
                         Spacer()
-                        ProgressBar(progress: progress, runtimeMinutes: book.runtimeMinutes)
+                        ProgressBar(progress: progress, runtimeMinutes: book.runtimeMinutes ?? 0)
                     }
                 }
             }
@@ -319,7 +319,7 @@ struct ContinueListeningCard: View {
 
                 // Time remaining
                 if let progress = userProgress {
-                    let remainingSeconds = Double(book.runtimeMinutes * 60) - progress.positionSeconds
+                    let remainingSeconds = Double((book.runtimeMinutes ?? 0) * 60) - progress.positionSeconds
                     Text(formatTimeRemaining(remainingSeconds))
                         .font(.caption2)
                         .foregroundColor(.blue)
