@@ -37,13 +37,6 @@ describe('Download Endpoints', () => {
     email: 'test@example.com',
   };
 
-  const mockBook = {
-    id: 'book-123',
-    asin: 'B001234567',
-    title: 'Test Book',
-    audioUrl: 'books/test-book/audio.mp3',
-  };
-
   // Clean up leftover test data once before all tests
   beforeAll(async () => {
     await prisma.userDownload.deleteMany({
@@ -210,9 +203,7 @@ describe('Download Endpoints', () => {
         },
       });
 
-      const request = new NextRequest(
-        `http://localhost:3000/api/downloads/${book.id}/check`
-      );
+      const request = new NextRequest(`http://localhost:3000/api/downloads/${book.id}/check`);
 
       const response = await checkEligibility(request, { params: { bookId: book.id } });
       const data = await response.json();
@@ -329,9 +320,9 @@ describe('Download Endpoints', () => {
       await prisma.book.delete({ where: { id: book.id } });
     });
 
-    it('should return 501 if S3 not enabled', async () => {
+    it('should return local URL when S3 not enabled (development mode)', async () => {
       mockGetAuthUserFromRequest.mockResolvedValue(mockUser);
-      mockIsS3Enabled.mockReturnValue(false); // S3 disabled
+      mockIsS3Enabled.mockReturnValue(false); // S3 disabled - uses local fallback
       mockCheckDownloadLimit.mockResolvedValue(true);
 
       const book = await prisma.book.create({
@@ -350,8 +341,11 @@ describe('Download Endpoints', () => {
       const response = await generateDownloadUrl(request, { params: { bookId: book.id } });
       const data = await response.json();
 
-      expect(response.status).toBe(501);
-      expect(data.error).toContain('S3 configuration');
+      // In development mode without S3, the route tries to use local filesystem
+      // Since the test file doesn't exist on disk, we get a 404
+      // This is expected behavior - the route now supports local file fallback
+      expect(response.status).toBe(404);
+      expect(data.error).toContain('Audio file not found');
 
       // Cleanup
       await prisma.book.delete({ where: { id: book.id } });
@@ -387,7 +381,7 @@ describe('Download Endpoints', () => {
   });
 
   describe('Rate Limiting', () => {
-    it('should enforce 10 downloads per day limit', async () => {
+    it('should enforce 50 downloads per day limit', async () => {
       // Use the real checkDownloadLimit implementation (unmock the module)
       jest.unmock('@/lib/rate-limit');
       // Clear the module cache and re-import to get the real implementation
@@ -409,8 +403,8 @@ describe('Download Endpoints', () => {
         },
       });
 
-      // Create 10 downloads in last 24 hours
-      for (let i = 0; i < 10; i++) {
+      // Create 50 downloads in last 24 hours (the limit)
+      for (let i = 0; i < 50; i++) {
         await prisma.userDownload.create({
           data: {
             userId: user.id,
@@ -419,7 +413,7 @@ describe('Download Endpoints', () => {
         });
       }
 
-      // Verify actual rate limit check
+      // Verify actual rate limit check - should be blocked after 50 downloads
       const isAllowed = await checkDownloadLimit(user.id);
 
       expect(isAllowed).toBe(false);

@@ -11,10 +11,7 @@ export async function GET(request: NextRequest) {
     const user = session?.user || mobileUser;
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get download history with book details
@@ -54,9 +51,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Download history fetch error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch download history' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch download history' }, { status: 500 });
   }
 }
