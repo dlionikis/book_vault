@@ -69,6 +69,24 @@ struct OfflineModeView: View {
 
                 // Action buttons
                 VStack(spacing: 12) {
+                    // Retry connection button - switches to Catalog if connected
+                    Button {
+                        // Check if we're actually connected now
+                        if networkMonitor.isConnected {
+                            selectedTab = .catalog
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.clockwise")
+                            Text("Retry Connection")
+                        }
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.horizontal, 24)
+
                     Button {
                         selectedTab = .library
                     } label: {
@@ -76,11 +94,11 @@ struct OfflineModeView: View {
                             Image(systemName: "books.vertical")
                             Text("Go to Library")
                         }
-                        .fontWeight(.semibold)
+                        .fontWeight(.medium)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
                     .padding(.horizontal, 24)
 
                     Button {
@@ -100,16 +118,17 @@ struct OfflineModeView: View {
 
                 Spacer()
 
-                // Connection status
+                // Connection status with live indicator
                 HStack(spacing: 8) {
                     Circle()
                         .fill(networkMonitor.isConnected ? Color.green : Color.red)
                         .frame(width: 8, height: 8)
-                    Text(networkMonitor.isConnected ? "Connected" : "No Connection")
+                    Text(networkMonitor.isConnected ? "Connected - Tap Retry" : "No Connection")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(networkMonitor.isConnected ? .green : .secondary)
                 }
                 .padding(.bottom, 20)
+                .animation(.easeInOut, value: networkMonitor.isConnected)
             }
             .navigationTitle("Offline Mode")
             .navigationBarTitleDisplayMode(.inline)
