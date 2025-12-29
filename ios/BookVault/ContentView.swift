@@ -8,11 +8,12 @@
 import SwiftUI
 
 enum Tab {
-    case catalog  // All books (was library)
-    case browse   // Metadata browse
-    case search   // Keyword search
-    case library  // User's personal library
-    case settings // Settings and account
+    case catalog   // All books (was library)
+    case browse    // Metadata browse
+    case search    // Keyword search
+    case library   // User's personal library
+    case downloads // Offline downloads (Phase 7)
+    case settings  // Settings and account
 }
 
 struct ContentView: View {
@@ -50,6 +51,12 @@ struct ContentView: View {
                             Label("Library", systemImage: "books.vertical")
                         }
                         .tag(Tab.library)
+
+                    DownloadsView()
+                        .tabItem {
+                            Label("Downloads", systemImage: "arrow.down.circle")
+                        }
+                        .tag(Tab.downloads)
 
                     SettingsView()
                         .tabItem {

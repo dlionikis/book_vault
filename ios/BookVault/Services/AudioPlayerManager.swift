@@ -7,6 +7,7 @@
 //  Phase 3: Background Audio & Lock Screen Controls
 //  Phase 4: Progress Sync
 //  Phase 5: Chapter Navigation
+//  Phase 7: Offline Downloads - Local file playback support
 //
 
 import Foundation
@@ -34,6 +35,9 @@ class AudioPlayerManager: ObservableObject {
     // Phase 5: Chapter Navigation
     @Published var chapters: [Chapter] = []
     @Published var currentChapterId: UUID? = nil
+
+    // Phase 7: Offline Downloads
+    @Published var isPlayingOffline = false
 
     // MARK: - Private Properties
 
@@ -254,92 +258,168 @@ class AudioPlayerManager: ObservableObject {
 
         // Get token and setup player asynchronously
         Task {
-            // Ensure we have authentication token
-            guard let token = AuthManager.shared.token else {
-                DebugLogger.error("AudioPlayerManager: No authentication token")
-                self.error = NSError(
-                    domain: "AudioPlayerManager",
-                    code: 401,
-                    userInfo: [NSLocalizedDescriptionKey: "Not authenticated"]
-                )
-                self.isLoading = false
+            let bookId = book.id.uuidString
+
+            // Phase 7: Check if book is downloaded locally
+            let storageManager = StorageManager.shared
+            if storageManager.isBookDownloaded(bookId: bookId) {
+                // Play from local file
+                DebugLogger.audio("Playing from local file: \(book.title)")
+                await playFromLocalFile(book: book)
                 return
             }
 
-            DebugLogger.audio("Starting playback for \(book.title)")
-            DebugLogger.verbose("Audio URL: \(book.audioUrl ?? "")")
-
-            // Create URL with custom scheme for resource loader interception
-            guard let url = URL(string: book.audioUrl ?? "") else {
-                DebugLogger.error("Invalid audio URL: \(book.audioUrl ?? "")")
-                self.error = NSError(
-                    domain: "AudioPlayerManager",
-                    code: 400,
-                    userInfo: [NSLocalizedDescriptionKey: "Invalid audio URL"]
-                )
-                self.isLoading = false
-                return
-            }
-
-            // Convert http:// to bookvault:// so resource loader can intercept
-            guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-                DebugLogger.error("Invalid URL components")
-                self.isLoading = false
-                return
-            }
-
-            if components.scheme == "http" {
-                components.scheme = "bookvault"
-            } else if components.scheme == "https" {
-                components.scheme = "bookvaults"
-            }
-
-            guard let customSchemeURL = components.url else {
-                DebugLogger.error("Failed to create custom scheme URL")
-                self.isLoading = false
-                return
-            }
-
-            DebugLogger.verbose("Custom scheme URL: \(customSchemeURL.absoluteString)")
-
-            // Create resource loader delegate
-            self.resourceLoaderDelegate = AuthenticatedAVAssetResourceLoaderDelegate(authToken: token)
-
-            // Create AVAsset with resource loader
-            let asset = AVURLAsset(url: customSchemeURL)
-            asset.resourceLoader.setDelegate(
-                self.resourceLoaderDelegate,
-                queue: DispatchQueue(label: "com.bookvault.resourceloader")
-            )
-
-            let playerItem = AVPlayerItem(asset: asset)
-
-            // Create or replace player
-            if self.player == nil {
-                self.player = AVPlayer(playerItem: playerItem)
-            } else {
-                self.player?.replaceCurrentItem(with: playerItem)
-            }
-
-            // Set initial volume
-            self.player?.volume = self.volume
-
-            // Fetch saved progress before starting playback
-            if let savedProgress = try? await self.progressManager.fetchProgress(for: book.id.uuidString) {
-                DebugLogger.database("Loaded saved position: \(savedProgress.positionSeconds)s")
-
-                // If book is not completed and has saved position, seek to it
-                if !savedProgress.completed && savedProgress.positionSeconds > 0 {
-                    self.lastSavedPosition = savedProgress.positionSeconds
-                }
-            }
-
-            // Setup time observer
-            self.setupTimeObserver()
-
-            // Setup duration observer and start playback when ready
-            self.setupDurationObserver(for: playerItem)
+            // Play from streaming URL (original behavior)
+            await playFromStreamingUrl(book: book)
         }
+    }
+
+    /// Play from local downloaded file (Phase 7)
+    @MainActor
+    private func playFromLocalFile(book: Book) async {
+        let bookId = book.id.uuidString
+        let storageManager = StorageManager.shared
+        let localUrl = storageManager.audioFilePath(for: bookId)
+
+        DebugLogger.audio("Starting local playback for \(book.title)")
+        DebugLogger.verbose("Local file: \(localUrl.path)")
+
+        // Verify file exists
+        guard FileManager.default.fileExists(atPath: localUrl.path) else {
+            DebugLogger.error("Local file not found: \(localUrl.path)")
+            self.error = NSError(
+                domain: "AudioPlayerManager",
+                code: 404,
+                userInfo: [NSLocalizedDescriptionKey: "Downloaded file not found"]
+            )
+            self.isLoading = false
+            return
+        }
+
+        // Create AVPlayerItem from local file (no authentication needed)
+        let playerItem = AVPlayerItem(url: localUrl)
+
+        // Create or replace player
+        if self.player == nil {
+            self.player = AVPlayer(playerItem: playerItem)
+        } else {
+            self.player?.replaceCurrentItem(with: playerItem)
+        }
+
+        // Set initial volume
+        self.player?.volume = self.volume
+
+        // Mark as playing offline
+        self.isPlayingOffline = true
+
+        // Fetch saved progress before starting playback
+        if let savedProgress = try? await self.progressManager.fetchProgress(for: book.id.uuidString) {
+            DebugLogger.database("Loaded saved position: \(savedProgress.positionSeconds)s")
+
+            // If book is not completed and has saved position, seek to it
+            if !savedProgress.completed && savedProgress.positionSeconds > 0 {
+                self.lastSavedPosition = savedProgress.positionSeconds
+            }
+        }
+
+        // Setup time observer
+        self.setupTimeObserver()
+
+        // Setup duration observer and start playback when ready
+        self.setupDurationObserver(for: playerItem)
+    }
+
+    /// Play from streaming URL (original behavior)
+    @MainActor
+    private func playFromStreamingUrl(book: Book) async {
+        // Ensure we have authentication token
+        guard let token = AuthManager.shared.token else {
+            DebugLogger.error("AudioPlayerManager: No authentication token")
+            self.error = NSError(
+                domain: "AudioPlayerManager",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: "Not authenticated"]
+            )
+            self.isLoading = false
+            return
+        }
+
+        DebugLogger.audio("Starting streaming playback for \(book.title)")
+        DebugLogger.verbose("Audio URL: \(book.audioUrl ?? "")")
+
+        // Create URL with custom scheme for resource loader interception
+        guard let url = URL(string: book.audioUrl ?? "") else {
+            DebugLogger.error("Invalid audio URL: \(book.audioUrl ?? "")")
+            self.error = NSError(
+                domain: "AudioPlayerManager",
+                code: 400,
+                userInfo: [NSLocalizedDescriptionKey: "Invalid audio URL"]
+            )
+            self.isLoading = false
+            return
+        }
+
+        // Convert http:// to bookvault:// so resource loader can intercept
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            DebugLogger.error("Invalid URL components")
+            self.isLoading = false
+            return
+        }
+
+        if components.scheme == "http" {
+            components.scheme = "bookvault"
+        } else if components.scheme == "https" {
+            components.scheme = "bookvaults"
+        }
+
+        guard let customSchemeURL = components.url else {
+            DebugLogger.error("Failed to create custom scheme URL")
+            self.isLoading = false
+            return
+        }
+
+        DebugLogger.verbose("Custom scheme URL: \(customSchemeURL.absoluteString)")
+
+        // Create resource loader delegate
+        self.resourceLoaderDelegate = AuthenticatedAVAssetResourceLoaderDelegate(authToken: token)
+
+        // Create AVAsset with resource loader
+        let asset = AVURLAsset(url: customSchemeURL)
+        asset.resourceLoader.setDelegate(
+            self.resourceLoaderDelegate,
+            queue: DispatchQueue(label: "com.bookvault.resourceloader")
+        )
+
+        let playerItem = AVPlayerItem(asset: asset)
+
+        // Create or replace player
+        if self.player == nil {
+            self.player = AVPlayer(playerItem: playerItem)
+        } else {
+            self.player?.replaceCurrentItem(with: playerItem)
+        }
+
+        // Set initial volume
+        self.player?.volume = self.volume
+
+        // Mark as streaming (not offline)
+        self.isPlayingOffline = false
+
+        // Fetch saved progress before starting playback
+        if let savedProgress = try? await self.progressManager.fetchProgress(for: book.id.uuidString) {
+            DebugLogger.database("Loaded saved position: \(savedProgress.positionSeconds)s")
+
+            // If book is not completed and has saved position, seek to it
+            if !savedProgress.completed && savedProgress.positionSeconds > 0 {
+                self.lastSavedPosition = savedProgress.positionSeconds
+            }
+        }
+
+        // Setup time observer
+        self.setupTimeObserver()
+
+        // Setup duration observer and start playback when ready
+        self.setupDurationObserver(for: playerItem)
     }
 
     /// Resume playback
@@ -485,6 +565,7 @@ class AudioPlayerManager: ObservableObject {
         currentBook = nil
         currentBookCoverImage = nil
         isPlaying = false
+        isPlayingOffline = false  // Phase 7: Reset offline flag
         currentTime = 0
         duration = 0
         lastSavedPosition = 0
