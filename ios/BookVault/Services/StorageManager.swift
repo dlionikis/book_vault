@@ -150,6 +150,12 @@ class StorageManager: ObservableObject {
         let fileManager = FileManager.default
         let destinationPath = audioFilePath(for: bookId)
 
+        // Ensure directory exists (defensive - may be called before init completes on main actor)
+        if !fileManager.fileExists(atPath: audiobooksDirectory.path) {
+            try fileManager.createDirectory(at: audiobooksDirectory, withIntermediateDirectories: true)
+            DebugLogger.storage("Created audiobooks directory (late initialization)")
+        }
+
         // Remove existing file if present
         if fileManager.fileExists(atPath: destinationPath.path) {
             try fileManager.removeItem(at: destinationPath)
