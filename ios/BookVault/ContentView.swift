@@ -31,7 +31,7 @@ struct ContentView: View {
             // User is logged in - show tab view with mini player
             ZStack(alignment: .top) {
                 TabView(selection: $selectedTab) {
-                    if networkMonitor.isOnline {
+                    if networkMonitor.isConnected {
                         // Online mode: 6 tabs
                         CatalogView()
                             .tabItem {
@@ -78,8 +78,8 @@ struct ContentView: View {
                         }
                         .tag(Tab.settings)
                 }
-                .onChange(of: networkMonitor.isOnline) { _, isOnline in
-                    handleNetworkChange(isOnline: isOnline)
+                .onChange(of: networkMonitor.isConnected) { _, isConnected in
+                    handleNetworkChange(isOnline: isConnected)
                 }
                 .task {
                     // Auto-load most recently played book on first appearance
