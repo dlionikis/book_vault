@@ -10,7 +10,12 @@ import SwiftUI
 struct BookDetailView: View {
     let book: Book
     @StateObject private var chapterManager = ChapterManager()
+    @StateObject private var libraryManager = LibraryManager.shared
     @State private var showingNowPlaying = false
+    @State private var isInLibrary = false
+    @State private var isCheckingLibrary = false
+    @State private var showingRemoveConfirmation = false
+    @State private var showingSeriesDialog = false
 
     var body: some View {
         ScrollView {
@@ -176,6 +181,21 @@ struct BookDetailView: View {
                         showingNowPlaying: $showingNowPlaying
                     )
                     .padding(.top, 8)
+
+                    // Library button
+                    LibraryButton(
+                        book: book,
+                        isInLibrary: $isInLibrary,
+                        isCheckingLibrary: $isCheckingLibrary,
+                        showingRemoveConfirmation: $showingRemoveConfirmation,
+                        showingSeriesDialog: $showingSeriesDialog,
+                        onLibraryStatusChanged: {
+                            // Refresh library status after add/remove
+                            Task {
+                                await checkLibraryStatus()
+                            }
+                        }
+                    )
                 }
                 .padding(.horizontal)
             }
@@ -196,6 +216,26 @@ struct BookDetailView: View {
                let jsonString = String(data: jsonData, encoding: .utf8) {
                 DebugLogger.verbose("Full Book JSON:\n\(jsonString)")
             }
+
+            // Check library status
+            Task {
+                await checkLibraryStatus()
+            }
+        }
+    }
+
+    // MARK: - Library Status Check
+
+    private func checkLibraryStatus() async {
+        isCheckingLibrary = true
+        defer { isCheckingLibrary = false }
+
+        do {
+            isInLibrary = try await libraryManager.isInLibrary(bookId: book.id.uuidString)
+            DebugLogger.ui("Library status for \(book.title): \(isInLibrary)")
+        } catch {
+            DebugLogger.error("Failed to check library status", error: error)
+            isInLibrary = false
         }
     }
 
@@ -259,6 +299,136 @@ struct BookPlayButton: View {
             .background(Color.blue)
             .foregroundColor(.white)
             .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+}
+
+// MARK: - Library Button
+
+/// Library management button component
+struct LibraryButton: View {
+    let book: Book
+    @Binding var isInLibrary: Bool
+    @Binding var isCheckingLibrary: Bool
+    @Binding var showingRemoveConfirmation: Bool
+    @Binding var showingSeriesDialog: Bool
+    let onLibraryStatusChanged: () -> Void
+
+    @StateObject private var libraryManager = LibraryManager.shared
+
+    private var hasSeries: Bool {
+        book.series?.isEmpty == false
+    }
+
+    var body: some View {
+        Button {
+            if isInLibrary {
+                // Show remove confirmation
+                showingRemoveConfirmation = true
+            } else {
+                // Show series dialog if book has series, otherwise add directly
+                if hasSeries {
+                    showingSeriesDialog = true
+                } else {
+                    addBookToLibrary()
+                }
+            }
+        } label: {
+            HStack {
+                Image(systemName: isInLibrary ? "checkmark.circle.fill" : "plus")
+                Text(isInLibrary ? "In Library" : "Add to Library")
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(isInLibrary ? Color.green : Color.blue)
+            .foregroundColor(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .disabled(isCheckingLibrary || libraryManager.isLoading)
+        .confirmationDialog(
+            "Remove from Library?",
+            isPresented: $showingRemoveConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Remove from Library", role: .destructive) {
+                removeBookFromLibrary()
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog(
+            "Add to Library",
+            isPresented: $showingSeriesDialog,
+            titleVisibility: .visible
+        ) {
+            VStack {
+                Text("This book is part of a series.")
+                Text("What would you like to add?")
+            }
+
+            Button("Add Entire Series") {
+                addSeriesToLibrary()
+            }
+            Button("Add Just This Book") {
+                addBookToLibrary()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This book is part of a series. What would you like to add?")
+        }
+    }
+
+    private func addBookToLibrary() {
+        Task {
+            do {
+                try await libraryManager.addToLibrary(bookId: book.id.uuidString)
+                await MainActor.run {
+                    isInLibrary = true
+                    onLibraryStatusChanged()
+                }
+                DebugLogger.success("Added '\(book.title)' to library")
+            } catch {
+                DebugLogger.error("Failed to add book to library", error: error)
+            }
+        }
+    }
+
+    private func removeBookFromLibrary() {
+        Task {
+            do {
+                try await libraryManager.removeFromLibrary(bookId: book.id.uuidString)
+                await MainActor.run {
+                    isInLibrary = false
+                    onLibraryStatusChanged()
+                }
+                DebugLogger.success("Removed '\(book.title)' from library")
+            } catch {
+                DebugLogger.error("Failed to remove book from library", error: error)
+            }
+        }
+    }
+
+    private func addSeriesToLibrary() {
+        Task {
+            // Get the first series ID
+            guard let firstSeries = book.series?.first,
+                  let asinString = firstSeries.asin,
+                  let seriesId = UUID(uuidString: asinString) else {
+                DebugLogger.error("No valid series ID found")
+                return
+            }
+
+            do {
+                try await libraryManager.addSeriesToLibrary(seriesId: seriesId.uuidString)
+                await MainActor.run {
+                    isInLibrary = true
+                    onLibraryStatusChanged()
+                }
+                DebugLogger.success("Added series '\(firstSeries.title)' to library")
+            } catch {
+                DebugLogger.error("Failed to add series to library", error: error)
+                // Fallback to adding just this book
+                addBookToLibrary()
+            }
         }
     }
 }

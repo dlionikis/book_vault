@@ -12,9 +12,14 @@ struct SeriesDetailView: View {
     let seriesId: String
 
     @StateObject private var searchManager = SearchManager.shared
+    @StateObject private var libraryManager = LibraryManager.shared
     @State private var seriesDetail: GetSeries200Response?
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var isAddingToLibrary = false
+    @State private var showingSuccessMessage = false
+    @State private var booksInLibrary: Set<String> = []
+    @State private var isCheckingLibrary = false
 
     private let columns = [
         GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
@@ -93,7 +98,73 @@ struct SeriesDetailView: View {
                             .frame(maxWidth: .infinity)
                             .padding()
                         } else {
-                            VStack(alignment: .leading, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 16) {
+                                // Add/Remove Series to/from Library button
+                                if isCheckingLibrary {
+                                    HStack {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle())
+                                        Text("Checking library status...")
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                } else if booksInLibrary.isEmpty {
+                                    // Add to library button
+                                    Button {
+                                        Task {
+                                            await addSeriesToLibrary()
+                                        }
+                                    } label: {
+                                        HStack {
+                                            if isAddingToLibrary {
+                                                ProgressView()
+                                                    .progressViewStyle(CircularProgressViewStyle())
+                                                    .scaleEffect(0.8)
+                                            } else {
+                                                Image(systemName: showingSuccessMessage ? "checkmark.circle.fill" : "plus.circle.fill")
+                                            }
+                                            Text(showingSuccessMessage ? "Added to Library" : "Add Entire Series to Library")
+                                                .fontWeight(.semibold)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(showingSuccessMessage ? Color.green : Color.accentColor)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(12)
+                                    }
+                                    .disabled(isAddingToLibrary || showingSuccessMessage)
+                                    .padding(.horizontal)
+                                    .padding(.bottom, 8)
+                                } else {
+                                    // Remove from library button
+                                    Button {
+                                        Task {
+                                            await removeSeriesFromLibrary()
+                                        }
+                                    } label: {
+                                        HStack {
+                                            if isAddingToLibrary {
+                                                ProgressView()
+                                                    .progressViewStyle(CircularProgressViewStyle())
+                                                    .scaleEffect(0.8)
+                                            } else {
+                                                Image(systemName: showingSuccessMessage ? "checkmark.circle.fill" : "trash.circle.fill")
+                                            }
+                                            Text(showingSuccessMessage ? "Removed from Library" : "Remove Series from Library")
+                                                .fontWeight(.semibold)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(showingSuccessMessage ? Color.green : Color.red)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(12)
+                                    }
+                                    .disabled(isAddingToLibrary || showingSuccessMessage)
+                                    .padding(.horizontal)
+                                    .padding(.bottom, 8)
+                                }
+
                                 Text("Books in Series Order")
                                     .font(.headline)
                                     .padding(.horizontal)
@@ -140,6 +211,103 @@ struct SeriesDetailView: View {
         }
     }
 
+    // MARK: - Library Actions
+
+    /// Checks which books from the series are already in the library
+    private func checkLibraryStatus() async {
+        guard let detail = seriesDetail else { return }
+
+        isCheckingLibrary = true
+        defer { isCheckingLibrary = false }
+
+        var inLibrary = Set<String>()
+
+        for book in detail.books {
+            do {
+                let status = try await libraryManager.isInLibrary(bookId: book.id.uuidString)
+                if status {
+                    inLibrary.insert(book.id.uuidString)
+                }
+            } catch {
+                DebugLogger.error("Failed to check library status for book \(book.id)", error: error)
+            }
+        }
+
+        await MainActor.run {
+            booksInLibrary = inLibrary
+        }
+
+        DebugLogger.info("Series '\(detail.title)': \(inLibrary.count)/\(detail.books.count) books in library")
+    }
+
+    /// Adds all books in the series to the user's library
+    private func addSeriesToLibrary() async {
+        guard let detail = seriesDetail else { return }
+
+        isAddingToLibrary = true
+        defer { isAddingToLibrary = false }
+
+        do {
+            // Add each book in the series to the library
+            for book in detail.books {
+                try await libraryManager.addToLibrary(bookId: book.id.uuidString)
+            }
+
+            // Update library status
+            await checkLibraryStatus()
+
+            // Show success message
+            await MainActor.run {
+                showingSuccessMessage = true
+            }
+
+            // Reset success message after 2 seconds
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            await MainActor.run {
+                showingSuccessMessage = false
+            }
+
+            DebugLogger.info("Successfully added \(detail.books.count) books from series '\(detail.title)' to library")
+        } catch {
+            DebugLogger.error("Failed to add series to library", error: error)
+            errorMessage = "Failed to add series to library: \(error.localizedDescription)"
+        }
+    }
+
+    /// Removes all books in the series from the user's library
+    private func removeSeriesFromLibrary() async {
+        guard let detail = seriesDetail else { return }
+
+        isAddingToLibrary = true
+        defer { isAddingToLibrary = false }
+
+        do {
+            // Remove each book in the series from the library
+            for book in detail.books {
+                try await libraryManager.removeFromLibrary(bookId: book.id.uuidString)
+            }
+
+            // Update library status
+            await checkLibraryStatus()
+
+            // Show success message
+            await MainActor.run {
+                showingSuccessMessage = true
+            }
+
+            // Reset success message after 2 seconds
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            await MainActor.run {
+                showingSuccessMessage = false
+            }
+
+            DebugLogger.info("Successfully removed \(detail.books.count) books from series '\(detail.title)' from library")
+        } catch {
+            DebugLogger.error("Failed to remove series from library", error: error)
+            errorMessage = "Failed to remove series from library: \(error.localizedDescription)"
+        }
+    }
+
     // MARK: - Data Loading
 
     /// Loads the series detail from the API
@@ -151,6 +319,9 @@ struct SeriesDetailView: View {
             let detail = try await searchManager.fetchSeriesDetail(id: seriesId)
             seriesDetail = detail
             DebugLogger.info("Loaded series: \(detail.title) with \(detail.books.count) books")
+
+            // Check library status after loading series
+            await checkLibraryStatus()
         } catch {
             DebugLogger.error("Failed to load series detail", error: error)
             errorMessage = error.localizedDescription

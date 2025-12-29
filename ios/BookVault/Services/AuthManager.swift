@@ -31,6 +31,11 @@ class AuthManager: ObservableObject {
         loadFromKeychain(key: accessTokenKey)
     }
 
+    // Public access to user email
+    var userEmail: String? {
+        currentUser?.email
+    }
+
     private init() {
         // Try to restore session from keychain
         Task {

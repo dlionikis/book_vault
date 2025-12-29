@@ -1,0 +1,243 @@
+//
+//  LibraryManager.swift
+//  BookVault
+//
+//  Created by Claude Code on 12/29/25.
+//  Phase 2: Library UX Alignment
+//
+
+import Foundation
+import Combine
+
+/// Manages user library operations with caching strategy
+/// This is a lightweight wrapper around APIClient for library-related operations
+class LibraryManager: ObservableObject {
+    static let shared = LibraryManager()
+
+    @MainActor @Published var isLoading = false
+    @MainActor @Published var error: Error?
+
+    private let apiClient = APIClient.shared
+
+    // MARK: - Caching
+
+    /// In-memory cache of library books
+    private var cachedBooks: [Book]?
+
+    /// Timestamp of last cache update
+    private var lastCacheUpdate: Date?
+
+    /// Cache validity duration (5 minutes)
+    private let cacheValidityDuration: TimeInterval = 300
+
+    private init() {}
+
+    // MARK: - Public API
+
+    /// Fetch user's library books
+    /// Uses cached data if available and fresh, otherwise fetches from API
+    /// - Parameter forceRefresh: If true, bypasses cache and fetches from API
+    /// - Returns: Array of books in user's library
+    @MainActor
+    func fetchLibraryBooks(forceRefresh: Bool = false) async throws -> [Book] {
+        // Check if cache is valid and not forcing refresh
+        if !forceRefresh, let cached = cachedBooks, isCacheValid() {
+            DebugLogger.database("Using cached library books (\(cached.count) books)")
+            return cached
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        DebugLogger.database("Fetching library books from API")
+
+        let response = try await apiClient.fetchLibrary()
+
+        // Update cache
+        cachedBooks = response.books
+        lastCacheUpdate = Date()
+
+        DebugLogger.success("Fetched \(response.books.count) library books (total: \(response.total))")
+
+        return response.books
+    }
+
+    /// Add book to user's library
+    /// Invalidates cache to ensure fresh data on next fetch
+    /// - Parameter bookId: The book's ID string
+    @MainActor
+    func addToLibrary(bookId: String) async throws {
+        guard let uuid = UUID(uuidString: bookId) else {
+            throw NSError(domain: "LibraryManager", code: 400, userInfo: [
+                NSLocalizedDescriptionKey: "Invalid book ID format"
+            ])
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        DebugLogger.database("Adding book to library: \(bookId)")
+
+        let response = try await apiClient.addToLibrary(bookId: uuid)
+
+        DebugLogger.success("Book added to library: \(response.message)")
+
+        // Invalidate cache
+        invalidateCache()
+    }
+
+    /// Remove book from user's library
+    /// Invalidates cache to ensure fresh data on next fetch
+    /// - Parameter bookId: The book's ID string
+    @MainActor
+    func removeFromLibrary(bookId: String) async throws {
+        guard let uuid = UUID(uuidString: bookId) else {
+            throw NSError(domain: "LibraryManager", code: 400, userInfo: [
+                NSLocalizedDescriptionKey: "Invalid book ID format"
+            ])
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        DebugLogger.database("Removing book from library: \(bookId)")
+
+        try await apiClient.removeFromLibrary(bookId: uuid)
+
+        DebugLogger.success("Book removed from library")
+
+        // Invalidate cache
+        invalidateCache()
+    }
+
+    /// Check if a book is in the user's library
+    /// Uses cached data if available to minimize API calls
+    /// - Parameter bookId: The book's ID string
+    /// - Returns: True if book is in library, false otherwise
+    @MainActor
+    func isInLibrary(bookId: String) async throws -> Bool {
+        // Try to use cached data first
+        if let cached = cachedBooks, isCacheValid() {
+            let isInCache = cached.contains { $0.id.uuidString == bookId }
+            DebugLogger.database("Checked library status from cache: \(isInCache)")
+            return isInCache
+        }
+
+        // If no valid cache, fetch library to update cache
+        let books = try await fetchLibraryBooks()
+        let isInLibrary = books.contains { $0.id.uuidString == bookId }
+
+        DebugLogger.database("Checked library status from API: \(isInLibrary)")
+        return isInLibrary
+    }
+
+    /// Add all books in a series to user's library
+    /// Note: This requires a series endpoint that may not be implemented yet
+    /// - Parameter seriesId: The series ID string
+    @MainActor
+    func addSeriesToLibrary(seriesId: String) async throws {
+        guard let uuid = UUID(uuidString: seriesId) else {
+            throw NSError(domain: "LibraryManager", code: 400, userInfo: [
+                NSLocalizedDescriptionKey: "Invalid series ID format"
+            ])
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        DebugLogger.database("Adding series to library: \(seriesId)")
+
+        // Create request to add series
+        // Note: This assumes the API endpoint exists at /api/library/series
+        // If not implemented yet, this will need to be updated
+        let request = try createSeriesRequest(seriesId: uuid)
+
+        do {
+            let response: AddSeriesToLibrary200Response = try await executeRequest(request)
+            DebugLogger.success("Series added to library: \(response.message) (\(response.added)/\(response.total) books)")
+
+            // Invalidate cache
+            invalidateCache()
+        } catch {
+            DebugLogger.error("Failed to add series to library", error: error)
+            throw error
+        }
+    }
+
+    // MARK: - Cache Management
+
+    /// Check if cached data is still valid
+    private func isCacheValid() -> Bool {
+        guard let lastUpdate = lastCacheUpdate else {
+            return false
+        }
+
+        let elapsed = Date().timeIntervalSince(lastUpdate)
+        return elapsed < cacheValidityDuration
+    }
+
+    /// Invalidate the cache (called after add/remove operations)
+    private func invalidateCache() {
+        cachedBooks = nil
+        lastCacheUpdate = nil
+        DebugLogger.database("Library cache invalidated")
+    }
+
+    /// Force refresh the cache (useful for pull-to-refresh)
+    @MainActor
+    func refreshCache() async throws {
+        DebugLogger.database("Force refreshing library cache")
+        _ = try await fetchLibraryBooks(forceRefresh: true)
+    }
+
+    // MARK: - Private Helpers
+
+    /// Create a request to add series to library
+    /// Note: This is a temporary implementation until the API endpoint is confirmed
+    private func createSeriesRequest(seriesId: UUID) throws -> URLRequest {
+        guard let url = URL(string: "/api/library/series", relativeTo: apiClient.baseURL) else {
+            throw NSError(domain: "LibraryManager", code: 400, userInfo: [
+                NSLocalizedDescriptionKey: "Invalid URL"
+            ])
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        // Add authorization header
+        if let token = apiClient.accessToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        // Create request body
+        let body = ["seriesId": seriesId.uuidString]
+        request.httpBody = try JSONEncoder().encode(body)
+
+        return request
+    }
+
+    /// Execute a URLRequest and decode the response
+    private func executeRequest<T: Decodable>(_ request: URLRequest) async throws -> T {
+        let session = URLSession.shared
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "LibraryManager", code: 500, userInfo: [
+                NSLocalizedDescriptionKey: "Invalid response"
+            ])
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NSError(domain: "LibraryManager", code: httpResponse.statusCode, userInfo: [
+                NSLocalizedDescriptionKey: "HTTP \(httpResponse.statusCode)"
+            ])
+        }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        return try decoder.decode(T.self, from: data)
+    }
+}

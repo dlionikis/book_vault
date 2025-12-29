@@ -1,14 +1,15 @@
 //
-//  BooksListView.swift
+//  CatalogView.swift
 //  BookVault
 //
 //  Created by Claude Code on 12/26/25.
+//  Renamed from BooksListView.swift on 12/29/25 (Phase 3: Library UX Alignment)
 //
 
 import SwiftUI
 
-struct BooksListView: View {
-    @StateObject private var viewModel = BooksListViewModel()
+struct CatalogView: View {
+    @StateObject private var viewModel = CatalogViewModel()
     @StateObject private var authManager = AuthManager.shared
 
     private let columns = [
@@ -55,7 +56,7 @@ struct BooksListView: View {
                             .foregroundColor(.secondary)
                         Text("No Books Found")
                             .font(.headline)
-                        Text("Your library is empty")
+                        Text("No books in catalog")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -94,18 +95,7 @@ struct BooksListView: View {
                     .padding(.vertical)
                 }
             }
-            .navigationTitle("Library")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        Task {
-                            await authManager.logout()
-                        }
-                    } label: {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                    }
-                }
-            }
+            .navigationTitle("Catalog")
             .refreshable {
                 await viewModel.refreshBooks()
             }
@@ -209,7 +199,7 @@ struct BookGridItem: View {
 // MARK: - View Model
 
 @MainActor
-class BooksListViewModel: ObservableObject {
+class CatalogViewModel: ObservableObject {
     @Published var books: [Book] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -434,7 +424,7 @@ struct ProgressIndicator: View {
 // MARK: - Previews
 
 #Preview("Empty State") {
-    BooksListView()
+    CatalogView()
 }
 
 #Preview("Grid Item - Standard") {
@@ -456,7 +446,7 @@ struct ProgressIndicator: View {
             }
             .padding()
         }
-        .navigationTitle("Library")
+        .navigationTitle("Catalog")
     }
 }
 
@@ -473,7 +463,7 @@ struct ProgressIndicator: View {
             }
             .padding()
         }
-        .navigationTitle("Library")
+        .navigationTitle("Catalog")
     }
     .preferredColorScheme(.dark)
 }

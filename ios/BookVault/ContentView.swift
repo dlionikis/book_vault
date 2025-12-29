@@ -8,27 +8,30 @@
 import SwiftUI
 
 enum Tab {
-    case library
-    case browse
-    case search
+    case catalog  // All books (was library)
+    case browse   // Metadata browse
+    case search   // Keyword search
+    case library  // User's personal library
+    case settings // Settings and account
 }
 
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
+    @StateObject private var themeManager = ThemeManager.shared
     @ObservedObject private var audioPlayer = AudioPlayerManager.shared
     @State private var hasLoadedInitialBook = false
-    @State private var selectedTab: Tab = .library
+    @State private var selectedTab: Tab = .catalog
 
     var body: some View {
         if authManager.isAuthenticated {
             // User is logged in - show tab view with mini player
-            ZStack(alignment: .bottom) {
+            ZStack(alignment: .top) {
                 TabView(selection: $selectedTab) {
-                    BooksListView()
+                    CatalogView()
                         .tabItem {
-                            Label("Library", systemImage: "books.vertical")
+                            Label("Catalog", systemImage: "books.vertical.fill")
                         }
-                        .tag(Tab.library)
+                        .tag(Tab.catalog)
 
                     BrowseView()
                         .tabItem {
@@ -41,6 +44,18 @@ struct ContentView: View {
                             Label("Search", systemImage: "magnifyingglass")
                         }
                         .tag(Tab.search)
+
+                    LibraryView(selectedTab: $selectedTab)
+                        .tabItem {
+                            Label("Library", systemImage: "books.vertical")
+                        }
+                        .tag(Tab.library)
+
+                    SettingsView()
+                        .tabItem {
+                            Label("Settings", systemImage: "gearshape")
+                        }
+                        .tag(Tab.settings)
                 }
                 .task {
                     // Auto-load most recently played book on first appearance
@@ -50,21 +65,22 @@ struct ContentView: View {
                     }
                 }
 
-                // Mini player overlay - floats above tab bar
+                // Mini player overlay - floats at top, below navigation bar
                 if audioPlayer.currentBook != nil {
                     VStack(spacing: 0) {
-                        Spacer()
                         MiniPlayerView()
-                            .padding(.bottom, 49) // Tab bar height
+                        Spacer()
                     }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(.move(edge: .top).combined(with: .opacity))
                     .animation(.spring(response: 0.3, dampingFraction: 0.8), value: audioPlayer.currentBook != nil)
                 }
             }
             .ignoresSafeArea(.keyboard)
+            .preferredColorScheme(themeManager.selectedTheme.colorScheme)
         } else {
             // User is not logged in - show login screen
             LoginView()
+                .preferredColorScheme(themeManager.selectedTheme.colorScheme)
         }
     }
 
