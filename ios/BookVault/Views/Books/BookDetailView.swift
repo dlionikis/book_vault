@@ -174,13 +174,32 @@ struct BookDetailView: View {
                         }
                     }
 
-                    // Play button (isolated to prevent unnecessary parent re-renders)
-                    BookPlayButton(
-                        book: book,
-                        chapterManager: chapterManager,
-                        showingNowPlaying: $showingNowPlaying
-                    )
-                    .padding(.top, 8)
+                    // Play and Download buttons (only shown if book is in library)
+                    if isInLibrary {
+                        // Play button (isolated to prevent unnecessary parent re-renders)
+                        BookPlayButton(
+                            book: book,
+                            chapterManager: chapterManager,
+                            showingNowPlaying: $showingNowPlaying
+                        )
+                        .padding(.top, 8)
+
+                        // Download button (Phase 7)
+                        DownloadButton(book: book)
+                    } else if isCheckingLibrary {
+                        // Show placeholder while checking library status
+                        HStack {
+                            ProgressView()
+                                .padding(.trailing, 4)
+                            Text("Checking library...")
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.gray.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding(.top, 8)
+                    }
 
                     // Library button
                     LibraryButton(
@@ -410,15 +429,13 @@ struct LibraryButton: View {
     private func addSeriesToLibrary() {
         Task {
             // Get the first series ID
-            guard let firstSeries = book.series?.first,
-                  let asinString = firstSeries.asin,
-                  let seriesId = UUID(uuidString: asinString) else {
+            guard let firstSeries = book.series?.first else {
                 DebugLogger.error("No valid series ID found")
                 return
             }
 
             do {
-                try await libraryManager.addSeriesToLibrary(seriesId: seriesId.uuidString)
+                try await libraryManager.addSeriesToLibrary(seriesId: firstSeries.id.uuidString)
                 await MainActor.run {
                     isInLibrary = true
                     onLibraryStatusChanged()
@@ -537,6 +554,210 @@ struct FlowLayout: Layout {
 #Preview("Multiple Authors") {
     NavigationView {
         BookDetailView(book: .mockMultipleAuthors)
+    }
+}
+
+// MARK: - Download Button (Phase 7)
+
+/// Download management button component
+struct DownloadButton: View {
+    let book: Book
+    @StateObject private var downloadManager = DownloadManager.shared
+    @StateObject private var storageManager = StorageManager.shared
+    @State private var showingDeleteConfirmation = false
+    @State private var downloadError: String?
+    @State private var showingError = false
+
+    private var bookId: String {
+        book.id.uuidString
+    }
+
+    private var downloadState: DownloadState {
+        downloadManager.downloadState(for: bookId)
+    }
+
+    private var isDownloaded: Bool {
+        storageManager.isBookDownloaded(bookId: bookId)
+    }
+
+    private var downloadedSize: Int64? {
+        storageManager.downloadedFileSize(for: bookId)
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            switch downloadState {
+            case .notDownloaded:
+                // Show download button
+                Button {
+                    startDownload()
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.down.circle")
+                        Text("Download for Offline")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.gray.opacity(0.2))
+                    .foregroundColor(.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+            case .waiting:
+                // Show waiting state
+                HStack {
+                    ProgressView()
+                        .padding(.trailing, 4)
+                    Text("Preparing download...")
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.gray.opacity(0.2))
+                .foregroundColor(.secondary)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            case .downloading(let progress):
+                // Show download progress
+                VStack(spacing: 8) {
+                    ProgressView(value: progress)
+                        .tint(.blue)
+
+                    HStack {
+                        Text("\(Int(progress * 100))% downloaded")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        Button("Cancel") {
+                            downloadManager.cancelDownload(bookId: bookId)
+                        }
+                        .font(.caption)
+                        .foregroundColor(.red)
+                    }
+                }
+                .padding()
+                .background(Color.gray.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            case .paused(let progress):
+                // Show paused state with resume option
+                VStack(spacing: 8) {
+                    ProgressView(value: progress)
+                        .tint(.orange)
+
+                    HStack {
+                        Text("Paused at \(Int(progress * 100))%")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        Button("Resume") {
+                            Task {
+                                try? await downloadManager.resumeDownload(book: book)
+                            }
+                        }
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                    }
+                }
+                .padding()
+                .background(Color.gray.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            case .completed:
+                // Show downloaded state with delete option
+                Button {
+                    showingDeleteConfirmation = true
+                } label: {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text("Downloaded")
+                        Spacer()
+                        if let size = downloadedSize {
+                            Text(StorageManager.formatFileSize(size))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                            .font(.caption)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green.opacity(0.1))
+                    .foregroundColor(.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+            case .failed(let errorMessage):
+                // Show error state with retry option
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.red)
+                        Text("Download failed")
+                            .foregroundColor(.red)
+                    }
+
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+
+                    Button("Retry") {
+                        startDownload()
+                    }
+                    .font(.caption)
+                    .foregroundColor(.blue)
+                }
+                .padding()
+                .background(Color.red.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .confirmationDialog(
+            "Delete Download?",
+            isPresented: $showingDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Download", role: .destructive) {
+                deleteDownload()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will remove the downloaded file from your device. You can always download it again.")
+        }
+        .alert("Download Error", isPresented: $showingError) {
+            Button("OK") {}
+        } message: {
+            Text(downloadError ?? "An unknown error occurred")
+        }
+    }
+
+    private func startDownload() {
+        Task {
+            do {
+                try await downloadManager.startDownload(book: book)
+            } catch let error as DownloadError {
+                downloadError = error.localizedDescription
+                showingError = true
+            } catch {
+                downloadError = error.localizedDescription
+                showingError = true
+            }
+        }
+    }
+
+    private func deleteDownload() {
+        do {
+            try downloadManager.deleteDownload(bookId: bookId)
+        } catch {
+            downloadError = error.localizedDescription
+            showingError = true
+        }
     }
 }
 

@@ -17,6 +17,10 @@ class LibraryManager: ObservableObject {
     @MainActor @Published var isLoading = false
     @MainActor @Published var error: Error?
 
+    /// Increments whenever the library is modified (add/remove book)
+    /// Observers can watch this to know when to refresh their views
+    @MainActor @Published var libraryVersion: Int = 0
+
     private let apiClient = APIClient.shared
 
     // MARK: - Caching
@@ -87,6 +91,7 @@ class LibraryManager: ObservableObject {
     }
 
     /// Remove book from user's library
+    /// Also deletes any local download of the book
     /// Invalidates cache to ensure fresh data on next fetch
     /// - Parameter bookId: The book's ID string
     @MainActor
@@ -105,6 +110,17 @@ class LibraryManager: ObservableObject {
         try await apiClient.removeFromLibrary(bookId: uuid)
 
         DebugLogger.success("Book removed from library")
+
+        // Delete local download if exists
+        if StorageManager.shared.isBookDownloaded(bookId: bookId) {
+            do {
+                try StorageManager.shared.deleteDownload(bookId: bookId)
+                DebugLogger.success("Deleted local download for removed book")
+            } catch {
+                DebugLogger.error("Failed to delete local download", error: error)
+                // Don't throw - book was removed from library successfully
+            }
+        }
 
         // Invalidate cache
         invalidateCache()
@@ -177,10 +193,13 @@ class LibraryManager: ObservableObject {
     }
 
     /// Invalidate the cache (called after add/remove operations)
+    /// Also increments libraryVersion to notify observers
+    @MainActor
     private func invalidateCache() {
         cachedBooks = nil
         lastCacheUpdate = nil
-        DebugLogger.database("Library cache invalidated")
+        libraryVersion += 1
+        DebugLogger.database("Library cache invalidated (version: \(libraryVersion))")
     }
 
     /// Force refresh the cache (useful for pull-to-refresh)

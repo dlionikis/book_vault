@@ -94,6 +94,14 @@ class AuthManager: ObservableObject {
         isLoading = false
     }
 
+    /// Force logout due to invalid/expired token (called when API returns 401)
+    /// This clears the session immediately without trying to call the server
+    func forceLogout() {
+        DebugLogger.auth("Force logout triggered - token invalid or expired")
+        clearSession()
+        errorMessage = "Your session has expired. Please log in again."
+    }
+
     /// Refresh the access token using the refresh token
     func refreshAccessToken() async -> Bool {
         guard let refreshToken = refreshTokenValue else {

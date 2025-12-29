@@ -4,11 +4,12 @@ import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { isS3Enabled, generatePresignedUrl, getS3ObjectMetadata } from '@/lib/s3';
 import { checkDownloadLimit } from '@/lib/rate-limit';
+import { normalizeUuid } from '@/lib/api-utils';
+import { getAbsoluteMediaPath } from '@/lib/media';
+import { statSync } from 'fs';
+import { join } from 'path';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { bookId: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { bookId: string } }) {
   try {
     // Check both auth methods
     const session = await getServerSession(authOptions);
@@ -16,13 +17,11 @@ export async function POST(
     const user = session?.user || mobileUser;
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { bookId } = params;
+    const normalizedBookId = normalizeUuid(bookId) as string;
 
     // Parse request body
     const body = await request.json();
@@ -30,7 +29,7 @@ export async function POST(
 
     // Verify book exists
     const book = await prisma.book.findUnique({
-      where: { id: bookId },
+      where: { id: normalizedBookId },
       select: {
         id: true,
         audioUrl: true,
@@ -38,46 +37,58 @@ export async function POST(
     });
 
     if (!book) {
-      return NextResponse.json(
-        { error: 'Book not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
     if (!book.audioUrl) {
-      return NextResponse.json(
-        { error: 'Book has no audio file' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Book has no audio file' }, { status: 400 });
     }
 
     // Check eligibility (for MVP: always eligible, future: check library, quota)
     // For now, just verify book exists (already done above)
 
-    // Check rate limit (max 10 downloads per day)
+    // Check rate limit (max 50 downloads per day)
     const withinLimit = await checkDownloadLimit(user.id);
     if (!withinLimit) {
-      return NextResponse.json(
-        { error: 'Download limit exceeded (10/day)' },
-        { status: 429 }
-      );
+      return NextResponse.json({ error: 'Download limit exceeded (50/day)' }, { status: 429 });
     }
 
-    // Check if S3 is configured
-    if (!isS3Enabled()) {
-      return NextResponse.json(
-        { error: 'Downloads require S3 configuration' },
-        { status: 501 }
-      );
+    let downloadUrl: string;
+    let fileSize: number;
+    let expiresAt: string;
+
+    if (isS3Enabled()) {
+      // Production: Generate pre-signed S3 URL
+      // audioUrl format: "book-folder/filename.mp3" (S3 key)
+      const expiresIn = 3600; // 1 hour
+      downloadUrl = await generatePresignedUrl(book.audioUrl, expiresIn);
+
+      // Get file size from S3
+      const metadata = await getS3ObjectMetadata(book.audioUrl);
+      fileSize = metadata.size;
+
+      // Calculate expiry time
+      expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+    } else {
+      // Development: Use local audio streaming endpoint
+      // audioUrl is stored as relative path (e.g., "Book Title [ASIN]/filename.mp3")
+      const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      const encodedPath = book.audioUrl.split('/').map(encodeURIComponent).join('/');
+      downloadUrl = `${baseUrl}/api/audio/${encodedPath}`;
+
+      // Get file size from local filesystem
+      const mediaPath = getAbsoluteMediaPath();
+      const localPath = join(mediaPath, book.audioUrl);
+      try {
+        const stat = statSync(localPath);
+        fileSize = stat.size;
+      } catch {
+        return NextResponse.json({ error: 'Audio file not found on disk' }, { status: 404 });
+      }
+
+      // Local URLs don't expire, but set a far-future date for consistency
+      expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
     }
-
-    // Generate pre-signed URL
-    // audioUrl format: "book-folder/filename.mp3" (S3 key)
-    const expiresIn = 3600; // 1 hour
-    const downloadUrl = await generatePresignedUrl(book.audioUrl, expiresIn);
-
-    // Get file size
-    const metadata = await getS3ObjectMetadata(book.audioUrl);
 
     // Record download in database
     await prisma.userDownload.create({
@@ -88,19 +99,13 @@ export async function POST(
       },
     });
 
-    // Calculate expiry time
-    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
-
     return NextResponse.json({
       downloadUrl,
       expiresAt,
-      fileSize: metadata.size,
+      fileSize,
     });
   } catch (error) {
     console.error('Download URL generation error:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate download URL' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to generate download URL' }, { status: 500 });
   }
 }
