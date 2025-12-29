@@ -71,16 +71,8 @@ struct OfflineModeView: View {
                 VStack(spacing: 12) {
                     // Retry connection button - refreshes network status and switches tab if connected
                     Button {
-                        DebugLogger.network("Retry button tapped - current isConnected: \(networkMonitor.isConnected)")
-                        // Force refresh the network status
-                        networkMonitor.refreshStatus()
-                        // Check if we're actually connected now
-                        DebugLogger.network("After refresh - isConnected: \(networkMonitor.isConnected)")
-                        if networkMonitor.isConnected {
-                            DebugLogger.network("Connected! Switching to Catalog tab")
-                            selectedTab = .catalog
-                        } else {
-                            DebugLogger.network("Still offline after refresh")
+                        Task {
+                            await retryConnection()
                         }
                     } label: {
                         HStack {
@@ -140,6 +132,38 @@ struct OfflineModeView: View {
             .navigationTitle("Offline Mode")
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    /// Retry connection with multiple attempts
+    /// WiFi can take a moment to reconnect after being re-enabled
+    private func retryConnection() async {
+        DebugLogger.network("Retry button tapped - starting connection check")
+
+        // First, restart the monitor to ensure fresh state
+        networkMonitor.restartMonitor()
+        try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5 seconds for monitor to initialize
+
+        // Try up to 3 times with delays to allow WiFi to fully reconnect
+        for attempt in 1...3 {
+            DebugLogger.network("Attempt \(attempt): refreshing network status")
+            networkMonitor.refreshStatus()
+
+            // Small delay to let the status update propagate
+            try? await Task.sleep(nanoseconds: 300_000_000)  // 0.3 seconds
+
+            if networkMonitor.isConnected {
+                DebugLogger.network("Connected on attempt \(attempt)! Switching to Catalog tab")
+                selectedTab = .catalog
+                return
+            }
+
+            if attempt < 3 {
+                DebugLogger.network("Not connected yet, waiting before retry...")
+                try? await Task.sleep(nanoseconds: 700_000_000)  // 0.7 seconds
+            }
+        }
+
+        DebugLogger.network("Still offline after 3 attempts")
     }
 }
 

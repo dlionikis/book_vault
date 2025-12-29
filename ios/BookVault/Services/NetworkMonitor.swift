@@ -114,8 +114,17 @@ class NetworkMonitor: ObservableObject {
             return
         }
         let currentPath = monitor.currentPath
-        DebugLogger.network("refreshStatus - manually checking currentPath: \(currentPath.status)")
+        DebugLogger.network("refreshStatus - manually checking currentPath: \(currentPath.status), interfaces: \(currentPath.availableInterfaces.map { $0.type })")
         handlePathUpdate(currentPath)
+    }
+
+    /// Restart the network monitor completely
+    /// Use this if the monitor seems to have stopped receiving updates
+    func restartMonitor() {
+        DebugLogger.network("Restarting network monitor...")
+        monitor?.cancel()
+        monitor = nil
+        setupMonitor()
     }
 
     // MARK: - Download Eligibility
