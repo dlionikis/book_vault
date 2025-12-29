@@ -12,6 +12,8 @@ import Combine
 struct LibraryView: View {
     @StateObject private var viewModel = LibraryViewModel()
     @StateObject private var authManager = AuthManager.shared
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
+    @ObservedObject private var libraryManager = LibraryManager.shared
     @Binding var selectedTab: Tab
 
     private let columns = [
@@ -31,25 +33,65 @@ struct LibraryView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.top, 100)
                 } else if let error = viewModel.errorMessage {
-                    // Error state
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 50))
-                            .foregroundColor(.orange)
-                        Text("Error Loading Library")
-                            .font(.headline)
-                        Text(error)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                        Button("Try Again") {
-                            Task {
-                                await viewModel.loadLibrary()
+                    // Error state - check if it's offline-no-cache
+                    if viewModel.isOfflineNoCache {
+                        // Special offline state with no cache
+                        VStack(spacing: 20) {
+                            Image(systemName: "wifi.slash")
+                                .font(.system(size: 60))
+                                .foregroundColor(.orange)
+
+                            Text("No Cached Library")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+
+                            Text("Connect to the internet to load your library for the first time. Once loaded, it will be available offline.")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 32)
+
+                            if networkMonitor.isConnected {
+                                Button("Load Library") {
+                                    Task {
+                                        await viewModel.loadLibrary()
+                                    }
+                                }
+                                .buttonStyle(.borderedProminent)
+                            } else {
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(Color.red)
+                                        .frame(width: 8, height: 8)
+                                    Text("Waiting for connection...")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                         }
-                        .buttonStyle(.borderedProminent)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.top, 60)
+                    } else {
+                        // Generic error state
+                        VStack(spacing: 16) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 50))
+                                .foregroundColor(.orange)
+                            Text("Error Loading Library")
+                                .font(.headline)
+                            Text(error)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                            Button("Try Again") {
+                                Task {
+                                    await viewModel.loadLibrary()
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        .padding()
                     }
-                    .padding()
                 } else if viewModel.books.isEmpty {
                     // Empty state
                     VStack(spacing: 20) {
@@ -85,10 +127,29 @@ struct LibraryView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         // Library books grid
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("My Library")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .padding(.horizontal)
+                            HStack {
+                                Text("My Library")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+
+                                Spacer()
+
+                                // Show cached indicator when showing offline data
+                                if libraryManager.isShowingCachedData {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "arrow.clockwise.icloud")
+                                            .font(.caption)
+                                        Text("Cached")
+                                            .font(.caption)
+                                    }
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color(.secondarySystemBackground))
+                                    .cornerRadius(8)
+                                }
+                            }
+                            .padding(.horizontal)
 
                             LazyVGrid(columns: columns, spacing: 20) {
                                 ForEach(viewModel.books, id: \.id) { book in
@@ -117,7 +178,24 @@ struct LibraryView: View {
             }
             .navigationTitle("Library")
             .refreshable {
-                await viewModel.refreshLibrary()
+                // Only allow refresh when online
+                if networkMonitor.isConnected {
+                    await viewModel.refreshLibrary()
+                }
+            }
+            .toolbar {
+                // Show offline indicator in toolbar when offline
+                if !networkMonitor.isConnected {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "wifi.slash")
+                                .font(.caption)
+                            Text("Offline")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.orange)
+                    }
+                }
             }
         }
         .task {
@@ -135,6 +213,7 @@ class LibraryViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var hasMorePages = false
     @Published var shouldPaginate = false
+    @Published var isOfflineNoCache = false  // Track if error is due to offline with no cache
 
     private let libraryManager = LibraryManager.shared
     private var totalBooks = 0
@@ -168,6 +247,7 @@ class LibraryViewModel: ObservableObject {
 
         isLoading = true
         errorMessage = nil
+        isOfflineNoCache = false
         currentPage = 1
 
         do {
@@ -189,9 +269,15 @@ class LibraryViewModel: ObservableObject {
             }
 
             isLoading = false
+        } catch let error as LibraryError {
+            isLoading = false
+            errorMessage = error.localizedDescription
+            isOfflineNoCache = (error == .offlineNoCache)
+            DebugLogger.error("Failed to load library", error: error)
         } catch {
             isLoading = false
             errorMessage = error.localizedDescription
+            isOfflineNoCache = false
             DebugLogger.error("Failed to load library", error: error)
         }
     }

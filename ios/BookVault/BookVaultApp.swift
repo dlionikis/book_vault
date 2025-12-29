@@ -11,6 +11,14 @@ import SwiftUI
 struct BookVaultApp: App {
     @StateObject private var authManager = AuthManager.shared
 
+    init() {
+        // Phase 8: Start background sync monitoring
+        // This ensures progress is synced when connectivity returns
+        Task { @MainActor in
+            SyncManager.shared.startMonitoring()
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

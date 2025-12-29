@@ -84,6 +84,11 @@ class NetworkMonitor: ObservableObject {
         return .unknown
     }
 
+    // MARK: - Online Status
+
+    /// Semantic alias for isConnected - clearer for offline mode logic
+    var isOnline: Bool { isConnected }
+
     // MARK: - Download Eligibility
 
     /// Check if downloads are allowed based on current network and user settings
