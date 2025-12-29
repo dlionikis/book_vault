@@ -1,7 +1,7 @@
 # Phase 8 Manual Testing Checklist
 
 **Date**: December 29, 2025
-**Tester**: ******\_******
+**Tester**: **\*\***\_**\*\***
 **Platform**: iOS Simulator (iPhone 17 Pro, iOS 26.2)
 **Backend**: http://localhost:3000
 
@@ -304,6 +304,6 @@ _Any UX improvements or enhancements to consider_
 - [ ] No critical issues blocking release
 - [ ] Phase 8 can be marked COMPLETE ✅
 
-**Tested By**: ******\_******
-**Date**: ******\_******
-**Sign-Off**: ******\_****** (mark complete or list blockers)
+**Tested By**: **\*\***\_**\*\***
+**Date**: **\*\***\_**\*\***
+**Sign-Off**: **\*\***\_**\*\*** (mark complete or list blockers)
