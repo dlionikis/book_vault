@@ -122,6 +122,11 @@ export async function GET(request: NextRequest) {
                   series: true,
                 },
               },
+              categories: {
+                include: {
+                  category: true,
+                },
+              },
             },
             orderBy: {
               title: 'asc',
@@ -158,6 +163,7 @@ export async function GET(request: NextRequest) {
               series: { id: string; title: string; asin: string | null };
               sequence: string | null;
             }>;
+            categories: Array<{ category: { id: string; name: string } }>;
           };
 
           return {
@@ -185,6 +191,10 @@ export async function GET(request: NextRequest) {
               title: bs.series.title,
               asin: bs.series.asin,
               sequence: bs.sequence,
+            })),
+            categories: fullBook.categories.map((bc) => ({
+              id: bc.category.id,
+              name: bc.category.name,
             })),
             createdAt: fullBook.createdAt,
           };
