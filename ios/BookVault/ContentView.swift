@@ -24,7 +24,7 @@ struct ContentView: View {
             // User is logged in - show tab view with mini player
             ZStack(alignment: .bottom) {
                 TabView(selection: $selectedTab) {
-                    BooksListView()
+                    CatalogView()
                         .tabItem {
                             Label("Library", systemImage: "books.vertical")
                         }

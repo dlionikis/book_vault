@@ -1,0 +1,254 @@
+//
+//  LibraryView.swift
+//  BookVault
+//
+//  Created by Claude Code on 12/29/25.
+//  Phase 4: Library UX Alignment
+//
+
+import SwiftUI
+
+struct LibraryView: View {
+    @StateObject private var viewModel = LibraryViewModel()
+    @StateObject private var authManager = AuthManager.shared
+    @Binding var selectedTab: Tab
+
+    private let columns = [
+        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
+    ]
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                if viewModel.isLoading && viewModel.books.isEmpty {
+                    // Initial loading state
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("Loading your library...")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.top, 100)
+                } else if let error = viewModel.errorMessage {
+                    // Error state
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 50))
+                            .foregroundColor(.orange)
+                        Text("Error Loading Library")
+                            .font(.headline)
+                        Text(error)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button("Try Again") {
+                            Task {
+                                await viewModel.loadLibrary()
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .padding()
+                } else if viewModel.books.isEmpty {
+                    // Empty state
+                    VStack(spacing: 20) {
+                        Image(systemName: "books.vertical")
+                            .font(.system(size: 60))
+                            .foregroundColor(.secondary)
+
+                        Text("Your library is empty")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+
+                        Text("Browse the catalog to add books")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+
+                        Button {
+                            // Navigate to Catalog tab
+                            selectedTab = .library  // Will be .catalog in Phase 6
+                        } label: {
+                            Text("Browse Catalog")
+                                .fontWeight(.semibold)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .padding(.top, 8)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.top, 60)
+                } else {
+                    VStack(alignment: .leading, spacing: 20) {
+                        // Library books grid
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("My Library")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .padding(.horizontal)
+
+                            LazyVGrid(columns: columns, spacing: 20) {
+                                ForEach(viewModel.books, id: \.id) { book in
+                                    NavigationLink(destination: BookDetailView(book: book)) {
+                                        BookGridItem(book: book)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+
+                                // Load more indicator (only if pagination is enabled)
+                                if viewModel.shouldPaginate && viewModel.hasMorePages {
+                                    ProgressView()
+                                        .gridCellColumns(columns.count)
+                                        .onAppear {
+                                            Task {
+                                                await viewModel.loadMoreBooks()
+                                            }
+                                        }
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                    .padding(.vertical)
+                }
+            }
+            .navigationTitle("Library")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        Task {
+                            await authManager.logout()
+                        }
+                    } label: {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                    }
+                }
+            }
+            .refreshable {
+                await viewModel.refreshLibrary()
+            }
+        }
+        .task {
+            await viewModel.loadLibrary()
+        }
+    }
+}
+
+// MARK: - View Model
+
+@MainActor
+class LibraryViewModel: ObservableObject {
+    @Published var books: [Book] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    @Published var hasMorePages = false
+    @Published var shouldPaginate = false
+
+    private let libraryManager = LibraryManager.shared
+    private var totalBooks = 0
+    private var currentPage = 1
+    private let pageSize = 20
+    private let paginationThreshold = 50
+
+    func loadLibrary() async {
+        guard !isLoading else { return }
+
+        isLoading = true
+        errorMessage = nil
+        currentPage = 1
+
+        do {
+            // Fetch library books (backend returns sorted by addedAt desc)
+            let fetchedBooks = try await libraryManager.fetchLibraryBooks()
+            self.books = fetchedBooks
+            self.totalBooks = fetchedBooks.count
+
+            // Smart pagination: only paginate if >= 50 books
+            self.shouldPaginate = totalBooks >= paginationThreshold
+
+            if shouldPaginate {
+                // If paginating, only show first page
+                self.books = Array(fetchedBooks.prefix(pageSize))
+                self.hasMorePages = totalBooks > pageSize
+            } else {
+                // If not paginating, show all books
+                self.hasMorePages = false
+            }
+
+            isLoading = false
+        } catch {
+            isLoading = false
+            errorMessage = error.localizedDescription
+            DebugLogger.error("Failed to load library", error: error)
+        }
+    }
+
+    func loadMoreBooks() async {
+        guard !isLoading && hasMorePages && shouldPaginate else { return }
+
+        isLoading = true
+        currentPage += 1
+
+        do {
+            // Fetch fresh data to get the next page
+            let fetchedBooks = try await libraryManager.fetchLibraryBooks()
+
+            // Calculate which books to show for this page
+            let startIndex = (currentPage - 1) * pageSize
+            let endIndex = min(startIndex + pageSize, fetchedBooks.count)
+
+            if startIndex < fetchedBooks.count {
+                let newBooks = Array(fetchedBooks[startIndex..<endIndex])
+                self.books.append(contentsOf: newBooks)
+                self.hasMorePages = endIndex < fetchedBooks.count
+            } else {
+                self.hasMorePages = false
+            }
+
+            isLoading = false
+        } catch {
+            isLoading = false
+            errorMessage = error.localizedDescription
+            DebugLogger.error("Failed to load more library books", error: error)
+        }
+    }
+
+    func refreshLibrary() async {
+        // Force refresh cache and reload
+        do {
+            try await libraryManager.refreshCache()
+            await loadLibrary()
+        } catch {
+            errorMessage = error.localizedDescription
+            DebugLogger.error("Failed to refresh library", error: error)
+        }
+    }
+}
+
+// MARK: - Previews
+
+#Preview("Empty State") {
+    struct PreviewWrapper: View {
+        @State private var tab: Tab = .library
+
+        var body: some View {
+            LibraryView(selectedTab: $tab)
+        }
+    }
+
+    return PreviewWrapper()
+}
+
+#Preview("With Books") {
+    struct PreviewWrapper: View {
+        @State private var tab: Tab = .library
+
+        var body: some View {
+            LibraryView(selectedTab: $tab)
+        }
+    }
+
+    return PreviewWrapper()
+}
