@@ -18,11 +18,13 @@ describe('book-transformer', () => {
     asin: 'B002V5D1CG',
     title: 'The Name of the Wind',
     description: 'A great book',
+    publisherSummary: null,
     runtimeMinutes: 1068,
     releaseDate: new Date('2008-04-01'),
     publisher: 'DAW',
     coverUrl: 'cover.jpg',
     audioUrl: 'audio.m4b',
+    metadata: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     authors: [
@@ -34,9 +36,7 @@ describe('book-transformer', () => {
           name: 'Patrick Rothfuss',
           asin: 'AUTHOR1',
           createdAt: new Date(),
-          updatedAt: new Date(),
         },
-        createdAt: new Date(),
       },
     ],
     narrators: [
@@ -48,9 +48,7 @@ describe('book-transformer', () => {
           name: 'Nick Podehl',
           asin: 'NARRATOR1',
           createdAt: new Date(),
-          updatedAt: new Date(),
         },
-        createdAt: new Date(),
       },
     ],
     series: [
@@ -63,9 +61,7 @@ describe('book-transformer', () => {
           title: 'The Kingkiller Chronicle',
           asin: 'SERIES1',
           createdAt: new Date(),
-          updatedAt: new Date(),
         },
-        createdAt: new Date(),
       },
     ],
     categories: [
@@ -78,9 +74,7 @@ describe('book-transformer', () => {
           level: 1,
           parentId: null,
           createdAt: new Date(),
-          updatedAt: new Date(),
         },
-        createdAt: new Date(),
       },
     ],
   };
@@ -115,7 +109,7 @@ describe('book-transformer', () => {
       expect(result.title).toBe('The Name of the Wind');
       expect(result.description).toBe('A great book');
       expect(result.runtimeMinutes).toBe(1068);
-      expect(result.releaseDate).toEqual(new Date('2008-04-01'));
+      expect(result.releaseDate).toBe('2008-04-01');
       expect(result.publisher).toBe('DAW');
       expect(result.coverUrl).toBe('https://example.com/covers/cover.jpg');
       expect(result.audioUrl).toBe('https://example.com/audio/audio.m4b');

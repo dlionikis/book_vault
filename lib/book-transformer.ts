@@ -70,7 +70,7 @@ export function transformBook(book: BookWithIncludes) {
     title: book.title,
     description: book.description,
     runtimeMinutes: book.runtimeMinutes,
-    releaseDate: book.releaseDate,
+    releaseDate: book.releaseDate ? book.releaseDate.toISOString().split('T')[0] : null,
     publisher: book.publisher,
     coverUrl: getCoverUrl(book.coverUrl),
     audioUrl: getAudioUrl(book.audioUrl),

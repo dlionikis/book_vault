@@ -113,7 +113,7 @@ components:
     # Core models (from lib/types.ts)
     Book:
       type: object
-      required: [id, asin, title, runtimeMinutes, coverUrl, audioUrl, authors]
+      required: [id, asin, title, authors]
       properties:
         id:
           type: string
@@ -132,6 +132,7 @@ components:
         runtimeMinutes:
           type: integer
           minimum: 0
+          nullable: true
           example: 1068
         releaseDate:
           type: string
@@ -145,10 +146,12 @@ components:
         coverUrl:
           type: string
           format: uri
+          nullable: true
           example: 'https://book-vault-media.s3.amazonaws.com/covers/B002V5D1CG.jpg'
         audioUrl:
           type: string
           format: uri
+          nullable: true
           example: 'https://book-vault-media.s3.amazonaws.com/audio/B002V5D1CG.m4b'
         authors:
           type: array
