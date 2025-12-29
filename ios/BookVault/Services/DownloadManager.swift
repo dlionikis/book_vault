@@ -207,7 +207,22 @@ class DownloadManager: NSObject, ObservableObject {
                 throw DownloadError.networkError("Invalid download URL")
             }
 
-            let task = backgroundSession.downloadTask(with: url)
+            // Create download task - use URLRequest with auth for API URLs, plain URL for S3
+            let task: URLSessionDownloadTask
+            if url.path.hasPrefix("/api/") || url.absoluteString.contains("/api/") {
+                // Local API URL - needs authentication header
+                var request = URLRequest(url: url)
+                if let token = apiClient.accessToken {
+                    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                }
+                task = backgroundSession.downloadTask(with: request)
+                DebugLogger.download("Using authenticated request for API download")
+            } else {
+                // S3 pre-signed URL - auth is in the URL itself
+                task = backgroundSession.downloadTask(with: url)
+                DebugLogger.download("Using pre-signed URL for S3 download")
+            }
+
             task.taskDescription = bookId  // Store bookId for delegate callbacks
             downloadTasks[bookId] = task
             activeDownloads[bookId]?.task = task
