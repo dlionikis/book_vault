@@ -392,8 +392,39 @@ extension DownloadManager: URLSessionDownloadDelegate {
             return
         }
 
-        Task { @MainActor in
-            await handleDownloadComplete(bookId: bookId, tempLocation: location)
+        // CRITICAL: The temp file at `location` is only valid during this callback!
+        // We must move it synchronously before returning, then update UI on main actor.
+        let fileManager = FileManager.default
+        let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let audiobooksDir = documentsURL.appendingPathComponent("downloads/audiobooks")
+        let destinationPath = audiobooksDir.appendingPathComponent("\(bookId).m4a")
+
+        do {
+            // Ensure directory exists
+            if !fileManager.fileExists(atPath: audiobooksDir.path) {
+                try fileManager.createDirectory(at: audiobooksDir, withIntermediateDirectories: true)
+                DebugLogger.storage("Created audiobooks directory from delegate")
+            }
+
+            // Remove existing file if present
+            if fileManager.fileExists(atPath: destinationPath.path) {
+                try fileManager.removeItem(at: destinationPath)
+            }
+
+            // Move temp file to permanent location (must happen synchronously!)
+            try fileManager.moveItem(at: location, to: destinationPath)
+
+            DebugLogger.storage("Moved download to: \(destinationPath.lastPathComponent)")
+
+            // Now update UI and metadata on main actor
+            Task { @MainActor in
+                await self.handleDownloadComplete(bookId: bookId, savedPath: destinationPath)
+            }
+        } catch {
+            DebugLogger.error("Failed to move downloaded file", error: error)
+            Task { @MainActor in
+                self.activeDownloads[bookId]?.state = .failed(error: error.localizedDescription)
+            }
         }
     }
 
@@ -432,38 +463,30 @@ extension DownloadManager: URLSessionDownloadDelegate {
 
     // MARK: - Private Handlers
 
-    private func handleDownloadComplete(bookId: String, tempLocation: URL) async {
+    /// Called after file has been successfully moved to permanent location
+    private func handleDownloadComplete(bookId: String, savedPath: URL) async {
         guard let book = pendingBooks[bookId] else {
             DebugLogger.error("Download complete but book not found: \(bookId)")
             return
         }
 
-        do {
-            // Move file to permanent location
-            let finalPath = try storageManager.saveAudioFile(from: tempLocation, bookId: bookId)
+        // Get file size
+        let fileSize = storageManager.downloadedFileSize(for: bookId) ?? 0
 
-            // Get file size
-            let fileSize = storageManager.downloadedFileSize(for: bookId) ?? 0
+        // Update metadata
+        storageManager.addToMetadata(book: book, fileSize: fileSize)
 
-            // Update metadata
-            storageManager.addToMetadata(book: book, fileSize: fileSize)
+        // Update state
+        activeDownloads[bookId]?.state = .completed
+        downloadTasks.removeValue(forKey: bookId)
+        pendingBooks.removeValue(forKey: bookId)
 
-            // Update state
-            activeDownloads[bookId]?.state = .completed
-            downloadTasks.removeValue(forKey: bookId)
-            pendingBooks.removeValue(forKey: bookId)
-
-            // Remove from active downloads after short delay (to show completion)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                self.activeDownloads.removeValue(forKey: bookId)
-            }
-
-            DebugLogger.success("Download complete: \(book.title) saved to \(finalPath.lastPathComponent)")
-
-        } catch {
-            DebugLogger.error("Failed to save download", error: error)
-            activeDownloads[bookId]?.state = .failed(error: error.localizedDescription)
+        // Remove from active downloads after short delay (to show completion)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            self.activeDownloads.removeValue(forKey: bookId)
         }
+
+        DebugLogger.success("Download complete: \(book.title) saved to \(savedPath.lastPathComponent)")
     }
 
     private func updateProgress(bookId: String, bytesWritten: Int64, totalBytes: Int64) {
