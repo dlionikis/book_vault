@@ -41,7 +41,7 @@ struct BookDetailView: View {
                 }()
 
                 // Cover image
-                AsyncImage(url: URL(string: book.coverUrl)) { phase in
+                AsyncImage(url: URL(string: book.coverUrl ?? "")) { phase in
                     switch phase {
                     case .empty:
                         Rectangle()
@@ -112,7 +112,7 @@ struct BookDetailView: View {
                         MetadataRow(
                             icon: "clock",
                             label: "Runtime",
-                            value: formatRuntime(book.runtimeMinutes)
+                            value: formatRuntime(book.runtimeMinutes ?? 0)
                         )
 
                         if let publisher = book.publisher {

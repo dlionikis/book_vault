@@ -13,6 +13,16 @@ protocol JSONEncodable {
     func encodeToJSON() -> Any
 }
 
+extension JSONEncodable where Self: Encodable {
+    func encodeToJSON() -> Any {
+        guard let data = try? JSONEncoder().encode(self),
+              let json = try? JSONSerialization.jsonObject(with: data) else {
+            return [:]
+        }
+        return json
+    }
+}
+
 /// An enum where the last case value can be used as a default catch-all.
 protocol CaseIterableDefaultsLast: Decodable & CaseIterable & RawRepresentable
 where RawValue: Decodable, AllCases: BidirectionalCollection {}
@@ -110,6 +120,14 @@ open class Response<T> {
     }
 }
 
+/// Protocol for URL session data tasks
+protocol URLSessionDataTaskProtocol {
+    func cancel()
+}
+
+/// Extension to make URLSessionDataTask conform to the protocol
+extension URLSessionDataTask: URLSessionDataTaskProtocol {}
+
 public final class RequestTask: @unchecked Sendable {
     private let lock = NSRecursiveLock()
     private var task: URLSessionDataTaskProtocol?
@@ -125,5 +143,37 @@ public final class RequestTask: @unchecked Sendable {
         defer { lock.unlock() }
         task?.cancel()
         task = nil
+    }
+}
+
+// MARK: - Validation Rules
+
+/// Validation rule for numeric values
+public struct NumericRule<T: Numeric & Comparable> {
+    public let minimum: T?
+    public let exclusiveMinimum: Bool
+    public let maximum: T?
+    public let exclusiveMaximum: Bool
+    public let multipleOf: T?
+
+    public init(minimum: T?, exclusiveMinimum: Bool, maximum: T?, exclusiveMaximum: Bool, multipleOf: T?) {
+        self.minimum = minimum
+        self.exclusiveMinimum = exclusiveMinimum
+        self.maximum = maximum
+        self.exclusiveMaximum = exclusiveMaximum
+        self.multipleOf = multipleOf
+    }
+}
+
+/// Validation rule for string values
+public struct StringRule {
+    public let minLength: Int?
+    public let maxLength: Int?
+    public let pattern: String?
+
+    public init(minLength: Int?, maxLength: Int?, pattern: String?) {
+        self.minLength = minLength
+        self.maxLength = maxLength
+        self.pattern = pattern
     }
 }
