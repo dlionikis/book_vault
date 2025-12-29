@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct LibraryView: View {
     @StateObject private var viewModel = LibraryViewModel()
@@ -140,6 +141,27 @@ class LibraryViewModel: ObservableObject {
     private var currentPage = 1
     private let pageSize = 20
     private let paginationThreshold = 50
+    private var cancellables = Set<AnyCancellable>()
+    private var lastKnownVersion = 0
+
+    init() {
+        // Observe library changes and auto-reload when library is modified
+        libraryManager.$libraryVersion
+            .dropFirst()  // Skip initial value
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newVersion in
+                guard let self = self else { return }
+                // Only reload if version changed (prevents duplicate reloads)
+                if newVersion != self.lastKnownVersion {
+                    self.lastKnownVersion = newVersion
+                    DebugLogger.database("Library version changed to \(newVersion), reloading...")
+                    Task {
+                        await self.loadLibrary()
+                    }
+                }
+            }
+            .store(in: &cancellables)
+    }
 
     func loadLibrary() async {
         guard !isLoading else { return }

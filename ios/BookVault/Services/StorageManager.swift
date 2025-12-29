@@ -17,9 +17,35 @@ struct DownloadedBook: Codable, Identifiable {
     let fileSize: Int64
     let audioPath: String
     let coverPath: String?
+    let fileExtension: String  // e.g., "mp3" or "m4a"
 
     var formattedSize: String {
         ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file)
+    }
+
+    // Custom decoder to handle existing metadata without fileExtension
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        author = try container.decode(String.self, forKey: .author)
+        downloadedAt = try container.decode(Date.self, forKey: .downloadedAt)
+        fileSize = try container.decode(Int64.self, forKey: .fileSize)
+        audioPath = try container.decode(String.self, forKey: .audioPath)
+        coverPath = try container.decodeIfPresent(String.self, forKey: .coverPath)
+        // Default to mp3 for backwards compatibility with existing downloads
+        fileExtension = try container.decodeIfPresent(String.self, forKey: .fileExtension) ?? "mp3"
+    }
+
+    init(id: String, title: String, author: String, downloadedAt: Date, fileSize: Int64, audioPath: String, coverPath: String?, fileExtension: String) {
+        self.id = id
+        self.title = title
+        self.author = author
+        self.downloadedAt = downloadedAt
+        self.fileSize = fileSize
+        self.audioPath = audioPath
+        self.coverPath = coverPath
+        self.fileExtension = fileExtension
     }
 }
 
@@ -129,14 +155,40 @@ class StorageManager: ObservableObject {
 
     // MARK: - File Paths
 
+    /// Normalize book ID to uppercase for consistent file naming
+    /// iOS UUID.uuidString returns uppercase, so we normalize all IDs to match
+    private func normalizeBookId(_ bookId: String) -> String {
+        bookId.uppercased()
+    }
+
     /// Get audio file path for a book
+    /// Uses file extension from metadata if available, otherwise defaults to mp3
     func audioFilePath(for bookId: String) -> URL {
-        audiobooksDirectory.appendingPathComponent("\(bookId).m4a")
+        let normalizedId = normalizeBookId(bookId)
+        // Check if we have metadata with file extension
+        if let downloadedBook = downloads.first(where: { $0.id == normalizedId }) {
+            return audiobooksDirectory.appendingPathComponent("\(normalizedId).\(downloadedBook.fileExtension)")
+        }
+        // Fallback: try to find any file with this book ID
+        let fileManager = FileManager.default
+        for ext in ["mp3", "m4a", "m4b", "aac"] {
+            let path = audiobooksDirectory.appendingPathComponent("\(normalizedId).\(ext)")
+            if fileManager.fileExists(atPath: path.path) {
+                return path
+            }
+        }
+        // Default to mp3 if no file found
+        return audiobooksDirectory.appendingPathComponent("\(normalizedId).mp3")
+    }
+
+    /// Get audio file path with specific extension (used during download)
+    func audioFilePath(for bookId: String, extension fileExtension: String) -> URL {
+        audiobooksDirectory.appendingPathComponent("\(normalizeBookId(bookId)).\(fileExtension)")
     }
 
     /// Get cover image path for a book
     func coverImagePath(for bookId: String) -> URL {
-        audiobooksDirectory.appendingPathComponent("\(bookId).jpg")
+        audiobooksDirectory.appendingPathComponent("\(normalizeBookId(bookId)).jpg")
     }
 
     // MARK: - Storage Operations
@@ -176,14 +228,37 @@ class StorageManager: ObservableObject {
     }
 
     /// Check if a book is downloaded
+    /// Uses metadata array (which triggers SwiftUI updates) with file system verification
     func isBookDownloaded(bookId: String) -> Bool {
+        let normalizedId = normalizeBookId(bookId)
+
+        // Check metadata first (this is what triggers SwiftUI updates)
+        let inMetadata = downloads.contains { $0.id == normalizedId }
+
+        // Verify file actually exists on disk
         let audioPath = audioFilePath(for: bookId)
-        return FileManager.default.fileExists(atPath: audioPath.path)
+        let existsOnDisk = FileManager.default.fileExists(atPath: audioPath.path)
+
+        // Both must be true for a valid download
+        let isDownloaded = inMetadata && existsOnDisk
+
+        DebugLogger.storage("isBookDownloaded check: \(normalizedId) -> \(isDownloaded) (metadata: \(inMetadata), disk: \(existsOnDisk))")
+        return isDownloaded
     }
 
     /// Get file size of downloaded audio
     func downloadedFileSize(for bookId: String) -> Int64? {
-        let audioPath = audioFilePath(for: bookId)
+        return downloadedFileSize(for: bookId, extension: nil)
+    }
+
+    /// Get file size of downloaded audio with explicit extension
+    func downloadedFileSize(for bookId: String, extension fileExtension: String?) -> Int64? {
+        let audioPath: URL
+        if let ext = fileExtension {
+            audioPath = audioFilePath(for: bookId, extension: ext)
+        } else {
+            audioPath = audioFilePath(for: bookId)
+        }
 
         do {
             let attributes = try FileManager.default.attributesOfItem(atPath: audioPath.path)
@@ -278,37 +353,41 @@ class StorageManager: ObservableObject {
     }
 
     /// Add a download to metadata
-    func addToMetadata(book: Book, fileSize: Int64) {
+    func addToMetadata(book: Book, fileSize: Int64, fileExtension: String = "mp3") {
+        let normalizedId = normalizeBookId(book.id.uuidString)
         let downloadedBook = DownloadedBook(
-            id: book.id.uuidString,
+            id: normalizedId,
             title: book.title,
             author: book.authors.first?.name ?? "Unknown Author",
             downloadedAt: Date(),
             fileSize: fileSize,
-            audioPath: "audiobooks/\(book.id.uuidString).m4a",
-            coverPath: "audiobooks/\(book.id.uuidString).jpg"
+            audioPath: "audiobooks/\(normalizedId).\(fileExtension)",
+            coverPath: "audiobooks/\(normalizedId).jpg",
+            fileExtension: fileExtension
         )
 
         // Remove existing entry if present (re-download)
-        downloads.removeAll { $0.id == book.id.uuidString }
+        downloads.removeAll { $0.id == normalizedId }
 
         downloads.append(downloadedBook)
         totalSize = downloads.reduce(0) { $0 + $1.fileSize }
 
         saveMetadata()
-        DebugLogger.storage("Added to metadata: \(book.title) (\(StorageManager.formatFileSize(fileSize)))")
+        DebugLogger.storage("Added to metadata: \(book.title) (\(StorageManager.formatFileSize(fileSize)), \(fileExtension))")
     }
 
     /// Remove a download from metadata
     private func removeFromMetadata(bookId: String) {
-        downloads.removeAll { $0.id == bookId }
+        let normalizedId = normalizeBookId(bookId)
+        downloads.removeAll { $0.id == normalizedId }
         totalSize = downloads.reduce(0) { $0 + $1.fileSize }
         saveMetadata()
     }
 
     /// Get downloaded book metadata
     func getDownloadedBook(bookId: String) -> DownloadedBook? {
-        downloads.first { $0.id == bookId }
+        let normalizedId = normalizeBookId(bookId)
+        return downloads.first { $0.id == normalizedId }
     }
 
     // MARK: - Storage Limit Checks

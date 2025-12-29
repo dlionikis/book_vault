@@ -57,7 +57,7 @@ export function checkRateLimit(
 }
 
 /**
- * Check download rate limit (max 10 downloads per day per user)
+ * Check download rate limit (max 50 downloads per day per user)
  * Uses database to track downloads for persistent rate limiting
  * @param userId - User ID to check
  * @returns Promise<boolean> - true if download is allowed, false if limit exceeded
@@ -77,6 +77,6 @@ export async function checkDownloadLimit(userId: string): Promise<boolean> {
     },
   });
 
-  // Max 10 downloads per day
-  return downloadCount < 10;
+  // Max 50 downloads per day
+  return downloadCount < 50;
 }

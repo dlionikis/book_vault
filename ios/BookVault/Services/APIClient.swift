@@ -179,6 +179,10 @@ class APIClient {
                 throw APIError.decodingError(error)
             }
         case 401:
+            // Force logout on main actor to redirect to login screen
+            Task { @MainActor in
+                AuthManager.shared.forceLogout()
+            }
             throw APIError.unauthorized
         case 404:
             throw APIError.notFound

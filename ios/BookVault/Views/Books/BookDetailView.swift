@@ -174,16 +174,32 @@ struct BookDetailView: View {
                         }
                     }
 
-                    // Play button (isolated to prevent unnecessary parent re-renders)
-                    BookPlayButton(
-                        book: book,
-                        chapterManager: chapterManager,
-                        showingNowPlaying: $showingNowPlaying
-                    )
-                    .padding(.top, 8)
+                    // Play and Download buttons (only shown if book is in library)
+                    if isInLibrary {
+                        // Play button (isolated to prevent unnecessary parent re-renders)
+                        BookPlayButton(
+                            book: book,
+                            chapterManager: chapterManager,
+                            showingNowPlaying: $showingNowPlaying
+                        )
+                        .padding(.top, 8)
 
-                    // Download button (Phase 7)
-                    DownloadButton(book: book)
+                        // Download button (Phase 7)
+                        DownloadButton(book: book)
+                    } else if isCheckingLibrary {
+                        // Show placeholder while checking library status
+                        HStack {
+                            ProgressView()
+                                .padding(.trailing, 4)
+                            Text("Checking library...")
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.gray.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding(.top, 8)
+                    }
 
                     // Library button
                     LibraryButton(
@@ -413,15 +429,13 @@ struct LibraryButton: View {
     private func addSeriesToLibrary() {
         Task {
             // Get the first series ID
-            guard let firstSeries = book.series?.first,
-                  let asinString = firstSeries.asin,
-                  let seriesId = UUID(uuidString: asinString) else {
+            guard let firstSeries = book.series?.first else {
                 DebugLogger.error("No valid series ID found")
                 return
             }
 
             do {
-                try await libraryManager.addSeriesToLibrary(seriesId: seriesId.uuidString)
+                try await libraryManager.addSeriesToLibrary(seriesId: firstSeries.id.uuidString)
                 await MainActor.run {
                     isInLibrary = true
                     onLibraryStatusChanged()

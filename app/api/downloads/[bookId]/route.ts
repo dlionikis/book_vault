@@ -47,10 +47,10 @@ export async function POST(request: NextRequest, { params }: { params: { bookId:
     // Check eligibility (for MVP: always eligible, future: check library, quota)
     // For now, just verify book exists (already done above)
 
-    // Check rate limit (max 10 downloads per day)
+    // Check rate limit (max 50 downloads per day)
     const withinLimit = await checkDownloadLimit(user.id);
     if (!withinLimit) {
-      return NextResponse.json({ error: 'Download limit exceeded (10/day)' }, { status: 429 });
+      return NextResponse.json({ error: 'Download limit exceeded (50/day)' }, { status: 429 });
     }
 
     let downloadUrl: string;

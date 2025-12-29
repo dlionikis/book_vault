@@ -59,7 +59,7 @@ enum DownloadError: LocalizedError {
         case .insufficientStorage:
             return "Not enough storage space"
         case .rateLimitExceeded:
-            return "Daily download limit reached (10/day)"
+            return "Daily download limit reached (50/day)"
         case .urlExpired:
             return "Download URL expired"
         case .fileCorruption:
@@ -95,6 +95,32 @@ class DownloadManager: NSObject, ObservableObject {
     private var backgroundSession: URLSession!
     private var downloadTasks: [String: URLSessionDownloadTask] = [:]
     private var pendingBooks: [String: Book] = [:]
+
+    // Thread-safe storage for file extensions (accessed from nonisolated delegate)
+    // Using NSLock for thread safety since delegate callbacks are on background queue
+    // nonisolated(unsafe) is required because we need to access from both main actor and delegate callbacks
+    private let fileExtensionsLock = NSLock()
+    private nonisolated(unsafe) var _pendingFileExtensions: [String: String] = [:]  // bookId -> file extension
+
+    // These methods are explicitly nonisolated because they use thread-safe locking
+    // and need to be called from both main actor context and URLSession delegate callbacks
+    private nonisolated func setFileExtension(_ ext: String, for bookId: String) {
+        fileExtensionsLock.lock()
+        defer { fileExtensionsLock.unlock() }
+        _pendingFileExtensions[bookId] = ext
+    }
+
+    private nonisolated func getFileExtension(for bookId: String) -> String {
+        fileExtensionsLock.lock()
+        defer { fileExtensionsLock.unlock() }
+        return _pendingFileExtensions[bookId] ?? "mp3"
+    }
+
+    private nonisolated func removeFileExtension(for bookId: String) {
+        fileExtensionsLock.lock()
+        defer { fileExtensionsLock.unlock() }
+        _pendingFileExtensions.removeValue(forKey: bookId)
+    }
 
     // Background session identifier
     private let backgroundSessionIdentifier = "com.bookvault.downloads"
@@ -180,6 +206,17 @@ class DownloadManager: NSObject, ObservableObject {
         activeDownloads[bookId] = download
         pendingBooks[bookId] = book
 
+        // Extract file extension from audioUrl (e.g., ".mp3" or ".m4a")
+        // This must use thread-safe method since delegate callbacks access it
+        if let audioUrl = book.audioUrl, let url = URL(string: audioUrl) {
+            let ext = url.pathExtension.lowercased()
+            let fileExt = ext.isEmpty ? "mp3" : ext
+            setFileExtension(fileExt, for: bookId)
+            DebugLogger.download("File extension for \(book.title): \(fileExt)")
+        } else {
+            setFileExtension("mp3", for: bookId)  // Default to mp3
+        }
+
         do {
             // Check eligibility with backend
             let eligible = try await checkEligibility(bookId: bookId)
@@ -250,6 +287,7 @@ class DownloadManager: NSObject, ObservableObject {
         downloadTasks.removeValue(forKey: bookId)
         activeDownloads.removeValue(forKey: bookId)
         pendingBooks.removeValue(forKey: bookId)
+        removeFileExtension(for: bookId)
 
         DebugLogger.download("Download cancelled: \(bookId)")
     }
@@ -304,6 +342,10 @@ class DownloadManager: NSObject, ObservableObject {
             DebugLogger.download("Eligibility result: \(result.eligible)")
             return result.eligible
         case 401:
+            // Force logout on main actor to redirect to login screen
+            Task { @MainActor in
+                AuthManager.shared.forceLogout()
+            }
             throw DownloadError.unauthorized
         case 429:
             throw DownloadError.rateLimitExceeded
@@ -341,6 +383,10 @@ class DownloadManager: NSObject, ObservableObject {
             decoder.dateDecodingStrategy = .iso8601
             return try decoder.decode(GenerateDownloadUrl200Response.self, from: data)
         case 401:
+            // Force logout on main actor to redirect to login screen
+            Task { @MainActor in
+                AuthManager.shared.forceLogout()
+            }
             throw DownloadError.unauthorized
         case 429:
             throw DownloadError.rateLimitExceeded
@@ -397,7 +443,10 @@ extension DownloadManager: URLSessionDownloadDelegate {
         let fileManager = FileManager.default
         let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let audiobooksDir = documentsURL.appendingPathComponent("downloads/audiobooks")
-        let destinationPath = audiobooksDir.appendingPathComponent("\(bookId).m4a")
+
+        // Get the correct file extension (thread-safe access)
+        let fileExtension = getFileExtension(for: bookId)
+        let destinationPath = audiobooksDir.appendingPathComponent("\(bookId).\(fileExtension)")
 
         do {
             // Ensure directory exists
@@ -470,16 +519,20 @@ extension DownloadManager: URLSessionDownloadDelegate {
             return
         }
 
-        // Get file size
-        let fileSize = storageManager.downloadedFileSize(for: bookId) ?? 0
+        // Get file extension (thread-safe) before cleaning up
+        let fileExtension = getFileExtension(for: bookId)
 
-        // Update metadata
-        storageManager.addToMetadata(book: book, fileSize: fileSize)
+        // Get file size using explicit extension (metadata not saved yet)
+        let fileSize = storageManager.downloadedFileSize(for: bookId, extension: fileExtension) ?? 0
+
+        // Update metadata with file extension
+        storageManager.addToMetadata(book: book, fileSize: fileSize, fileExtension: fileExtension)
 
         // Update state
         activeDownloads[bookId]?.state = .completed
         downloadTasks.removeValue(forKey: bookId)
         pendingBooks.removeValue(forKey: bookId)
+        removeFileExtension(for: bookId)  // Clean up thread-safe storage
 
         // Remove from active downloads after short delay (to show completion)
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
