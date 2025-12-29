@@ -162,8 +162,8 @@ struct CategoryListView: View {
         do {
             let response = try await searchManager.fetchCategories(page: currentPage, limit: 50)
             categories = response.results
-            hasMorePages = currentPage < (response.pagination.total / 50) + 1
-            DebugLogger.info("Loaded \(categories.count) categories (page \(currentPage))")
+            hasMorePages = currentPage < response.pagination.pages
+            DebugLogger.info("Loaded \(categories.count) categories (page \(currentPage) of \(response.pagination.pages), total: \(response.pagination.total))")
         } catch {
             DebugLogger.error("Failed to load categories", error: error)
             errorMessage = error.localizedDescription
@@ -182,8 +182,8 @@ struct CategoryListView: View {
         do {
             let response = try await searchManager.fetchCategories(page: currentPage, limit: 50)
             categories.append(contentsOf: response.results)
-            hasMorePages = currentPage < (response.pagination.total / 50) + 1
-            DebugLogger.info("Loaded more categories - total: \(categories.count)")
+            hasMorePages = currentPage < response.pagination.pages
+            DebugLogger.info("Loaded more categories - page \(currentPage), total loaded: \(categories.count)")
         } catch {
             DebugLogger.error("Failed to load more categories", error: error)
             // Don't show error for pagination failures

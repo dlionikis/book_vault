@@ -162,8 +162,8 @@ struct AuthorListView: View {
         do {
             let response = try await searchManager.fetchAuthors(page: currentPage, limit: 50)
             authors = response.results
-            hasMorePages = currentPage < (response.pagination.total / 50) + 1
-            DebugLogger.info("Loaded \(authors.count) authors (page \(currentPage))")
+            hasMorePages = currentPage < response.pagination.pages
+            DebugLogger.info("Loaded \(authors.count) authors (page \(currentPage) of \(response.pagination.pages), total: \(response.pagination.total))")
         } catch {
             DebugLogger.error("Failed to load authors", error: error)
             errorMessage = error.localizedDescription
@@ -182,8 +182,8 @@ struct AuthorListView: View {
         do {
             let response = try await searchManager.fetchAuthors(page: currentPage, limit: 50)
             authors.append(contentsOf: response.results)
-            hasMorePages = currentPage < (response.pagination.total / 50) + 1
-            DebugLogger.info("Loaded more authors - total: \(authors.count)")
+            hasMorePages = currentPage < response.pagination.pages
+            DebugLogger.info("Loaded more authors - page \(currentPage), total loaded: \(authors.count)")
         } catch {
             DebugLogger.error("Failed to load more authors", error: error)
             // Don't show error for pagination failures

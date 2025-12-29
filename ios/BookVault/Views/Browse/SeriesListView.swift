@@ -162,8 +162,8 @@ struct SeriesListView: View {
         do {
             let response = try await searchManager.fetchSeries(page: currentPage, limit: 50)
             series = response.results
-            hasMorePages = currentPage < (response.pagination.total / 50) + 1
-            DebugLogger.info("Loaded \(series.count) series (page \(currentPage))")
+            hasMorePages = currentPage < response.pagination.pages
+            DebugLogger.info("Loaded \(series.count) series (page \(currentPage) of \(response.pagination.pages), total: \(response.pagination.total))")
         } catch {
             DebugLogger.error("Failed to load series", error: error)
             errorMessage = error.localizedDescription
@@ -182,8 +182,8 @@ struct SeriesListView: View {
         do {
             let response = try await searchManager.fetchSeries(page: currentPage, limit: 50)
             series.append(contentsOf: response.results)
-            hasMorePages = currentPage < (response.pagination.total / 50) + 1
-            DebugLogger.info("Loaded more series - total: \(series.count)")
+            hasMorePages = currentPage < response.pagination.pages
+            DebugLogger.info("Loaded more series - page \(currentPage), total loaded: \(series.count)")
         } catch {
             DebugLogger.error("Failed to load more series", error: error)
             // Don't show error for pagination failures

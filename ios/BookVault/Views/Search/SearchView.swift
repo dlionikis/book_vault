@@ -117,7 +117,10 @@ struct SearchView: View {
         }
         .onAppear {
             // Auto-focus search field when view appears
-            isSearchFieldFocused = true
+            // Use a small delay to ensure the view is fully loaded and keyboard appears reliably
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                isSearchFieldFocused = true
+            }
         }
     }
 
@@ -376,6 +379,16 @@ struct SearchView: View {
                 }
             } catch is CancellationError {
                 // Ignore cancellation errors from debouncing
+            } catch let error as APIError {
+                // Silently ignore 400 errors (query too short) - this is expected during typing
+                if case .serverError(400, _) = error {
+                    // Clear suggestions when query is too short
+                    if searchText == newValue {
+                        suggestions = nil
+                    }
+                } else {
+                    DebugLogger.error("Failed to fetch suggestions", error: error)
+                }
             } catch {
                 DebugLogger.error("Failed to fetch suggestions", error: error)
             }
@@ -384,7 +397,12 @@ struct SearchView: View {
 
     /// Performs a full search
     private func performSearch() {
-        guard !searchText.isEmpty else { return }
+        // Trim and validate search text
+        let trimmedQuery = searchText.trimmingCharacters(in: .whitespaces)
+        guard trimmedQuery.count >= 2 else {
+            // Don't perform search if query is too short
+            return
+        }
 
         isLoading = true
         errorMessage = nil
@@ -393,7 +411,7 @@ struct SearchView: View {
 
         Task {
             do {
-                let result = try await searchManager.search(query: searchText, page: currentPage)
+                let result = try await searchManager.search(query: trimmedQuery, page: currentPage)
                 searchResults = result
                 isSearchFieldFocused = false // Dismiss keyboard
             } catch {

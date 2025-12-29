@@ -162,8 +162,8 @@ struct NarratorListView: View {
         do {
             let response = try await searchManager.fetchNarrators(page: currentPage, limit: 50)
             narrators = response.results
-            hasMorePages = currentPage < (response.pagination.total / 50) + 1
-            DebugLogger.info("Loaded \(narrators.count) narrators (page \(currentPage))")
+            hasMorePages = currentPage < response.pagination.pages
+            DebugLogger.info("Loaded \(narrators.count) narrators (page \(currentPage) of \(response.pagination.pages), total: \(response.pagination.total))")
         } catch {
             DebugLogger.error("Failed to load narrators", error: error)
             errorMessage = error.localizedDescription
@@ -182,8 +182,8 @@ struct NarratorListView: View {
         do {
             let response = try await searchManager.fetchNarrators(page: currentPage, limit: 50)
             narrators.append(contentsOf: response.results)
-            hasMorePages = currentPage < (response.pagination.total / 50) + 1
-            DebugLogger.info("Loaded more narrators - total: \(narrators.count)")
+            hasMorePages = currentPage < response.pagination.pages
+            DebugLogger.info("Loaded more narrators - page \(currentPage), total loaded: \(narrators.count)")
         } catch {
             DebugLogger.error("Failed to load more narrators", error: error)
             // Don't show error for pagination failures

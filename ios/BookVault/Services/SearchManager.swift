@@ -88,6 +88,36 @@ class SearchManager: ObservableObject {
         DebugLogger.info("Search caches cleared")
     }
 
+    // MARK: - JSON Decoding
+
+    /// Creates a configured JSONDecoder with custom date handling
+    private func createDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateString = try container.decode(String.self)
+
+            // Try ISO8601 with time first (e.g., "2025-07-22T00:00:00Z")
+            let iso8601Formatter = ISO8601DateFormatter()
+            if let date = iso8601Formatter.date(from: dateString) {
+                return date
+            }
+
+            // Try date-only format (e.g., "2025-07-22")
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+            dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+
+            if let date = dateFormatter.date(from: dateString) {
+                return date
+            }
+
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string: \(dateString)")
+        }
+        return decoder
+    }
+
     // MARK: - Search
 
     /// Performs a full-text search with pagination
@@ -97,10 +127,10 @@ class SearchManager: ObservableObject {
     ///   - limit: Results per page (default: 20)
     /// - Returns: Search results with pagination info
     func search(query: String, page: Int = 1, limit: Int = 20) async throws -> SearchAll200Response {
-        // Check cache first
-        let cacheKey = "\(query)_\(page)"
+        // Check cache first (include limit in key to avoid returning wrong page size)
+        let cacheKey = "\(query)_\(page)_\(limit)"
         if let cached = searchCache[cacheKey], !cached.isExpired {
-            DebugLogger.network("Returning cached search results for: \(query) (page \(page))")
+            DebugLogger.network("Returning cached search results for: \(query) (page \(page), limit \(limit))")
             return cached.data
         }
 
@@ -126,7 +156,7 @@ class SearchManager: ObservableObject {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
-        DebugLogger.network("Searching for: \(query) (page \(page))")
+        DebugLogger.network("Searching for: \(query) (page \(page), limit \(limit))")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -138,7 +168,12 @@ class SearchManager: ObservableObject {
             throw APIError.serverError(httpResponse.statusCode, nil)
         }
 
-        let decoder = JSONDecoder()
+        // DEBUG: Log raw JSON response
+        if let jsonString = String(data: data, encoding: .utf8) {
+            DebugLogger.verbose("Raw search JSON response:\n\(jsonString)")
+        }
+
+        let decoder = createDecoder()
         let result = try decoder.decode(SearchAll200Response.self, from: data)
 
         // Cache the result
@@ -195,10 +230,19 @@ class SearchManager: ObservableObject {
         }
 
         guard httpResponse.statusCode == 200 else {
+            // DEBUG: Log error response
+            if let errorString = String(data: data, encoding: .utf8) {
+                DebugLogger.error("Suggestions API error (\(httpResponse.statusCode)): \(errorString)")
+            }
             throw APIError.serverError(httpResponse.statusCode, nil)
         }
 
-        let decoder = JSONDecoder()
+        // DEBUG: Log raw JSON response
+        if let jsonString = String(data: data, encoding: .utf8) {
+            DebugLogger.verbose("Raw suggestions JSON response:\n\(jsonString)")
+        }
+
+        let decoder = createDecoder()
         let result = try decoder.decode(GetSearchSuggestions200Response.self, from: data)
 
         // Cache the result
@@ -272,10 +316,10 @@ class SearchManager: ObservableObject {
         limit: Int,
         cachePrefix: String
     ) async throws -> T {
-        // Check cache first
-        let cacheKey = "\(cachePrefix)_\(page)"
+        // Check cache first (include limit in key to avoid returning wrong page size)
+        let cacheKey = "\(cachePrefix)_\(page)_\(limit)"
         if let cached = browseListCache[cacheKey] as? CacheEntry<T>, !cached.isExpired {
-            DebugLogger.network("Returning cached \(cachePrefix) list (page \(page))")
+            DebugLogger.network("Returning cached \(cachePrefix) list (page \(page), limit \(limit))")
             return cached.data
         }
 
@@ -300,7 +344,8 @@ class SearchManager: ObservableObject {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
-        DebugLogger.network("Fetching \(cachePrefix) list (page \(page))")
+        DebugLogger.network("Fetching \(cachePrefix) list (page \(page), limit \(limit))")
+        DebugLogger.verbose("Request URL: \(url.absoluteString)")
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -312,7 +357,12 @@ class SearchManager: ObservableObject {
             throw APIError.serverError(httpResponse.statusCode, nil)
         }
 
-        let decoder = JSONDecoder()
+        // DEBUG: Log raw JSON response
+        if let jsonString = String(data: data, encoding: .utf8) {
+            DebugLogger.verbose("Raw JSON response for \(cachePrefix) list (page \(page)):\n\(jsonString)")
+        }
+
+        let decoder = createDecoder()
         let result = try decoder.decode(T.self, from: data)
 
         // Cache the result
@@ -400,7 +450,14 @@ class SearchManager: ObservableObject {
             throw APIError.serverError(httpResponse.statusCode, nil)
         }
 
-        let decoder = JSONDecoder()
+        // DEBUG: Log raw JSON response
+        if let jsonString = String(data: data, encoding: .utf8) {
+            DebugLogger.verbose("Raw JSON response for \(path):\n\(jsonString)")
+        } else {
+            DebugLogger.warning("Could not convert response data to string for \(path)")
+        }
+
+        let decoder = createDecoder()
         let result = try decoder.decode(T.self, from: data)
 
         // Cache the result
