@@ -129,106 +129,81 @@ struct SearchView: View {
     @ViewBuilder
     private func suggestionsView(_ suggestions: GetSearchSuggestions200Response) -> some View {
         VStack(alignment: .leading, spacing: 16) {
+            // Books suggestions
             if !suggestions.books.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Books")
-                        .font(.headline)
-                        .padding(.horizontal)
-
-                    ForEach(suggestions.books, id: \.id) { book in
-                        NavigationLink(destination: BookDetailLoader(bookId: book.id.uuidString)) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "book.fill")
-                                    .foregroundColor(.accentColor)
-                                    .frame(width: 24)
-
-                                Text(book.title)
-                                    .font(.body)
-                                    .lineLimit(1)
-
-                                Spacer()
-
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Book: \(book.title)")
-                    }
-                }
+                suggestionSection(
+                    title: "Books",
+                    icon: "book.fill",
+                    items: suggestions.books,
+                    itemText: { $0.title },
+                    destination: { BookDetailLoader(bookId: $0.id.uuidString) }
+                )
             }
 
+            // Authors suggestions
             if !suggestions.authors.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Authors")
-                        .font(.headline)
-                        .padding(.horizontal)
-
-                    ForEach(suggestions.authors, id: \.id) { author in
-                        NavigationLink(destination: AuthorDetailView(authorId: author.id.uuidString)) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "person.fill")
-                                    .foregroundColor(.accentColor)
-                                    .frame(width: 24)
-
-                                Text(author.name)
-                                    .font(.body)
-                                    .lineLimit(1)
-
-                                Spacer()
-
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Author: \(author.name)")
-                    }
-                }
+                suggestionSection(
+                    title: "Authors",
+                    icon: "person.fill",
+                    items: suggestions.authors,
+                    itemText: { $0.name },
+                    destination: { AuthorDetailView(authorId: $0.id.uuidString) }
+                )
             }
 
+            // Narrators suggestions
             if !suggestions.narrators.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Narrators")
-                        .font(.headline)
-                        .padding(.horizontal)
-
-                    ForEach(suggestions.narrators, id: \.id) { narrator in
-                        NavigationLink(destination: NarratorDetailView(narratorId: narrator.id.uuidString)) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "mic.fill")
-                                    .foregroundColor(.accentColor)
-                                    .frame(width: 24)
-
-                                Text(narrator.name)
-                                    .font(.body)
-                                    .lineLimit(1)
-
-                                Spacer()
-
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.horizontal)
-                            .padding(.vertical, 8)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Narrator: \(narrator.name)")
-                    }
-                }
+                suggestionSection(
+                    title: "Narrators",
+                    icon: "mic.fill",
+                    items: suggestions.narrators,
+                    itemText: { $0.name },
+                    destination: { NarratorDetailView(narratorId: $0.id.uuidString) }
+                )
             }
         }
         .padding(.vertical)
+    }
+
+    /// Generic suggestion section component
+    @ViewBuilder
+    private func suggestionSection<Item: Identifiable, Destination: View>(
+        title: String,
+        icon: String,
+        items: [Item],
+        itemText: @escaping (Item) -> String,
+        destination: @escaping (Item) -> Destination
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+                .padding(.horizontal)
+
+            ForEach(items) { item in
+                NavigationLink(destination: destination(item)) {
+                    HStack(spacing: 12) {
+                        Image(systemName: icon)
+                            .foregroundColor(.accentColor)
+                            .frame(width: 24)
+
+                        Text(itemText(item))
+                            .font(.body)
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(title.dropLast()): \(itemText(item))")
+            }
+        }
     }
 
     // MARK: - Search Results View
