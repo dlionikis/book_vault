@@ -161,7 +161,7 @@ private struct ChapterRow: View {
                     .stroke(isCurrentChapter ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 2)
             )
         }
-        .buttonStyle(ChapterButtonStyle(isCurrentChapter: isCurrentChapter))
+        .buttonStyle(PlainButtonStyle())
         .accessibilityLabel("\(chapter.title), starts at \(formatTime(chapter.startTime)), duration \(formatTime(chapter.duration))")
         .accessibilityHint(isCurrentChapter ? "Currently playing" : "Tap to skip to this chapter")
     }
@@ -178,27 +178,6 @@ private struct ChapterRow: View {
         } else {
             return String(format: "%d:%02d", minutes, secs)
         }
-    }
-}
-
-// MARK: - Custom Button Style
-
-private struct ChapterButtonStyle: ButtonStyle {
-    let isCurrentChapter: Bool
-
-    @ViewBuilder
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(
-                        configuration.isPressed
-                            ? Color.blue.opacity(0.2)  // Pressed state - more visible
-                            : Color.clear
-                    )
-            )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 
