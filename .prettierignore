@@ -8,3 +8,6 @@ package-lock.json
 public
 .env*
 prisma/migrations
+
+# Auto-generated from OpenAPI spec (don't reformat)
+lib/api-types.ts
