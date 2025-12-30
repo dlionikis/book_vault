@@ -200,7 +200,7 @@ final class LibraryCacheManagerRealTests: XCTestCase {
     @MainActor
     func testLoadLibrary_PreservesBookDetails() {
         // Given: A book with all details
-        let book = Book(
+        let book = LibraryBook(
             id: UUID(),
             asin: "B0123456789",
             title: "The Great Book",
@@ -213,7 +213,8 @@ final class LibraryCacheManagerRealTests: XCTestCase {
             authors: [Author(id: UUID(), name: "Famous Author", asin: "A123")],
             narrators: [Narrator(id: UUID(), name: "Voice Actor", asin: "N456")],
             series: [SeriesInfo(id: UUID(), title: "Epic Series", sequence: "1")],
-            categories: [Category(id: UUID(), name: "Fiction")]
+            categories: [Category(id: UUID(), name: "Fiction")],
+            addedAt: Date()
         )
 
         // When: Saving and loading

@@ -29,9 +29,9 @@ final class LibraryCacheManagerTests: XCTestCase {
     func testSaveLibraryStoresBooks() {
         // Given list of books
         let books = [
-            TestFixtures.makeBook(id: UUID(), title: "Book 1"),
-            TestFixtures.makeBook(id: UUID(), title: "Book 2"),
-            TestFixtures.makeBook(id: UUID(), title: "Book 3")
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Book 1"),
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Book 2"),
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Book 3")
         ]
 
         // When saveLibrary is called
@@ -45,7 +45,7 @@ final class LibraryCacheManagerTests: XCTestCase {
 
     func testSaveLibraryUpdatesCacheTimestamp() {
         // Given list of books
-        let books = [TestFixtures.makeBook()]
+        let books = [TestFixtures.makeLibraryBook()]
         let beforeSave = Date()
 
         // When saveLibrary is called
@@ -59,8 +59,8 @@ final class LibraryCacheManagerTests: XCTestCase {
 
     func testSaveLibraryTracksCalls() {
         // Given two sets of books
-        let books1 = [TestFixtures.makeBook(id: UUID(), title: "Book 1")]
-        let books2 = [TestFixtures.makeBook(id: UUID(), title: "Book 2")]
+        let books1 = [TestFixtures.makeLibraryBook(id: UUID(), title: "Book 1")]
+        let books2 = [TestFixtures.makeLibraryBook(id: UUID(), title: "Book 2")]
 
         // When saveLibrary is called twice
         sut.saveLibrary(books: books1)
@@ -75,13 +75,13 @@ final class LibraryCacheManagerTests: XCTestCase {
     func testSaveLibraryOverwritesPreviousCache() {
         // Given existing cached books
         let oldBooks = [
-            TestFixtures.makeBook(id: UUID(), title: "Old Book 1"),
-            TestFixtures.makeBook(id: UUID(), title: "Old Book 2")
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Old Book 1"),
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Old Book 2")
         ]
         sut.saveLibrary(books: oldBooks)
 
         // When saving new books
-        let newBooks = [TestFixtures.makeBook(id: UUID(), title: "New Book")]
+        let newBooks = [TestFixtures.makeLibraryBook(id: UUID(), title: "New Book")]
         sut.saveLibrary(books: newBooks)
 
         // Then cache should contain only new books
@@ -104,8 +104,8 @@ final class LibraryCacheManagerTests: XCTestCase {
     func testLoadLibraryReturnsCachedBooks() {
         // Given cached books
         let books = [
-            TestFixtures.makeBook(id: UUID(), title: "Cached Book 1"),
-            TestFixtures.makeBook(id: UUID(), title: "Cached Book 2")
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Cached Book 1"),
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Cached Book 2")
         ]
         sut.preloadCache(books: books)
 
@@ -119,7 +119,7 @@ final class LibraryCacheManagerTests: XCTestCase {
 
     func testLoadLibraryReturnsNilWhenLoadFails() {
         // Given cache that should fail to load
-        sut.preloadCache(books: [TestFixtures.makeBook()])
+        sut.preloadCache(books: [TestFixtures.makeLibraryBook()])
         sut.loadShouldFail = true
 
         // When loadLibrary is called
@@ -143,7 +143,7 @@ final class LibraryCacheManagerTests: XCTestCase {
 
     func testIsCacheValidReturnsTrueWhenFresh() {
         // Given recently cached data
-        sut.preloadCache(books: [TestFixtures.makeBook()])
+        sut.preloadCache(books: [TestFixtures.makeLibraryBook()])
 
         // When isCacheValid is checked
         let isValid = sut.isCacheValid()
@@ -163,7 +163,7 @@ final class LibraryCacheManagerTests: XCTestCase {
 
     func testIsCacheValidReturnsFalseWhenConfigured() {
         // Given cache configured to be invalid
-        sut.preloadCache(books: [TestFixtures.makeBook()])
+        sut.preloadCache(books: [TestFixtures.makeLibraryBook()])
         sut.shouldCacheBeValid = false
 
         // When isCacheValid is checked
@@ -196,7 +196,7 @@ final class LibraryCacheManagerTests: XCTestCase {
     func testGetLastSyncDateReturnsCacheTimestamp() {
         // Given cache with known timestamp
         let syncDate = Date().addingTimeInterval(-3600) // 1 hour ago
-        sut.preloadCache(books: [TestFixtures.makeBook()], syncDate: syncDate)
+        sut.preloadCache(books: [TestFixtures.makeLibraryBook()], syncDate: syncDate)
 
         // When getLastSyncDate is called
         let date = sut.getLastSyncDate()
@@ -220,7 +220,7 @@ final class LibraryCacheManagerTests: XCTestCase {
 
     func testClearCacheRemovesAllData() {
         // Given cached library
-        sut.preloadCache(books: [TestFixtures.makeBook(), TestFixtures.makeBook()])
+        sut.preloadCache(books: [TestFixtures.makeLibraryBook(), TestFixtures.makeLibraryBook()])
 
         // When clearCache is called
         sut.clearCache()
@@ -235,7 +235,7 @@ final class LibraryCacheManagerTests: XCTestCase {
 
     func testPreloadCacheSetsData() {
         // Given books and date
-        let books = [TestFixtures.makeBook(title: "Preloaded Book")]
+        let books = [TestFixtures.makeLibraryBook(title: "Preloaded Book")]
         let syncDate = Date().addingTimeInterval(-7200)
 
         // When preloadCache is called
@@ -250,7 +250,7 @@ final class LibraryCacheManagerTests: XCTestCase {
 
     func testSimulateStaleCacheSetsOldTimestamp() {
         // Given books and age
-        let books = [TestFixtures.makeBook()]
+        let books = [TestFixtures.makeLibraryBook()]
         let age: TimeInterval = 7200 // 2 hours
 
         // When simulateStaleCache is called
@@ -266,8 +266,8 @@ final class LibraryCacheManagerTests: XCTestCase {
 
     func testResetClearsAllState() {
         // Given state
-        sut.preloadCache(books: [TestFixtures.makeBook()])
-        sut.saveLibrary(books: [TestFixtures.makeBook()])
+        sut.preloadCache(books: [TestFixtures.makeLibraryBook()])
+        sut.saveLibrary(books: [TestFixtures.makeLibraryBook()])
         _ = sut.loadLibrary()
         _ = sut.isCacheValid()
         _ = sut.getLastSyncDate()

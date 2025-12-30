@@ -140,7 +140,7 @@ final class PlaybackFlowTests: XCTestCase {
     func testLibraryCacheRefreshOnReconnect() async {
         // Given: stale library cache
         mockLibraryCache.simulateStaleCache(
-            books: [TestFixtures.makeBook()],
+            books: [TestFixtures.makeLibraryBook()],
             age: 7200 // 2 hours old
         )
 
@@ -178,16 +178,16 @@ final class PlaybackFlowTests: XCTestCase {
 
     func testOfflinePlaybackWithCachedLibrary() async {
         // Given: cached library
-        let books = [
-            TestFixtures.makeBook(id: UUID(), title: "Book 1"),
-            TestFixtures.makeBook(id: UUID(), title: "Book 2"),
-            TestFixtures.makeBook(id: UUID(), title: "Book 3")
+        let libraryBooks = [
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Book 1"),
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Book 2"),
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Book 3")
         ]
-        mockLibraryCache.preloadCache(books: books)
+        mockLibraryCache.preloadCache(books: libraryBooks)
 
-        // Download one book
-        mockStorageManager.downloadedBooks.insert(books[0].id.uuidString.uppercased())
-        mockStorageManager.addToMetadata(book: books[0], fileSize: 40_000_000)
+        // Download one book - convert to Book for storage metadata
+        mockStorageManager.downloadedBooks.insert(libraryBooks[0].id.uuidString.uppercased())
+        mockStorageManager.addToMetadata(book: libraryBooks[0].asBook, fileSize: 40_000_000)
 
         // When: going offline
         mockNetworkMonitor.simulateDisconnection()
@@ -198,9 +198,9 @@ final class PlaybackFlowTests: XCTestCase {
         XCTAssertEqual(cachedBooks?.count, 3)
 
         // And: can identify which books are downloaded
-        XCTAssertTrue(mockStorageManager.isBookDownloaded(bookId: books[0].id.uuidString))
-        XCTAssertFalse(mockStorageManager.isBookDownloaded(bookId: books[1].id.uuidString))
-        XCTAssertFalse(mockStorageManager.isBookDownloaded(bookId: books[2].id.uuidString))
+        XCTAssertTrue(mockStorageManager.isBookDownloaded(bookId: libraryBooks[0].id.uuidString))
+        XCTAssertFalse(mockStorageManager.isBookDownloaded(bookId: libraryBooks[1].id.uuidString))
+        XCTAssertFalse(mockStorageManager.isBookDownloaded(bookId: libraryBooks[2].id.uuidString))
     }
 
     // MARK: - Progress Conflict Resolution Tests
@@ -288,7 +288,7 @@ final class PlaybackFlowTests: XCTestCase {
         // Given: cached data
         let bookId = TestFixtures.testBookId.uuidString
         mockOfflineStore.saveProgress(bookId: bookId, position: 500.0, completed: false)
-        mockLibraryCache.preloadCache(books: [TestFixtures.makeBook()])
+        mockLibraryCache.preloadCache(books: [TestFixtures.makeLibraryBook()])
 
         // When: logout occurs (caches are cleared)
         mockOfflineStore.clearCache()
