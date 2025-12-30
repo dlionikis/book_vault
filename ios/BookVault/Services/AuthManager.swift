@@ -10,7 +10,7 @@ import Security
 
 /// Manages user authentication and token storage
 @MainActor
-class AuthManager: ObservableObject {
+class AuthManager: ObservableObject, AuthManaging {
     static let shared = AuthManager()
 
     @Published private(set) var isAuthenticated = false

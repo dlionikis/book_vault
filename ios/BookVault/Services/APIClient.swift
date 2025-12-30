@@ -39,7 +39,7 @@ enum APIError: LocalizedError {
 
 /// API client for Book Vault backend
 /// Uses generated models from OpenAPI specification
-class APIClient {
+class APIClient: APIClientProtocol {
     static let shared = APIClient()
 
     let baseURL: URL  // Changed from private to allow SearchManager access
