@@ -30,6 +30,9 @@ BookVault/Generated/Models/Cartfile
 BookVault/Generated/Models/git_push.sh
 BookVault/Generated/Models/project.yml
 BookVault/Generated/Models/.openapi-generator/
+BookVault/Generated/Models/.openapi-generator-ignore
+BookVault/Generated/Models/.gitignore
+BookVault/Generated/Models/.swiftformat
 BookVault/Generated/API/*
 !BookVault/Generated/Models/.gitkeep
 !BookVault/Generated/API/.gitkeep
