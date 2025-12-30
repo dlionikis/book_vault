@@ -58,6 +58,7 @@
 		89EE06A02EF4B094A2654BEB /* BatchUpdateProgressRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A74D57A5BC18D96438D69E0 /* BatchUpdateProgressRequest.swift */; };
 		8A4F17B54EBAF0C52C222D68 /* LoginMobileRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A50FD28FC1A87C71A657E8C5 /* LoginMobileRequest.swift */; };
 		8B5B541C2B1F7ECE14FD8907 /* GetSearchSuggestions200ResponseAuthorsInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF1E641E72C554FEC3B6D648 /* GetSearchSuggestions200ResponseAuthorsInner.swift */; };
+		8EAECB7504F472C1E0D6F294 /* TestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ABCD382712C188F4C8A5D23 /* TestFixtures.swift */; };
 		8F9F563B2DE94883F330959D /* Narrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAFFDCB54B6EABB247EE760E /* Narrator.swift */; };
 		907430932D8F5A40A9CE1C7A /* ListAuthors200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD87363780646D678A13C4F5 /* ListAuthors200Response.swift */; };
 		93F58F836B25985C41B260E5 /* HealthCheck200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = CADD2EF6B6D87D3D993CCCDC /* HealthCheck200Response.swift */; };
@@ -67,6 +68,7 @@
 		97230F6A1A26E51B24A00945 /* AuthManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 700B7329A0C11B1E66A5E889 /* AuthManaging.swift */; };
 		9953946332648246B73DF553 /* RefreshToken200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4464ECD53B6B3F122500F8C6 /* RefreshToken200Response.swift */; };
 		9A806F8C1E29F5FB63701623 /* CategoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1DBED70F5BFE6DFC574153 /* CategoryListView.swift */; };
+		A1577E1DC70967C9EE19EB01 /* ModelDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEADA8A99DC7641D4954F6DA /* ModelDecodingTests.swift */; };
 		A17A3F59D79869DDFF6B6E75 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8DB4844CCD3B17010EB7FD0 /* Models.swift */; };
 		A1F0AD20ACE3B37F4BB97CA5 /* AuthManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29661D097AA4FFF2CCD70207 /* AuthManagerTests.swift */; };
 		A566CC93465A65B21426953D /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224B1150587B17F911A52A29 /* User.swift */; };
@@ -168,6 +170,7 @@
 		25CF782C7941A830B3E5CFB2 /* GetSearchSuggestions200ResponseBooksInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetSearchSuggestions200ResponseBooksInner.swift; sourceTree = "<group>"; };
 		29661D097AA4FFF2CCD70207 /* AuthManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManagerTests.swift; sourceTree = "<group>"; };
 		2A74D57A5BC18D96438D69E0 /* BatchUpdateProgressRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchUpdateProgressRequest.swift; sourceTree = "<group>"; };
+		2ABCD382712C188F4C8A5D23 /* TestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFixtures.swift; sourceTree = "<group>"; };
 		2B72983E7A01DE984068CFC5 /* RemoveSeriesFromLibrary200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoveSeriesFromLibrary200Response.swift; sourceTree = "<group>"; };
 		2D631995ACACE90A072FEDE5 /* BookDetailLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDetailLoader.swift; sourceTree = "<group>"; };
 		303A6D712CE9FE16658E09DC /* ListBooks200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListBooks200Response.swift; sourceTree = "<group>"; };
@@ -230,6 +233,7 @@
 		A77745CAEAAE7ECFFFDC8104 /* ListNarrators200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListNarrators200Response.swift; sourceTree = "<group>"; };
 		A973EE511EEC0C57149BFEBE /* AudioPlayerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerManager.swift; sourceTree = "<group>"; };
 		AD8831DFF665BF82E16217D7 /* CheckLibrary200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckLibrary200Response.swift; sourceTree = "<group>"; };
+		AEADA8A99DC7641D4954F6DA /* ModelDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelDecodingTests.swift; sourceTree = "<group>"; };
 		B01DA9D637484B54621208C0 /* GetBookChapters200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetBookChapters200Response.swift; sourceTree = "<group>"; };
 		B464DE345A8CE05DB8C53AA0 /* VerifyToken200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifyToken200Response.swift; sourceTree = "<group>"; };
 		B6E7E69ACAA3BF25ECD5ED74 /* ListBooks200ResponsePagination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListBooks200ResponsePagination.swift; sourceTree = "<group>"; };
@@ -332,6 +336,14 @@
 			path = NowPlaying;
 			sourceTree = "<group>";
 		};
+		3EDB367E7494472149E2DDF2 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				AEADA8A99DC7641D4954F6DA /* ModelDecodingTests.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
 		5C6B49A6AD7421F7B91511AD /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -356,6 +368,14 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
+		6E64D9C4DA57A0FB40A3E606 /* Fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				2ABCD382712C188F4C8A5D23 /* TestFixtures.swift */,
+			);
+			path = Fixtures;
+			sourceTree = "<group>";
+		};
 		7AC8D554A2599865EDCAED54 /* Books */ = {
 			isa = PBXGroup;
 			children = (
@@ -377,8 +397,10 @@
 		82EC7C489263B90C6B1C08D2 /* BookVaultTests */ = {
 			isa = PBXGroup;
 			children = (
+				6E64D9C4DA57A0FB40A3E606 /* Fixtures */,
 				039CAB40D1A386696DA35C9D /* Helpers */,
 				995A62F437B359364B5381E5 /* Mocks */,
+				3EDB367E7494472149E2DDF2 /* Models */,
 				13DFD709FDDA3E0E7E20093E /* Services */,
 			);
 			path = BookVaultTests;
@@ -670,6 +692,8 @@
 				41333DC3A6B4A182E037D2D5 /* APIClientTests.swift in Sources */,
 				A1F0AD20ACE3B37F4BB97CA5 /* AuthManagerTests.swift in Sources */,
 				2062ED761294BD6AD593464D /* MockAPIClient.swift in Sources */,
+				A1577E1DC70967C9EE19EB01 /* ModelDecodingTests.swift in Sources */,
+				8EAECB7504F472C1E0D6F294 /* TestFixtures.swift in Sources */,
 				00B38F2DE521352C11992363 /* XCTestCase+Async.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

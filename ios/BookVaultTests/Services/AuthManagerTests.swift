@@ -39,13 +39,8 @@ final class AuthManagerTests: XCTestCase {
     // MARK: - Login Tests
 
     func testLoginSuccessUpdatesAuthenticatedState() async {
-        // Given
-        let mockResponse = LoginMobile200Response(
-            accessToken: "test-token",
-            refreshToken: UUID(),
-            user: User(id: UUID(), email: "test@example.com"),
-            expiresIn: 3600
-        )
+        // Given - using TestFixtures for OpenAPI model construction
+        let mockResponse = TestFixtures.makeLoginResponse()
         mockAPIClient.loginResult = .success(mockResponse)
 
         // When
