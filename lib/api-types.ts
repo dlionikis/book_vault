@@ -3,132 +3,131 @@
  * Do not make direct changes to the file.
  */
 
-
 export interface paths {
-  "/api/auth/mobile/login": {
+  '/api/auth/mobile/login': {
     /** Mobile app login - returns JWT tokens */
-    post: operations["loginMobile"];
+    post: operations['loginMobile'];
   };
-  "/api/auth/mobile/refresh": {
+  '/api/auth/mobile/refresh': {
     /** Refresh JWT access token using refresh token */
-    post: operations["refreshToken"];
+    post: operations['refreshToken'];
   };
-  "/api/auth/mobile/verify": {
+  '/api/auth/mobile/verify': {
     /** Verify JWT token is valid and not expired */
-    get: operations["verifyToken"];
+    get: operations['verifyToken'];
   };
-  "/api/auth/mobile/logout": {
+  '/api/auth/mobile/logout': {
     /** Logout and invalidate refresh token */
-    post: operations["logoutMobile"];
+    post: operations['logoutMobile'];
   };
-  "/api/auth/register": {
+  '/api/auth/register': {
     /** Register a new user account */
-    post: operations["registerUser"];
+    post: operations['registerUser'];
   };
-  "/api/books": {
+  '/api/books': {
     /** Get all books (paginated and sortable) */
-    get: operations["listBooks"];
+    get: operations['listBooks'];
   };
-  "/api/books/{id}": {
+  '/api/books/{id}': {
     /** Get book details */
-    get: operations["getBook"];
+    get: operations['getBook'];
   };
-  "/api/books/{id}/chapters": {
+  '/api/books/{id}/chapters': {
     /** Get chapters for a book (lazy extraction from audio file) */
-    get: operations["getBookChapters"];
+    get: operations['getBookChapters'];
   };
-  "/api/progress": {
+  '/api/progress': {
     /** Get user progress for a book */
-    get: operations["getProgress"];
+    get: operations['getProgress'];
     /** Mark book as completed or reset to not started */
-    put: operations["setProgressStatus"];
+    put: operations['setProgressStatus'];
     /**
      * Update user progress (save position)
      * @description **Supports both authentication methods**:
      * - Session cookies (web)
      * - Bearer token (mobile)
      */
-    post: operations["updateProgress"];
+    post: operations['updateProgress'];
   };
-  "/api/search": {
+  '/api/search': {
     /** Search across books, authors, narrators, and series */
-    get: operations["searchAll"];
+    get: operations['searchAll'];
   };
-  "/api/browse/authors": {
+  '/api/browse/authors': {
     /** List all authors with book counts */
-    get: operations["listAuthors"];
+    get: operations['listAuthors'];
   };
-  "/api/browse/series": {
+  '/api/browse/series': {
     /** List all series with book counts */
-    get: operations["listSeries"];
+    get: operations['listSeries'];
   };
-  "/api/browse/narrators": {
+  '/api/browse/narrators': {
     /** List all narrators with book counts */
-    get: operations["listNarrators"];
+    get: operations['listNarrators'];
   };
-  "/api/browse/categories": {
+  '/api/browse/categories': {
     /** List all categories with book counts */
-    get: operations["listCategories"];
+    get: operations['listCategories'];
   };
-  "/api/authors/{id}": {
+  '/api/authors/{id}': {
     /** Get author details and their books */
-    get: operations["getAuthor"];
+    get: operations['getAuthor'];
   };
-  "/api/series/{id}": {
+  '/api/series/{id}': {
     /** Get series details and books in the series */
-    get: operations["getSeries"];
+    get: operations['getSeries'];
   };
-  "/api/narrators/{id}": {
+  '/api/narrators/{id}': {
     /** Get narrator details and their books */
-    get: operations["getNarrator"];
+    get: operations['getNarrator'];
   };
-  "/api/categories/{id}": {
+  '/api/categories/{id}': {
     /** Get category details and books in the category */
-    get: operations["getCategory"];
+    get: operations['getCategory'];
   };
-  "/api/library": {
+  '/api/library': {
     /** Get user's library books */
-    get: operations["getLibrary"];
+    get: operations['getLibrary'];
     /** Add book to user's library */
-    post: operations["addToLibrary"];
+    post: operations['addToLibrary'];
   };
-  "/api/library/{bookId}": {
+  '/api/library/{bookId}': {
     /** Remove book from user's library */
-    delete: operations["removeFromLibrary"];
+    delete: operations['removeFromLibrary'];
   };
-  "/api/library/check": {
+  '/api/library/check': {
     /** Check if book is in user's library */
-    get: operations["checkLibrary"];
+    get: operations['checkLibrary'];
   };
-  "/api/library/lists": {
+  '/api/library/lists': {
     /** Get all user lists with book counts */
-    get: operations["getUserLists"];
+    get: operations['getUserLists'];
     /** Create new list */
-    post: operations["createList"];
+    post: operations['createList'];
   };
-  "/api/library/lists/{id}": {
+  '/api/library/lists/{id}': {
     /** Update list metadata */
-    put: operations["updateList"];
+    put: operations['updateList'];
     /** Delete list */
-    delete: operations["deleteList"];
+    delete: operations['deleteList'];
   };
-  "/api/library/lists/{id}/books": {
+  '/api/library/lists/{id}/books': {
     /** Add book to list */
-    post: operations["addBookToList"];
+    post: operations['addBookToList'];
     /** Remove book from list */
-    delete: operations["removeBookFromList"];
+    delete: operations['removeBookFromList'];
   };
-  "/api/library/lists/{id}/reorder": {
+  '/api/library/lists/{id}/reorder': {
     /** Reorder books in list */
-    put: operations["reorderList"];
+    put: operations['reorderList'];
   };
-  "/api/library/series/{seriesId}": {
+  '/api/library/series/{seriesId}': {
     /** Add all books in series to library */
-    post: operations["addSeriesToLibrary"];
+    post: operations['addSeriesToLibrary'];
     /** Remove all books in series from library */
-    delete: operations["removeSeriesFromLibrary"];
+    delete: operations['removeSeriesFromLibrary'];
   };
-  "/api/progress/batch": {
+  '/api/progress/batch': {
     /**
      * Batch update user progress for offline sync
      * @description Accepts array of progress updates with timestamps for conflict resolution.
@@ -138,24 +137,24 @@ export interface paths {
      * - Session cookies (web)
      * - Bearer token (mobile)
      */
-    post: operations["batchUpdateProgress"];
+    post: operations['batchUpdateProgress'];
   };
-  "/api/search/suggestions": {
+  '/api/search/suggestions': {
     /**
      * Get search suggestions (autocomplete)
      * @description Returns top 5 books, 3 authors, and 2 narrators matching query.
      * Minimum 2 characters required.
      */
-    get: operations["getSearchSuggestions"];
+    get: operations['getSearchSuggestions'];
   };
-  "/api/downloads": {
+  '/api/downloads': {
     /**
      * Get download history
      * @description Returns recent 50 downloads with daily count for rate limiting info.
      */
-    get: operations["getDownloadHistory"];
+    get: operations['getDownloadHistory'];
   };
-  "/api/downloads/{bookId}": {
+  '/api/downloads/{bookId}': {
     /**
      * Generate pre-signed download URL
      * @description Generates a pre-signed S3 URL for downloading audiobook file.
@@ -163,47 +162,47 @@ export interface paths {
      *
      * **Requires S3 configuration** - returns 501 if S3 not enabled.
      */
-    post: operations["generateDownloadUrl"];
+    post: operations['generateDownloadUrl'];
   };
-  "/api/downloads/{bookId}/check": {
+  '/api/downloads/{bookId}/check': {
     /**
      * Check if user can download book
      * @description Verifies book exists and user is eligible to download.
      * Currently returns true for all books (MVP).
      */
-    get: operations["checkDownloadEligibility"];
+    get: operations['checkDownloadEligibility'];
   };
-  "/api/user/password": {
+  '/api/user/password': {
     /**
      * Update user password
      * @description Validates current password and updates to new password.
      * New password must be at least 8 characters.
      */
-    put: operations["updatePassword"];
+    put: operations['updatePassword'];
   };
-  "/api/audio/{path}": {
+  '/api/audio/{path}': {
     /**
      * Stream audio file with range request support
      * @description Streams audiobook files from S3 (production) or local filesystem (development).
      * Supports HTTP range requests for seeking during playback.
      * Requires authentication.
      */
-    get: operations["streamAudio"];
+    get: operations['streamAudio'];
   };
-  "/api/images/{path}": {
+  '/api/images/{path}': {
     /**
      * Stream image file (book covers)
      * @description Serves book cover images from S3 (production) or local filesystem (development).
      * Public endpoint (no authentication required for better caching).
      */
-    get: operations["streamImage"];
+    get: operations['streamImage'];
   };
-  "/api/health": {
+  '/api/health': {
     /**
      * API health check
      * @description Returns 200 OK if server is running
      */
-    get: operations["healthCheck"];
+    get: operations['healthCheck'];
   };
 }
 
@@ -262,12 +261,12 @@ export interface components {
        * @example https://book-vault-media.s3.amazonaws.com/audio/B002V5D1CG.m4b
        */
       audioUrl?: string | null;
-      authors: components["schemas"]["Author"][];
-      narrators?: components["schemas"]["Narrator"][];
-      series?: components["schemas"]["SeriesInfo"][];
-      categories?: components["schemas"]["Category"][];
+      authors: components['schemas']['Author'][];
+      narrators?: components['schemas']['Narrator'][];
+      series?: components['schemas']['SeriesInfo'][];
+      categories?: components['schemas']['Category'][];
     };
-    LibraryBook: components["schemas"]["Book"] & {
+    LibraryBook: components['schemas']['Book'] & {
       /**
        * Format: date-time
        * @description Timestamp when book was added to library
@@ -420,12 +419,11 @@ export type $defs = Record<string, never>;
 export type external = Record<string, never>;
 
 export interface operations {
-
   /** Mobile app login - returns JWT tokens */
   loginMobile: {
     requestBody: {
       content: {
-        "application/json": {
+        'application/json': {
           /**
            * Format: email
            * @example test@example.com
@@ -443,7 +441,7 @@ export interface operations {
       /** @description Login successful */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /**
              * @description JWT access token for API requests
              * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -455,7 +453,7 @@ export interface operations {
              * @example 19706212-c220-465e-a94f-b3042ceb47ba
              */
             refreshToken: string;
-            user: components["schemas"]["User"];
+            user: components['schemas']['User'];
             /**
              * @description Access token lifetime in seconds
              * @example 3600
@@ -467,13 +465,13 @@ export interface operations {
       /** @description Missing email or password */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description Invalid credentials */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -482,7 +480,7 @@ export interface operations {
   refreshToken: {
     requestBody: {
       content: {
-        "application/json": {
+        'application/json': {
           /**
            * Format: uuid
            * @description Refresh token from login response
@@ -496,7 +494,7 @@ export interface operations {
       /** @description Token refreshed successfully */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /**
              * @description New JWT access token
              * @example eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -519,13 +517,13 @@ export interface operations {
       /** @description Missing refresh token */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description Invalid or expired refresh token */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -536,10 +534,10 @@ export interface operations {
       /** @description Token is valid or invalid */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example true */
             valid: boolean;
-            user?: components["schemas"]["User"] | null;
+            user?: components['schemas']['User'] | null;
           };
         };
       };
@@ -549,7 +547,7 @@ export interface operations {
   logoutMobile: {
     requestBody: {
       content: {
-        "application/json": {
+        'application/json': {
           /**
            * Format: uuid
            * @description Refresh token to invalidate
@@ -562,7 +560,7 @@ export interface operations {
       /** @description Logged out successfully */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example Logged out successfully */
             message: string;
           };
@@ -571,7 +569,7 @@ export interface operations {
       /** @description Invalid token */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -580,7 +578,7 @@ export interface operations {
   registerUser: {
     requestBody: {
       content: {
-        "application/json": {
+        'application/json': {
           /**
            * Format: email
            * @example newuser@example.com
@@ -598,23 +596,23 @@ export interface operations {
       /** @description User created successfully */
       201: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example User created successfully */
             message: string;
-            user: components["schemas"]["User"];
+            user: components['schemas']['User'];
           };
         };
       };
       /** @description Invalid input (bad email format or weak password) */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description User already exists */
       409: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -628,15 +626,15 @@ export interface operations {
         /** @description Items per page */
         limit?: number;
         /** @description Sort order (title, author, narrator, or series) */
-        sort?: "title" | "author" | "narrator" | "series";
+        sort?: 'title' | 'author' | 'narrator' | 'series';
       };
     };
     responses: {
       /** @description Paginated list of books */
       200: {
         content: {
-          "application/json": {
-            books: components["schemas"]["Book"][];
+          'application/json': {
+            books: components['schemas']['Book'][];
             pagination: {
               /** @example 1 */
               page: number;
@@ -653,13 +651,13 @@ export interface operations {
       /** @description Unauthorized */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description Server error */
       500: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -669,7 +667,7 @@ export interface operations {
     parameters: {
       query?: {
         /** @description Include related data (chapters) */
-        include?: "chapters";
+        include?: 'chapters';
       };
       path: {
         /** @description Book ID */
@@ -680,13 +678,13 @@ export interface operations {
       /** @description Book details */
       200: {
         content: {
-          "application/json": components["schemas"]["Book"];
+          'application/json': components['schemas']['Book'];
         };
       };
       /** @description Book not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -703,8 +701,8 @@ export interface operations {
       /** @description List of chapters */
       200: {
         content: {
-          "application/json": {
-            chapters: components["schemas"]["Chapter"][];
+          'application/json': {
+            chapters: components['schemas']['Chapter'][];
             /**
              * @description Where chapters came from:
              * - database: Previously extracted chapters from DB
@@ -716,7 +714,7 @@ export interface operations {
              * @example database
              * @enum {string}
              */
-            source: "database" | "extracted" | "none" | "unavailable" | "error";
+            source: 'database' | 'extracted' | 'none' | 'unavailable' | 'error';
             /** @example No chapters found in audio file */
             message?: string | null;
           };
@@ -725,7 +723,7 @@ export interface operations {
       /** @description Book not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -742,7 +740,7 @@ export interface operations {
       /** @description User progress */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /**
              * Format: double
              * @example 3612.5
@@ -761,7 +759,7 @@ export interface operations {
       /** @description Missing book ID */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -770,14 +768,14 @@ export interface operations {
   setProgressStatus: {
     requestBody: {
       content: {
-        "application/json": {
+        'application/json': {
           /** Format: uuid */
           bookId: string;
           /**
            * @description Mark as completed or reset progress
            * @enum {string}
            */
-          status: "completed" | "not-started";
+          status: 'completed' | 'not-started';
         };
       };
     };
@@ -785,7 +783,7 @@ export interface operations {
       /** @description Progress status updated */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /**
              * Format: double
              * @example 0
@@ -804,13 +802,13 @@ export interface operations {
       /** @description Invalid request (missing bookId or invalid status) */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description Unauthorized */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -824,7 +822,7 @@ export interface operations {
   updateProgress: {
     requestBody: {
       content: {
-        "application/json": {
+        'application/json': {
           /** Format: uuid */
           bookId: string;
           /** Format: double */
@@ -841,7 +839,7 @@ export interface operations {
       /** @description Progress updated */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /**
              * Format: double
              * @example 3612.5
@@ -865,13 +863,13 @@ export interface operations {
       /** @description Invalid request (missing bookId or invalid positionSeconds) */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description Unauthorized */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -892,8 +890,8 @@ export interface operations {
       /** @description Search results */
       200: {
         content: {
-          "application/json": {
-            results: components["schemas"]["Book"][];
+          'application/json': {
+            results: components['schemas']['Book'][];
             pagination: {
               page: number;
               limit: number;
@@ -906,7 +904,7 @@ export interface operations {
       /** @description Missing or invalid search query */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -923,8 +921,8 @@ export interface operations {
       /** @description Paginated list of authors */
       200: {
         content: {
-          "application/json": {
-            results: components["schemas"]["AuthorWithBookCount"][];
+          'application/json': {
+            results: components['schemas']['AuthorWithBookCount'][];
             pagination: {
               page: number;
               limit: number;
@@ -937,7 +935,7 @@ export interface operations {
       /** @description Unauthorized */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -954,8 +952,8 @@ export interface operations {
       /** @description Paginated list of series */
       200: {
         content: {
-          "application/json": {
-            results: components["schemas"]["SeriesWithBookCount"][];
+          'application/json': {
+            results: components['schemas']['SeriesWithBookCount'][];
             pagination: {
               page: number;
               limit: number;
@@ -968,7 +966,7 @@ export interface operations {
       /** @description Unauthorized */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -985,8 +983,8 @@ export interface operations {
       /** @description Paginated list of narrators */
       200: {
         content: {
-          "application/json": {
-            results: components["schemas"]["NarratorWithBookCount"][];
+          'application/json': {
+            results: components['schemas']['NarratorWithBookCount'][];
             pagination: {
               page: number;
               limit: number;
@@ -999,7 +997,7 @@ export interface operations {
       /** @description Unauthorized */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1016,8 +1014,8 @@ export interface operations {
       /** @description Paginated list of categories */
       200: {
         content: {
-          "application/json": {
-            results: components["schemas"]["CategoryWithBookCount"][];
+          'application/json': {
+            results: components['schemas']['CategoryWithBookCount'][];
             pagination: {
               page: number;
               limit: number;
@@ -1030,7 +1028,7 @@ export interface operations {
       /** @description Unauthorized */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1051,21 +1049,21 @@ export interface operations {
       /** @description Author with their books */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** Format: uuid */
             id: string;
             /** @example Patrick Rothfuss */
             name: string;
             asin?: string | null;
-            books: components["schemas"]["Book"][];
-            pagination: components["schemas"]["Pagination"];
+            books: components['schemas']['Book'][];
+            pagination: components['schemas']['Pagination'];
           };
         };
       };
       /** @description Author not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1086,21 +1084,21 @@ export interface operations {
       /** @description Series with books */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** Format: uuid */
             id: string;
             /** @example The Kingkiller Chronicle */
             title: string;
             asin?: string | null;
-            books: components["schemas"]["Book"][];
-            pagination: components["schemas"]["Pagination"];
+            books: components['schemas']['Book'][];
+            pagination: components['schemas']['Pagination'];
           };
         };
       };
       /** @description Series not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1121,21 +1119,21 @@ export interface operations {
       /** @description Narrator with their books */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** Format: uuid */
             id: string;
             /** @example Nick Podehl */
             name: string;
             asin?: string | null;
-            books: components["schemas"]["Book"][];
-            pagination: components["schemas"]["Pagination"];
+            books: components['schemas']['Book'][];
+            pagination: components['schemas']['Pagination'];
           };
         };
       };
       /** @description Narrator not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1156,21 +1154,21 @@ export interface operations {
       /** @description Category with books */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** Format: uuid */
             id: string;
             /** @example Fantasy */
             name: string;
             level?: number;
-            books: components["schemas"]["Book"][];
-            pagination: components["schemas"]["Pagination"];
+            books: components['schemas']['Book'][];
+            pagination: components['schemas']['Pagination'];
           };
         };
       };
       /** @description Category not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1181,8 +1179,8 @@ export interface operations {
       /** @description User's library */
       200: {
         content: {
-          "application/json": {
-            books: components["schemas"]["LibraryBook"][];
+          'application/json': {
+            books: components['schemas']['LibraryBook'][];
             /** @example 42 */
             total: number;
           };
@@ -1191,7 +1189,7 @@ export interface operations {
       /** @description Unauthorized */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1200,7 +1198,7 @@ export interface operations {
   addToLibrary: {
     requestBody: {
       content: {
-        "application/json": {
+        'application/json': {
           /** Format: uuid */
           bookId: string;
         };
@@ -1210,7 +1208,7 @@ export interface operations {
       /** @description Book already in library */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example Book already in library */
             message: string;
           };
@@ -1219,7 +1217,7 @@ export interface operations {
       /** @description Book added to library */
       201: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example Book added to library */
             message: string;
           };
@@ -1228,7 +1226,7 @@ export interface operations {
       /** @description Missing book ID */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1245,7 +1243,7 @@ export interface operations {
       /** @description Book removed from library */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example Book removed from library */
             message: string;
           };
@@ -1254,7 +1252,7 @@ export interface operations {
       /** @description Library not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1271,7 +1269,7 @@ export interface operations {
       /** @description Library check result */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example true */
             inLibrary: boolean;
           };
@@ -1280,7 +1278,7 @@ export interface operations {
       /** @description Missing book ID */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1291,28 +1289,28 @@ export interface operations {
       /** @description User's lists */
       200: {
         content: {
-          "application/json": {
-            lists: ({
-                /** Format: uuid */
-                id: string;
-                /** @example To Read */
-                name: string;
-                /** @example Books I want to read next */
-                description?: string | null;
-                /** @example 12 */
-                bookCount: number;
-                /** Format: date-time */
-                createdAt: string;
-                /** Format: date-time */
-                updatedAt: string;
-              })[];
+          'application/json': {
+            lists: {
+              /** Format: uuid */
+              id: string;
+              /** @example To Read */
+              name: string;
+              /** @example Books I want to read next */
+              description?: string | null;
+              /** @example 12 */
+              bookCount: number;
+              /** Format: date-time */
+              createdAt: string;
+              /** Format: date-time */
+              updatedAt: string;
+            }[];
           };
         };
       };
       /** @description Unauthorized */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1321,7 +1319,7 @@ export interface operations {
   createList: {
     requestBody: {
       content: {
-        "application/json": {
+        'application/json': {
           /** @example To Read */
           name: string;
           /** @example Books I want to read next */
@@ -1333,7 +1331,7 @@ export interface operations {
       /** @description List created */
       201: {
         content: {
-          "application/json": {
+          'application/json': {
             /** Format: uuid */
             id: string;
             /** @example To Read */
@@ -1352,7 +1350,7 @@ export interface operations {
       /** @description Missing list name */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1367,7 +1365,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": {
+        'application/json': {
           /** @example To Read */
           name?: string;
           /** @example Books I want to read next */
@@ -1379,7 +1377,7 @@ export interface operations {
       /** @description List updated */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** Format: uuid */
             id: string;
             name: string;
@@ -1395,13 +1393,13 @@ export interface operations {
       /** @description Not your list */
       403: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description List not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1418,7 +1416,7 @@ export interface operations {
       /** @description List deleted */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example true */
             success: boolean;
           };
@@ -1427,13 +1425,13 @@ export interface operations {
       /** @description Not your list */
       403: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description List not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1448,7 +1446,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": {
+        'application/json': {
           /** Format: uuid */
           bookId: string;
         };
@@ -1458,7 +1456,7 @@ export interface operations {
       /** @description Book added to list */
       201: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example true */
             success: boolean;
           };
@@ -1467,13 +1465,13 @@ export interface operations {
       /** @description Not your list */
       403: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description List or book not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1494,7 +1492,7 @@ export interface operations {
       /** @description Book removed from list */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example true */
             success: boolean;
           };
@@ -1503,13 +1501,13 @@ export interface operations {
       /** @description Not your list */
       403: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description List not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1524,7 +1522,7 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": {
+        'application/json': {
           /** @description Array of book IDs in desired order */
           bookIds: string[];
         };
@@ -1534,7 +1532,7 @@ export interface operations {
       /** @description List reordered */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example true */
             success: boolean;
             /** @example 10 */
@@ -1545,13 +1543,13 @@ export interface operations {
       /** @description Not your list */
       403: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description List not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1568,7 +1566,7 @@ export interface operations {
       /** @description Books added to library */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example Added 5 books to library */
             message: string;
             /** @example 5 */
@@ -1581,7 +1579,7 @@ export interface operations {
       /** @description Series not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1598,7 +1596,7 @@ export interface operations {
       /** @description Books removed from library */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example Removed 5 books from library */
             message: string;
             /** @example 5 */
@@ -1609,7 +1607,7 @@ export interface operations {
       /** @description Series not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1626,18 +1624,18 @@ export interface operations {
   batchUpdateProgress: {
     requestBody: {
       content: {
-        "application/json": {
+        'application/json': {
           updates: {
-              /** Format: uuid */
-              bookId: string;
-              /** Format: double */
-              positionSeconds: number;
-              /**
-               * Format: date-time
-               * @description Client timestamp for conflict resolution
-               */
-              timestamp: string;
-            }[];
+            /** Format: uuid */
+            bookId: string;
+            /** Format: double */
+            positionSeconds: number;
+            /**
+             * Format: date-time
+             * @description Client timestamp for conflict resolution
+             */
+            timestamp: string;
+          }[];
         };
       };
     };
@@ -1645,7 +1643,7 @@ export interface operations {
       /** @description Batch update results */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /**
              * @description Number of successful updates
              * @example 5
@@ -1656,25 +1654,25 @@ export interface operations {
              * @example 1
              */
             conflicts: number;
-            details: ({
-                /** Format: uuid */
-                bookId: string;
-                /** @enum {string} */
-                status: "updated" | "conflict";
-              })[];
+            details: {
+              /** Format: uuid */
+              bookId: string;
+              /** @enum {string} */
+              status: 'updated' | 'conflict';
+            }[];
           };
         };
       };
       /** @description Invalid request (missing updates array) */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description Rate limit exceeded */
       429: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1695,31 +1693,31 @@ export interface operations {
       /** @description Search suggestions */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             books: {
-                /** Format: uuid */
-                id: string;
-                title: string;
-                /** Format: uri */
-                coverUrl: string;
-              }[];
+              /** Format: uuid */
+              id: string;
+              title: string;
+              /** Format: uri */
+              coverUrl: string;
+            }[];
             authors: {
-                /** Format: uuid */
-                id: string;
-                name: string;
-              }[];
+              /** Format: uuid */
+              id: string;
+              name: string;
+            }[];
             narrators: {
-                /** Format: uuid */
-                id: string;
-                name: string;
-              }[];
+              /** Format: uuid */
+              id: string;
+              name: string;
+            }[];
           };
         };
       };
       /** @description Query too short */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1733,15 +1731,15 @@ export interface operations {
       /** @description Download history */
       200: {
         content: {
-          "application/json": {
-            downloads: ({
-                /** Format: uuid */
-                bookId: string;
-                bookTitle: string;
-                /** Format: date-time */
-                downloadedAt: string;
-                deviceId?: string | null;
-              })[];
+          'application/json': {
+            downloads: {
+              /** Format: uuid */
+              bookId: string;
+              bookTitle: string;
+              /** Format: date-time */
+              downloadedAt: string;
+              deviceId?: string | null;
+            }[];
             /**
              * @description Downloads in last 24 hours
              * @example 3
@@ -1753,7 +1751,7 @@ export interface operations {
       /** @description Unauthorized */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1774,7 +1772,7 @@ export interface operations {
     };
     requestBody?: {
       content: {
-        "application/json": {
+        'application/json': {
           /** @description Optional device identifier */
           deviceId?: string;
         };
@@ -1784,7 +1782,7 @@ export interface operations {
       /** @description Download URL generated */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /**
              * Format: uri
              * @description Pre-signed S3 URL (expires in 1 hour)
@@ -1803,25 +1801,25 @@ export interface operations {
       /** @description Book has no audio file */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description Book not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description Download limit exceeded (10/day) */
       429: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description Downloads require S3 configuration */
       501: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1842,7 +1840,7 @@ export interface operations {
       /** @description Eligibility check result */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example true */
             eligible: boolean;
           };
@@ -1851,7 +1849,7 @@ export interface operations {
       /** @description Book not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1864,7 +1862,7 @@ export interface operations {
   updatePassword: {
     requestBody: {
       content: {
-        "application/json": {
+        'application/json': {
           /** Format: password */
           currentPassword: string;
           /** Format: password */
@@ -1876,7 +1874,7 @@ export interface operations {
       /** @description Password updated successfully */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example Password updated successfully */
             message: string;
           };
@@ -1885,19 +1883,19 @@ export interface operations {
       /** @description Invalid request (current password wrong or new password too short) */
       400: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description Unauthorized */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description User not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1929,35 +1927,35 @@ export interface operations {
       /** @description Audio file stream (full content) */
       200: {
         headers: {
-          "Content-Type"?: string;
-          "Content-Length"?: number;
-          "Cache-Control"?: string;
+          'Content-Type'?: string;
+          'Content-Length'?: number;
+          'Cache-Control'?: string;
         };
         content: {
-          "audio/mp4": string;
+          'audio/mp4': string;
         };
       };
       /** @description Partial audio content (range request) */
       206: {
         headers: {
-          "Content-Range"?: string;
-          "Content-Type"?: string;
-          "Content-Length"?: number;
+          'Content-Range'?: string;
+          'Content-Type'?: string;
+          'Content-Length'?: number;
         };
         content: {
-          "audio/mp4": string;
+          'audio/mp4': string;
         };
       };
       /** @description Unauthorized */
       401: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
       /** @description Audio file not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -1981,19 +1979,19 @@ export interface operations {
       /** @description Image file */
       200: {
         headers: {
-          "Content-Type"?: string;
-          "Content-Length"?: number;
-          "Cache-Control"?: string;
+          'Content-Type'?: string;
+          'Content-Length'?: number;
+          'Cache-Control'?: string;
         };
         content: {
-          "image/jpeg": string;
-          "image/png": string;
+          'image/jpeg': string;
+          'image/png': string;
         };
       };
       /** @description Image not found */
       404: {
         content: {
-          "application/json": components["schemas"]["Error"];
+          'application/json': components['schemas']['Error'];
         };
       };
     };
@@ -2007,7 +2005,7 @@ export interface operations {
       /** @description Server is healthy */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @example ok */
             status: string;
           };
