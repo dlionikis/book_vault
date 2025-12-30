@@ -83,12 +83,19 @@ class StorageManager: ObservableObject, StorageManaging {
     private let audiobooksDirectoryName = "audiobooks"
     private let metadataFileName = "metadata.json"
 
+    // MARK: - Instance Properties
+
+    /// Base directory for all storage (injected for testing)
+    private let baseDirectory: URL
+
+    /// UserDefaults instance (injected for testing)
+    private let userDefaults: UserDefaults
+
     // MARK: - Computed Properties
 
     /// Root downloads directory
     private var downloadsDirectory: URL {
-        let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        return documentsURL.appendingPathComponent(downloadsDirectoryName)
+        baseDirectory.appendingPathComponent(downloadsDirectoryName)
     }
 
     /// Audiobooks subdirectory
@@ -103,7 +110,7 @@ class StorageManager: ObservableObject, StorageManaging {
 
     /// Current storage limit from UserDefaults
     var storageLimit: Int64 {
-        let limit = UserDefaults.standard.integer(forKey: "downloadStorageLimit")
+        let limit = userDefaults.integer(forKey: "downloadStorageLimit")
         return limit > 0 ? Int64(limit) : StorageManager.defaultStorageLimit
     }
 
@@ -126,7 +133,19 @@ class StorageManager: ObservableObject, StorageManaging {
 
     // MARK: - Initialization
 
-    private init() {
+    /// Production singleton initializer
+    private convenience init() {
+        let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        self.init(baseDirectory: documentsURL, userDefaults: .standard)
+    }
+
+    /// Testable initializer that accepts base directory and UserDefaults
+    /// - Parameters:
+    ///   - baseDirectory: Root directory for storage (Documents directory in production)
+    ///   - userDefaults: UserDefaults instance for storage limit settings
+    init(baseDirectory: URL, userDefaults: UserDefaults = .standard) {
+        self.baseDirectory = baseDirectory
+        self.userDefaults = userDefaults
         setupDirectories()
         loadMetadata()
     }
