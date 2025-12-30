@@ -536,9 +536,166 @@ class MockKeychain: KeychainStoring {
 
 ---
 
+## Phase 5: Fix Phase 4 Test Compilation Issues
+
+> **Status**: Blocked - Tests written but not compiling
+> **Date Added**: December 30, 2025
+> **Prerequisite**: Phase 4 service refactoring is complete
+
+### Background
+
+Phase 4 service refactoring was completed successfully. The four complex services (AuthManager, APIClient, DownloadManager, AudioPlayerManager) were refactored with full dependency injection support. However, the test files have compilation errors due to mismatches between test code and OpenAPI-generated model signatures.
+
+### What Was Completed in Phase 4
+
+#### Service Refactoring (✅ Complete)
+
+1. **AuthManager** - Refactored with:
+   - `KeychainStoring` protocol for mock keychain testing
+   - `SystemKeychain` production implementation
+   - Testable initializer: `init(apiClient:keychain:)`
+   - `clearCachesOnLogout` callback for DI
+
+2. **APIClient** - Refactored with:
+   - Testable initializer: `init(baseURL:session:)` for URLProtocol interception
+   - `forceLogoutHandler` callback for DI
+   - Session configuration moved to production singleton
+
+3. **DownloadManager** - Refactored with:
+   - Full DI: `init(apiClient:storageManager:networkMonitor:sessionIdentifier:session:)`
+   - `forceLogoutHandler` callback
+   - Optional session injection for testing
+
+4. **AudioPlayerManager** - Refactored with:
+   - DI: `init(progressManager:downloadManager:storageManager:concreteDownloadManager:skipAudioSetup:)`
+   - `authTokenProvider` callback for token injection
+   - `skipAudioSetup` flag to skip AVAudioSession in unit tests
+   - `AudioPlayable` protocol wrapping AVPlayer
+   - `AVPlayerWrapper` production implementation
+
+#### New Files Created (✅ Complete)
+
+- `ios/BookVault/Services/Protocols/KeychainStoring.swift`
+- `ios/BookVault/Services/Protocols/AudioPlayable.swift`
+- `ios/BookVault/Services/SystemKeychain.swift`
+- `ios/BookVaultTests/Services/Real/AuthManagerRealTests.swift`
+- `ios/BookVaultTests/Services/Real/APIClientRealTests.swift`
+- `ios/BookVaultTests/Services/Real/DownloadManagerRealTests.swift`
+- `ios/BookVaultTests/Services/Real/AudioPlayerManagerRealTests.swift`
+
+### Known Issues (❌ Need Fixing)
+
+#### Issue 1: OpenAPI Model Signature Mismatches
+
+The test files were written with assumed model signatures, but the actual OpenAPI-generated models have different structures.
+
+**Affected Models and Fixes Needed:**
+
+1. **`User` model** (`ios/BookVault/Generated/Models/User.swift`)
+   - Actual: `init(id: UUID, email: String)`
+   - Tests assumed: `init(id:, email:, createdAt:, updatedAt:)`
+   - **Fix**: Update test helpers to only use `id` and `email`
+
+2. **`LoginMobile200Response`** (`ios/BookVault/Generated/Models/LoginMobile200Response.swift`)
+   - Actual: `init(accessToken:, refreshToken:, user:, expiresIn:)`
+   - Tests assumed: `init(user:, accessToken:, refreshToken:)` (missing `expiresIn`, wrong order)
+   - **Fix**: Update test response creation to include `expiresIn` and use correct parameter order
+
+3. **`Book` model** (`ios/BookVault/Generated/Models/Book.swift`)
+   - Actual: Optional fields, no `createdAt`/`updatedAt`
+   - Tests assumed: Required fields with timestamps
+   - **Fix**: Update `makeTestBook()` helpers to match actual signature
+
+4. **`Chapter` model** (`ios/BookVault/Generated/Models/Chapter.swift`)
+   - Actual: `init(id:, title:, startTime:, endTime:, duration:, index:)`
+   - Tests assumed: `init(id:, title:, startTime:, endTime:)` (missing `duration` and `index`)
+   - **Fix**: Update `makeTestChapter()` helpers - PARTIALLY DONE in `AudioPlayerManagerRealTests.swift`
+
+5. **`UserProgress` model** (`ios/BookVault/Models/UserProgress.swift`)
+   - Actual: `init(positionSeconds:, completed:, lastPlayed:)`
+   - Tests assumed: `init(positionSeconds:, status:, updatedAt:)`
+   - **Fix**: Update mock return values - PARTIALLY DONE in `AudioPlayerManagerRealTests.swift`
+
+6. **`SaveProgressResponse`** (`ios/BookVault/Models/UserProgress.swift`)
+   - Actual: `init(positionSeconds:, completed:, lastPlayed:, updated:)`
+   - Tests assumed: Different field names
+   - **Fix**: Update mock return values - PARTIALLY DONE in `AudioPlayerManagerRealTests.swift`
+
+7. **`ListBooks200ResponsePagination`**
+   - Test uses `totalBooks` but actual field name may differ
+   - **Fix**: Check actual model and update test assertions
+
+8. **`UpdateProgress200Response`**
+   - Test uses `.success` but actual model structure differs
+   - **Fix**: Check actual model and update test assertions
+
+#### Issue 2: Protocol Conformance in Test Mocks
+
+Some test mocks don't fully conform to their protocols due to the above model mismatches.
+
+**Affected Files:**
+
+- `AuthManagerRealTests.swift` - `MockAPIClientForAuth` login result type
+- `AudioPlayerManagerRealTests.swift` - `MockProgressManagerForAudio` return types
+
+#### Issue 3: DownloadError Equatable
+
+`DownloadManagerRealTests.swift` uses `XCTAssertEqual` with `DownloadError`, but the enum doesn't conform to `Equatable`.
+
+**Fix Options:**
+
+1. Add `Equatable` conformance to `DownloadError` (preferred if not too complex)
+2. Use pattern matching in assertions (currently partially applied)
+
+### Files Requiring Updates
+
+| File                                | Issues                                                    | Priority |
+| ----------------------------------- | --------------------------------------------------------- | -------- |
+| `AuthManagerRealTests.swift`        | User model, LoginMobile200Response signatures             | High     |
+| `APIClientRealTests.swift`          | ListBooks200ResponsePagination, UpdateProgress200Response | High     |
+| `AudioPlayerManagerRealTests.swift` | Chapter model (partially fixed), Book model               | Medium   |
+| `DownloadManagerRealTests.swift`    | Book model, DownloadError Equatable                       | Medium   |
+
+### Recommended Approach
+
+1. **Read the actual generated models** in `ios/BookVault/Generated/Models/` to understand exact signatures
+2. **Read custom models** in `ios/BookVault/Models/` (UserProgress, SaveProgressResponse)
+3. **Update test helper functions** (`makeTestBook()`, `makeTestChapter()`, response builders)
+4. **Update mock implementations** to return correct types
+5. **Run tests incrementally** - fix one test file at a time
+
+### Estimated Effort
+
+- **Time**: 2-4 hours
+- **Complexity**: Low (mostly mechanical updates to match signatures)
+- **Risk**: Low (no production code changes needed)
+
+### Commands to Verify
+
+```bash
+# Regenerate Xcode project after changes
+cd ios && xcodegen generate
+
+# Run Phase 4 tests only
+xcodebuild test -scheme BookVault \
+  -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.2' \
+  -only-testing:BookVaultTests/AuthManagerRealTests \
+  -only-testing:BookVaultTests/APIClientRealTests \
+  -only-testing:BookVaultTests/DownloadManagerRealTests \
+  -only-testing:BookVaultTests/AudioPlayerManagerRealTests
+
+# Check specific compilation errors
+xcodebuild test -scheme BookVault \
+  -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.2' \
+  2>&1 | grep "error:"
+```
+
+---
+
 ## Next Steps
 
 1. **Immediate**: Start with Phase 1 - DebugLogger and ThemeManager tests
 2. **This Week**: Complete Phase 2 - StorageManager refactor and tests
 3. **Code Review**: Review refactoring patterns before applying to all services
 4. **CI Integration**: Ensure coverage reports show improvement after each phase
+5. **Phase 5**: Fix Phase 4 test compilation issues (see above)
