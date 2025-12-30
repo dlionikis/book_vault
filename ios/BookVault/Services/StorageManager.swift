@@ -64,7 +64,7 @@ struct DownloadMetadata: Codable {
 /// Manages local storage for downloaded audiobooks
 /// Handles file operations, metadata index, and storage limits
 @MainActor
-class StorageManager: ObservableObject {
+class StorageManager: ObservableObject, StorageManaging {
     static let shared = StorageManager()
 
     // MARK: - Published Properties

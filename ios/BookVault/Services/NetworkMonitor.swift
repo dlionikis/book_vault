@@ -19,7 +19,7 @@ enum ConnectionType: String {
 
 /// Monitors network connectivity for WiFi-only downloads
 @MainActor
-class NetworkMonitor: ObservableObject {
+class NetworkMonitor: ObservableObject, NetworkMonitoring {
     static let shared = NetworkMonitor()
 
     // MARK: - Published Properties

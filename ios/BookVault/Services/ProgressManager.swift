@@ -12,7 +12,7 @@ import Combine
 /// Manages user progress sync with backend API
 /// This is a lightweight wrapper around APIClient for progress-related operations
 /// Phase 8: Now supports local-first saving with offline sync
-class ProgressManager: ObservableObject {
+class ProgressManager: ObservableObject, ProgressManaging {
     static let shared = ProgressManager()
 
     @MainActor @Published var isLoading = false
