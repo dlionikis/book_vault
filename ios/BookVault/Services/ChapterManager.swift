@@ -18,12 +18,12 @@ class ChapterManager: ObservableObject {
 
     // MARK: - Private Properties
 
-    private let apiClient: APIClient
+    private let apiClient: any APIClientProtocol
     private var chapterCache: [String: [Chapter]] = [:] // bookId -> chapters
 
     // MARK: - Initialization
 
-    init(apiClient: APIClient = .shared) {
+    init(apiClient: any APIClientProtocol = APIClient.shared) {
         self.apiClient = apiClient
     }
 
