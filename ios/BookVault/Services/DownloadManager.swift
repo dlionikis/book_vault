@@ -41,7 +41,7 @@ struct ActiveDownload: Identifiable {
 }
 
 /// Download error types
-enum DownloadError: LocalizedError {
+enum DownloadError: LocalizedError, Equatable {
     case networkError(String)
     case insufficientStorage
     case rateLimitExceeded

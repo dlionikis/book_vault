@@ -131,12 +131,11 @@ final class APIClientRealTests: XCTestCase {
         let responseJSON: [String: Any] = [
             "user": [
                 "id": userId.uuidString,
-                "email": "test@example.com",
-                "createdAt": "2024-01-01T00:00:00Z",
-                "updatedAt": "2024-01-01T00:00:00Z"
+                "email": "test@example.com"
             ],
             "accessToken": "test-access-token",
-            "refreshToken": refreshToken.uuidString
+            "refreshToken": refreshToken.uuidString,
+            "expiresIn": 3600
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -161,19 +160,33 @@ final class APIClientRealTests: XCTestCase {
         let responseJSON: [String: Any] = [
             "user": [
                 "id": userId.uuidString,
-                "email": "test@example.com",
-                "createdAt": "2024-01-01T00:00:00Z",
-                "updatedAt": "2024-01-01T00:00:00Z"
+                "email": "test@example.com"
             ],
             "accessToken": "token",
-            "refreshToken": refreshToken.uuidString
+            "refreshToken": refreshToken.uuidString,
+            "expiresIn": 3600
         ]
 
         var capturedBody: [String: String]?
 
         MockURLProtocol.requestHandler = { request in
+            // httpBody can be nil in URLProtocol - try httpBodyStream instead
             if let bodyData = request.httpBody {
                 capturedBody = try? JSONSerialization.jsonObject(with: bodyData) as? [String: String]
+            } else if let stream = request.httpBodyStream {
+                stream.open()
+                var data = Data()
+                let bufferSize = 1024
+                let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+                defer { buffer.deallocate() }
+                while stream.hasBytesAvailable {
+                    let bytesRead = stream.read(buffer, maxLength: bufferSize)
+                    if bytesRead > 0 {
+                        data.append(buffer, count: bytesRead)
+                    }
+                }
+                stream.close()
+                capturedBody = try? JSONSerialization.jsonObject(with: data) as? [String: String]
             }
             return self.makeJSONResponse(statusCode: 200, json: responseJSON)
         }
@@ -213,8 +226,11 @@ final class APIClientRealTests: XCTestCase {
         // Given
         sut.accessToken = "old-token"
         let refreshToken = UUID()
+        let newRefreshToken = UUID()
         let responseJSON: [String: Any] = [
-            "accessToken": "new-access-token"
+            "accessToken": "new-access-token",
+            "refreshToken": newRefreshToken.uuidString,
+            "expiresIn": 3600
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -248,16 +264,14 @@ final class APIClientRealTests: XCTestCase {
                     "narrators": [],
                     "description": "A test book",
                     "runtimeMinutes": 300,
-                    "releaseDate": "2024-01-01",
-                    "createdAt": "2024-01-01T00:00:00Z",
-                    "updatedAt": "2024-01-01T00:00:00Z"
+                    "releaseDate": "2024-01-01"
                 ]
             ],
             "pagination": [
                 "page": 1,
                 "limit": 20,
-                "totalBooks": 1,
-                "totalPages": 1
+                "total": 1,
+                "pages": 1
             ]
         ]
 
@@ -275,7 +289,7 @@ final class APIClientRealTests: XCTestCase {
         // Then
         XCTAssertEqual(response.books.count, 1)
         XCTAssertEqual(response.books.first?.title, "Test Book")
-        XCTAssertEqual(response.pagination.totalBooks, 1)
+        XCTAssertEqual(response.pagination.total, 1)
     }
 
     func testFetchBooksWithPagination() async throws {
@@ -283,7 +297,7 @@ final class APIClientRealTests: XCTestCase {
         sut.accessToken = "valid-token"
         let responseJSON: [String: Any] = [
             "books": [],
-            "pagination": ["page": 2, "limit": 10, "totalBooks": 50, "totalPages": 5]
+            "pagination": ["page": 2, "limit": 10, "total": 50, "pages": 5]
         ]
 
         var capturedURL: URL?
@@ -321,9 +335,7 @@ final class APIClientRealTests: XCTestCase {
             "narrators": [],
             "description": "Description",
             "runtimeMinutes": 200,
-            "releaseDate": "2024-01-01",
-            "createdAt": "2024-01-01T00:00:00Z",
-            "updatedAt": "2024-01-01T00:00:00Z"
+            "releaseDate": "2024-01-01"
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -368,9 +380,13 @@ final class APIClientRealTests: XCTestCase {
         // Given
         sut.accessToken = "valid-token"
         let bookId = UUID()
+        let dateFormatter = ISO8601DateFormatter()
+        let lastPlayed = dateFormatter.string(from: Date())
         let responseJSON: [String: Any] = [
-            "success": true,
-            "positionSeconds": 123.45
+            "positionSeconds": 123.45,
+            "completed": false,
+            "lastPlayed": lastPlayed,
+            "updated": true
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -383,7 +399,7 @@ final class APIClientRealTests: XCTestCase {
         let response = try await sut.updateProgress(bookId: bookId, positionSeconds: 123.45)
 
         // Then
-        XCTAssertTrue(response.success)
+        XCTAssertTrue(response.updated)
         XCTAssertEqual(response.positionSeconds, 123.45)
     }
 
@@ -437,7 +453,7 @@ final class APIClientRealTests: XCTestCase {
         sut.accessToken = "my-auth-token"
         let responseJSON: [String: Any] = [
             "books": [],
-            "pagination": ["page": 1, "limit": 20, "totalBooks": 0, "totalPages": 0]
+            "pagination": ["page": 1, "limit": 20, "total": 0, "pages": 0]
         ]
 
         var capturedAuthHeader: String?
@@ -462,9 +478,10 @@ final class APIClientRealTests: XCTestCase {
         let userId = UUID()
         let refreshToken = UUID()
         let responseJSON: [String: Any] = [
-            "user": ["id": userId.uuidString, "email": "test@example.com", "createdAt": "2024-01-01T00:00:00Z", "updatedAt": "2024-01-01T00:00:00Z"],
+            "user": ["id": userId.uuidString, "email": "test@example.com"],
             "accessToken": "token",
-            "refreshToken": refreshToken.uuidString
+            "refreshToken": refreshToken.uuidString,
+            "expiresIn": 3600
         ]
 
         var capturedContentType: String?
@@ -488,7 +505,7 @@ final class APIClientRealTests: XCTestCase {
         sut.accessToken = "my-token"
 
         MockURLProtocol.requestHandler = { _ in
-            return self.makeJSONResponse(statusCode: 200, json: ["success": true])
+            return self.makeJSONResponse(statusCode: 200, json: ["message": "Logged out successfully"])
         }
 
         // When

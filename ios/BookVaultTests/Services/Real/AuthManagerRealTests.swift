@@ -152,16 +152,10 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testSuccessfulLogin() async {
         // Given
-        let testUser = User(
-            id: UUID(),
-            email: "test@example.com",
-            createdAt: Date(),
-            updatedAt: Date()
-        )
-        let response = LoginMobile200Response(
-            user: testUser,
+        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let response = TestFixtures.makeLoginResponse(
             accessToken: "test-access-token",
-            refreshToken: UUID()
+            user: testUser
         )
         mockAPIClient.loginResult = .success(response)
 
@@ -233,16 +227,10 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testSuccessfulLogout() async {
         // Given - first login
-        let testUser = User(
-            id: UUID(),
-            email: "test@example.com",
-            createdAt: Date(),
-            updatedAt: Date()
-        )
-        let response = LoginMobile200Response(
-            user: testUser,
+        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let response = TestFixtures.makeLoginResponse(
             accessToken: "test-token",
-            refreshToken: UUID()
+            user: testUser
         )
         mockAPIClient.loginResult = .success(response)
         await sut.login(email: "test@example.com", password: "password123")
@@ -259,16 +247,10 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testLogoutClearsKeychainEvenIfServerFails() async {
         // Given - first login
-        let testUser = User(
-            id: UUID(),
-            email: "test@example.com",
-            createdAt: Date(),
-            updatedAt: Date()
-        )
-        let response = LoginMobile200Response(
-            user: testUser,
+        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let response = TestFixtures.makeLoginResponse(
             accessToken: "test-token",
-            refreshToken: UUID()
+            user: testUser
         )
         mockAPIClient.loginResult = .success(response)
         await sut.login(email: "test@example.com", password: "password123")
@@ -287,16 +269,10 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testForceLogout() async {
         // Given - first login
-        let testUser = User(
-            id: UUID(),
-            email: "test@example.com",
-            createdAt: Date(),
-            updatedAt: Date()
-        )
-        let response = LoginMobile200Response(
-            user: testUser,
+        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let response = TestFixtures.makeLoginResponse(
             accessToken: "test-token",
-            refreshToken: UUID()
+            user: testUser
         )
         mockAPIClient.loginResult = .success(response)
         await sut.login(email: "test@example.com", password: "password123")
@@ -316,21 +292,15 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testSuccessfulTokenRefresh() async {
         // Given - first login to get refresh token
-        let testUser = User(
-            id: UUID(),
-            email: "test@example.com",
-            createdAt: Date(),
-            updatedAt: Date()
-        )
-        let loginResponse = LoginMobile200Response(
-            user: testUser,
+        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let loginResponse = TestFixtures.makeLoginResponse(
             accessToken: "old-token",
-            refreshToken: UUID()
+            user: testUser
         )
         mockAPIClient.loginResult = .success(loginResponse)
         await sut.login(email: "test@example.com", password: "password123")
 
-        let refreshResponse = RefreshToken200Response(accessToken: "new-token")
+        let refreshResponse = TestFixtures.makeRefreshTokenResponse(accessToken: "new-token")
         mockAPIClient.refreshResult = .success(refreshResponse)
 
         // When
@@ -344,16 +314,10 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testFailedTokenRefreshClearsSession() async {
         // Given - first login
-        let testUser = User(
-            id: UUID(),
-            email: "test@example.com",
-            createdAt: Date(),
-            updatedAt: Date()
-        )
-        let loginResponse = LoginMobile200Response(
-            user: testUser,
+        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let loginResponse = TestFixtures.makeLoginResponse(
             accessToken: "old-token",
-            refreshToken: UUID()
+            user: testUser
         )
         mockAPIClient.loginResult = .success(loginResponse)
         await sut.login(email: "test@example.com", password: "password123")
@@ -383,16 +347,10 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testUserEmailAfterLogin() async {
         // Given
-        let testUser = User(
-            id: UUID(),
-            email: "test@example.com",
-            createdAt: Date(),
-            updatedAt: Date()
-        )
-        let response = LoginMobile200Response(
-            user: testUser,
+        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let response = TestFixtures.makeLoginResponse(
             accessToken: "test-token",
-            refreshToken: UUID()
+            user: testUser
         )
         mockAPIClient.loginResult = .success(response)
 
@@ -412,16 +370,10 @@ final class AuthManagerRealTests: XCTestCase {
     func testKeychainSaveErrorDuringLogin() async {
         // Given
         mockKeychain.shouldThrowOnSave = true
-        let testUser = User(
-            id: UUID(),
-            email: "test@example.com",
-            createdAt: Date(),
-            updatedAt: Date()
-        )
-        let response = LoginMobile200Response(
-            user: testUser,
+        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let response = TestFixtures.makeLoginResponse(
             accessToken: "test-token",
-            refreshToken: UUID()
+            user: testUser
         )
         mockAPIClient.loginResult = .success(response)
 

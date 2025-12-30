@@ -286,4 +286,32 @@ enum TestFixtures {
         "lastPlayed": "2025-01-15T10:30:00Z"
     }
     """
+
+    // MARK: - Custom Progress Models (from ios/BookVault/Models/UserProgress.swift)
+
+    static func makeUserProgress(
+        positionSeconds: Double = 0.0,
+        completed: Bool = false,
+        lastPlayed: Date? = nil
+    ) -> UserProgress {
+        UserProgress(
+            positionSeconds: positionSeconds,
+            completed: completed,
+            lastPlayed: lastPlayed
+        )
+    }
+
+    static func makeSaveProgressResponse(
+        positionSeconds: Double = 0.0,
+        completed: Bool = false,
+        lastPlayed: String? = nil,
+        updated: Bool = true
+    ) -> SaveProgressResponse {
+        SaveProgressResponse(
+            positionSeconds: positionSeconds,
+            completed: completed,
+            lastPlayed: lastPlayed,
+            updated: updated
+        )
+    }
 }
