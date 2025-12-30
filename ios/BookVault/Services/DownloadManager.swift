@@ -78,7 +78,7 @@ enum DownloadError: LocalizedError, Equatable {
 
 /// Thread-safe storage for file extensions
 /// Used to pass file extension info from main actor to URLSession delegate callbacks
-/// Swift 5.9 compatible (no nonisolated(unsafe) required)
+/// Encapsulates thread-safety with NSLock for clean cross-actor access
 final class FileExtensionStorage: @unchecked Sendable {
     private let lock = NSLock()
     private var storage: [String: String] = [:]
@@ -130,7 +130,6 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
     private var pendingBooks: [String: Book] = [:]
 
     // Thread-safe storage for file extensions (accessed from URLSession delegate callbacks)
-    // Uses a separate thread-safe class for Swift 5.9 compatibility
     private let fileExtensionStorage = FileExtensionStorage()
 
     // Background session identifier
