@@ -62,6 +62,19 @@ npm run dev
 npm run api:watch
 ```
 
+### Testing Commands
+
+```bash
+# Run all iOS tests
+cd ios && xcodebuild test -scheme BookVault -destination 'platform=iOS Simulator,name=iPhone 17'
+
+# Run specific test file
+cd ios && xcodebuild test -scheme BookVault -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:BookVaultTests/AuthManagerTests
+
+# Generate coverage report
+cd ios && xcodebuild test -scheme BookVault -destination 'platform=iOS Simulator,name=iPhone 17' -enableCodeCoverage YES -resultBundlePath TestResults.xcresult && xcrun xccov view --report TestResults.xcresult
+```
+
 ---
 
 ## Parent Documentation

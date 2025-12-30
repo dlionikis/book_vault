@@ -1,0 +1,122 @@
+//
+//  MockAPIClient.swift
+//  BookVaultTests
+//
+//  Mock API client for testing - allows configuring responses and tracking calls.
+//
+
+import Foundation
+@testable import BookVault
+
+/// Mock API client for testing - allows configuring responses and tracking calls
+class MockAPIClient: APIClientProtocol {
+    var accessToken: String?
+    var baseURL: URL = URL(string: "http://localhost:3000")!
+
+    // MARK: - Call Tracking
+    var loginCalls: [(email: String, password: String)] = []
+    var refreshTokenCalls: [UUID] = []
+    var logoutCalls: [UUID] = []
+    var fetchBooksCalls: [(page: Int, limit: Int, sortBy: String?)] = []
+    var fetchBookCalls: [UUID] = []
+    var fetchBookChaptersCalls: [UUID] = []
+    var fetchProgressCalls: [UUID] = []
+    var updateProgressCalls: [(bookId: UUID, positionSeconds: Double)] = []
+    var setProgressStatusCalls: [(bookId: UUID, status: SetProgressStatusRequest.Status)] = []
+    var fetchLibraryCalls: Int = 0
+    var addToLibraryCalls: [UUID] = []
+    var removeFromLibraryCalls: [UUID] = []
+
+    // MARK: - Configurable Results
+    var loginResult: Result<LoginMobile200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
+    var refreshTokenResult: Result<RefreshToken200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
+    var logoutResult: Result<Void, Error> = .success(())
+    var fetchBooksResult: Result<ListBooks200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
+    var fetchBookResult: Result<Book, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
+    var fetchBookChaptersResult: Result<[Chapter], Error> = .success([])
+    var fetchProgressResult: Result<GetProgress200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
+    var updateProgressResult: Result<UpdateProgress200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
+    var setProgressStatusResult: Result<SetProgressStatus200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
+    var fetchLibraryResult: Result<GetLibrary200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
+    var addToLibraryResult: Result<AddToLibrary201Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
+    var removeFromLibraryResult: Result<Void, Error> = .success(())
+
+    // MARK: - Reset
+    func reset() {
+        loginCalls = []
+        refreshTokenCalls = []
+        logoutCalls = []
+        fetchBooksCalls = []
+        fetchBookCalls = []
+        fetchBookChaptersCalls = []
+        fetchProgressCalls = []
+        updateProgressCalls = []
+        setProgressStatusCalls = []
+        fetchLibraryCalls = 0
+        addToLibraryCalls = []
+        removeFromLibraryCalls = []
+        accessToken = nil
+    }
+
+    // MARK: - APIClientProtocol Implementation
+
+    func login(email: String, password: String) async throws -> LoginMobile200Response {
+        loginCalls.append((email, password))
+        return try loginResult.get()
+    }
+
+    func refreshToken(refreshToken: UUID) async throws -> RefreshToken200Response {
+        refreshTokenCalls.append(refreshToken)
+        return try refreshTokenResult.get()
+    }
+
+    func logout(refreshToken: UUID) async throws {
+        logoutCalls.append(refreshToken)
+        try logoutResult.get()
+    }
+
+    func fetchBooks(page: Int, limit: Int, sortBy: String?) async throws -> ListBooks200Response {
+        fetchBooksCalls.append((page, limit, sortBy))
+        return try fetchBooksResult.get()
+    }
+
+    func fetchBook(id: UUID) async throws -> Book {
+        fetchBookCalls.append(id)
+        return try fetchBookResult.get()
+    }
+
+    func fetchBookChapters(bookId: UUID) async throws -> [Chapter] {
+        fetchBookChaptersCalls.append(bookId)
+        return try fetchBookChaptersResult.get()
+    }
+
+    func fetchProgress(bookId: UUID) async throws -> GetProgress200Response {
+        fetchProgressCalls.append(bookId)
+        return try fetchProgressResult.get()
+    }
+
+    func updateProgress(bookId: UUID, positionSeconds: Double) async throws -> UpdateProgress200Response {
+        updateProgressCalls.append((bookId, positionSeconds))
+        return try updateProgressResult.get()
+    }
+
+    func setProgressStatus(bookId: UUID, status: SetProgressStatusRequest.Status) async throws -> SetProgressStatus200Response {
+        setProgressStatusCalls.append((bookId, status))
+        return try setProgressStatusResult.get()
+    }
+
+    func fetchLibrary() async throws -> GetLibrary200Response {
+        fetchLibraryCalls += 1
+        return try fetchLibraryResult.get()
+    }
+
+    func addToLibrary(bookId: UUID) async throws -> AddToLibrary201Response {
+        addToLibraryCalls.append(bookId)
+        return try addToLibraryResult.get()
+    }
+
+    func removeFromLibrary(bookId: UUID) async throws {
+        removeFromLibraryCalls.append(bookId)
+        try removeFromLibraryResult.get()
+    }
+}

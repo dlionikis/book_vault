@@ -10,7 +10,7 @@ import Foundation
 
 /// Persists user's library books to disk for offline access
 @MainActor
-class LibraryCacheManager: ObservableObject {
+class LibraryCacheManager: ObservableObject, LibraryCaching {
     static let shared = LibraryCacheManager()
 
     // MARK: - Storage
@@ -21,21 +21,37 @@ class LibraryCacheManager: ObservableObject {
         cacheDirectory.appendingPathComponent(cacheFileName)
     }
 
+    /// Provider for current user ID (injected for testing)
+    private let userIdProvider: () -> String?
+
     // MARK: - Cache Data Structure
 
     struct LibraryCache: Codable {
         var version: Int = 1
-        var books: [Book]
+        var books: [LibraryBook]
         var lastSyncDate: Date
         var userId: String  // Tied to user to avoid cross-account issues
     }
 
     // MARK: - Initialization
 
-    private init() {
-        // Create cache directory in Documents folder
+    /// Production singleton initializer
+    private convenience init() {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        cacheDirectory = documentsPath.appendingPathComponent("cache", isDirectory: true)
+        let cacheDir = documentsPath.appendingPathComponent("cache", isDirectory: true)
+        self.init(
+            cacheDirectory: cacheDir,
+            userIdProvider: { AuthManager.shared.currentUser?.id.uuidString }
+        )
+    }
+
+    /// Testable initializer that accepts cache directory and user ID provider
+    /// - Parameters:
+    ///   - cacheDirectory: Directory for cache files (Documents/cache in production)
+    ///   - userIdProvider: Closure that returns current user ID (uses AuthManager in production)
+    init(cacheDirectory: URL, userIdProvider: @escaping () -> String?) {
+        self.cacheDirectory = cacheDirectory
+        self.userIdProvider = userIdProvider
 
         // Ensure directory exists
         try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
@@ -46,8 +62,8 @@ class LibraryCacheManager: ObservableObject {
     // MARK: - Public API
 
     /// Save library books to disk
-    /// - Parameter books: Array of books to cache
-    func saveLibrary(books: [Book]) {
+    /// - Parameter books: Array of library books to cache
+    func saveLibrary(books: [LibraryBook]) {
         guard let userId = getCurrentUserId() else {
             DebugLogger.warning("Cannot save library cache: no user logged in")
             return
@@ -73,8 +89,8 @@ class LibraryCacheManager: ObservableObject {
     }
 
     /// Load library books from disk
-    /// - Returns: Array of cached books, or nil if no valid cache exists
-    func loadLibrary() -> [Book]? {
+    /// - Returns: Array of cached library books, or nil if no valid cache exists
+    func loadLibrary() -> [LibraryBook]? {
         guard let userId = getCurrentUserId() else {
             DebugLogger.warning("Cannot load library cache: no user logged in")
             return nil
@@ -167,8 +183,8 @@ class LibraryCacheManager: ObservableObject {
 
     // MARK: - Private Helpers
 
-    /// Get current user's ID from AuthManager
+    /// Get current user's ID from the injected provider
     private func getCurrentUserId() -> String? {
-        AuthManager.shared.currentUser?.id.uuidString
+        userIdProvider()
     }
 }

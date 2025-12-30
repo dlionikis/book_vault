@@ -10,7 +10,7 @@ import Foundation
 
 /// Local playback progress with sync queue for offline support
 @MainActor
-class OfflineProgressStore: ObservableObject {
+class OfflineProgressStore: ObservableObject, OfflineStoring {
     static let shared = OfflineProgressStore()
 
     // MARK: - Storage
@@ -20,6 +20,9 @@ class OfflineProgressStore: ObservableObject {
     private var cacheFileURL: URL {
         cacheDirectory.appendingPathComponent(cacheFileName)
     }
+
+    /// Provider for current user ID (injected for testing)
+    private let userIdProvider: () -> String?
 
     // MARK: - Data Structures
 
@@ -43,10 +46,23 @@ class OfflineProgressStore: ObservableObject {
 
     // MARK: - Initialization
 
-    private init() {
-        // Create cache directory in Documents folder
+    /// Production singleton initializer
+    private convenience init() {
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        cacheDirectory = documentsPath.appendingPathComponent("cache", isDirectory: true)
+        let cacheDir = documentsPath.appendingPathComponent("cache", isDirectory: true)
+        self.init(
+            cacheDirectory: cacheDir,
+            userIdProvider: { AuthManager.shared.currentUser?.id.uuidString }
+        )
+    }
+
+    /// Testable initializer that accepts cache directory and user ID provider
+    /// - Parameters:
+    ///   - cacheDirectory: Directory for cache files (Documents/cache in production)
+    ///   - userIdProvider: Closure that returns current user ID (uses AuthManager in production)
+    init(cacheDirectory: URL, userIdProvider: @escaping () -> String?) {
+        self.cacheDirectory = cacheDirectory
+        self.userIdProvider = userIdProvider
 
         // Ensure directory exists
         try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
@@ -197,9 +213,9 @@ class OfflineProgressStore: ObservableObject {
 
     // MARK: - Private Helpers
 
-    /// Get current user's ID from AuthManager
+    /// Get current user's ID from the injected provider
     private func getCurrentUserId() -> String? {
-        AuthManager.shared.currentUser?.id.uuidString
+        userIdProvider()
     }
 
     /// Load cache from disk into memory

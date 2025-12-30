@@ -1,0 +1,443 @@
+//
+//  DownloadManagerRealTests.swift
+//  BookVaultTests
+//
+//  Phase 4: Real service tests for DownloadManager.
+//  Tests actual download logic with mock dependencies.
+//
+
+import XCTest
+@testable import BookVault
+
+// MARK: - Mock Storage Manager for Download Tests
+
+@MainActor
+final class MockStorageManagerForDownloads: StorageManaging {
+    var downloads: [DownloadedBook] = []
+    var totalSize: Int64 = 0
+    var isLoading = false
+    var storageLimit: Int64 = 10_000_000_000 // 10 GB
+    var availableDeviceSpace: Int64 = 50_000_000_000 // 50 GB
+    var remainingStorageLimit: Int64 { storageLimit - totalSize }
+    var storageUsagePercentage: Double { Double(totalSize) / Double(storageLimit) }
+    var isNearStorageLimit: Bool { storageUsagePercentage > 0.9 }
+
+    var downloadedBookIds: Set<String> = []
+    var canDownloadResult = true
+    var savedAudioFiles: [String: URL] = [:]
+    var savedCoverImages: [String: Data] = [:]
+    var metadataEntries: [String: (book: Book, fileSize: Int64, fileExtension: String)] = [:]
+
+    func audioFilePath(for bookId: String) -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("\(bookId).mp3")
+    }
+
+    func audioFilePath(for bookId: String, extension fileExtension: String) -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("\(bookId).\(fileExtension)")
+    }
+
+    func coverImagePath(for bookId: String) -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("\(bookId).jpg")
+    }
+
+    func saveAudioFile(from tempLocation: URL, bookId: String) throws -> URL {
+        let destURL = audioFilePath(for: bookId)
+        savedAudioFiles[bookId] = destURL
+        return destURL
+    }
+
+    func saveCoverImage(data: Data, bookId: String) throws {
+        savedCoverImages[bookId] = data
+    }
+
+    func isBookDownloaded(bookId: String) -> Bool {
+        downloadedBookIds.contains(bookId)
+    }
+
+    func downloadedFileSize(for bookId: String) -> Int64? {
+        return metadataEntries[bookId]?.fileSize
+    }
+
+    func downloadedFileSize(for bookId: String, extension fileExtension: String?) -> Int64? {
+        return metadataEntries[bookId]?.fileSize
+    }
+
+    func deleteDownload(bookId: String) throws {
+        downloadedBookIds.remove(bookId)
+        metadataEntries.removeValue(forKey: bookId)
+    }
+
+    func deleteAllDownloads() throws {
+        downloadedBookIds.removeAll()
+        metadataEntries.removeAll()
+    }
+
+    func addToMetadata(book: Book, fileSize: Int64, fileExtension: String) {
+        downloadedBookIds.insert(book.id.uuidString)
+        metadataEntries[book.id.uuidString] = (book: book, fileSize: fileSize, fileExtension: fileExtension)
+    }
+
+    func getDownloadedBook(bookId: String) -> DownloadedBook? {
+        guard let entry = metadataEntries[bookId] else { return nil }
+        return DownloadedBook(
+            id: bookId,
+            title: entry.book.title,
+            author: entry.book.authors.first?.name ?? "",
+            downloadedAt: Date(),
+            fileSize: entry.fileSize,
+            audioPath: "audiobooks/\(bookId).mp3",
+            coverPath: nil,
+            fileExtension: entry.fileExtension
+        )
+    }
+
+    func canDownload(fileSize: Int64) -> Bool {
+        return canDownloadResult
+    }
+
+    func verifyDownload(bookId: String) -> Bool {
+        return downloadedBookIds.contains(bookId)
+    }
+
+    func cleanupOrphanedFiles() {
+        // No-op for tests
+    }
+}
+
+// MARK: - Mock Network Monitor for Download Tests
+
+@MainActor
+final class MockNetworkMonitorForDownloads: NetworkMonitoring {
+    @Published var isConnected = true
+    @Published var isExpensive = false
+    @Published var connectionType: ConnectionType = .wifi
+    @Published var isOnline = true
+    @Published var canDownload = true
+    @Published var downloadBlockedReason: String?
+
+    func refreshStatus() {}
+    func restartMonitor() {}
+
+    func waitForConnection(timeout: TimeInterval) async -> Bool {
+        return isConnected
+    }
+}
+
+// MARK: - DownloadManager Real Tests
+
+@MainActor
+final class DownloadManagerRealTests: XCTestCase {
+
+    var sut: DownloadManager!
+    var mockAPIClient: MockAPIClientForAuth!
+    var mockStorageManager: MockStorageManagerForDownloads!
+    var mockNetworkMonitor: MockNetworkMonitorForDownloads!
+
+    override func setUp() async throws {
+        mockAPIClient = MockAPIClientForAuth()
+        mockAPIClient.accessToken = "test-token"
+        mockStorageManager = MockStorageManagerForDownloads()
+        mockNetworkMonitor = MockNetworkMonitorForDownloads()
+
+        // Create with a test session identifier and nil session (won't create background session)
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [MockURLProtocol.self]
+        let testSession = URLSession(configuration: config)
+
+        sut = DownloadManager(
+            apiClient: mockAPIClient,
+            storageManager: mockStorageManager,
+            networkMonitor: mockNetworkMonitor,
+            sessionIdentifier: "com.bookvault.downloads.test.\(UUID().uuidString)",
+            session: testSession
+        )
+
+        // Disable force logout for tests
+        sut.forceLogoutHandler = {}
+    }
+
+    override func tearDown() async throws {
+        MockURLProtocol.reset()
+        sut = nil
+        mockAPIClient = nil
+        mockStorageManager = nil
+        mockNetworkMonitor = nil
+    }
+
+    // MARK: - Initial State Tests
+
+    func testInitialState() {
+        XCTAssertTrue(sut.activeDownloads.isEmpty)
+        XCTAssertNil(sut.error)
+    }
+
+    // MARK: - Download State Tests
+
+    func testDownloadStateNotDownloaded() {
+        let bookId = UUID().uuidString
+
+        let state = sut.downloadState(for: bookId)
+
+        XCTAssertEqual(state, .notDownloaded)
+    }
+
+    func testDownloadStateCompleted() {
+        let bookId = UUID().uuidString
+        mockStorageManager.downloadedBookIds.insert(bookId)
+
+        let state = sut.downloadState(for: bookId)
+
+        XCTAssertEqual(state, .completed)
+    }
+
+    func testDownloadStateWhenActivelyDownloading() {
+        let book = TestFixtures.makeBook()
+        let bookId = book.id.uuidString
+
+        // Simulate active download
+        let activeDownload = ActiveDownload(
+            id: bookId,
+            book: book,
+            bytesDownloaded: 1000,
+            totalBytes: 10000,
+            state: .downloading(progress: 0.1),
+            task: nil
+        )
+        sut.activeDownloads[bookId] = activeDownload
+
+        let state = sut.downloadState(for: bookId)
+
+        if case .downloading = state {
+            // Expected
+        } else {
+            XCTFail("Expected downloading state, got \(state)")
+        }
+    }
+
+    // MARK: - Is Downloading Tests
+
+    func testIsDownloadingWhenNotDownloading() {
+        let bookId = UUID().uuidString
+
+        XCTAssertFalse(sut.isDownloading(bookId: bookId))
+    }
+
+    func testIsDownloadingWhenWaiting() {
+        let book = TestFixtures.makeBook()
+        let bookId = book.id.uuidString
+
+        let activeDownload = ActiveDownload(
+            id: bookId,
+            book: book,
+            bytesDownloaded: 0,
+            totalBytes: 0,
+            state: .waiting,
+            task: nil
+        )
+        sut.activeDownloads[bookId] = activeDownload
+
+        XCTAssertTrue(sut.isDownloading(bookId: bookId))
+    }
+
+    func testIsDownloadingWhenActivelyDownloading() {
+        let book = TestFixtures.makeBook()
+        let bookId = book.id.uuidString
+
+        let activeDownload = ActiveDownload(
+            id: bookId,
+            book: book,
+            bytesDownloaded: 5000,
+            totalBytes: 10000,
+            state: .downloading(progress: 0.5),
+            task: nil
+        )
+        sut.activeDownloads[bookId] = activeDownload
+
+        XCTAssertTrue(sut.isDownloading(bookId: bookId))
+    }
+
+    func testIsDownloadingWhenPaused() {
+        let book = TestFixtures.makeBook()
+        let bookId = book.id.uuidString
+
+        let activeDownload = ActiveDownload(
+            id: bookId,
+            book: book,
+            bytesDownloaded: 5000,
+            totalBytes: 10000,
+            state: .paused(progress: 0.5),
+            task: nil
+        )
+        sut.activeDownloads[bookId] = activeDownload
+
+        // Paused is not considered "downloading"
+        XCTAssertFalse(sut.isDownloading(bookId: bookId))
+    }
+
+    // MARK: - WiFi Required Tests
+
+    func testStartDownloadFailsWhenWiFiRequired() async {
+        // Given
+        mockNetworkMonitor.canDownload = false
+
+        let book = TestFixtures.makeBook()
+
+        // When/Then
+        do {
+            try await sut.startDownload(book: book)
+            XCTFail("Expected WiFi required error")
+        } catch let error as DownloadError {
+            if case .wifiRequired = error {
+                // Expected
+            } else {
+                XCTFail("Expected wifiRequired, got \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    // MARK: - Already Downloaded Tests
+
+    func testStartDownloadSkipsAlreadyDownloaded() async throws {
+        // Given
+        let book = TestFixtures.makeBook()
+        mockStorageManager.downloadedBookIds.insert(book.id.uuidString)
+
+        // When
+        try await sut.startDownload(book: book)
+
+        // Then - no active download should be created
+        XCTAssertTrue(sut.activeDownloads.isEmpty)
+    }
+
+    // MARK: - Cancel Download Tests
+
+    func testCancelDownload() {
+        // Given
+        let book = TestFixtures.makeBook()
+        let bookId = book.id.uuidString
+
+        let activeDownload = ActiveDownload(
+            id: bookId,
+            book: book,
+            bytesDownloaded: 1000,
+            totalBytes: 10000,
+            state: .downloading(progress: 0.1),
+            task: nil
+        )
+        sut.activeDownloads[bookId] = activeDownload
+
+        // When
+        sut.cancelDownload(bookId: bookId)
+
+        // Then
+        XCTAssertNil(sut.activeDownloads[bookId])
+    }
+
+    // MARK: - Delete Download Tests
+
+    func testDeleteDownload() throws {
+        // Given
+        let book = TestFixtures.makeBook()
+        let bookId = book.id.uuidString
+        mockStorageManager.downloadedBookIds.insert(bookId)
+
+        // When
+        try sut.deleteDownload(bookId: bookId)
+
+        // Then - storage manager should have deleted
+        XCTAssertFalse(mockStorageManager.downloadedBookIds.contains(bookId))
+    }
+
+    // MARK: - Active Download Progress Tests
+
+    func testActiveDownloadProgress() {
+        // Given
+        let book = TestFixtures.makeBook()
+        let bookId = book.id.uuidString
+
+        var activeDownload = ActiveDownload(
+            id: bookId,
+            book: book,
+            bytesDownloaded: 2500,
+            totalBytes: 10000,
+            state: .downloading(progress: 0.25),
+            task: nil
+        )
+
+        // Then
+        XCTAssertEqual(activeDownload.progress, 0.25, accuracy: 0.001)
+
+        // Update progress
+        activeDownload.bytesDownloaded = 5000
+        XCTAssertEqual(activeDownload.progress, 0.5, accuracy: 0.001)
+    }
+
+    func testActiveDownloadProgressWithZeroTotal() {
+        // Given
+        let book = TestFixtures.makeBook()
+        let bookId = book.id.uuidString
+
+        let activeDownload = ActiveDownload(
+            id: bookId,
+            book: book,
+            bytesDownloaded: 1000,
+            totalBytes: 0,
+            state: .downloading(progress: 0),
+            task: nil
+        )
+
+        // Then - should handle division by zero
+        XCTAssertEqual(activeDownload.progress, 0)
+    }
+
+    // MARK: - Formatted Progress Tests
+
+    func testActiveDownloadFormattedProgress() {
+        // Given
+        let book = TestFixtures.makeBook()
+        let bookId = book.id.uuidString
+
+        let activeDownload = ActiveDownload(
+            id: bookId,
+            book: book,
+            bytesDownloaded: 5_000_000,  // 5 MB
+            totalBytes: 100_000_000,     // 100 MB
+            state: .downloading(progress: 0.05),
+            task: nil
+        )
+
+        // Then
+        let formatted = activeDownload.formattedProgress
+        XCTAssertTrue(formatted.contains("MB"))
+    }
+
+    // MARK: - Download State Equatable Tests
+
+    func testDownloadStateEquatable() {
+        XCTAssertEqual(DownloadState.notDownloaded, DownloadState.notDownloaded)
+        XCTAssertEqual(DownloadState.waiting, DownloadState.waiting)
+        XCTAssertEqual(DownloadState.completed, DownloadState.completed)
+        XCTAssertEqual(DownloadState.downloading(progress: 0.5), DownloadState.downloading(progress: 0.5))
+        XCTAssertEqual(DownloadState.paused(progress: 0.3), DownloadState.paused(progress: 0.3))
+        XCTAssertEqual(DownloadState.failed(error: "Error"), DownloadState.failed(error: "Error"))
+
+        XCTAssertNotEqual(DownloadState.notDownloaded, DownloadState.completed)
+        XCTAssertNotEqual(DownloadState.downloading(progress: 0.5), DownloadState.downloading(progress: 0.6))
+    }
+
+    // MARK: - Error Description Tests
+
+    func testDownloadErrorDescriptions() {
+        XCTAssertNotNil(DownloadError.networkError("Test").errorDescription)
+        XCTAssertNotNil(DownloadError.insufficientStorage.errorDescription)
+        XCTAssertNotNil(DownloadError.rateLimitExceeded.errorDescription)
+        XCTAssertNotNil(DownloadError.urlExpired.errorDescription)
+        XCTAssertNotNil(DownloadError.fileCorruption.errorDescription)
+        XCTAssertNotNil(DownloadError.unauthorized.errorDescription)
+        XCTAssertNotNil(DownloadError.notEligible.errorDescription)
+        XCTAssertNotNil(DownloadError.wifiRequired.errorDescription)
+        XCTAssertNotNil(DownloadError.cancelled.errorDescription)
+    }
+}

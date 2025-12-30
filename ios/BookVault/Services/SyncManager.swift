@@ -12,7 +12,7 @@ import Combine
 /// Manages background sync when connectivity returns
 /// Monitors network state and syncs pending progress when online
 @MainActor
-class SyncManager: ObservableObject {
+class SyncManager: ObservableObject, SyncManaging {
     static let shared = SyncManager()
 
     // MARK: - Published Properties
@@ -26,9 +26,41 @@ class SyncManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var isMonitoring = false
 
+    // MARK: - Dependencies
+
+    private let networkMonitor: any NetworkMonitoring
+    private let offlineProgressStore: any OfflineStoring
+    private let progressManager: any ProgressManaging
+    private let libraryManager: any LibraryManaging
+
     // MARK: - Initialization
 
-    private init() {
+    /// Production singleton initializer
+    private convenience init() {
+        self.init(
+            networkMonitor: NetworkMonitor.shared,
+            offlineProgressStore: OfflineProgressStore.shared,
+            progressManager: ProgressManager.shared,
+            libraryManager: LibraryManager.shared
+        )
+    }
+
+    /// Testable initializer with dependency injection
+    /// - Parameters:
+    ///   - networkMonitor: Network connectivity monitor
+    ///   - offlineProgressStore: Offline progress storage
+    ///   - progressManager: Progress manager for syncing
+    ///   - libraryManager: Library manager for cache refresh
+    init(
+        networkMonitor: any NetworkMonitoring,
+        offlineProgressStore: any OfflineStoring,
+        progressManager: any ProgressManaging,
+        libraryManager: any LibraryManaging
+    ) {
+        self.networkMonitor = networkMonitor
+        self.offlineProgressStore = offlineProgressStore
+        self.progressManager = progressManager
+        self.libraryManager = libraryManager
         // Update pending count on init
         updatePendingSyncCount()
     }
@@ -46,24 +78,36 @@ class SyncManager: ObservableObject {
         isMonitoring = true
 
         // Monitor network connectivity changes
-        NetworkMonitor.shared.$isConnected
-            .removeDuplicates()
-            .filter { $0 }  // Only when becomes connected
-            .debounce(for: .seconds(2), scheduler: DispatchQueue.main)  // Wait for stable connection
-            .sink { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    await self?.syncPendingProgress()
+        // For production, we cast to NetworkMonitor to access the publisher
+        // For testing, use triggerSyncIfOnline() directly
+        if let realMonitor = networkMonitor as? NetworkMonitor {
+            realMonitor.$isConnected
+                .removeDuplicates()
+                .filter { $0 }  // Only when becomes connected
+                .debounce(for: .seconds(2), scheduler: DispatchQueue.main)  // Wait for stable connection
+                .sink { [weak self] _ in
+                    Task { @MainActor [weak self] in
+                        await self?.syncPendingProgress()
+                    }
                 }
-            }
-            .store(in: &cancellables)
+                .store(in: &cancellables)
+        }
 
         DebugLogger.network("SyncManager monitoring started")
 
         // Attempt initial sync if already connected
-        if NetworkMonitor.shared.isConnected {
+        if networkMonitor.isConnected {
             Task {
                 await syncPendingProgress()
             }
+        }
+    }
+
+    /// Trigger sync if online - for testing purposes
+    /// In production, this is called automatically via Combine subscription
+    func triggerSyncIfOnline() async {
+        if networkMonitor.isConnected {
+            await syncPendingProgress()
         }
     }
 
@@ -77,7 +121,7 @@ class SyncManager: ObservableObject {
     /// Manually trigger sync of pending progress
     /// Call this to force sync attempt
     func syncPendingProgress() async {
-        guard NetworkMonitor.shared.isConnected else {
+        guard networkMonitor.isConnected else {
             DebugLogger.network("Cannot sync: offline")
             return
         }
@@ -87,7 +131,7 @@ class SyncManager: ObservableObject {
             return
         }
 
-        let pending = OfflineProgressStore.shared.getPendingSync()
+        let pending = offlineProgressStore.getPendingSync()
 
         guard !pending.isEmpty else {
             DebugLogger.database("No pending progress to sync")
@@ -104,7 +148,7 @@ class SyncManager: ObservableObject {
         for progress in pending {
             do {
                 // Use ProgressManager to sync - it handles marking as synced
-                _ = try await ProgressManager.shared.saveProgress(
+                _ = try await progressManager.saveProgress(
                     for: progress.bookId,
                     positionSeconds: progress.positionSeconds
                 )
@@ -128,12 +172,12 @@ class SyncManager: ObservableObject {
 
     /// Force refresh library cache when back online
     func refreshLibraryCache() async {
-        guard NetworkMonitor.shared.isConnected else {
+        guard networkMonitor.isConnected else {
             return
         }
 
         do {
-            try await LibraryManager.shared.refreshCache()
+            try await libraryManager.refreshCache()
             DebugLogger.success("Library cache refreshed after coming online")
         } catch {
             DebugLogger.error("Failed to refresh library cache", error: error)
@@ -143,6 +187,6 @@ class SyncManager: ObservableObject {
     // MARK: - Private Helpers
 
     private func updatePendingSyncCount() {
-        pendingSyncCount = OfflineProgressStore.shared.pendingSyncCount
+        pendingSyncCount = offlineProgressStore.pendingSyncCount
     }
 }

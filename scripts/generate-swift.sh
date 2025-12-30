@@ -20,8 +20,12 @@ if [ ! -d "ios/BookVault" ]; then
   exit 1
 fi
 
-# Clean previous generation
+# Clean previous generation (preserve committed files like Models.swift)
 echo "🗑️  Cleaning previous generated code..."
+# Keep the committed Models.swift if it exists (has custom validation types)
+if [ -f "$OUTPUT_DIR/Models.swift" ]; then
+  cp "$OUTPUT_DIR/Models.swift" /tmp/Models.swift.backup
+fi
 rm -rf "$OUTPUT_DIR"/*
 mkdir -p "$OUTPUT_DIR"
 
@@ -40,16 +44,27 @@ openapi-generator generate \
 # Move generated models to a flatter structure and clean up
 echo "🧹 Reorganizing generated files..."
 if [ -d "$OUTPUT_DIR/BookVault/Classes/OpenAPIs" ]; then
-  # Move Models.swift to the top level
-  if [ -f "$OUTPUT_DIR/BookVault/Classes/OpenAPIs/Models.swift" ]; then
-    mv "$OUTPUT_DIR/BookVault/Classes/OpenAPIs/Models.swift" "$OUTPUT_DIR/"
-  fi
+  # Move all supporting Swift files (Models.swift, Validation.swift, etc.) to the top level
+  find "$OUTPUT_DIR/BookVault/Classes/OpenAPIs" -maxdepth 1 -name "*.swift" -exec mv {} "$OUTPUT_DIR/" \;
+
   # Move individual model files if they exist
   if [ -d "$OUTPUT_DIR/BookVault/Classes/OpenAPIs/Models" ]; then
     find "$OUTPUT_DIR/BookVault/Classes/OpenAPIs/Models" -name "*.swift" -exec mv {} "$OUTPUT_DIR/" \;
   fi
+
   # Remove the nested directory structure
   rm -rf "$OUTPUT_DIR/BookVault"
+fi
+
+# Restore the committed Models.swift which has custom validation types
+# (The generated Validation.swift provides these types, so we prefer it when available)
+if [ -f "$OUTPUT_DIR/Validation.swift" ]; then
+  echo "✅ Using generated Validation.swift for validation types"
+  # Don't need to restore backup since Validation.swift provides the types
+  rm -f /tmp/Models.swift.backup
+elif [ -f /tmp/Models.swift.backup ]; then
+  echo "⚠️  Restoring custom Models.swift (no Validation.swift generated)"
+  mv /tmp/Models.swift.backup "$OUTPUT_DIR/Models.swift"
 fi
 # Remove documentation and generator metadata
 rm -rf "$OUTPUT_DIR/docs" "$OUTPUT_DIR/.openapi-generator"

@@ -39,7 +39,7 @@ enum APIError: LocalizedError {
 
 /// API client for Book Vault backend
 /// Uses generated models from OpenAPI specification
-class APIClient {
+class APIClient: APIClientProtocol {
     static let shared = APIClient()
 
     let baseURL: URL  // Changed from private to allow SearchManager access
@@ -53,14 +53,29 @@ class APIClient {
     // Token storage (will be managed by AuthManager)
     var accessToken: String?
 
-    private init() {
-        // Determine the appropriate base URL
-        // FORCE localhost for all builds during development
+    // Force logout callback (enables DI for testing)
+    var forceLogoutHandler: () -> Void = {
+        Task { @MainActor in
+            AuthManager.shared.forceLogout()
+        }
+    }
+
+    // Production singleton init
+    private convenience init() {
         let urlString = "http://localhost:3000"
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 30
+        configuration.timeoutIntervalForResource = 300
+        let session = URLSession(configuration: configuration)
+        self.init(baseURL: URL(string: urlString)!, session: session)
+    }
 
-        self.baseURL = URL(string: urlString)!
+    // Testable initializer - accepts custom URLSession for URLProtocol interception
+    init(baseURL: URL, session: URLSession) {
+        self.baseURL = baseURL
+        self.session = session
 
-        DebugLogger.network("APIClient initialized with base URL: \(urlString)")
+        DebugLogger.network("APIClient initialized with base URL: \(baseURL.absoluteString)")
 
         // Configure JSON decoder with custom date handling
         self.decoder = JSONDecoder()
@@ -97,12 +112,6 @@ class APIClient {
         // Configure JSON encoder
         self.encoder = JSONEncoder()
         self.encoder.dateEncodingStrategy = .iso8601
-
-        // Initialize URLSession with standard configuration
-        let configuration = URLSessionConfiguration.default
-        configuration.timeoutIntervalForRequest = 30
-        configuration.timeoutIntervalForResource = 300
-        self.session = URLSession(configuration: configuration)
     }
 
     // MARK: - Private Helpers
@@ -179,10 +188,8 @@ class APIClient {
                 throw APIError.decodingError(error)
             }
         case 401:
-            // Force logout on main actor to redirect to login screen
-            Task { @MainActor in
-                AuthManager.shared.forceLogout()
-            }
+            // Force logout via handler (enables DI for testing)
+            forceLogoutHandler()
             throw APIError.unauthorized
         case 404:
             throw APIError.notFound

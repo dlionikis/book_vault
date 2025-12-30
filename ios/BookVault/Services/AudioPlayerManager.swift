@@ -40,6 +40,20 @@ class AudioPlayerManager: ObservableObject {
     // Phase 7: Offline Downloads
     @Published var isPlayingOffline = false
 
+    // MARK: - Dependencies (DI for testing)
+
+    private let progressManager: any ProgressManaging
+    private let downloadManager: any DownloadManaging
+    private let storageManager: any StorageManaging
+
+    // Concrete reference for download observation (protocols can't expose $publishers)
+    private weak var concreteDownloadManager: DownloadManager?
+
+    // Auth token provider (enables DI for testing)
+    var authTokenProvider: () -> String? = {
+        AuthManager.shared.token
+    }
+
     // MARK: - Private Properties
 
     private var player: AVPlayer?
@@ -47,9 +61,7 @@ class AudioPlayerManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var resourceLoaderDelegate: AuthenticatedAVAssetResourceLoaderDelegate?
     private var progressSaveTimer: Timer?
-    private var progressManager = ProgressManager.shared
     private var lastSavedPosition: TimeInterval = 0
-    private var downloadManager = DownloadManager.shared
     private var downloadObserver: AnyCancellable?
 
     // MARK: - Computed Properties
@@ -61,10 +73,37 @@ class AudioPlayerManager: ObservableObject {
 
     // MARK: - Initialization
 
-    private init() {
+    // Production singleton init
+    private convenience init() {
+        self.init(
+            progressManager: ProgressManager.shared,
+            downloadManager: DownloadManager.shared,
+            storageManager: StorageManager.shared,
+            concreteDownloadManager: DownloadManager.shared
+        )
         setupAudioSession()
         setupNotifications()
         setupRemoteCommandCenter()
+    }
+
+    // Testable initializer
+    init(
+        progressManager: any ProgressManaging,
+        downloadManager: any DownloadManaging,
+        storageManager: any StorageManaging,
+        concreteDownloadManager: DownloadManager? = nil,
+        skipAudioSetup: Bool = false
+    ) {
+        self.progressManager = progressManager
+        self.downloadManager = downloadManager
+        self.storageManager = storageManager
+        self.concreteDownloadManager = concreteDownloadManager
+
+        if !skipAudioSetup {
+            setupAudioSession()
+            setupNotifications()
+            setupRemoteCommandCenter()
+        }
     }
 
     deinit {
@@ -230,7 +269,7 @@ class AudioPlayerManager: ObservableObject {
         do {
             // Add authentication header for cover image
             var request = URLRequest(url: coverUrl)
-            if let token = await AuthManager.shared.token {
+            if let token = authTokenProvider() {
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
 
@@ -267,7 +306,6 @@ class AudioPlayerManager: ObservableObject {
             let bookId = book.id.uuidString
 
             // Phase 7: Check if book is downloaded locally
-            let storageManager = StorageManager.shared
             if storageManager.isBookDownloaded(bookId: bookId) {
                 // Play from local file
                 DebugLogger.audio("Playing from local file: \(book.title)")
@@ -284,7 +322,6 @@ class AudioPlayerManager: ObservableObject {
 
     private func playFromLocalFile(book: Book) async {
         let bookId = book.id.uuidString
-        let storageManager = StorageManager.shared
         let localUrl = storageManager.audioFilePath(for: bookId)
 
         DebugLogger.audio("Starting local playback for \(book.title)")
@@ -340,7 +377,7 @@ class AudioPlayerManager: ObservableObject {
 
     private func playFromStreamingUrl(book: Book) async {
         // Ensure we have authentication token
-        guard let token = AuthManager.shared.token else {
+        guard let token = authTokenProvider() else {
             DebugLogger.error("AudioPlayerManager: No authentication token")
             self.error = NSError(
                 domain: "AudioPlayerManager",
@@ -484,8 +521,10 @@ class AudioPlayerManager: ObservableObject {
         let cmTime = CMTime(seconds: time, preferredTimescale: 1000)
         player?.seek(to: cmTime) { [weak self] completed in
             if completed {
-                self?.currentTime = time
-                self?.updateNowPlayingInfo()
+                Task { @MainActor in
+                    self?.currentTime = time
+                    self?.updateNowPlayingInfo()
+                }
             }
         }
     }
@@ -601,14 +640,16 @@ class AudioPlayerManager: ObservableObject {
             forInterval: interval,
             queue: .main
         ) { [weak self] time in
-            guard let self = self else { return }
-            self.currentTime = time.seconds
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.currentTime = time.seconds
 
-            // Update current chapter (Phase 5)
-            if let currentChapter = self.getCurrentChapter() {
-                if self.currentChapterId != currentChapter.id {
-                    self.currentChapterId = currentChapter.id
-                    DebugLogger.audio("Chapter changed: \(currentChapter.title)")
+                // Update current chapter (Phase 5)
+                if let currentChapter = self.getCurrentChapter() {
+                    if self.currentChapterId != currentChapter.id {
+                        self.currentChapterId = currentChapter.id
+                        DebugLogger.audio("Chapter changed: \(currentChapter.title)")
+                    }
                 }
             }
         }
@@ -631,20 +672,23 @@ class AudioPlayerManager: ObservableObject {
                     if self.lastSavedPosition > 0 {
                         DebugLogger.audio("Seeking to saved position: \(self.lastSavedPosition)s")
                         let cmTime = CMTime(seconds: self.lastSavedPosition, preferredTimescale: 1000)
-                        self.player?.seek(to: cmTime) { _ in
-                            // Start playback after seek completes
-                            self.player?.play()
+                        self.player?.seek(to: cmTime) { [weak self] _ in
+                            Task { @MainActor in
+                                guard let self = self else { return }
+                                // Start playback after seek completes
+                                self.player?.play()
 
-                            // Set playback rate after calling play()
-                            if self.playbackRate != 1.0 {
-                                self.player?.rate = self.playbackRate
+                                // Set playback rate after calling play()
+                                if self.playbackRate != 1.0 {
+                                    self.player?.rate = self.playbackRate
+                                }
+
+                                self.isPlaying = true
+                                self.updateNowPlayingInfo()
+
+                                // Start auto-save timer
+                                self.startProgressSaveTimer()
                             }
-
-                            self.isPlaying = true
-                            self.updateNowPlayingInfo()
-
-                            // Start auto-save timer
-                            self.startProgressSaveTimer()
                         }
                     } else {
                         // Start playback now that we're ready
@@ -803,7 +847,7 @@ class AudioPlayerManager: ObservableObject {
         let bookId = book.id.uuidString
 
         // Don't start if already downloaded or downloading
-        if StorageManager.shared.isBookDownloaded(bookId: bookId) {
+        if storageManager.isBookDownloaded(bookId: bookId) {
             DebugLogger.download("Book already downloaded, skipping auto-download")
             return
         }
@@ -833,8 +877,9 @@ class AudioPlayerManager: ObservableObject {
         // Cancel any existing observer
         downloadObserver?.cancel()
 
-        // Observe changes to activeDownloads
-        downloadObserver = downloadManager.$activeDownloads
+        // Observe changes to activeDownloads (requires concrete type for $publisher access)
+        guard let concreteManager = concreteDownloadManager else { return }
+        downloadObserver = concreteManager.$activeDownloads
             .receive(on: DispatchQueue.main)
             .sink { [weak self] downloads in
                 guard let self = self else { return }
@@ -858,13 +903,11 @@ class AudioPlayerManager: ObservableObject {
     /// Seamlessly switch from streaming to local file playback
     private func switchToLocalFile(book: Book) async {
         let bookId = book.id.uuidString
-        let storageManager = StorageManager.shared
         let localUrl = storageManager.audioFilePath(for: bookId)
 
         // Capture current state before switch
         let wasPlaying = isPlaying
         let savedPosition = currentTime
-        let savedRate = playbackRate
 
         DebugLogger.audio("Switching to local file at position: \(savedPosition)s, wasPlaying: \(wasPlaying)")
 

@@ -1,6 +1,6 @@
 # Project Status
 
-**Last Updated**: December 29, 2025
+**Last Updated**: December 30, 2025
 
 ## Current State
 
@@ -10,6 +10,7 @@ Book Vault is a **production-ready** personal audiobook library application.
 | --------------- | -------------------------------------------------------------------- |
 | **Web App**     | ✅ Complete - Browse, search, playback, progress tracking, dark mode |
 | **iOS App**     | ✅ Complete - All 8 phases implemented (offline mode included)       |
+| **iOS Tests**   | ✅ Complete - 568 tests passing, real service coverage               |
 | **Backend API** | ✅ Complete - OpenAPI spec, contract tests, dual auth (web + mobile) |
 
 **Next Priority**: AWS Deployment (see [development-roadmap.md](development-roadmap.md))
@@ -24,14 +25,14 @@ None currently blocking. All tests passing.
 
 ## Recent Merges
 
-| PR  | Description                                | Date   |
-| --- | ------------------------------------------ | ------ |
-| #47 | iOS Phase 8 - Offline Mode Support         | Dec 29 |
-| #46 | iOS Phase 7 - Offline Downloads            | Dec 29 |
-| #45 | iOS Library UX Alignment                   | Dec 29 |
-| #44 | API DRY Refactor - Entity Detail Endpoints | Dec 28 |
-| #43 | iOS Phase 6 - Search & Browse              | Dec 28 |
-| #42 | iOS Phase 5 - Chapter Navigation           | Dec 28 |
+| PR  | Description                                    | Date   |
+| --- | ---------------------------------------------- | ------ |
+| #48 | iOS Testing - 568 tests, real service coverage | Dec 30 |
+| #47 | iOS Phase 8 - Offline Mode Support             | Dec 29 |
+| #46 | iOS Phase 7 - Offline Downloads                | Dec 29 |
+| #45 | iOS Library UX Alignment                       | Dec 29 |
+| #44 | API DRY Refactor - Entity Detail Endpoints     | Dec 28 |
+| #43 | iOS Phase 6 - Search & Browse                  | Dec 28 |
 
 ---
 

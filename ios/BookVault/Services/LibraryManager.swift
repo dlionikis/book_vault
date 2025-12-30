@@ -23,26 +23,31 @@ enum LibraryError: LocalizedError {
 
 /// Manages user library operations with caching strategy
 /// This is a lightweight wrapper around APIClient for library-related operations
-class LibraryManager: ObservableObject {
+@MainActor
+class LibraryManager: ObservableObject, LibraryManaging {
     static let shared = LibraryManager()
 
-    @MainActor @Published var isLoading = false
-    @MainActor @Published var error: Error?
+    @Published var isLoading = false
+    @Published var error: Error?
 
     /// Increments whenever the library is modified (add/remove book)
     /// Observers can watch this to know when to refresh their views
-    @MainActor @Published var libraryVersion: Int = 0
+    @Published var libraryVersion: Int = 0
 
     /// Indicates if current data is from cache (offline mode)
-    @MainActor @Published var isShowingCachedData = false
+    @Published var isShowingCachedData = false
 
-    private let apiClient = APIClient.shared
-    private let libraryCacheManager = LibraryCacheManager.shared
+    // MARK: - Dependencies
+
+    private let apiClient: any APIClientProtocol
+    private let libraryCacheManager: any LibraryCaching
+    private let networkMonitor: any NetworkMonitoring
+    private let storageManager: any StorageManaging
 
     // MARK: - Caching
 
     /// In-memory cache of library books
-    private var cachedBooks: [Book]?
+    private var cachedBooks: [LibraryBook]?
 
     /// Timestamp of last cache update
     private var lastCacheUpdate: Date?
@@ -50,7 +55,33 @@ class LibraryManager: ObservableObject {
     /// Cache validity duration (5 minutes)
     private let cacheValidityDuration: TimeInterval = 300
 
-    private init() {}
+    /// Production singleton initializer
+    private convenience init() {
+        self.init(
+            apiClient: APIClient.shared,
+            libraryCacheManager: LibraryCacheManager.shared,
+            networkMonitor: NetworkMonitor.shared,
+            storageManager: StorageManager.shared
+        )
+    }
+
+    /// Testable initializer with dependency injection
+    /// - Parameters:
+    ///   - apiClient: API client for server communication
+    ///   - libraryCacheManager: Library cache for offline access
+    ///   - networkMonitor: Network connectivity monitor
+    ///   - storageManager: Storage manager for download deletion
+    init(
+        apiClient: any APIClientProtocol,
+        libraryCacheManager: any LibraryCaching,
+        networkMonitor: any NetworkMonitoring,
+        storageManager: any StorageManaging
+    ) {
+        self.apiClient = apiClient
+        self.libraryCacheManager = libraryCacheManager
+        self.networkMonitor = networkMonitor
+        self.storageManager = storageManager
+    }
 
     // MARK: - Public API
 
@@ -58,11 +89,11 @@ class LibraryManager: ObservableObject {
     /// Uses cached data if available and fresh, otherwise fetches from API
     /// When offline, returns disk-cached data if available
     /// - Parameter forceRefresh: If true, bypasses cache and fetches from API
-    /// - Returns: Array of books in user's library
+    /// - Returns: Array of library books (includes addedAt timestamp)
     @MainActor
-    func fetchLibraryBooks(forceRefresh: Bool = false) async throws -> [Book] {
+    func fetchLibraryBooks(forceRefresh: Bool = false) async throws -> [LibraryBook] {
         // Check network status first
-        if !NetworkMonitor.shared.isConnected {
+        if !networkMonitor.isConnected {
             // Offline: try to load from disk cache
             if let diskCached = libraryCacheManager.loadLibrary() {
                 DebugLogger.database("Using disk-cached library (offline): \(diskCached.count) books")
@@ -147,9 +178,9 @@ class LibraryManager: ObservableObject {
         DebugLogger.success("Book removed from library")
 
         // Delete local download if exists
-        if StorageManager.shared.isBookDownloaded(bookId: bookId) {
+        if storageManager.isBookDownloaded(bookId: bookId) {
             do {
-                try StorageManager.shared.deleteDownload(bookId: bookId)
+                try storageManager.deleteDownload(bookId: bookId)
                 DebugLogger.success("Deleted local download for removed book")
             } catch {
                 DebugLogger.error("Failed to delete local download", error: error)

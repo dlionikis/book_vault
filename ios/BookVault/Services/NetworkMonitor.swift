@@ -19,7 +19,7 @@ enum ConnectionType: String {
 
 /// Monitors network connectivity for WiFi-only downloads
 @MainActor
-class NetworkMonitor: ObservableObject {
+class NetworkMonitor: ObservableObject, NetworkMonitoring {
     static let shared = NetworkMonitor()
 
     // MARK: - Published Properties
@@ -173,5 +173,43 @@ class NetworkMonitor: ObservableObject {
 
         return false
     }
+
+    // MARK: - Testing Support
+
+    #if DEBUG
+    /// Simulate a network state change for testing purposes
+    /// - Parameters:
+    ///   - connected: Whether the network is connected
+    ///   - expensive: Whether the connection is expensive (e.g., cellular)
+    ///   - type: The type of connection
+    /// - Note: This method is only available in DEBUG builds for testing
+    func simulateNetworkState(connected: Bool, expensive: Bool = false, type: ConnectionType = .wifi) {
+        DebugLogger.network("Simulating network state - connected: \(connected), expensive: \(expensive), type: \(type)")
+        self.isConnected = connected
+        self.isExpensive = expensive
+        self.connectionType = type
+    }
+
+    /// Create a testable instance that doesn't start the real NWPathMonitor
+    /// - Parameter userDefaults: UserDefaults to use for WiFi-only setting
+    /// - Returns: A NetworkMonitor instance suitable for testing
+    static func createForTesting(userDefaults: UserDefaults = .standard) -> NetworkMonitor {
+        // Create instance without starting real monitor
+        let instance = NetworkMonitor(forTesting: true)
+        return instance
+    }
+
+    /// Private testing initializer that skips NWPathMonitor setup
+    private convenience init(forTesting: Bool) {
+        // Call the default init but we'll skip monitor setup
+        self.init(skipMonitorSetup: true)
+    }
+
+    /// Private initializer that optionally skips monitor setup
+    private init(skipMonitorSetup: Bool) {
+        // Don't call setupMonitor() - for testing only
+        DebugLogger.network("NetworkMonitor created for testing (monitor not started)")
+    }
+    #endif
 }
 
