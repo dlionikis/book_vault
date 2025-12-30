@@ -31,6 +31,17 @@ jobs:
       - name: Install xcpretty
         run: gem install xcpretty
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install OpenAPI Generator
+        run: brew install openapi-generator swiftformat
+
+      - name: Generate Swift models from OpenAPI
+        run: npm run api:generate:swift
+
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate
