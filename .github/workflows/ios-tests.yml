@@ -42,6 +42,19 @@ jobs:
       - name: Generate Swift models from OpenAPI
         run: npm run api:generate:swift
 
+      - name: Debug - List generated files
+        run: |
+          echo "=== Generated Models Directory ==="
+          ls -la ios/BookVault/Generated/Models/ || echo "Directory not found"
+          echo ""
+          echo "=== Swift files count ==="
+          find ios/BookVault/Generated/Models -name "*.swift" 2>/dev/null | wc -l || echo "0"
+          echo ""
+          echo "=== Key model files check ==="
+          ls -la ios/BookVault/Generated/Models/Book.swift 2>/dev/null || echo "Book.swift NOT FOUND"
+          ls -la ios/BookVault/Generated/Models/Chapter.swift 2>/dev/null || echo "Chapter.swift NOT FOUND"
+          ls -la ios/BookVault/Generated/Models/LoginMobile200Response.swift 2>/dev/null || echo "LoginMobile200Response.swift NOT FOUND"
+
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate
