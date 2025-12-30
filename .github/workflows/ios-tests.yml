@@ -47,6 +47,17 @@ jobs:
         working-directory: ios
         run: xcodegen generate
 
+      - name: List available simulators
+        run: |
+          echo "=== Available Xcode versions ==="
+          ls /Applications/ | grep Xcode
+          echo ""
+          echo "=== Current Xcode version ==="
+          xcodebuild -version
+          echo ""
+          echo "=== Available iOS Simulators ==="
+          xcrun simctl list devices available | grep -E "iPhone|iPad" | head -20
+
       - name: Run tests with coverage
         working-directory: ios
         run: |
