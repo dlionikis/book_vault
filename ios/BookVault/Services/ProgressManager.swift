@@ -18,10 +18,34 @@ class ProgressManager: ObservableObject, ProgressManaging {
     @MainActor @Published var isLoading = false
     @MainActor @Published var error: Error?
 
-    private let apiClient = APIClient.shared
-    private let offlineProgressStore = OfflineProgressStore.shared
+    private let apiClient: any APIClientProtocol
+    private let offlineProgressStore: any OfflineStoring
+    private let networkMonitor: any NetworkMonitoring
 
-    private init() {}
+    /// Production singleton initializer
+    private convenience init() {
+        self.init(
+            apiClient: APIClient.shared,
+            offlineStore: OfflineProgressStore.shared,
+            networkMonitor: NetworkMonitor.shared
+        )
+    }
+
+    /// Testable initializer with dependency injection
+    /// - Parameters:
+    ///   - apiClient: API client for server communication
+    ///   - offlineStore: Offline progress storage
+    ///   - networkMonitor: Network connectivity monitor
+    @MainActor
+    init(
+        apiClient: any APIClientProtocol,
+        offlineStore: any OfflineStoring,
+        networkMonitor: any NetworkMonitoring
+    ) {
+        self.apiClient = apiClient
+        self.offlineProgressStore = offlineStore
+        self.networkMonitor = networkMonitor
+    }
 
     /// Fetch user's progress for a book
     /// When online, fetches from server and merges with local
@@ -31,7 +55,7 @@ class ProgressManager: ObservableObject, ProgressManaging {
     @MainActor
     func fetchProgress(for bookId: String) async throws -> UserProgress {
         // If offline, return local progress only
-        if !NetworkMonitor.shared.isConnected {
+        if !networkMonitor.isConnected {
             if let localProgress = offlineProgressStore.getProgress(bookId: bookId) {
                 DebugLogger.database("Using local progress (offline): \(localProgress.positionSeconds)s")
                 return UserProgress(
@@ -107,10 +131,10 @@ class ProgressManager: ObservableObject, ProgressManaging {
         timestamp: Date? = nil
     ) async throws -> SaveProgressResponse {
         // Always save locally first (local-first approach)
-        offlineProgressStore.saveProgress(bookId: bookId, position: positionSeconds)
+        offlineProgressStore.saveProgress(bookId: bookId, position: positionSeconds, completed: false)
 
         // If offline, return a synthetic response
-        if !NetworkMonitor.shared.isConnected {
+        if !networkMonitor.isConnected {
             DebugLogger.database("Progress saved locally (offline): \(positionSeconds)s")
             let formatter = ISO8601DateFormatter()
             return SaveProgressResponse(
