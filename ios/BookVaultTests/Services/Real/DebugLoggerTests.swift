@@ -31,7 +31,7 @@ final class DebugLoggerTests: XCTestCase {
         // Verify all 11 categories exist by checking their raw values
         let categories: [DebugLogger.Category] = [
             .network, .auth, .audio, .database, .ui,
-            .error, .warning, .success, .info, .debug, .performance,
+            .error, .warning, .success, .info, .debug, .performance
         ]
         XCTAssertEqual(categories.count, 11)
     }

@@ -59,7 +59,7 @@ class MockLibraryManager: LibraryManaging {
 
         if addShouldFail {
             throw NSError(domain: "MockLibraryManager", code: 400, userInfo: [
-                NSLocalizedDescriptionKey: "Failed to add to library",
+                NSLocalizedDescriptionKey: "Failed to add to library"
             ])
         }
 
@@ -71,7 +71,7 @@ class MockLibraryManager: LibraryManaging {
 
         if removeShouldFail {
             throw NSError(domain: "MockLibraryManager", code: 400, userInfo: [
-                NSLocalizedDescriptionKey: "Failed to remove from library",
+                NSLocalizedDescriptionKey: "Failed to remove from library"
             ])
         }
 

@@ -26,7 +26,7 @@ final class SystemKeychain: KeychainStoring {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key,
-            kSecValueData as String: data,
+            kSecValueData as String: data
         ]
 
         // Delete any existing item
@@ -45,7 +45,7 @@ final class SystemKeychain: KeychainStoring {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecMatchLimit as String: kSecMatchLimitOne
         ]
 
         var result: AnyObject?
@@ -64,7 +64,7 @@ final class SystemKeychain: KeychainStoring {
     func delete(key: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key,
+            kSecAttrAccount as String: key
         ]
 
         SecItemDelete(query as CFDictionary)

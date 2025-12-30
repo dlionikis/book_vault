@@ -206,6 +206,7 @@ struct CategoryListView: View {
 
 // MARK: - CategoryListView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct CategoryListView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

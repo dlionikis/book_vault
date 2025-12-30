@@ -143,7 +143,7 @@ class LibraryManager: ObservableObject, LibraryManaging {
     func addToLibrary(bookId: String) async throws {
         guard let uuid = UUID(uuidString: bookId) else {
             throw NSError(domain: "LibraryManager", code: 400, userInfo: [
-                NSLocalizedDescriptionKey: "Invalid book ID format",
+                NSLocalizedDescriptionKey: "Invalid book ID format"
             ])
         }
 
@@ -168,7 +168,7 @@ class LibraryManager: ObservableObject, LibraryManaging {
     func removeFromLibrary(bookId: String) async throws {
         guard let uuid = UUID(uuidString: bookId) else {
             throw NSError(domain: "LibraryManager", code: 400, userInfo: [
-                NSLocalizedDescriptionKey: "Invalid book ID format",
+                NSLocalizedDescriptionKey: "Invalid book ID format"
             ])
         }
 
@@ -224,7 +224,7 @@ class LibraryManager: ObservableObject, LibraryManaging {
     func addSeriesToLibrary(seriesId: String) async throws {
         guard let uuid = UUID(uuidString: seriesId) else {
             throw NSError(domain: "LibraryManager", code: 400, userInfo: [
-                NSLocalizedDescriptionKey: "Invalid series ID format",
+                NSLocalizedDescriptionKey: "Invalid series ID format"
             ])
         }
 
@@ -287,7 +287,7 @@ class LibraryManager: ObservableObject, LibraryManaging {
     private func createSeriesRequest(seriesId: UUID) throws -> URLRequest {
         guard let url = URL(string: "/api/library/series", relativeTo: apiClient.baseURL) else {
             throw NSError(domain: "LibraryManager", code: 400, userInfo: [
-                NSLocalizedDescriptionKey: "Invalid URL",
+                NSLocalizedDescriptionKey: "Invalid URL"
             ])
         }
 
@@ -315,13 +315,13 @@ class LibraryManager: ObservableObject, LibraryManaging {
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NSError(domain: "LibraryManager", code: 500, userInfo: [
-                NSLocalizedDescriptionKey: "Invalid response",
+                NSLocalizedDescriptionKey: "Invalid response"
             ])
         }
 
         guard (200 ... 299).contains(httpResponse.statusCode) else {
             throw NSError(domain: "LibraryManager", code: httpResponse.statusCode, userInfo: [
-                NSLocalizedDescriptionKey: "HTTP \(httpResponse.statusCode)",
+                NSLocalizedDescriptionKey: "HTTP \(httpResponse.statusCode)"
             ])
         }
 

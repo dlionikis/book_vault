@@ -74,7 +74,7 @@ class ProgressManager: ObservableObject, ProgressManaging {
 
         guard let uuid = UUID(uuidString: bookId) else {
             throw NSError(domain: "ProgressManager", code: 400, userInfo: [
-                NSLocalizedDescriptionKey: "Invalid book ID format",
+                NSLocalizedDescriptionKey: "Invalid book ID format"
             ])
         }
 
@@ -90,8 +90,7 @@ class ProgressManager: ObservableObject, ProgressManaging {
         // Check if local progress is newer
         if let localProgress = offlineProgressStore.getProgress(bookId: bookId) {
             if let serverLastPlayed = serverProgress.lastPlayed,
-               localProgress.lastPlayed > serverLastPlayed
-            {
+               localProgress.lastPlayed > serverLastPlayed {
                 // Local is newer, return local and it will sync later
                 DebugLogger
                     .database(
@@ -152,7 +151,7 @@ class ProgressManager: ObservableObject, ProgressManaging {
         // Online: sync to server
         guard let uuid = UUID(uuidString: bookId) else {
             throw NSError(domain: "ProgressManager", code: 400, userInfo: [
-                NSLocalizedDescriptionKey: "Invalid book ID format",
+                NSLocalizedDescriptionKey: "Invalid book ID format"
             ])
         }
 
@@ -201,7 +200,7 @@ class ProgressManager: ObservableObject, ProgressManaging {
     func markCompleted(bookId: String) async throws {
         guard let uuid = UUID(uuidString: bookId) else {
             throw NSError(domain: "ProgressManager", code: 400, userInfo: [
-                NSLocalizedDescriptionKey: "Invalid book ID format",
+                NSLocalizedDescriptionKey: "Invalid book ID format"
             ])
         }
 
@@ -216,7 +215,7 @@ class ProgressManager: ObservableObject, ProgressManaging {
     func resetProgress(bookId: String) async throws {
         guard let uuid = UUID(uuidString: bookId) else {
             throw NSError(domain: "ProgressManager", code: 400, userInfo: [
-                NSLocalizedDescriptionKey: "Invalid book ID format",
+                NSLocalizedDescriptionKey: "Invalid book ID format"
             ])
         }
 

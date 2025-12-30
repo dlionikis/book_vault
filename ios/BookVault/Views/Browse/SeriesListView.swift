@@ -206,6 +206,7 @@ struct SeriesListView: View {
 
 // MARK: - SeriesListView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct SeriesListView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

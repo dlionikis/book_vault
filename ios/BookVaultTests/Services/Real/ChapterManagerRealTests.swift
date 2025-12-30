@@ -55,7 +55,7 @@ final class ChapterManagerRealTests: XCTestCase {
                 endTime: 1800.0,
                 duration: 600.0,
                 index: 2
-            ),
+            )
         ]
     }
 
@@ -256,7 +256,7 @@ final class ChapterManagerRealTests: XCTestCase {
 
         let bookId2 = UUID()
         let chapters2 = [
-            Chapter(id: UUID(), title: "Other Chapter", startTime: 0, endTime: 300, duration: 300, index: 0),
+            Chapter(id: UUID(), title: "Other Chapter", startTime: 0, endTime: 300, duration: 300, index: 0)
         ]
         mockAPIClient.fetchBookChaptersResult = .success(chapters2)
         _ = await chapterManager.fetchChapters(bookId: bookId2.uuidString)

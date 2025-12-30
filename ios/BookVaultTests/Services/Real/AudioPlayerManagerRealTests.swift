@@ -180,7 +180,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         let chapters = [
             TestFixtures.makeChapter(title: "Chapter 1", startTime: 0, endTime: 100, duration: 100, index: 0),
             TestFixtures.makeChapter(title: "Chapter 2", startTime: 100, endTime: 200, duration: 100, index: 1),
-            TestFixtures.makeChapter(title: "Chapter 3", startTime: 200, endTime: 300, duration: 100, index: 2),
+            TestFixtures.makeChapter(title: "Chapter 3", startTime: 200, endTime: 300, duration: 100, index: 2)
         ]
         sut.updateChapters(chapters)
         sut.currentTime = 150 // Middle of Chapter 2
@@ -196,7 +196,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         // Given
         let chapters = [
             TestFixtures.makeChapter(title: "Chapter 1", startTime: 0, endTime: 100, duration: 100, index: 0),
-            TestFixtures.makeChapter(title: "Chapter 2", startTime: 100, endTime: 200, duration: 100, index: 1),
+            TestFixtures.makeChapter(title: "Chapter 2", startTime: 100, endTime: 200, duration: 100, index: 1)
         ]
         sut.updateChapters(chapters)
         sut.currentTime = 100 // Exactly at boundary
@@ -212,7 +212,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         // Given
         let chapters = [
             TestFixtures.makeChapter(title: "Intro", startTime: 0, endTime: 60, duration: 60, index: 0),
-            TestFixtures.makeChapter(title: "Main", startTime: 60, endTime: 300, duration: 240, index: 1),
+            TestFixtures.makeChapter(title: "Main", startTime: 60, endTime: 300, duration: 240, index: 1)
         ]
 
         // When
@@ -230,7 +230,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
 
         let chapters = [
             TestFixtures.makeChapter(title: "Intro", startTime: 0, endTime: 60, duration: 60, index: 0),
-            TestFixtures.makeChapter(title: "Main", startTime: 60, endTime: 300, duration: 240, index: 1),
+            TestFixtures.makeChapter(title: "Main", startTime: 60, endTime: 300, duration: 240, index: 1)
         ]
 
         // When
@@ -243,7 +243,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
     func testClearChapters() {
         // Given
         let chapters = [
-            TestFixtures.makeChapter(title: "Chapter 1", startTime: 0, endTime: 100, duration: 100, index: 0),
+            TestFixtures.makeChapter(title: "Chapter 1", startTime: 0, endTime: 100, duration: 100, index: 0)
         ]
         sut.updateChapters(chapters)
         sut.currentTime = 50

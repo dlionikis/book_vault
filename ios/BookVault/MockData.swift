@@ -27,15 +27,15 @@ extension Book {
         coverUrl: "https://m.media-amazon.com/images/I/91vS2wAT8jL._SL1500_.jpg",
         audioUrl: "https://example.com/audio/project-hail-mary.mp3",
         authors: [
-            Author(id: UUID(), name: "Andy Weir", asin: "B00G0WYW92"),
+            Author(id: UUID(), name: "Andy Weir", asin: "B00G0WYW92")
         ],
         narrators: [
-            Narrator(id: UUID(), name: "Ray Porter", asin: "B001PJTOQE"),
+            Narrator(id: UUID(), name: "Ray Porter", asin: "B001PJTOQE")
         ],
         series: nil,
         categories: [
             Category(id: UUID(), name: "Science Fiction"),
-            Category(id: UUID(), name: "Space Opera"),
+            Category(id: UUID(), name: "Space Opera")
         ]
     )
 
@@ -51,17 +51,17 @@ extension Book {
         coverUrl: "https://m.media-amazon.com/images/I/91jW9GZ8aTL._SL1500_.jpg",
         audioUrl: "https://example.com/audio/way-of-kings.mp3",
         authors: [
-            Author(id: UUID(), name: "Brandon Sanderson", asin: "B001IGFHW6"),
+            Author(id: UUID(), name: "Brandon Sanderson", asin: "B001IGFHW6")
         ],
         narrators: [
             Narrator(id: UUID(), name: "Kate Reading", asin: "B001LBFQSO"),
-            Narrator(id: UUID(), name: "Michael Kramer", asin: "B001LBFQTI"),
+            Narrator(id: UUID(), name: "Michael Kramer", asin: "B001LBFQTI")
         ],
         series: [
-            SeriesInfo(id: UUID(), title: "The Stormlight Archive", sequence: "1", asin: "B006K1M4YI"),
+            SeriesInfo(id: UUID(), title: "The Stormlight Archive", sequence: "1", asin: "B006K1M4YI")
         ],
         categories: [
-            Category(id: UUID(), name: "Epic Fantasy"),
+            Category(id: UUID(), name: "Epic Fantasy")
         ]
     )
 
@@ -77,7 +77,7 @@ extension Book {
         coverUrl: "https://via.placeholder.com/300x450",
         audioUrl: "https://example.com/audio/short.mp3",
         authors: [
-            Author(id: UUID(), name: "Unknown Author", asin: nil),
+            Author(id: UUID(), name: "Unknown Author", asin: nil)
         ],
         narrators: nil,
         series: nil,
@@ -97,15 +97,15 @@ extension Book {
         audioUrl: "https://example.com/audio/good-omens.mp3",
         authors: [
             Author(id: UUID(), name: "Neil Gaiman", asin: "B000AQ01G2"),
-            Author(id: UUID(), name: "Terry Pratchett", asin: "B000AQ0VQU"),
+            Author(id: UUID(), name: "Terry Pratchett", asin: "B000AQ0VQU")
         ],
         narrators: [
-            Narrator(id: UUID(), name: "Martin Jarvis", asin: "B001PJQX9E"),
+            Narrator(id: UUID(), name: "Martin Jarvis", asin: "B001PJQX9E")
         ],
         series: nil,
         categories: [
             Category(id: UUID(), name: "Fantasy"),
-            Category(id: UUID(), name: "Humor"),
+            Category(id: UUID(), name: "Humor")
         ]
     )
 }
@@ -161,12 +161,13 @@ extension Chapter {
             endTime: 9030.0,
             duration: 1806.0,
             index: 5
-        ),
+        )
     ]
 }
 
 // MARK: - UserProgress Mock Data
 
+// periphery:ignore - Mock data for SwiftUI Previews and testing
 extension UserProgress {
     /// Just started
     static let mockStarted = UserProgress(
@@ -206,6 +207,7 @@ extension UserProgress {
 
 // MARK: - Supporting Types Mock Data
 
+// periphery:ignore - Mock data for SwiftUI Previews and testing
 extension Author {
     static let mockAndyWeir = Author(
         id: UUID(),
@@ -220,6 +222,7 @@ extension Author {
     )
 }
 
+// periphery:ignore - Mock data for SwiftUI Previews and testing
 extension Narrator {
     static let mockRayPorter = Narrator(
         id: UUID(),
@@ -234,6 +237,7 @@ extension Narrator {
     )
 }
 
+// periphery:ignore - Mock data for SwiftUI Previews and testing
 extension Category {
     static let mockSciFi = Category(
         id: UUID(),
@@ -246,6 +250,7 @@ extension Category {
     )
 }
 
+// periphery:ignore - Mock data for SwiftUI Previews and testing
 extension SeriesInfo {
     static let mockStormlightArchive = SeriesInfo(
         id: UUID(),

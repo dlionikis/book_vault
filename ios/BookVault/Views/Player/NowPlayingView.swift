@@ -26,7 +26,7 @@ struct NowPlayingView: View {
                 LinearGradient(
                     colors: [
                         Color.blue.opacity(0.3),
-                        Color.purple.opacity(0.3),
+                        Color.purple.opacity(0.3)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -192,8 +192,7 @@ struct NowPlayingView: View {
                                     // Otherwise, go to previous chapter
                                     else if let currentIndex = audioPlayer.chapters
                                         .firstIndex(where: { $0.id == currentChapter.id }),
-                                        currentIndex > 0
-                                    {
+                                        currentIndex > 0 {
                                         audioPlayer.skipToChapter(audioPlayer.chapters[currentIndex - 1])
                                     }
                                     // If at first chapter and within first 30s, just go to start
@@ -206,8 +205,7 @@ struct NowPlayingView: View {
                                 if let currentChapter = audioPlayer.getCurrentChapter(),
                                    let currentIndex = audioPlayer.chapters
                                    .firstIndex(where: { $0.id == currentChapter.id }),
-                                   currentIndex < audioPlayer.chapters.count - 1
-                                {
+                                   currentIndex < audioPlayer.chapters.count - 1 {
                                     audioPlayer.skipToChapter(audioPlayer.chapters[currentIndex + 1])
                                 }
                             }

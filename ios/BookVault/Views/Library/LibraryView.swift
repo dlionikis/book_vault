@@ -19,7 +19,7 @@ struct LibraryView: View {
     @Binding var selectedTab: Tab
 
     private let columns = [
-        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top),
+        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
     ]
 
     var body: some View {

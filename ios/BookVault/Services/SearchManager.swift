@@ -147,7 +147,7 @@ class SearchManager: ObservableObject {
         components.queryItems = [
             URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "page", value: String(page)),
-            URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "limit", value: String(limit))
         ]
 
         guard let url = components.url(relativeTo: apiClient.baseURL) else {
@@ -212,7 +212,7 @@ class SearchManager: ObservableObject {
         var components = URLComponents()
         components.path = "/api/search/suggestions"
         components.queryItems = [
-            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "q", value: query)
         ]
 
         guard let url = components.url(relativeTo: apiClient.baseURL) else {
@@ -335,7 +335,7 @@ class SearchManager: ObservableObject {
         components.path = path
         components.queryItems = [
             URLQueryItem(name: "page", value: String(page)),
-            URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "limit", value: String(limit))
         ]
 
         guard let url = components.url(relativeTo: apiClient.baseURL) else {

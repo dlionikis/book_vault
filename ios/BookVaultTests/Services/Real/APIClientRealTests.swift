@@ -134,11 +134,11 @@ final class APIClientRealTests: XCTestCase {
         let responseJSON: [String: Any] = [
             "user": [
                 "id": userId.uuidString,
-                "email": "test@example.com",
+                "email": "test@example.com"
             ],
             "accessToken": "test-access-token",
             "refreshToken": refreshToken.uuidString,
-            "expiresIn": 3600,
+            "expiresIn": 3600
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -163,11 +163,11 @@ final class APIClientRealTests: XCTestCase {
         let responseJSON: [String: Any] = [
             "user": [
                 "id": userId.uuidString,
-                "email": "test@example.com",
+                "email": "test@example.com"
             ],
             "accessToken": "token",
             "refreshToken": refreshToken.uuidString,
-            "expiresIn": 3600,
+            "expiresIn": 3600
         ]
 
         var capturedBody: [String: String]?
@@ -233,7 +233,7 @@ final class APIClientRealTests: XCTestCase {
         let responseJSON: [String: Any] = [
             "accessToken": "new-access-token",
             "refreshToken": newRefreshToken.uuidString,
-            "expiresIn": 3600,
+            "expiresIn": 3600
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -267,15 +267,15 @@ final class APIClientRealTests: XCTestCase {
                     "narrators": [],
                     "description": "A test book",
                     "runtimeMinutes": 300,
-                    "releaseDate": "2024-01-01",
-                ],
+                    "releaseDate": "2024-01-01"
+                ]
             ],
             "pagination": [
                 "page": 1,
                 "limit": 20,
                 "total": 1,
-                "pages": 1,
-            ],
+                "pages": 1
+            ]
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -300,7 +300,7 @@ final class APIClientRealTests: XCTestCase {
         sut.accessToken = "valid-token"
         let responseJSON: [String: Any] = [
             "books": [],
-            "pagination": ["page": 2, "limit": 10, "total": 50, "pages": 5],
+            "pagination": ["page": 2, "limit": 10, "total": 50, "pages": 5]
         ]
 
         var capturedURL: URL?
@@ -338,7 +338,7 @@ final class APIClientRealTests: XCTestCase {
             "narrators": [],
             "description": "Description",
             "runtimeMinutes": 200,
-            "releaseDate": "2024-01-01",
+            "releaseDate": "2024-01-01"
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -389,7 +389,7 @@ final class APIClientRealTests: XCTestCase {
             "positionSeconds": 123.45,
             "completed": false,
             "lastPlayed": lastPlayed,
-            "updated": true,
+            "updated": true
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -456,7 +456,7 @@ final class APIClientRealTests: XCTestCase {
         sut.accessToken = "my-auth-token"
         let responseJSON: [String: Any] = [
             "books": [],
-            "pagination": ["page": 1, "limit": 20, "total": 0, "pages": 0],
+            "pagination": ["page": 1, "limit": 20, "total": 0, "pages": 0]
         ]
 
         var capturedAuthHeader: String?
@@ -484,7 +484,7 @@ final class APIClientRealTests: XCTestCase {
             "user": ["id": userId.uuidString, "email": "test@example.com"],
             "accessToken": "token",
             "refreshToken": refreshToken.uuidString,
-            "expiresIn": 3600,
+            "expiresIn": 3600
         ]
 
         var capturedContentType: String?

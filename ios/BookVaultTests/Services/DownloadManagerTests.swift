@@ -481,7 +481,7 @@ final class DownloadManagerTests: XCTestCase {
             .unauthorized,
             .notEligible,
             .wifiRequired,
-            .cancelled,
+            .cancelled
         ]
 
         for error in errors {

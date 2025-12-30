@@ -45,7 +45,7 @@ final class LibraryManagerRealTests: XCTestCase {
         testBooks = [
             createTestBook(title: "Book 1", authorName: "Author 1"),
             createTestBook(title: "Book 2", authorName: "Author 2"),
-            createTestBook(title: "Book 3", authorName: "Author 3"),
+            createTestBook(title: "Book 3", authorName: "Author 3")
         ]
     }
 

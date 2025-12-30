@@ -268,7 +268,7 @@ class APIClient: APIClientProtocol {
         var components = URLComponents(string: "/api/books")!
         var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "page", value: "\(page)"),
-            URLQueryItem(name: "limit", value: "\(limit)"),
+            URLQueryItem(name: "limit", value: "\(limit)")
         ]
 
         if let sortBy {

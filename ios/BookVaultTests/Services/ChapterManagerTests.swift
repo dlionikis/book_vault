@@ -214,7 +214,7 @@ final class ChapterManagerTests: XCTestCase {
                 endTime: 900,
                 duration: 600,
                 index: 1
-            ),
+            )
         ]
         mockAPIClient.fetchBookChaptersResult = .success(chapters)
 

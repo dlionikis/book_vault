@@ -19,7 +19,7 @@ struct AuthorDetailView: View {
     @State private var errorMessage: String?
 
     private let columns = [
-        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top),
+        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
     ]
 
     var body: some View {
@@ -154,6 +154,7 @@ struct AuthorDetailView: View {
 
 // MARK: - AuthorDetailView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct AuthorDetailView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

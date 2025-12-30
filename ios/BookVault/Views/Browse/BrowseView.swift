@@ -169,6 +169,7 @@ private struct BrowseCategoryRow: View {
 
 // MARK: - BrowseView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct BrowseView_Previews: PreviewProvider {
     static var previews: some View {
         Group {

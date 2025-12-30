@@ -206,6 +206,7 @@ struct NarratorListView: View {
 
 // MARK: - NarratorListView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct NarratorListView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

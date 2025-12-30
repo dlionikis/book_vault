@@ -44,28 +44,6 @@ struct UserProgress: Codable {
     }
 }
 
-// MARK: - SaveProgressRequest
-
-/// Request body for saving progress
-struct SaveProgressRequest: Codable {
-    let bookId: String
-    let positionSeconds: Double
-    let timestamp: String?
-
-    init(bookId: String, positionSeconds: Double, timestamp: Date? = nil) {
-        self.bookId = bookId
-        self.positionSeconds = positionSeconds
-
-        if let timestamp {
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            self.timestamp = formatter.string(from: timestamp)
-        } else {
-            self.timestamp = nil
-        }
-    }
-}
-
 // MARK: - SaveProgressResponse
 
 /// Response from saving progress

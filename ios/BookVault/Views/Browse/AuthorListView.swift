@@ -206,6 +206,7 @@ struct AuthorListView: View {
 
 // MARK: - AuthorListView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct AuthorListView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

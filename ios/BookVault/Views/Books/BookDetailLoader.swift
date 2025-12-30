@@ -79,6 +79,7 @@ struct BookDetailLoader: View {
 
 // MARK: - BookDetailLoader_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct BookDetailLoader_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

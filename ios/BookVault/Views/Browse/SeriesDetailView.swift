@@ -24,7 +24,7 @@ struct SeriesDetailView: View {
     @State private var isCheckingLibrary = false
 
     private let columns = [
-        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top),
+        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
     ]
 
     var body: some View {
@@ -181,8 +181,7 @@ struct SeriesDetailView: View {
                                             VStack(alignment: .leading, spacing: 0) {
                                                 // Show sequence number if available
                                                 if let seriesInfo = book.series?.first(where: { $0.id == detail.id }),
-                                                   let sequence = seriesInfo.sequence
-                                                {
+                                                   let sequence = seriesInfo.sequence {
                                                     Text("Book \(sequence)")
                                                         .font(.caption2)
                                                         .fontWeight(.semibold)
@@ -347,6 +346,7 @@ struct SeriesDetailView: View {
 
 // MARK: - SeriesDetailView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct SeriesDetailView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

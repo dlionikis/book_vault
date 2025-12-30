@@ -30,7 +30,7 @@ final class LibraryCacheManagerTests: XCTestCase {
         let books = [
             TestFixtures.makeLibraryBook(id: UUID(), title: "Book 1"),
             TestFixtures.makeLibraryBook(id: UUID(), title: "Book 2"),
-            TestFixtures.makeLibraryBook(id: UUID(), title: "Book 3"),
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Book 3")
         ]
 
         // When saveLibrary is called
@@ -75,7 +75,7 @@ final class LibraryCacheManagerTests: XCTestCase {
         // Given existing cached books
         let oldBooks = [
             TestFixtures.makeLibraryBook(id: UUID(), title: "Old Book 1"),
-            TestFixtures.makeLibraryBook(id: UUID(), title: "Old Book 2"),
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Old Book 2")
         ]
         sut.saveLibrary(books: oldBooks)
 
@@ -104,7 +104,7 @@ final class LibraryCacheManagerTests: XCTestCase {
         // Given cached books
         let books = [
             TestFixtures.makeLibraryBook(id: UUID(), title: "Cached Book 1"),
-            TestFixtures.makeLibraryBook(id: UUID(), title: "Cached Book 2"),
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Cached Book 2")
         ]
         sut.preloadCache(books: books)
 
