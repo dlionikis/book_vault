@@ -67,7 +67,7 @@ jobs:
           # Run tests without xcpretty piping to preserve coverage data
           xcodebuild test \
             -scheme BookVault \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
