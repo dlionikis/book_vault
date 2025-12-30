@@ -22,7 +22,7 @@ class MockLibraryManager: LibraryManaging {
 
     // MARK: - In-Memory Storage
 
-    var libraryBooks: [Book] = []
+    var libraryBooks: [LibraryBook] = []
 
     // MARK: - Call Tracking
 
@@ -41,7 +41,7 @@ class MockLibraryManager: LibraryManaging {
 
     // MARK: - Protocol Implementation
 
-    func fetchLibraryBooks(forceRefresh: Bool) async throws -> [Book] {
+    func fetchLibraryBooks(forceRefresh: Bool) async throws -> [LibraryBook] {
         fetchLibraryBooksCalls.append(forceRefresh)
 
         if fetchShouldFail {
@@ -90,8 +90,8 @@ class MockLibraryManager: LibraryManaging {
 
     // MARK: - Test Helpers
 
-    /// Set up library with test books
-    func setLibrary(_ books: [Book]) {
+    /// Set up library with test library books
+    func setLibrary(_ books: [LibraryBook]) {
         libraryBooks = books
     }
 

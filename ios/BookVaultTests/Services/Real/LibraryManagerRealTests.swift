@@ -23,7 +23,7 @@ final class LibraryManagerRealTests: XCTestCase {
 
     // MARK: - Test Data
 
-    private var testBooks: [Book]!
+    private var testBooks: [LibraryBook]!
 
     // MARK: - Setup & Teardown
 
@@ -63,8 +63,8 @@ final class LibraryManagerRealTests: XCTestCase {
 
     // MARK: - Helper Methods
 
-    private func createTestBook(title: String, authorName: String) -> Book {
-        Book(
+    private func createTestBook(title: String, authorName: String) -> LibraryBook {
+        LibraryBook(
             id: UUID(),
             asin: "ASIN\(UUID().uuidString.prefix(8))",
             title: title,
@@ -74,7 +74,8 @@ final class LibraryManagerRealTests: XCTestCase {
             publisher: "Test Publisher",
             coverUrl: "https://example.com/cover.jpg",
             audioUrl: "https://example.com/audio.mp3",
-            authors: [Author(id: UUID(), name: authorName)]
+            authors: [Author(id: UUID(), name: authorName)],
+            addedAt: Date()
         )
     }
 

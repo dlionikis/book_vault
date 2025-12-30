@@ -222,13 +222,49 @@ enum TestFixtures {
         )
     }
 
+    // MARK: - LibraryBook
+
+    static func makeLibraryBook(
+        id: UUID = testBookId,
+        asin: String = "B00TEST123",
+        title: String = "Test Book Title",
+        description: String? = "A test book description",
+        runtimeMinutes: Int? = 360,
+        releaseDate: Date? = nil,
+        publisher: String? = "Test Publisher",
+        coverUrl: String? = "/api/images/test/cover.jpg",
+        audioUrl: String? = "/api/audio/test/audio.mp3",
+        authors: [BookVault.Author]? = nil,
+        narrators: [BookVault.Narrator]? = nil,
+        series: [BookVault.SeriesInfo]? = nil,
+        categories: [BookVault.Category]? = nil,
+        addedAt: Date = Date()
+    ) -> BookVault.LibraryBook {
+        BookVault.LibraryBook(
+            id: id,
+            asin: asin,
+            title: title,
+            description: description,
+            runtimeMinutes: runtimeMinutes,
+            releaseDate: releaseDate,
+            publisher: publisher,
+            coverUrl: coverUrl,
+            audioUrl: audioUrl,
+            authors: authors ?? [makeAuthor()],
+            narrators: narrators,
+            series: series,
+            categories: categories,
+            addedAt: addedAt
+        )
+    }
+
     // MARK: - Library Responses
 
     static func makeGetLibraryResponse(
-        books: [BookVault.Book]? = nil,
+        books: [BookVault.LibraryBook]? = nil,
         total: Int? = nil
     ) -> BookVault.GetLibrary200Response {
-        let bookList = books ?? [makeBook()]
+        let bookList = books ?? [makeLibraryBook()]
         return BookVault.GetLibrary200Response(
             books: bookList,
             total: total ?? bookList.count

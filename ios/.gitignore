@@ -21,8 +21,15 @@ Pods/
 *.xcworkspace
 !default.xcworkspace
 
-# Generated code
-BookVault/Generated/Models/*
+# Generated code - Track Swift files to ensure CI uses same models as local dev
+# Only ignore non-Swift artifacts (Package.swift, docs, config files)
+BookVault/Generated/Models/Package.swift
+BookVault/Generated/Models/*.md
+BookVault/Generated/Models/*.podspec
+BookVault/Generated/Models/Cartfile
+BookVault/Generated/Models/git_push.sh
+BookVault/Generated/Models/project.yml
+BookVault/Generated/Models/.openapi-generator/
 BookVault/Generated/API/*
 !BookVault/Generated/Models/.gitkeep
 !BookVault/Generated/API/.gitkeep

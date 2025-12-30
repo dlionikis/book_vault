@@ -19,14 +19,14 @@ final class LibraryCacheManagerRealTests: XCTestCase {
 
     // MARK: - Test Helpers
 
-    private func createTestBook(id: UUID = UUID(), title: String = "Test Book", authorName: String = "Test Author") -> Book {
+    private func createTestLibraryBook(id: UUID = UUID(), title: String = "Test Book", authorName: String = "Test Author") -> LibraryBook {
         let author = Author(id: UUID(), name: authorName)
-        return Book(id: id, asin: "ASIN123", title: title, authors: [author])
+        return LibraryBook(id: id, asin: "ASIN123", title: title, authors: [author], addedAt: Date())
     }
 
-    private func createTestBooks(count: Int) -> [Book] {
+    private func createTestBooks(count: Int) -> [LibraryBook] {
         return (1...count).map { i in
-            createTestBook(id: UUID(), title: "Book \(i)", authorName: "Author \(i)")
+            createTestLibraryBook(id: UUID(), title: "Book \(i)", authorName: "Author \(i)")
         }
     }
 
@@ -413,7 +413,7 @@ final class LibraryCacheManagerRealTests: XCTestCase {
     @MainActor
     func testSaveLibrary_WithBooksHavingSpecialCharacters_Works() {
         // Given: Book with special characters in title
-        let book = createTestBook(title: "Book with \"quotes\" & <special> chars")
+        let book = createTestLibraryBook(title: "Book with \"quotes\" & <special> chars")
         cacheManager.saveLibrary(books: [book])
 
         // When: Loading
@@ -426,7 +426,7 @@ final class LibraryCacheManagerRealTests: XCTestCase {
     @MainActor
     func testSaveLibrary_WithUnicodeContent_Works() {
         // Given: Book with unicode characters
-        let book = createTestBook(title: "日本語のタイトル 🎧📚")
+        let book = createTestLibraryBook(title: "日本語のタイトル 🎧📚")
         cacheManager.saveLibrary(books: [book])
 
         // When: Loading

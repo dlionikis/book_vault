@@ -152,9 +152,9 @@ struct LibraryView: View {
                             .padding(.horizontal)
 
                             LazyVGrid(columns: columns, spacing: 20) {
-                                ForEach(viewModel.books, id: \.id) { book in
-                                    NavigationLink(destination: BookDetailView(book: book)) {
-                                        BookGridItem(book: book)
+                                ForEach(viewModel.books, id: \.id) { libraryBook in
+                                    NavigationLink(destination: BookDetailView(book: libraryBook.asBook)) {
+                                        BookGridItem(book: libraryBook.asBook)
                                     }
                                     .buttonStyle(.plain)
                                 }
@@ -208,7 +208,7 @@ struct LibraryView: View {
 
 @MainActor
 class LibraryViewModel: ObservableObject {
-    @Published var books: [Book] = []
+    @Published var books: [LibraryBook] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var hasMorePages = false

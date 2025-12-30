@@ -25,8 +25,8 @@ protocol LibraryManaging {
 
     /// Fetch user's library books
     /// - Parameter forceRefresh: If true, bypasses cache
-    /// - Returns: Array of books in user's library
-    func fetchLibraryBooks(forceRefresh: Bool) async throws -> [Book]
+    /// - Returns: Array of library books (includes addedAt timestamp)
+    func fetchLibraryBooks(forceRefresh: Bool) async throws -> [LibraryBook]
 
     /// Add book to user's library
     /// - Parameter bookId: The book's ID string
@@ -47,7 +47,7 @@ protocol LibraryManaging {
 
 // Default parameter extension
 extension LibraryManaging {
-    func fetchLibraryBooks() async throws -> [Book] {
+    func fetchLibraryBooks() async throws -> [LibraryBook] {
         try await fetchLibraryBooks(forceRefresh: false)
     }
 }

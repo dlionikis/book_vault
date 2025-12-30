@@ -28,7 +28,7 @@ class LibraryCacheManager: ObservableObject, LibraryCaching {
 
     struct LibraryCache: Codable {
         var version: Int = 1
-        var books: [Book]
+        var books: [LibraryBook]
         var lastSyncDate: Date
         var userId: String  // Tied to user to avoid cross-account issues
     }
@@ -62,8 +62,8 @@ class LibraryCacheManager: ObservableObject, LibraryCaching {
     // MARK: - Public API
 
     /// Save library books to disk
-    /// - Parameter books: Array of books to cache
-    func saveLibrary(books: [Book]) {
+    /// - Parameter books: Array of library books to cache
+    func saveLibrary(books: [LibraryBook]) {
         guard let userId = getCurrentUserId() else {
             DebugLogger.warning("Cannot save library cache: no user logged in")
             return
@@ -89,8 +89,8 @@ class LibraryCacheManager: ObservableObject, LibraryCaching {
     }
 
     /// Load library books from disk
-    /// - Returns: Array of cached books, or nil if no valid cache exists
-    func loadLibrary() -> [Book]? {
+    /// - Returns: Array of cached library books, or nil if no valid cache exists
+    func loadLibrary() -> [LibraryBook]? {
         guard let userId = getCurrentUserId() else {
             DebugLogger.warning("Cannot load library cache: no user logged in")
             return nil

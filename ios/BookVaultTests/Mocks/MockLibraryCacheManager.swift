@@ -15,13 +15,13 @@ class MockLibraryCacheManager: LibraryCaching {
 
     // MARK: - In-Memory Storage
 
-    var cachedBooks: [Book]?
+    var cachedBooks: [LibraryBook]?
     var cacheTimestamp: Date?
     var simulatedUserId: String?
 
     // MARK: - Call Tracking
 
-    var saveLibraryCalls: [[Book]] = []
+    var saveLibraryCalls: [[LibraryBook]] = []
     var loadLibraryCalls: Int = 0
     var isCacheValidCalls: Int = 0
     var getLastSyncDateCalls: Int = 0
@@ -34,13 +34,13 @@ class MockLibraryCacheManager: LibraryCaching {
 
     // MARK: - Protocol Implementation
 
-    func saveLibrary(books: [Book]) {
+    func saveLibrary(books: [LibraryBook]) {
         saveLibraryCalls.append(books)
         cachedBooks = books
         cacheTimestamp = Date()
     }
 
-    func loadLibrary() -> [Book]? {
+    func loadLibrary() -> [LibraryBook]? {
         loadLibraryCalls += 1
 
         if loadShouldFail {
@@ -73,14 +73,14 @@ class MockLibraryCacheManager: LibraryCaching {
 
     // MARK: - Test Helpers
 
-    /// Pre-populate cache with books
-    func preloadCache(books: [Book], syncDate: Date = Date()) {
+    /// Pre-populate cache with library books
+    func preloadCache(books: [LibraryBook], syncDate: Date = Date()) {
         cachedBooks = books
         cacheTimestamp = syncDate
     }
 
     /// Simulate stale cache by setting old timestamp
-    func simulateStaleCache(books: [Book], age: TimeInterval = 3600) {
+    func simulateStaleCache(books: [LibraryBook], age: TimeInterval = 3600) {
         cachedBooks = books
         cacheTimestamp = Date().addingTimeInterval(-age)
     }

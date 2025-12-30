@@ -31,29 +31,17 @@ jobs:
       - name: Install xcpretty
         run: gem install xcpretty
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install OpenAPI Generator
-        run: brew install openapi-generator swiftformat
-
-      - name: Generate Swift models from OpenAPI
-        run: npm run api:generate:swift
-
-      - name: Debug - List generated files
+      - name: Verify Swift models exist
         run: |
-          echo "=== Generated Models Directory ==="
-          ls -la ios/BookVault/Generated/Models/ || echo "Directory not found"
-          echo ""
-          echo "=== Swift files count ==="
-          find ios/BookVault/Generated/Models -name "*.swift" 2>/dev/null | wc -l || echo "0"
-          echo ""
-          echo "=== Key model files check ==="
-          ls -la ios/BookVault/Generated/Models/Book.swift 2>/dev/null || echo "Book.swift NOT FOUND"
-          ls -la ios/BookVault/Generated/Models/Validation.swift 2>/dev/null || echo "Validation.swift NOT FOUND (NumericRule will fail)"
-          ls -la ios/BookVault/Generated/Models/Models.swift 2>/dev/null || echo "Models.swift NOT FOUND"
+          echo "=== Checking tracked Swift models ==="
+          SWIFT_COUNT=$(find ios/BookVault/Generated/Models -name "*.swift" 2>/dev/null | wc -l | tr -d ' ')
+          echo "Found $SWIFT_COUNT Swift files in Generated/Models/"
+          if [ "$SWIFT_COUNT" -lt 10 ]; then
+            echo "❌ Error: Expected generated Swift models to be tracked in git"
+            echo "Run 'npm run api:generate:swift' locally and commit the generated files"
+            exit 1
+          fi
+          ls -la ios/BookVault/Generated/Models/Book.swift ios/BookVault/Generated/Models/Models.swift
 
       - name: Generate Xcode project
         working-directory: ios

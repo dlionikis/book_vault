@@ -47,7 +47,7 @@ class LibraryManager: ObservableObject, LibraryManaging {
     // MARK: - Caching
 
     /// In-memory cache of library books
-    private var cachedBooks: [Book]?
+    private var cachedBooks: [LibraryBook]?
 
     /// Timestamp of last cache update
     private var lastCacheUpdate: Date?
@@ -89,9 +89,9 @@ class LibraryManager: ObservableObject, LibraryManaging {
     /// Uses cached data if available and fresh, otherwise fetches from API
     /// When offline, returns disk-cached data if available
     /// - Parameter forceRefresh: If true, bypasses cache and fetches from API
-    /// - Returns: Array of books in user's library
+    /// - Returns: Array of library books (includes addedAt timestamp)
     @MainActor
-    func fetchLibraryBooks(forceRefresh: Bool = false) async throws -> [Book] {
+    func fetchLibraryBooks(forceRefresh: Bool = false) async throws -> [LibraryBook] {
         // Check network status first
         if !networkMonitor.isConnected {
             // Offline: try to load from disk cache

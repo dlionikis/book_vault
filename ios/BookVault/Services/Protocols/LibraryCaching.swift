@@ -12,12 +12,12 @@ import Foundation
 @MainActor
 protocol LibraryCaching {
     /// Save library books to disk
-    /// - Parameter books: Array of books to cache
-    func saveLibrary(books: [Book])
+    /// - Parameter books: Array of library books to cache
+    func saveLibrary(books: [LibraryBook])
 
     /// Load library books from disk
-    /// - Returns: Array of cached books, or nil if no valid cache exists
-    func loadLibrary() -> [Book]?
+    /// - Returns: Array of cached library books, or nil if no valid cache exists
+    func loadLibrary() -> [LibraryBook]?
 
     /// Check if valid cache exists for current user
     /// - Returns: True if cache exists and belongs to current user
