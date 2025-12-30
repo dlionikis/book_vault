@@ -144,6 +144,9 @@
 Located in `archive/` folder:
 
 - `archive/completed-plans/ios-implementation-phases.md` - iOS phase plan (all 8 phases complete)
+- `archive/completed-plans/ios-testing-implementation-plan.md` - iOS testing (568 tests complete)
+- `archive/completed-plans/ios-testing-real-services-plan.md` - Real service testing strategy
+- `archive/completed-plans/ios-testing-recommendations.md` - Testing recommendations
 - `archive/completed-plans/ios-backend-sync.md` - iOS-backend sync tracker (historical)
 - `archive/completed-plans/implement-backend-support-for-mobile.md` (71K, 9,512 words)
 - `archive/completed-plans/storybook-plan.md` (30K, 3,913 words)
