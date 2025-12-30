@@ -1,10 +1,64 @@
-# Project Status - December 28, 2025
+# Project Status - December 29, 2025
 
 ## Current State
 
-Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing. iOS mobile app development has completed Phase 6 (Search & Browse) with full search and browse functionality across all entity types.
+Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing. iOS mobile app development has completed Phase 8 (Offline Mode Support), completing all planned phases for the initial release.
 
 ### Recent Accomplishments
+
+#### iOS Phase 8: Offline Mode Support (December 29, 2025) ✅ COMPLETE
+
+**Goal**: Enable comprehensive offline support so users can browse their cached library, play downloaded audiobooks, and have playback progress synced when back online.
+
+**Core Features:**
+
+**Library Caching:**
+
+- ✅ LibraryCacheManager service persists library to disk
+- ✅ Automatic cache population after successful API fetch
+- ✅ Offline library browsing from disk cache
+- ✅ Cache cleared on logout (user-specific)
+
+**Progress Persistence & Sync:**
+
+- ✅ OfflineProgressStore for local progress storage
+- ✅ Local-first progress saving (always saves locally, syncs when online)
+- ✅ SyncManager for automatic background sync when connectivity returns
+- ✅ Timestamp-based conflict resolution (latest wins)
+
+**Network-Aware UI:**
+
+- ✅ ContentView dynamically shows/hides tabs based on connectivity
+  - Online: 6 tabs (Catalog, Browse, Search, Library, Downloads, Settings)
+  - Offline: 4 tabs (Offline, Library, Downloads, Settings)
+- ✅ OfflineModeView with connection status and retry button
+- ✅ LibraryView shows "Cached" badge when displaying offline data
+- ✅ Book detail view hides Download button offline, shows Play only for downloaded books
+
+**Files Created:**
+
+- `ios/BookVault/Services/LibraryCacheManager.swift` (174 lines)
+- `ios/BookVault/Services/OfflineProgressStore.swift` (238 lines)
+- `ios/BookVault/Services/SyncManager.swift` (148 lines)
+- `ios/BookVault/Views/OfflineModeView.swift` (207 lines)
+
+**Files Modified:**
+
+- `ios/BookVault/ContentView.swift` - Conditional tabs based on network state
+- `ios/BookVault/Services/NetworkMonitor.swift` - Added refreshStatus(), restartMonitor()
+- `ios/BookVault/Services/LibraryManager.swift` - Integrated cache for offline fallback
+- `ios/BookVault/Services/ProgressManager.swift` - Local-first saving with sync
+- `ios/BookVault/Services/AuthManager.swift` - Clear caches on logout
+- `ios/BookVault/Views/Library/LibraryView.swift` - Cached badge, offline-aware refresh
+- `ios/BookVault/Views/Books/BookDetailView.swift` - Offline-aware button visibility
+
+**Testing:** Manual testing completed for offline library, progress sync, tab switching, and book detail behavior.
+
+**Impact:** iOS app now has complete offline functionality, enabling users to listen to downloaded books and track progress without internet connectivity.
+
+**Documentation:** `ios/archive/completed-phases/PHASE8_COMPLETE.md`
+
+---
 
 #### API Code Quality: Entity Detail Endpoints DRY Refactor (December 28, 2025) ✅ COMPLETE
 

@@ -14,38 +14,52 @@ enum Tab {
     case library   // User's personal library
     case downloads // Offline downloads (Phase 7)
     case settings  // Settings and account
+    case offline   // Offline mode placeholder (Phase 8)
 }
 
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var themeManager = ThemeManager.shared
+    @StateObject private var networkMonitor = NetworkMonitor.shared
     @ObservedObject private var audioPlayer = AudioPlayerManager.shared
     @State private var hasLoadedInitialBook = false
     @State private var selectedTab: Tab = .catalog
+    @State private var previousOnlineTab: Tab? = nil  // Remember tab when going offline
 
     var body: some View {
         if authManager.isAuthenticated {
             // User is logged in - show tab view with mini player
             ZStack(alignment: .top) {
                 TabView(selection: $selectedTab) {
-                    CatalogView()
-                        .tabItem {
-                            Label("Catalog", systemImage: "books.vertical.fill")
-                        }
-                        .tag(Tab.catalog)
+                    if networkMonitor.isConnected {
+                        // Online mode: 6 tabs
+                        CatalogView()
+                            .tabItem {
+                                Label("Catalog", systemImage: "books.vertical.fill")
+                            }
+                            .tag(Tab.catalog)
 
-                    BrowseView()
-                        .tabItem {
-                            Label("Browse", systemImage: "square.grid.2x2")
-                        }
-                        .tag(Tab.browse)
+                        BrowseView()
+                            .tabItem {
+                                Label("Browse", systemImage: "square.grid.2x2")
+                            }
+                            .tag(Tab.browse)
 
-                    SearchView()
-                        .tabItem {
-                            Label("Search", systemImage: "magnifyingglass")
-                        }
-                        .tag(Tab.search)
+                        SearchView()
+                            .tabItem {
+                                Label("Search", systemImage: "magnifyingglass")
+                            }
+                            .tag(Tab.search)
+                    } else {
+                        // Offline mode: Replace Catalog/Browse/Search with Offline tab
+                        OfflineModeView(selectedTab: $selectedTab)
+                            .tabItem {
+                                Label("Offline", systemImage: "wifi.slash")
+                            }
+                            .tag(Tab.offline)
+                    }
 
+                    // Always show Library, Downloads, Settings
                     LibraryView(selectedTab: $selectedTab)
                         .tabItem {
                             Label("Library", systemImage: "books.vertical")
@@ -63,6 +77,10 @@ struct ContentView: View {
                             Label("Settings", systemImage: "gearshape")
                         }
                         .tag(Tab.settings)
+                }
+                .onChange(of: networkMonitor.isConnected) { oldValue, isConnected in
+                    DebugLogger.network("onChange triggered: \(oldValue) -> \(isConnected)")
+                    handleNetworkChange(isOnline: isConnected)
                 }
                 .task {
                     // Auto-load most recently played book on first appearance
@@ -88,6 +106,33 @@ struct ContentView: View {
             // User is not logged in - show login screen
             LoginView()
                 .preferredColorScheme(themeManager.selectedTheme.colorScheme)
+        }
+    }
+
+    /// Handle tab transitions when network state changes
+    private func handleNetworkChange(isOnline: Bool) {
+        DebugLogger.network("handleNetworkChange called with isOnline: \(isOnline), currentTab: \(selectedTab)")
+        if isOnline {
+            // Going online: restore previous tab if it was Catalog/Browse/Search
+            DebugLogger.network("Going online - selectedTab: \(selectedTab), previousOnlineTab: \(String(describing: previousOnlineTab))")
+            if selectedTab == .offline {
+                if let previousTab = previousOnlineTab {
+                    DebugLogger.network("Restoring previous tab: \(previousTab)")
+                    selectedTab = previousTab
+                } else {
+                    DebugLogger.network("No previous tab, switching to catalog")
+                    selectedTab = .catalog
+                }
+            }
+            previousOnlineTab = nil
+        } else {
+            // Going offline: switch from Catalog/Browse/Search to Offline tab
+            let onlineOnlyTabs: [Tab] = [.catalog, .browse, .search]
+            if onlineOnlyTabs.contains(selectedTab) {
+                DebugLogger.network("Going offline - saving current tab: \(selectedTab)")
+                previousOnlineTab = selectedTab
+                selectedTab = .offline
+            }
         }
     }
 

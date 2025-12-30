@@ -11,11 +11,23 @@ struct BookDetailView: View {
     let book: Book
     @StateObject private var chapterManager = ChapterManager()
     @StateObject private var libraryManager = LibraryManager.shared
+    @StateObject private var networkMonitor = NetworkMonitor.shared
+    @StateObject private var storageManager = StorageManager.shared
     @State private var showingNowPlaying = false
     @State private var isInLibrary = false
     @State private var isCheckingLibrary = false
     @State private var showingRemoveConfirmation = false
     @State private var showingSeriesDialog = false
+
+    /// Check if book is downloaded for offline playback
+    private var isBookDownloaded: Bool {
+        storageManager.isBookDownloaded(bookId: book.id.uuidString)
+    }
+
+    /// Check if we're currently online
+    private var isOnline: Bool {
+        networkMonitor.isConnected
+    }
 
     var body: some View {
         ScrollView {
@@ -176,16 +188,33 @@ struct BookDetailView: View {
 
                     // Play and Download buttons (only shown if book is in library)
                     if isInLibrary {
-                        // Play button (isolated to prevent unnecessary parent re-renders)
-                        BookPlayButton(
-                            book: book,
-                            chapterManager: chapterManager,
-                            showingNowPlaying: $showingNowPlaying
-                        )
-                        .padding(.top, 8)
+                        // Play button: show if online OR if book is downloaded for offline playback
+                        if isOnline || isBookDownloaded {
+                            BookPlayButton(
+                                book: book,
+                                chapterManager: chapterManager,
+                                showingNowPlaying: $showingNowPlaying
+                            )
+                            .padding(.top, 8)
+                        } else {
+                            // Offline and not downloaded - show unavailable message
+                            HStack {
+                                Image(systemName: "wifi.slash")
+                                    .foregroundColor(.secondary)
+                                Text("Download to play offline")
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.gray.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .padding(.top, 8)
+                        }
 
-                        // Download button (Phase 7)
-                        DownloadButton(book: book)
+                        // Download button (Phase 7) - only show when online
+                        if isOnline {
+                            DownloadButton(book: book)
+                        }
                     } else if isCheckingLibrary {
                         // Show placeholder while checking library status
                         HStack {

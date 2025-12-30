@@ -9,6 +9,18 @@
 import Foundation
 import Combine
 
+/// Error types for library operations
+enum LibraryError: LocalizedError {
+    case offlineNoCache
+
+    var errorDescription: String? {
+        switch self {
+        case .offlineNoCache:
+            return "You're offline and no cached library is available. Connect to the internet to load your library."
+        }
+    }
+}
+
 /// Manages user library operations with caching strategy
 /// This is a lightweight wrapper around APIClient for library-related operations
 class LibraryManager: ObservableObject {
@@ -21,7 +33,11 @@ class LibraryManager: ObservableObject {
     /// Observers can watch this to know when to refresh their views
     @MainActor @Published var libraryVersion: Int = 0
 
+    /// Indicates if current data is from cache (offline mode)
+    @MainActor @Published var isShowingCachedData = false
+
     private let apiClient = APIClient.shared
+    private let libraryCacheManager = LibraryCacheManager.shared
 
     // MARK: - Caching
 
@@ -40,13 +56,28 @@ class LibraryManager: ObservableObject {
 
     /// Fetch user's library books
     /// Uses cached data if available and fresh, otherwise fetches from API
+    /// When offline, returns disk-cached data if available
     /// - Parameter forceRefresh: If true, bypasses cache and fetches from API
     /// - Returns: Array of books in user's library
     @MainActor
     func fetchLibraryBooks(forceRefresh: Bool = false) async throws -> [Book] {
-        // Check if cache is valid and not forcing refresh
+        // Check network status first
+        if !NetworkMonitor.shared.isConnected {
+            // Offline: try to load from disk cache
+            if let diskCached = libraryCacheManager.loadLibrary() {
+                DebugLogger.database("Using disk-cached library (offline): \(diskCached.count) books")
+                isShowingCachedData = true
+                cachedBooks = diskCached
+                return diskCached
+            }
+            // No disk cache available while offline
+            throw LibraryError.offlineNoCache
+        }
+
+        // Online: Check if in-memory cache is valid and not forcing refresh
         if !forceRefresh, let cached = cachedBooks, isCacheValid() {
-            DebugLogger.database("Using cached library books (\(cached.count) books)")
+            DebugLogger.database("Using in-memory cached library books (\(cached.count) books)")
+            isShowingCachedData = false
             return cached
         }
 
@@ -57,9 +88,13 @@ class LibraryManager: ObservableObject {
 
         let response = try await apiClient.fetchLibrary()
 
-        // Update cache
+        // Update in-memory cache
         cachedBooks = response.books
         lastCacheUpdate = Date()
+        isShowingCachedData = false
+
+        // Save to disk cache for offline access
+        libraryCacheManager.saveLibrary(books: response.books)
 
         DebugLogger.success("Fetched \(response.books.count) library books (total: \(response.total))")
 

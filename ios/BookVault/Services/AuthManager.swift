@@ -160,6 +160,11 @@ class AuthManager: ObservableObject {
         // Clear API client token
         apiClient.accessToken = nil
 
+        // Clear offline caches (Phase 8: security - prevent cross-user data access)
+        LibraryCacheManager.shared.clearCache()
+        OfflineProgressStore.shared.clearCache()
+        DebugLogger.auth("Offline caches cleared on logout")
+
         // Clear state
         self.currentUser = nil
         self.refreshTokenValue = nil
