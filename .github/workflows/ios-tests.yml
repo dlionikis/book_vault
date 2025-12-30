@@ -38,12 +38,25 @@ jobs:
       - name: Run tests with coverage
         working-directory: ios
         run: |
+          # Remove any existing result bundle
+          rm -rf TestResults.xcresult
+
+          # Run tests without xcpretty piping to preserve coverage data
           xcodebuild test \
             -scheme BookVault \
             -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.0' \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
-            | xcpretty --report junit --output TestResults.xml
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee xcodebuild.log | xcpretty --report junit --output TestResults.xml || true
+
+          # Check if tests passed by examining the log
+          if grep -q "** TEST SUCCEEDED **" xcodebuild.log; then
+            echo "✅ Tests passed"
+          else
+            echo "❌ Tests failed"
+            exit 1
+          fi
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -53,17 +66,32 @@ jobs:
           path: |
             ios/TestResults.xcresult
             ios/TestResults.xml
+            ios/xcodebuild.log
 
       - name: Generate coverage report
         if: success()
         working-directory: ios
         run: |
-          xcrun xccov view --report --json TestResults.xcresult > coverage.json
           echo "## Code Coverage Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          xcrun xccov view --report TestResults.xcresult | head -30 >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+
+          # Check if result bundle exists and has coverage data
+          if [ -d "TestResults.xcresult" ]; then
+            echo "Result bundle found, attempting to extract coverage..."
+
+            # Try to generate coverage report (may fail if no coverage data)
+            if xcrun xccov view --report --json TestResults.xcresult > coverage.json 2>/dev/null; then
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              xcrun xccov view --report TestResults.xcresult 2>/dev/null | head -30 >> $GITHUB_STEP_SUMMARY || echo "Coverage data not available" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⚠️ Coverage report generation failed - this is non-blocking" >> $GITHUB_STEP_SUMMARY
+              echo '{}' > coverage.json
+            fi
+          else
+            echo "⚠️ Result bundle not found" >> $GITHUB_STEP_SUMMARY
+            echo '{}' > coverage.json
+          fi
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
@@ -74,16 +102,21 @@ jobs:
 
       - name: Check coverage threshold
         if: success()
+        continue-on-error: true
         working-directory: ios
         run: |
-          COVERAGE=$(xcrun xccov view --report TestResults.xcresult | grep 'BookVault.app' | awk '{print $2}' | tr -d '%')
-          echo "Coverage: $COVERAGE%"
-          if [ -n "$COVERAGE" ]; then
-            if (( $(echo "$COVERAGE < 70" | bc -l) )); then
-              echo "::warning::Coverage ($COVERAGE%) is below 70% target"
+          if [ -d "TestResults.xcresult" ]; then
+            COVERAGE=$(xcrun xccov view --report TestResults.xcresult 2>/dev/null | grep 'BookVault.app' | awk '{print $2}' | tr -d '%' || echo "")
+            if [ -n "$COVERAGE" ]; then
+              echo "Coverage: $COVERAGE%"
+              if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+                echo "::warning::Coverage ($COVERAGE%) is below 70% target"
+              else
+                echo "✅ Coverage ($COVERAGE%) meets 70% target"
+              fi
             else
-              echo "✅ Coverage ($COVERAGE%) meets 70% target"
+              echo "::notice::Could not parse coverage percentage - tests passed but coverage unavailable"
             fi
           else
-            echo "::warning::Could not parse coverage percentage"
+            echo "::notice::Coverage check skipped - result bundle not available"
           fi
