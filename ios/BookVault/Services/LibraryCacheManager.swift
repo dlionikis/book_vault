@@ -10,7 +10,7 @@ import Foundation
 
 /// Persists user's library books to disk for offline access
 @MainActor
-class LibraryCacheManager: ObservableObject {
+class LibraryCacheManager: ObservableObject, LibraryCaching {
     static let shared = LibraryCacheManager()
 
     // MARK: - Storage

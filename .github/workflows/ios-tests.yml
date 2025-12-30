@@ -28,22 +28,62 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Install xcpretty
+        run: gem install xcpretty
+
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate
 
-      - name: Run tests
+      - name: Run tests with coverage
         working-directory: ios
         run: |
           xcodebuild test \
             -scheme BookVault \
             -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.0' \
+            -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
-            | xcpretty
+            | xcpretty --report junit --output TestResults.xml
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
-          path: ios/TestResults.xcresult
+          path: |
+            ios/TestResults.xcresult
+            ios/TestResults.xml
+
+      - name: Generate coverage report
+        if: success()
+        working-directory: ios
+        run: |
+          xcrun xccov view --report --json TestResults.xcresult > coverage.json
+          echo "## Code Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          xcrun xccov view --report TestResults.xcresult | head -30 >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: coverage-report
+          path: ios/coverage.json
+
+      - name: Check coverage threshold
+        if: success()
+        working-directory: ios
+        run: |
+          COVERAGE=$(xcrun xccov view --report TestResults.xcresult | grep 'BookVault.app' | awk '{print $2}' | tr -d '%')
+          echo "Coverage: $COVERAGE%"
+          if [ -n "$COVERAGE" ]; then
+            if (( $(echo "$COVERAGE < 70" | bc -l) )); then
+              echo "::warning::Coverage ($COVERAGE%) is below 70% target"
+            else
+              echo "✅ Coverage ($COVERAGE%) meets 70% target"
+            fi
+          else
+            echo "::warning::Could not parse coverage percentage"
+          fi

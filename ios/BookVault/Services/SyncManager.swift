@@ -12,7 +12,7 @@ import Combine
 /// Manages background sync when connectivity returns
 /// Monitors network state and syncs pending progress when online
 @MainActor
-class SyncManager: ObservableObject {
+class SyncManager: ObservableObject, SyncManaging {
     static let shared = SyncManager()
 
     // MARK: - Published Properties

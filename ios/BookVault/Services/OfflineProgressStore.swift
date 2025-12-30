@@ -10,7 +10,7 @@ import Foundation
 
 /// Local playback progress with sync queue for offline support
 @MainActor
-class OfflineProgressStore: ObservableObject {
+class OfflineProgressStore: ObservableObject, OfflineStoring {
     static let shared = OfflineProgressStore()
 
     // MARK: - Storage
