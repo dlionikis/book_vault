@@ -11,7 +11,6 @@ import XCTest
 
 @MainActor
 final class NetworkMonitorRealTests: XCTestCase {
-
     // MARK: - Properties
 
     private var networkMonitor: NetworkMonitor!

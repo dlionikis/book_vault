@@ -11,7 +11,6 @@ import XCTest
 
 @MainActor
 final class LibraryCacheManagerTests: XCTestCase {
-
     var sut: MockLibraryCacheManager!
 
     override func setUp() {
@@ -31,7 +30,7 @@ final class LibraryCacheManagerTests: XCTestCase {
         let books = [
             TestFixtures.makeLibraryBook(id: UUID(), title: "Book 1"),
             TestFixtures.makeLibraryBook(id: UUID(), title: "Book 2"),
-            TestFixtures.makeLibraryBook(id: UUID(), title: "Book 3")
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Book 3"),
         ]
 
         // When saveLibrary is called
@@ -76,7 +75,7 @@ final class LibraryCacheManagerTests: XCTestCase {
         // Given existing cached books
         let oldBooks = [
             TestFixtures.makeLibraryBook(id: UUID(), title: "Old Book 1"),
-            TestFixtures.makeLibraryBook(id: UUID(), title: "Old Book 2")
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Old Book 2"),
         ]
         sut.saveLibrary(books: oldBooks)
 
@@ -105,7 +104,7 @@ final class LibraryCacheManagerTests: XCTestCase {
         // Given cached books
         let books = [
             TestFixtures.makeLibraryBook(id: UUID(), title: "Cached Book 1"),
-            TestFixtures.makeLibraryBook(id: UUID(), title: "Cached Book 2")
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Cached Book 2"),
         ]
         sut.preloadCache(books: books)
 
@@ -259,7 +258,11 @@ final class LibraryCacheManagerTests: XCTestCase {
         // Then timestamp should be old
         let expectedDate = Date().addingTimeInterval(-age)
         XCTAssertNotNil(sut.cacheTimestamp)
-        XCTAssertEqual(sut.cacheTimestamp?.timeIntervalSince1970 ?? 0, expectedDate.timeIntervalSince1970, accuracy: 5.0)
+        XCTAssertEqual(
+            sut.cacheTimestamp?.timeIntervalSince1970 ?? 0,
+            expectedDate.timeIntervalSince1970,
+            accuracy: 5.0
+        )
     }
 
     // MARK: - Reset Tests

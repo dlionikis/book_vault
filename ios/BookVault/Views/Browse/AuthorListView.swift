@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - AuthorListView
+
 /// List view for browsing all authors alphabetically
 struct AuthorListView: View {
     @StateObject private var searchManager = SearchManager.shared
@@ -19,7 +21,7 @@ struct AuthorListView: View {
 
     var body: some View {
         ZStack {
-            if isLoading && authors.isEmpty {
+            if isLoading, authors.isEmpty {
                 ProgressView("Loading authors...")
                     .accessibilityLabel("Loading authors")
             } else if let error = errorMessage, authors.isEmpty {
@@ -141,9 +143,9 @@ struct AuthorListView: View {
     /// Filters authors based on search text
     private var filteredAuthors: [AuthorWithBookCount] {
         if searchText.isEmpty {
-            return authors
+            authors
         } else {
-            return authors.filter { author in
+            authors.filter { author in
                 author.name.localizedCaseInsensitiveContains(searchText)
             }
         }
@@ -163,7 +165,10 @@ struct AuthorListView: View {
             let response = try await searchManager.fetchAuthors(page: currentPage, limit: 50)
             authors = response.results
             hasMorePages = currentPage < response.pagination.pages
-            DebugLogger.info("Loaded \(authors.count) authors (page \(currentPage) of \(response.pagination.pages), total: \(response.pagination.total))")
+            DebugLogger
+                .info(
+                    "Loaded \(authors.count) authors (page \(currentPage) of \(response.pagination.pages), total: \(response.pagination.total))"
+                )
         } catch {
             DebugLogger.error("Failed to load authors", error: error)
             errorMessage = error.localizedDescription
@@ -199,7 +204,7 @@ struct AuthorListView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - AuthorListView_Previews
 
 struct AuthorListView_Previews: PreviewProvider {
     static var previews: some View {

@@ -148,7 +148,8 @@ class AuthManager: ObservableObject, AuthManaging {
               let refreshTokenString = keychain.load(key: refreshTokenKey),
               let refreshToken = UUID(uuidString: refreshTokenString),
               let userDataString = keychain.load(key: userDataKey),
-              let userData = userDataString.data(using: .utf8) else {
+              let userData = userDataString.data(using: .utf8)
+        else {
             return
         }
 

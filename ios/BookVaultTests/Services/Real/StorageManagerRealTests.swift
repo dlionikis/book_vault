@@ -10,7 +10,6 @@ import XCTest
 @testable import BookVault
 
 final class StorageManagerRealTests: XCTestCase {
-
     // MARK: - Properties
 
     private var tempDirectory: URL!
@@ -20,7 +19,11 @@ final class StorageManagerRealTests: XCTestCase {
 
     // MARK: - Test Helpers
 
-    private func createTestBook(id: UUID = UUID(), title: String = "Test Book", authorName: String = "Test Author") -> Book {
+    private func createTestBook(
+        id: UUID = UUID(),
+        title: String = "Test Book",
+        authorName: String = "Test Author"
+    ) -> Book {
         let author = Author(id: UUID(), name: authorName)
         return Book(id: id, asin: "TEST123", title: title, authors: [author])
     }
@@ -207,7 +210,7 @@ final class StorageManagerRealTests: XCTestCase {
     func testAddToMetadata_AddsBookToDownloads() {
         // Given: A book
         let book = createTestBook()
-        let fileSize: Int64 = 1024 * 1024  // 1 MB
+        let fileSize: Int64 = 1024 * 1024 // 1 MB
 
         // When: Adding to metadata
         storageManager.addToMetadata(book: book, fileSize: fileSize)
@@ -367,7 +370,7 @@ final class StorageManagerRealTests: XCTestCase {
     @MainActor
     func testDeleteAllDownloads_ClearsEverything() throws {
         // Given: Multiple downloads
-        for i in 1...3 {
+        for i in 1 ... 3 {
             let book = createTestBook(title: "Book \(i)")
             let audioData = Data("audio \(i)".utf8)
             let tempFile = createTempFile(withData: audioData, named: "temp\(i).mp3")
@@ -437,7 +440,7 @@ final class StorageManagerRealTests: XCTestCase {
     func testIsNearStorageLimit_Below90Percent_ReturnsFalse() {
         // Given: 80% usage
         let book = createTestBook()
-        storageManager.addToMetadata(book: book, fileSize: 4_000_000_000)  // 80% of 5GB
+        storageManager.addToMetadata(book: book, fileSize: 4_000_000_000) // 80% of 5GB
 
         // Then: Not near limit
         XCTAssertFalse(storageManager.isNearStorageLimit)
@@ -447,7 +450,7 @@ final class StorageManagerRealTests: XCTestCase {
     func testIsNearStorageLimit_Above90Percent_ReturnsTrue() {
         // Given: 95% usage
         let book = createTestBook()
-        storageManager.addToMetadata(book: book, fileSize: 4_750_000_000)  // 95% of 5GB
+        storageManager.addToMetadata(book: book, fileSize: 4_750_000_000) // 95% of 5GB
 
         // Then: Near limit
         XCTAssertTrue(storageManager.isNearStorageLimit)
@@ -486,7 +489,7 @@ final class StorageManagerRealTests: XCTestCase {
     func testDownloadedFileSize_ReturnsCorrectSize() throws {
         // Given: A saved audio file
         let book = createTestBook()
-        let audioData = Data(repeating: 0, count: 1024)  // 1KB
+        let audioData = Data(repeating: 0, count: 1024) // 1KB
         let tempFile = createTempFile(withData: audioData, named: "temp.mp3")
         _ = try storageManager.saveAudioFile(from: tempFile, bookId: book.id.uuidString)
         storageManager.addToMetadata(book: book, fileSize: 1024)

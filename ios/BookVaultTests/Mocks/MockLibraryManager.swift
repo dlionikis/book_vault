@@ -12,7 +12,6 @@ import Foundation
 /// Mock library manager for testing
 @MainActor
 class MockLibraryManager: LibraryManaging {
-
     // MARK: - Published-like Properties (for protocol conformance)
 
     var isLoading: Bool = false
@@ -26,7 +25,7 @@ class MockLibraryManager: LibraryManaging {
 
     // MARK: - Call Tracking
 
-    var fetchLibraryBooksCalls: [Bool] = []  // forceRefresh values
+    var fetchLibraryBooksCalls: [Bool] = [] // forceRefresh values
     var addToLibraryCalls: [String] = []
     var removeFromLibraryCalls: [String] = []
     var isInLibraryCalls: [String] = []
@@ -35,7 +34,11 @@ class MockLibraryManager: LibraryManaging {
     // MARK: - Behavior Configuration
 
     var fetchShouldFail: Bool = false
-    var fetchError: Error = NSError(domain: "MockLibraryManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Mock error"])
+    var fetchError: Error = NSError(
+        domain: "MockLibraryManager",
+        code: -1,
+        userInfo: [NSLocalizedDescriptionKey: "Mock error"]
+    )
     var addShouldFail: Bool = false
     var removeShouldFail: Bool = false
 
@@ -56,7 +59,7 @@ class MockLibraryManager: LibraryManaging {
 
         if addShouldFail {
             throw NSError(domain: "MockLibraryManager", code: 400, userInfo: [
-                NSLocalizedDescriptionKey: "Failed to add to library"
+                NSLocalizedDescriptionKey: "Failed to add to library",
             ])
         }
 
@@ -68,7 +71,7 @@ class MockLibraryManager: LibraryManaging {
 
         if removeShouldFail {
             throw NSError(domain: "MockLibraryManager", code: 400, userInfo: [
-                NSLocalizedDescriptionKey: "Failed to remove from library"
+                NSLocalizedDescriptionKey: "Failed to remove from library",
             ])
         }
 

@@ -9,6 +9,8 @@
 import Foundation
 import Security
 
+// MARK: - SystemKeychain
+
 /// Production implementation of KeychainStoring using the system Security framework
 final class SystemKeychain: KeychainStoring {
     static let shared = SystemKeychain()
@@ -24,7 +26,7 @@ final class SystemKeychain: KeychainStoring {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key,
-            kSecValueData as String: data
+            kSecValueData as String: data,
         ]
 
         // Delete any existing item
@@ -43,7 +45,7 @@ final class SystemKeychain: KeychainStoring {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
         ]
 
         var result: AnyObject?
@@ -51,7 +53,8 @@ final class SystemKeychain: KeychainStoring {
 
         guard status == errSecSuccess,
               let data = result as? Data,
-              let value = String(data: data, encoding: .utf8) else {
+              let value = String(data: data, encoding: .utf8)
+        else {
             return nil
         }
 
@@ -61,12 +64,14 @@ final class SystemKeychain: KeychainStoring {
     func delete(key: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key
+            kSecAttrAccount as String: key,
         ]
 
         SecItemDelete(query as CFDictionary)
     }
 }
+
+// MARK: - KeychainError
 
 /// Errors that can occur during keychain operations
 enum KeychainError: LocalizedError {
@@ -76,9 +81,9 @@ enum KeychainError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .encodingFailed:
-            return "Failed to encode value for keychain storage"
-        case .saveFailed(let status):
-            return "Failed to save to keychain (status: \(status))"
+            "Failed to encode value for keychain storage"
+        case let .saveFailed(status):
+            "Failed to save to keychain (status: \(status))"
         }
     }
 }

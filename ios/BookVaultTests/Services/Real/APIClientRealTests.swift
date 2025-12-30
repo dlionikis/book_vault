@@ -9,7 +9,7 @@
 import XCTest
 @testable import BookVault
 
-// MARK: - Mock URLProtocol for Network Interception
+// MARK: - MockURLProtocol
 
 final class MockURLProtocol: URLProtocol {
     // Handler to provide mock responses
@@ -18,19 +18,23 @@ final class MockURLProtocol: URLProtocol {
     // Track all requests made
     static var capturedRequests: [URLRequest] = []
 
-    override class func canInit(with request: URLRequest) -> Bool {
-        return true
+    override class func canInit(with _: URLRequest) -> Bool {
+        true
     }
 
     override class func canonicalRequest(for request: URLRequest) -> URLRequest {
-        return request
+        request
     }
 
     override func startLoading() {
         MockURLProtocol.capturedRequests.append(request)
 
         guard let handler = MockURLProtocol.requestHandler else {
-            let error = NSError(domain: "MockURLProtocol", code: -1, userInfo: [NSLocalizedDescriptionKey: "No handler set"])
+            let error = NSError(
+                domain: "MockURLProtocol",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "No handler set"]
+            )
             client?.urlProtocol(self, didFailWithError: error)
             return
         }
@@ -55,10 +59,9 @@ final class MockURLProtocol: URLProtocol {
     }
 }
 
-// MARK: - APIClient Real Tests
+// MARK: - APIClientRealTests
 
 final class APIClientRealTests: XCTestCase {
-
     var sut: APIClient!
     var mockSession: URLSession!
 
@@ -99,7 +102,7 @@ final class APIClientRealTests: XCTestCase {
         return (response, data)
     }
 
-    func makeJSONResponse<T: Encodable>(statusCode: Int, object: T) -> (HTTPURLResponse, Data) {
+    func makeJSONResponse(statusCode: Int, object: some Encodable) -> (HTTPURLResponse, Data) {
         let response = HTTPURLResponse(
             url: URL(string: "http://localhost:3000")!,
             statusCode: statusCode,
@@ -131,11 +134,11 @@ final class APIClientRealTests: XCTestCase {
         let responseJSON: [String: Any] = [
             "user": [
                 "id": userId.uuidString,
-                "email": "test@example.com"
+                "email": "test@example.com",
             ],
             "accessToken": "test-access-token",
             "refreshToken": refreshToken.uuidString,
-            "expiresIn": 3600
+            "expiresIn": 3600,
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -160,11 +163,11 @@ final class APIClientRealTests: XCTestCase {
         let responseJSON: [String: Any] = [
             "user": [
                 "id": userId.uuidString,
-                "email": "test@example.com"
+                "email": "test@example.com",
             ],
             "accessToken": "token",
             "refreshToken": refreshToken.uuidString,
-            "expiresIn": 3600
+            "expiresIn": 3600,
         ]
 
         var capturedBody: [String: String]?
@@ -202,7 +205,7 @@ final class APIClientRealTests: XCTestCase {
     func testLoginUnauthorizedError() async {
         // Given
         MockURLProtocol.requestHandler = { _ in
-            return self.makeJSONResponse(statusCode: 401, json: ["error": "Invalid credentials"])
+            self.makeJSONResponse(statusCode: 401, json: ["error": "Invalid credentials"])
         }
 
         // When/Then
@@ -230,7 +233,7 @@ final class APIClientRealTests: XCTestCase {
         let responseJSON: [String: Any] = [
             "accessToken": "new-access-token",
             "refreshToken": newRefreshToken.uuidString,
-            "expiresIn": 3600
+            "expiresIn": 3600,
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -264,15 +267,15 @@ final class APIClientRealTests: XCTestCase {
                     "narrators": [],
                     "description": "A test book",
                     "runtimeMinutes": 300,
-                    "releaseDate": "2024-01-01"
-                ]
+                    "releaseDate": "2024-01-01",
+                ],
             ],
             "pagination": [
                 "page": 1,
                 "limit": 20,
                 "total": 1,
-                "pages": 1
-            ]
+                "pages": 1,
+            ],
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -297,7 +300,7 @@ final class APIClientRealTests: XCTestCase {
         sut.accessToken = "valid-token"
         let responseJSON: [String: Any] = [
             "books": [],
-            "pagination": ["page": 2, "limit": 10, "total": 50, "pages": 5]
+            "pagination": ["page": 2, "limit": 10, "total": 50, "pages": 5],
         ]
 
         var capturedURL: URL?
@@ -335,7 +338,7 @@ final class APIClientRealTests: XCTestCase {
             "narrators": [],
             "description": "Description",
             "runtimeMinutes": 200,
-            "releaseDate": "2024-01-01"
+            "releaseDate": "2024-01-01",
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -356,7 +359,7 @@ final class APIClientRealTests: XCTestCase {
         sut.accessToken = "valid-token"
 
         MockURLProtocol.requestHandler = { _ in
-            return self.makeJSONResponse(statusCode: 404, json: ["error": "Not found"])
+            self.makeJSONResponse(statusCode: 404, json: ["error": "Not found"])
         }
 
         // When/Then
@@ -386,7 +389,7 @@ final class APIClientRealTests: XCTestCase {
             "positionSeconds": 123.45,
             "completed": false,
             "lastPlayed": lastPlayed,
-            "updated": true
+            "updated": true,
         ]
 
         MockURLProtocol.requestHandler = { request in
@@ -410,7 +413,7 @@ final class APIClientRealTests: XCTestCase {
         sut.accessToken = "valid-token"
 
         MockURLProtocol.requestHandler = { _ in
-            return self.makeJSONResponse(statusCode: 500, json: ["error": "Internal server error"])
+            self.makeJSONResponse(statusCode: 500, json: ["error": "Internal server error"])
         }
 
         // When/Then
@@ -418,7 +421,7 @@ final class APIClientRealTests: XCTestCase {
             _ = try await sut.fetchBooks(page: 1, limit: 20, sortBy: nil)
             XCTFail("Expected server error")
         } catch let error as APIError {
-            if case .serverError(let code, let message) = error {
+            if case let .serverError(code, message) = error {
                 XCTAssertEqual(code, 500)
                 XCTAssertEqual(message, "Internal server error")
             } else {
@@ -453,7 +456,7 @@ final class APIClientRealTests: XCTestCase {
         sut.accessToken = "my-auth-token"
         let responseJSON: [String: Any] = [
             "books": [],
-            "pagination": ["page": 1, "limit": 20, "total": 0, "pages": 0]
+            "pagination": ["page": 1, "limit": 20, "total": 0, "pages": 0],
         ]
 
         var capturedAuthHeader: String?
@@ -481,7 +484,7 @@ final class APIClientRealTests: XCTestCase {
             "user": ["id": userId.uuidString, "email": "test@example.com"],
             "accessToken": "token",
             "refreshToken": refreshToken.uuidString,
-            "expiresIn": 3600
+            "expiresIn": 3600,
         ]
 
         var capturedContentType: String?
@@ -505,7 +508,7 @@ final class APIClientRealTests: XCTestCase {
         sut.accessToken = "my-token"
 
         MockURLProtocol.requestHandler = { _ in
-            return self.makeJSONResponse(statusCode: 200, json: ["message": "Logged out successfully"])
+            self.makeJSONResponse(statusCode: 200, json: ["message": "Logged out successfully"])
         }
 
         // When

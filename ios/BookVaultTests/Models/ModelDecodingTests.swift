@@ -10,7 +10,6 @@ import XCTest
 @testable import BookVault
 
 final class ModelDecodingTests: XCTestCase {
-
     var decoder: JSONDecoder!
 
     override func setUp() {
@@ -254,7 +253,7 @@ final class ModelDecodingTests: XCTestCase {
         let data = json.data(using: .utf8)!
 
         XCTAssertThrowsError(try decoder.decode(Book.self, from: data)) { error in
-            guard case DecodingError.keyNotFound(let key, _) = error else {
+            guard case let DecodingError.keyNotFound(key, _) = error else {
                 XCTFail("Expected keyNotFound error, got \(error)")
                 return
             }

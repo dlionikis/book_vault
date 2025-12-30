@@ -6,8 +6,8 @@
 //  Phase 3: Playback Core Tests
 //
 
-import Foundation
 import Combine
+import Foundation
 @testable import BookVault
 
 /// Mock audio player manager for testing
@@ -38,7 +38,7 @@ class MockAudioPlayerManager: AudioPlayerManaging, ObservableObject {
 
     var playbackState: PlaybackState {
         if isLoading { return .loading }
-        if let error = error { return .error(error.localizedDescription) }
+        if let error { return .error(error.localizedDescription) }
         if isPlaying { return .playing }
         if currentBook != nil { return .paused }
         return .idle
@@ -63,7 +63,11 @@ class MockAudioPlayerManager: AudioPlayerManaging, ObservableObject {
     // MARK: - Behavior Configuration
 
     var loadShouldFail: Bool = false
-    var loadFailureError: Error = NSError(domain: "MockAudioPlayerManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to load audio"])
+    var loadFailureError: Error = NSError(
+        domain: "MockAudioPlayerManager",
+        code: -1,
+        userInfo: [NSLocalizedDescriptionKey: "Failed to load audio"]
+    )
     var autoUpdateCurrentChapter: Bool = true
 
     // MARK: - Protocol Implementation

@@ -5,13 +5,12 @@
 //  Unit tests for NetworkMonitor.
 //
 
-import XCTest
 import Combine
+import XCTest
 @testable import BookVault
 
 @MainActor
 final class NetworkMonitorTests: XCTestCase {
-
     var sut: MockNetworkMonitor!
     var cancellables: Set<AnyCancellable>!
 

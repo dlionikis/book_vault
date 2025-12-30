@@ -77,14 +77,14 @@ class ChapterManager: ObservableObject {
     /// - Parameter bookId: The book ID
     /// - Returns: Cached chapters or empty array
     func getCachedChapters(bookId: String) -> [Chapter] {
-        return chapterCache[bookId] ?? []
+        chapterCache[bookId] ?? []
     }
 
     /// Check if chapters are cached for a book
     /// - Parameter bookId: The book ID
     /// - Returns: True if chapters are in cache
     func hasCachedChapters(bookId: String) -> Bool {
-        return chapterCache[bookId] != nil
+        chapterCache[bookId] != nil
     }
 
     /// Clear all cached chapters

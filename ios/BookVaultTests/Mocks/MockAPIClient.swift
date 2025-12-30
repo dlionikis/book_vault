@@ -11,9 +11,10 @@ import Foundation
 /// Mock API client for testing - allows configuring responses and tracking calls
 class MockAPIClient: APIClientProtocol {
     var accessToken: String?
-    var baseURL: URL = URL(string: "http://localhost:3000")!
+    var baseURL: URL = .init(string: "http://localhost:3000")!
 
     // MARK: - Call Tracking
+
     var loginCalls: [(email: String, password: String)] = []
     var refreshTokenCalls: [UUID] = []
     var logoutCalls: [UUID] = []
@@ -28,20 +29,46 @@ class MockAPIClient: APIClientProtocol {
     var removeFromLibraryCalls: [UUID] = []
 
     // MARK: - Configurable Results
-    var loginResult: Result<LoginMobile200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
-    var refreshTokenResult: Result<RefreshToken200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
+
+    var loginResult: Result<LoginMobile200Response, Error> = .failure(APIError.networkError(NSError(
+        domain: "Test",
+        code: -1
+    )))
+    var refreshTokenResult: Result<RefreshToken200Response, Error> = .failure(APIError.networkError(NSError(
+        domain: "Test",
+        code: -1
+    )))
     var logoutResult: Result<Void, Error> = .success(())
-    var fetchBooksResult: Result<ListBooks200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
+    var fetchBooksResult: Result<ListBooks200Response, Error> = .failure(APIError.networkError(NSError(
+        domain: "Test",
+        code: -1
+    )))
     var fetchBookResult: Result<Book, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
     var fetchBookChaptersResult: Result<[Chapter], Error> = .success([])
-    var fetchProgressResult: Result<GetProgress200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
-    var updateProgressResult: Result<UpdateProgress200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
-    var setProgressStatusResult: Result<SetProgressStatus200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
-    var fetchLibraryResult: Result<GetLibrary200Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
-    var addToLibraryResult: Result<AddToLibrary201Response, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
+    var fetchProgressResult: Result<GetProgress200Response, Error> = .failure(APIError.networkError(NSError(
+        domain: "Test",
+        code: -1
+    )))
+    var updateProgressResult: Result<UpdateProgress200Response, Error> = .failure(APIError.networkError(NSError(
+        domain: "Test",
+        code: -1
+    )))
+    var setProgressStatusResult: Result<SetProgressStatus200Response, Error> = .failure(APIError.networkError(NSError(
+        domain: "Test",
+        code: -1
+    )))
+    var fetchLibraryResult: Result<GetLibrary200Response, Error> = .failure(APIError.networkError(NSError(
+        domain: "Test",
+        code: -1
+    )))
+    var addToLibraryResult: Result<AddToLibrary201Response, Error> = .failure(APIError.networkError(NSError(
+        domain: "Test",
+        code: -1
+    )))
     var removeFromLibraryResult: Result<Void, Error> = .success(())
 
     // MARK: - Reset
+
     func reset() {
         loginCalls = []
         refreshTokenCalls = []
@@ -100,7 +127,10 @@ class MockAPIClient: APIClientProtocol {
         return try updateProgressResult.get()
     }
 
-    func setProgressStatus(bookId: UUID, status: SetProgressStatusRequest.Status) async throws -> SetProgressStatus200Response {
+    func setProgressStatus(
+        bookId: UUID,
+        status: SetProgressStatusRequest.Status
+    ) async throws -> SetProgressStatus200Response {
         setProgressStatusCalls.append((bookId, status))
         return try setProgressStatusResult.get()
     }

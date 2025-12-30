@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - SeriesDetailView
+
 /// Detail view showing a series and all books in series order
 struct SeriesDetailView: View {
     let seriesId: String
@@ -22,7 +24,7 @@ struct SeriesDetailView: View {
     @State private var isCheckingLibrary = false
 
     private let columns = [
-        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
+        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top),
     ]
 
     var body: some View {
@@ -122,9 +124,11 @@ struct SeriesDetailView: View {
                                                     .progressViewStyle(CircularProgressViewStyle())
                                                     .scaleEffect(0.8)
                                             } else {
-                                                Image(systemName: showingSuccessMessage ? "checkmark.circle.fill" : "plus.circle.fill")
+                                                Image(systemName: showingSuccessMessage ? "checkmark.circle.fill" :
+                                                    "plus.circle.fill")
                                             }
-                                            Text(showingSuccessMessage ? "Added to Library" : "Add Entire Series to Library")
+                                            Text(showingSuccessMessage ? "Added to Library" :
+                                                "Add Entire Series to Library")
                                                 .fontWeight(.semibold)
                                         }
                                         .frame(maxWidth: .infinity)
@@ -149,9 +153,11 @@ struct SeriesDetailView: View {
                                                     .progressViewStyle(CircularProgressViewStyle())
                                                     .scaleEffect(0.8)
                                             } else {
-                                                Image(systemName: showingSuccessMessage ? "checkmark.circle.fill" : "trash.circle.fill")
+                                                Image(systemName: showingSuccessMessage ? "checkmark.circle.fill" :
+                                                    "trash.circle.fill")
                                             }
-                                            Text(showingSuccessMessage ? "Removed from Library" : "Remove Series from Library")
+                                            Text(showingSuccessMessage ? "Removed from Library" :
+                                                "Remove Series from Library")
                                                 .fontWeight(.semibold)
                                         }
                                         .frame(maxWidth: .infinity)
@@ -175,7 +181,8 @@ struct SeriesDetailView: View {
                                             VStack(alignment: .leading, spacing: 0) {
                                                 // Show sequence number if available
                                                 if let seriesInfo = book.series?.first(where: { $0.id == detail.id }),
-                                                   let sequence = seriesInfo.sequence {
+                                                   let sequence = seriesInfo.sequence
+                                                {
                                                     Text("Book \(sequence)")
                                                         .font(.caption2)
                                                         .fontWeight(.semibold)
@@ -301,7 +308,8 @@ struct SeriesDetailView: View {
                 showingSuccessMessage = false
             }
 
-            DebugLogger.info("Successfully removed \(detail.books.count) books from series '\(detail.title)' from library")
+            DebugLogger
+                .info("Successfully removed \(detail.books.count) books from series '\(detail.title)' from library")
         } catch {
             DebugLogger.error("Failed to remove series from library", error: error)
             errorMessage = "Failed to remove series from library: \(error.localizedDescription)"
@@ -337,7 +345,7 @@ struct SeriesDetailView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - SeriesDetailView_Previews
 
 struct SeriesDetailView_Previews: PreviewProvider {
     static var previews: some View {

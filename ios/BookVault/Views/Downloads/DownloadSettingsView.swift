@@ -8,10 +8,12 @@
 
 import SwiftUI
 
+// MARK: - DownloadSettingsView
+
 /// Settings view for download preferences
 struct DownloadSettingsView: View {
     @AppStorage("downloadOnlyOnWiFi") private var wifiOnly = true
-    @AppStorage("downloadStorageLimit") private var storageLimitRaw = 5_000_000_000  // 5 GB default
+    @AppStorage("downloadStorageLimit") private var storageLimitRaw = 5_000_000_000 // 5 GB default
     @AppStorage("autoDeleteOldDownloads") private var autoDelete = false
     @AppStorage("autoDeleteDays") private var autoDeleteDays = 30
 
@@ -70,9 +72,11 @@ struct DownloadSettingsView: View {
                         ProgressView(value: storageManager.storageUsagePercentage)
                             .tint(storageManager.isNearStorageLimit ? .orange : .blue)
 
-                        Text("\(Int(storageManager.storageUsagePercentage * 100))% of \(StorageManager.formatFileSize(storageLimit)) used")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        Text(
+                            "\(Int(storageManager.storageUsagePercentage * 100))% of \(StorageManager.formatFileSize(storageLimit)) used"
+                        )
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                     }
                 }
                 .padding(.vertical, 4)
@@ -107,7 +111,9 @@ struct DownloadSettingsView: View {
                 Text("Automatic Cleanup")
             } footer: {
                 if autoDelete {
-                    Text("Downloads not played in \(autoDeleteDays) days will be automatically deleted to free up space.")
+                    Text(
+                        "Downloads not played in \(autoDeleteDays) days will be automatically deleted to free up space."
+                    )
                 } else {
                     Text("Enable to automatically remove old downloads that haven't been played recently.")
                 }
@@ -169,7 +175,7 @@ struct DownloadSettingsView: View {
     }
 }
 
-// MARK: - Stat Row
+// MARK: - StatRow
 
 struct StatRow: View {
     let label: String

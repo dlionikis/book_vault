@@ -30,7 +30,7 @@ class LibraryCacheManager: ObservableObject, LibraryCaching {
         var version: Int = 1
         var books: [LibraryBook]
         var lastSyncDate: Date
-        var userId: String  // Tied to user to avoid cross-account issues
+        var userId: String // Tied to user to avoid cross-account issues
     }
 
     // MARK: - Initialization
@@ -148,7 +148,8 @@ class LibraryCacheManager: ObservableObject, LibraryCaching {
     /// - Returns: Date of last sync, or nil if no cache exists
     func getLastSyncDate() -> Date? {
         guard let userId = getCurrentUserId(),
-              FileManager.default.fileExists(atPath: cacheFileURL.path) else {
+              FileManager.default.fileExists(atPath: cacheFileURL.path)
+        else {
             return nil
         }
 

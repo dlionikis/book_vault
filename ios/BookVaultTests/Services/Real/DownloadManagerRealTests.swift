@@ -9,7 +9,7 @@
 import XCTest
 @testable import BookVault
 
-// MARK: - Mock Storage Manager for Download Tests
+// MARK: - MockStorageManagerForDownloads
 
 @MainActor
 final class MockStorageManagerForDownloads: StorageManaging {
@@ -40,7 +40,7 @@ final class MockStorageManagerForDownloads: StorageManaging {
         FileManager.default.temporaryDirectory.appendingPathComponent("\(bookId).jpg")
     }
 
-    func saveAudioFile(from tempLocation: URL, bookId: String) throws -> URL {
+    func saveAudioFile(from _: URL, bookId: String) throws -> URL {
         let destURL = audioFilePath(for: bookId)
         savedAudioFiles[bookId] = destURL
         return destURL
@@ -55,11 +55,11 @@ final class MockStorageManagerForDownloads: StorageManaging {
     }
 
     func downloadedFileSize(for bookId: String) -> Int64? {
-        return metadataEntries[bookId]?.fileSize
+        metadataEntries[bookId]?.fileSize
     }
 
-    func downloadedFileSize(for bookId: String, extension fileExtension: String?) -> Int64? {
-        return metadataEntries[bookId]?.fileSize
+    func downloadedFileSize(for bookId: String, extension _: String?) -> Int64? {
+        metadataEntries[bookId]?.fileSize
     }
 
     func deleteDownload(bookId: String) throws {
@@ -91,12 +91,12 @@ final class MockStorageManagerForDownloads: StorageManaging {
         )
     }
 
-    func canDownload(fileSize: Int64) -> Bool {
-        return canDownloadResult
+    func canDownload(fileSize _: Int64) -> Bool {
+        canDownloadResult
     }
 
     func verifyDownload(bookId: String) -> Bool {
-        return downloadedBookIds.contains(bookId)
+        downloadedBookIds.contains(bookId)
     }
 
     func cleanupOrphanedFiles() {
@@ -104,7 +104,7 @@ final class MockStorageManagerForDownloads: StorageManaging {
     }
 }
 
-// MARK: - Mock Network Monitor for Download Tests
+// MARK: - MockNetworkMonitorForDownloads
 
 @MainActor
 final class MockNetworkMonitorForDownloads: NetworkMonitoring {
@@ -118,16 +118,15 @@ final class MockNetworkMonitorForDownloads: NetworkMonitoring {
     func refreshStatus() {}
     func restartMonitor() {}
 
-    func waitForConnection(timeout: TimeInterval) async -> Bool {
-        return isConnected
+    func waitForConnection(timeout _: TimeInterval) async -> Bool {
+        isConnected
     }
 }
 
-// MARK: - DownloadManager Real Tests
+// MARK: - DownloadManagerRealTests
 
 @MainActor
 final class DownloadManagerRealTests: XCTestCase {
-
     var sut: DownloadManager!
     var mockAPIClient: MockAPIClientForAuth!
     var mockStorageManager: MockStorageManagerForDownloads!
@@ -402,8 +401,8 @@ final class DownloadManagerRealTests: XCTestCase {
         let activeDownload = ActiveDownload(
             id: bookId,
             book: book,
-            bytesDownloaded: 5_000_000,  // 5 MB
-            totalBytes: 100_000_000,     // 100 MB
+            bytesDownloaded: 5_000_000, // 5 MB
+            totalBytes: 100_000_000, // 100 MB
             state: .downloading(progress: 0.05),
             task: nil
         )

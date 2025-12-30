@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: - APIError
+
 /// Errors that can occur during API operations
 enum APIError: LocalizedError {
     case invalidURL
@@ -20,29 +22,31 @@ enum APIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "Invalid URL"
-        case .networkError(let error):
-            return "Network error: \(error.localizedDescription)"
+            "Invalid URL"
+        case let .networkError(error):
+            "Network error: \(error.localizedDescription)"
         case .invalidResponse:
-            return "Invalid response from server"
-        case .decodingError(let error):
-            return "Failed to decode response: \(error.localizedDescription)"
-        case .serverError(let code, let message):
-            return "Server error (\(code)): \(message ?? "Unknown error")"
+            "Invalid response from server"
+        case let .decodingError(error):
+            "Failed to decode response: \(error.localizedDescription)"
+        case let .serverError(code, message):
+            "Server error (\(code)): \(message ?? "Unknown error")"
         case .unauthorized:
-            return "Unauthorized - please log in again"
+            "Unauthorized - please log in again"
         case .notFound:
-            return "Resource not found"
+            "Resource not found"
         }
     }
 }
+
+// MARK: - APIClient
 
 /// API client for Book Vault backend
 /// Uses generated models from OpenAPI specification
 class APIClient: APIClientProtocol {
     static let shared = APIClient()
 
-    let baseURL: URL  // Changed from private to allow SearchManager access
+    let baseURL: URL // Changed from private to allow SearchManager access
     private let session: URLSession
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
@@ -106,7 +110,10 @@ class APIClient: APIClientProtocol {
                 return date
             }
 
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string: \(dateString)")
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Cannot decode date string: \(dateString)"
+            )
         }
 
         // Configure JSON encoder
@@ -138,7 +145,7 @@ class APIClient: APIClientProtocol {
         }
 
         // Encode body if present
-        if let body = body {
+        if let body {
             request.httpBody = try encoder.encode(body)
         }
 
@@ -163,7 +170,7 @@ class APIClient: APIClientProtocol {
 
         // Handle HTTP error codes
         switch httpResponse.statusCode {
-        case 200...299:
+        case 200 ... 299:
             // Success - decode response
             do {
                 return try decoder.decode(T.self, from: data)
@@ -173,13 +180,13 @@ class APIClient: APIClientProtocol {
 
                 if let decodingError = error as? DecodingError {
                     switch decodingError {
-                    case .keyNotFound(let key, let context):
+                    case let .keyNotFound(key, context):
                         DebugLogger.error("Missing key: \(key.stringValue) | Context: \(context.debugDescription)")
-                    case .typeMismatch(let type, let context):
+                    case let .typeMismatch(type, context):
                         DebugLogger.error("Type mismatch: expected \(type) | Context: \(context.debugDescription)")
-                    case .valueNotFound(let type, let context):
+                    case let .valueNotFound(type, context):
                         DebugLogger.error("Value not found: \(type) | Context: \(context.debugDescription)")
-                    case .dataCorrupted(let context):
+                    case let .dataCorrupted(context):
                         DebugLogger.error("Data corrupted: \(context.debugDescription)")
                     @unknown default:
                         DebugLogger.error("Unknown decoding error")
@@ -261,10 +268,10 @@ class APIClient: APIClientProtocol {
         var components = URLComponents(string: "/api/books")!
         var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "page", value: "\(page)"),
-            URLQueryItem(name: "limit", value: "\(limit)")
+            URLQueryItem(name: "limit", value: "\(limit)"),
         ]
 
-        if let sortBy = sortBy {
+        if let sortBy {
             queryItems.append(URLQueryItem(name: "sortBy", value: sortBy))
         }
 
@@ -332,7 +339,10 @@ class APIClient: APIClientProtocol {
     }
 
     /// Set book completion status
-    func setProgressStatus(bookId: UUID, status: SetProgressStatusRequest.Status) async throws -> SetProgressStatus200Response {
+    func setProgressStatus(
+        bookId: UUID,
+        status: SetProgressStatusRequest.Status
+    ) async throws -> SetProgressStatus200Response {
         let requestBody = SetProgressStatusRequest(bookId: bookId, status: status)
         let request = try createRequest(
             path: "/api/progress",

@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - NarratorDetailView
+
 /// Detail view showing a narrator and all their books
 struct NarratorDetailView: View {
     let narratorId: String
@@ -17,7 +19,7 @@ struct NarratorDetailView: View {
     @State private var errorMessage: String?
 
     private let columns = [
-        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
+        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top),
     ]
 
     var body: some View {
@@ -150,7 +152,7 @@ struct NarratorDetailView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - NarratorDetailView_Previews
 
 struct NarratorDetailView_Previews: PreviewProvider {
     static var previews: some View {

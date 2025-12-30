@@ -6,13 +6,12 @@
 //  Phase 5: Offline Mode Tests
 //
 
-import XCTest
 import Combine
+import XCTest
 @testable import BookVault
 
 @MainActor
 final class SyncManagerTests: XCTestCase {
-
     var sut: MockSyncManager!
     var mockOfflineStore: MockOfflineProgressStore!
     var mockNetworkMonitor: MockNetworkMonitor!

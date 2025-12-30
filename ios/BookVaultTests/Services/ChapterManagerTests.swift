@@ -10,7 +10,6 @@ import XCTest
 
 @MainActor
 final class ChapterManagerTests: XCTestCase {
-
     var sut: ChapterManager!
     var mockAPIClient: MockAPIClient!
 
@@ -215,7 +214,7 @@ final class ChapterManagerTests: XCTestCase {
                 endTime: 900,
                 duration: 600,
                 index: 1
-            )
+            ),
         ]
         mockAPIClient.fetchBookChaptersResult = .success(chapters)
 

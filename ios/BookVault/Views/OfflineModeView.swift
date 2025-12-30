@@ -8,6 +8,8 @@
 
 import SwiftUI
 
+// MARK: - OfflineModeView
+
 /// Informational view shown in the "Offline" tab when device is offline
 /// Explains what features are available and unavailable
 struct OfflineModeView: View {
@@ -141,15 +143,15 @@ struct OfflineModeView: View {
 
         // First, restart the monitor to ensure fresh state
         networkMonitor.restartMonitor()
-        try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5 seconds for monitor to initialize
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds for monitor to initialize
 
         // Try up to 3 times with delays to allow WiFi to fully reconnect
-        for attempt in 1...3 {
+        for attempt in 1 ... 3 {
             DebugLogger.network("Attempt \(attempt): refreshing network status")
             networkMonitor.refreshStatus()
 
             // Small delay to let the status update propagate
-            try? await Task.sleep(nanoseconds: 300_000_000)  // 0.3 seconds
+            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
 
             if networkMonitor.isConnected {
                 DebugLogger.network("Connected on attempt \(attempt)! Switching to Catalog tab")
@@ -159,13 +161,15 @@ struct OfflineModeView: View {
 
             if attempt < 3 {
                 DebugLogger.network("Not connected yet, waiting before retry...")
-                try? await Task.sleep(nanoseconds: 700_000_000)  // 0.7 seconds
+                try? await Task.sleep(nanoseconds: 700_000_000) // 0.7 seconds
             }
         }
 
         DebugLogger.network("Still offline after 3 attempts")
     }
 }
+
+// MARK: - OfflineFeatureRow
 
 /// Row component for showing available offline features
 struct OfflineFeatureRow: View {

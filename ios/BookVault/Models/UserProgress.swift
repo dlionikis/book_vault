@@ -8,6 +8,8 @@
 
 import Foundation
 
+// MARK: - UserProgress
+
 /// User progress for a book
 struct UserProgress: Codable {
     let positionSeconds: Double
@@ -42,6 +44,8 @@ struct UserProgress: Codable {
     }
 }
 
+// MARK: - SaveProgressRequest
+
 /// Request body for saving progress
 struct SaveProgressRequest: Codable {
     let bookId: String
@@ -52,7 +56,7 @@ struct SaveProgressRequest: Codable {
         self.bookId = bookId
         self.positionSeconds = positionSeconds
 
-        if let timestamp = timestamp {
+        if let timestamp {
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
             self.timestamp = formatter.string(from: timestamp)
@@ -61,6 +65,8 @@ struct SaveProgressRequest: Codable {
         }
     }
 }
+
+// MARK: - SaveProgressResponse
 
 /// Response from saving progress
 struct SaveProgressResponse: Codable {

@@ -6,8 +6,10 @@
 //  Phase 4: Library UX Alignment
 //
 
-import SwiftUI
 import Combine
+import SwiftUI
+
+// MARK: - LibraryView
 
 struct LibraryView: View {
     @StateObject private var viewModel = LibraryViewModel()
@@ -17,13 +19,13 @@ struct LibraryView: View {
     @Binding var selectedTab: Tab
 
     private let columns = [
-        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
+        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top),
     ]
 
     var body: some View {
         NavigationView {
             ScrollView {
-                if viewModel.isLoading && viewModel.books.isEmpty {
+                if viewModel.isLoading, viewModel.books.isEmpty {
                     // Initial loading state
                     VStack(spacing: 12) {
                         ProgressView()
@@ -45,11 +47,13 @@ struct LibraryView: View {
                                 .font(.title2)
                                 .fontWeight(.semibold)
 
-                            Text("Connect to the internet to load your library for the first time. Once loaded, it will be available offline.")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 32)
+                            Text(
+                                "Connect to the internet to load your library for the first time. Once loaded, it will be available offline."
+                            )
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
 
                             if networkMonitor.isConnected {
                                 Button("Load Library") {
@@ -160,7 +164,7 @@ struct LibraryView: View {
                                 }
 
                                 // Load more indicator (only if pagination is enabled)
-                                if viewModel.shouldPaginate && viewModel.hasMorePages {
+                                if viewModel.shouldPaginate, viewModel.hasMorePages {
                                     ProgressView()
                                         .gridCellColumns(columns.count)
                                         .onAppear {
@@ -204,7 +208,7 @@ struct LibraryView: View {
     }
 }
 
-// MARK: - View Model
+// MARK: - LibraryViewModel
 
 @MainActor
 class LibraryViewModel: ObservableObject {
@@ -213,7 +217,7 @@ class LibraryViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var hasMorePages = false
     @Published var shouldPaginate = false
-    @Published var isOfflineNoCache = false  // Track if error is due to offline with no cache
+    @Published var isOfflineNoCache = false // Track if error is due to offline with no cache
 
     private let libraryManager = LibraryManager.shared
     private var totalBooks = 0
@@ -226,10 +230,10 @@ class LibraryViewModel: ObservableObject {
     init() {
         // Observe library changes and auto-reload when library is modified
         libraryManager.$libraryVersion
-            .dropFirst()  // Skip initial value
+            .dropFirst() // Skip initial value
             .receive(on: DispatchQueue.main)
             .sink { [weak self] newVersion in
-                guard let self = self else { return }
+                guard let self else { return }
                 // Only reload if version changed (prevents duplicate reloads)
                 if newVersion != self.lastKnownVersion {
                     self.lastKnownVersion = newVersion
@@ -283,7 +287,7 @@ class LibraryViewModel: ObservableObject {
     }
 
     func loadMoreBooks() async {
-        guard !isLoading && hasMorePages && shouldPaginate else { return }
+        guard !isLoading, hasMorePages, shouldPaginate else { return }
 
         isLoading = true
         currentPage += 1
@@ -297,7 +301,7 @@ class LibraryViewModel: ObservableObject {
             let endIndex = min(startIndex + pageSize, fetchedBooks.count)
 
             if startIndex < fetchedBooks.count {
-                let newBooks = Array(fetchedBooks[startIndex..<endIndex])
+                let newBooks = Array(fetchedBooks[startIndex ..< endIndex])
                 self.books.append(contentsOf: newBooks)
                 self.hasMorePages = endIndex < fetchedBooks.count
             } else {

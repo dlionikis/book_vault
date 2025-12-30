@@ -25,7 +25,8 @@ protocol APIClientProtocol {
     // Progress
     func fetchProgress(bookId: UUID) async throws -> GetProgress200Response
     func updateProgress(bookId: UUID, positionSeconds: Double) async throws -> UpdateProgress200Response
-    func setProgressStatus(bookId: UUID, status: SetProgressStatusRequest.Status) async throws -> SetProgressStatus200Response
+    func setProgressStatus(bookId: UUID, status: SetProgressStatusRequest.Status) async throws
+        -> SetProgressStatus200Response
 
     // Library
     func fetchLibrary() async throws -> GetLibrary200Response

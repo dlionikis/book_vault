@@ -6,8 +6,8 @@
 //  Handles AVPlayer authentication by intercepting resource loading requests
 //
 
-import Foundation
 import AVFoundation
+import Foundation
 
 /// AVAssetResourceLoaderDelegate that adds Authorization header to AVPlayer requests
 /// This is necessary because AVPlayer doesn't properly use headers from AVURLAsset options
@@ -27,8 +27,10 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
         super.init()
     }
 
-    func resourceLoader(_ resourceLoader: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
-
+    func resourceLoader(
+        _: AVAssetResourceLoader,
+        shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest
+    ) -> Bool {
         DebugLogger.verbose("Resource loader: Request received")
 
         guard let url = loadingRequest.request.url else {
@@ -76,9 +78,9 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
         DebugLogger.verbose("Resource loader: Starting request...")
 
         let task = session.dataTask(with: request) { [weak self] data, response, error in
-            guard let self = self else { return }
+            guard let self else { return }
 
-            if let error = error {
+            if let error {
                 DebugLogger.error("Resource loader: Request failed", error: error)
                 loadingRequest.finishLoading(with: error)
                 return
@@ -97,9 +99,9 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
                     // Format: "bytes 0-1/123456789"
                     // Try both "Content-Range" and lowercase "content-range"
                     let contentRange = response.allHeaderFields["Content-Range"] as? String ??
-                                     response.allHeaderFields["content-range"] as? String
+                        response.allHeaderFields["content-range"] as? String
 
-                    if let contentRange = contentRange {
+                    if let contentRange {
                         let components = contentRange.split(separator: "/")
                         if components.count == 2, let totalSize = Int64(components[1]) {
                             contentInfoRequest.contentLength = totalSize
@@ -113,7 +115,7 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
                 }
             }
 
-            if let data = data {
+            if let data {
                 loadingRequest.dataRequest?.respond(with: data)
             }
 
@@ -130,7 +132,7 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
         return true
     }
 
-    func resourceLoader(_ resourceLoader: AVAssetResourceLoader, didCancel loadingRequest: AVAssetResourceLoadingRequest) {
+    func resourceLoader(_: AVAssetResourceLoader, didCancel loadingRequest: AVAssetResourceLoadingRequest) {
         guard let url = loadingRequest.request.url else { return }
 
         if let task = loadingRequests[url.absoluteString] {

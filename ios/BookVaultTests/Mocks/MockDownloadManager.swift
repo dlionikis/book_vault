@@ -6,8 +6,8 @@
 //  Phase 4: Download Tests
 //
 
-import Foundation
 import Combine
+import Foundation
 @testable import BookVault
 
 /// Mock download manager for testing
@@ -60,7 +60,8 @@ class MockDownloadManager: ObservableObject, DownloadManaging {
     func isDownloading(bookId: String) -> Bool {
         guard let active = activeDownloads[bookId] else { return false }
         switch active.state {
-        case .waiting, .downloading:
+        case .waiting,
+             .downloading:
             return true
         default:
             return false
@@ -124,7 +125,11 @@ class MockDownloadManager: ObservableObject, DownloadManaging {
         deleteDownloadCalls.append(bookId)
 
         if deleteShouldFail {
-            throw NSError(domain: "MockDownloadManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Delete failed"])
+            throw NSError(
+                domain: "MockDownloadManager",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Delete failed"]
+            )
         }
 
         activeDownloads.removeValue(forKey: bookId)

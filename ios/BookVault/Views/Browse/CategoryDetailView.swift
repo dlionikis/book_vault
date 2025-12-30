@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - CategoryDetailView
+
 /// Detail view showing a category and all books in that category
 struct CategoryDetailView: View {
     let categoryId: String
@@ -17,7 +19,7 @@ struct CategoryDetailView: View {
     @State private var errorMessage: String?
 
     private let columns = [
-        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
+        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top),
     ]
 
     var body: some View {
@@ -150,7 +152,7 @@ struct CategoryDetailView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - CategoryDetailView_Previews
 
 struct CategoryDetailView_Previews: PreviewProvider {
     static var previews: some View {

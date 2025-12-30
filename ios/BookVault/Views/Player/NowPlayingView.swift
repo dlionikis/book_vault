@@ -8,6 +8,8 @@
 
 import SwiftUI
 
+// MARK: - NowPlayingView
+
 struct NowPlayingView: View {
     @StateObject private var audioPlayer = AudioPlayerManager.shared
 
@@ -24,7 +26,7 @@ struct NowPlayingView: View {
                 LinearGradient(
                     colors: [
                         Color.blue.opacity(0.3),
-                        Color.purple.opacity(0.3)
+                        Color.purple.opacity(0.3),
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -46,7 +48,7 @@ struct NowPlayingView: View {
                                     .overlay {
                                         ProgressView()
                                     }
-                            case .success(let image):
+                            case let .success(image):
                                 image
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
@@ -77,7 +79,7 @@ struct NowPlayingView: View {
                                 .padding(.horizontal)
 
                             if !book.authors.isEmpty {
-                                Text(book.authors.map { $0.name }.joined(separator: ", "))
+                                Text(book.authors.map(\.name).joined(separator: ", "))
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)
@@ -188,8 +190,10 @@ struct NowPlayingView: View {
                                         audioPlayer.seek(to: currentChapter.startTime)
                                     }
                                     // Otherwise, go to previous chapter
-                                    else if let currentIndex = audioPlayer.chapters.firstIndex(where: { $0.id == currentChapter.id }),
-                                            currentIndex > 0 {
+                                    else if let currentIndex = audioPlayer.chapters
+                                        .firstIndex(where: { $0.id == currentChapter.id }),
+                                        currentIndex > 0
+                                    {
                                         audioPlayer.skipToChapter(audioPlayer.chapters[currentIndex - 1])
                                     }
                                     // If at first chapter and within first 30s, just go to start
@@ -200,8 +204,10 @@ struct NowPlayingView: View {
                             },
                             onNextChapter: {
                                 if let currentChapter = audioPlayer.getCurrentChapter(),
-                                   let currentIndex = audioPlayer.chapters.firstIndex(where: { $0.id == currentChapter.id }),
-                                   currentIndex < audioPlayer.chapters.count - 1 {
+                                   let currentIndex = audioPlayer.chapters
+                                   .firstIndex(where: { $0.id == currentChapter.id }),
+                                   currentIndex < audioPlayer.chapters.count - 1
+                                {
                                     audioPlayer.skipToChapter(audioPlayer.chapters[currentIndex + 1])
                                 }
                             }
@@ -221,7 +227,7 @@ struct NowPlayingView: View {
                                         get: { audioPlayer.volume },
                                         set: { audioPlayer.setVolume($0) }
                                     ),
-                                    in: 0...1
+                                    in: 0 ... 1
                                 )
                             }
 
@@ -305,18 +311,18 @@ struct NowPlayingView: View {
 
     private func volumeIcon(for volume: Float) -> String {
         if volume == 0 {
-            return "speaker.fill"
+            "speaker.fill"
         } else if volume < 0.33 {
-            return "speaker.wave.1.fill"
+            "speaker.wave.1.fill"
         } else if volume < 0.66 {
-            return "speaker.wave.2.fill"
+            "speaker.wave.2.fill"
         } else {
-            return "speaker.wave.3.fill"
+            "speaker.wave.3.fill"
         }
     }
 }
 
-// MARK: - Progress Bar View
+// MARK: - ProgressBarView
 
 struct ProgressBarView: View {
     let currentTime: TimeInterval
@@ -370,7 +376,7 @@ struct ProgressBarView: View {
     }
 }
 
-// MARK: - Playback Controls View
+// MARK: - PlaybackControlsView
 
 struct PlaybackControlsView: View {
     let isPlaying: Bool
@@ -383,16 +389,18 @@ struct PlaybackControlsView: View {
     let onNextChapter: () -> Void
 
     var canGoPreviousChapter: Bool {
-        guard let currentChapterId = currentChapterId,
-              let currentIndex = chapters.firstIndex(where: { $0.id == currentChapterId }) else {
+        guard let currentChapterId,
+              let currentIndex = chapters.firstIndex(where: { $0.id == currentChapterId })
+        else {
             return false
         }
         return currentIndex > 0
     }
 
     var canGoNextChapter: Bool {
-        guard let currentChapterId = currentChapterId,
-              let currentIndex = chapters.firstIndex(where: { $0.id == currentChapterId }) else {
+        guard let currentChapterId,
+              let currentIndex = chapters.firstIndex(where: { $0.id == currentChapterId })
+        else {
             return false
         }
         return currentIndex < chapters.count - 1
@@ -448,7 +456,7 @@ struct PlaybackControlsView: View {
     }
 }
 
-// MARK: - Playback Speed Picker
+// MARK: - PlaybackSpeedPicker
 
 struct PlaybackSpeedPicker: View {
     let currentRate: Float

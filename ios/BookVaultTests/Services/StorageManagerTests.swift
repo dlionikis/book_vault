@@ -10,7 +10,6 @@ import XCTest
 
 @MainActor
 final class StorageManagerTests: XCTestCase {
-
     var sut: MockStorageManager!
     var testDirectory: URL!
 
@@ -34,7 +33,7 @@ final class StorageManagerTests: XCTestCase {
 
     func testAvailableStorageReturnsConfiguredValue() {
         // Given: A mock with configured available space
-        sut._availableDeviceSpace = 20_000_000_000 // 20GB
+        sut.configurableAvailableSpace = 20_000_000_000 // 20GB
 
         // Then: Should return the configured value
         XCTAssertEqual(sut.availableDeviceSpace, 20_000_000_000)
@@ -42,8 +41,8 @@ final class StorageManagerTests: XCTestCase {
 
     func testHasSpaceForDownloadReturnsTrueWhenSpaceAvailable() {
         // Given: Enough storage available
-        sut._storageLimit = 5_000_000_000 // 5GB
-        sut._availableDeviceSpace = 10_000_000_000 // 10GB
+        sut.configurableStorageLimit = 5_000_000_000 // 5GB
+        sut.configurableAvailableSpace = 10_000_000_000 // 10GB
         sut.totalSize = 0
 
         // When: Checking if can download 1GB file
@@ -55,7 +54,7 @@ final class StorageManagerTests: XCTestCase {
 
     func testHasSpaceForDownloadReturnsFalseWhenExceedsLimit() {
         // Given: Limited storage
-        sut._storageLimit = 1_000_000_000 // 1GB
+        sut.configurableStorageLimit = 1_000_000_000 // 1GB
         sut.totalSize = 500_000_000 // 500MB already used
 
         // When: Trying to download 600MB file (would exceed 1GB limit)
@@ -67,7 +66,7 @@ final class StorageManagerTests: XCTestCase {
 
     func testHasSpaceForDownloadReturnsFalseWhenDeviceSpaceLow() {
         // Given: Limited device space
-        sut._availableDeviceSpace = 400_000_000 // 400MB (less than 500MB buffer)
+        sut.configurableAvailableSpace = 400_000_000 // 400MB (less than 500MB buffer)
 
         // When: Trying to download any file
         let result = sut.canDownload(fileSize: 100_000_000)
@@ -209,7 +208,7 @@ final class StorageManagerTests: XCTestCase {
 
     func testStorageUsagePercentageCalculation() {
         // Given: Known storage values
-        sut._storageLimit = 10_000_000_000 // 10GB
+        sut.configurableStorageLimit = 10_000_000_000 // 10GB
         sut.totalSize = 2_500_000_000 // 2.5GB
 
         // When: Calculating usage percentage
@@ -221,7 +220,7 @@ final class StorageManagerTests: XCTestCase {
 
     func testIsNearStorageLimitReturnsTrueAbove90Percent() {
         // Given: 95% usage
-        sut._storageLimit = 10_000_000_000
+        sut.configurableStorageLimit = 10_000_000_000
         sut.totalSize = 9_500_000_000
 
         // Then: Should be near limit
@@ -230,7 +229,7 @@ final class StorageManagerTests: XCTestCase {
 
     func testIsNearStorageLimitReturnsFalseBelow90Percent() {
         // Given: 50% usage
-        sut._storageLimit = 10_000_000_000
+        sut.configurableStorageLimit = 10_000_000_000
         sut.totalSize = 5_000_000_000
 
         // Then: Should not be near limit

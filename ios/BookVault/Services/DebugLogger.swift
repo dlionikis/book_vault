@@ -8,6 +8,8 @@
 import Foundation
 import OSLog
 
+// MARK: - DebugLogger
+
 /// Centralized debug logging utility that automatically respects DEBUG/RELEASE builds
 /// Eliminates the need to scatter `#if DEBUG` throughout the codebase
 ///
@@ -25,15 +27,14 @@ import OSLog
 /// DebugLogger.verbose("Detailed debug info: \(largeObject)")
 /// ```
 class DebugLogger {
-
     // MARK: - Configuration
 
     /// Global enable/disable flag - automatically set based on build configuration
     private static let isEnabled: Bool = {
         #if DEBUG
-        return true
+            return true
         #else
-        return false
+            return false
         #endif
     }()
 
@@ -140,7 +141,7 @@ class DebugLogger {
         line: Int = #line
     ) {
         var fullMessage = message
-        if let error = error {
+        if let error {
             fullMessage += " | Error: \(error.localizedDescription)"
         }
         log(fullMessage, category: .error, file: file, function: function, line: line)
@@ -195,7 +196,7 @@ class DebugLogger {
         function: String = #function,
         line: Int = #line
     ) {
-        guard isEnabled && verboseLoggingEnabled else { return }
+        guard isEnabled, verboseLoggingEnabled else { return }
         log(message, category: category, file: file, function: function, line: line)
     }
 
@@ -211,7 +212,7 @@ class DebugLogger {
         line: Int = #line
     ) {
         var message = "API Request: \(method) \(path)"
-        if let body = body {
+        if let body {
             message += " | Body: \(body)"
         }
         network(message, file: file, function: function, line: line)
@@ -227,23 +228,21 @@ class DebugLogger {
         line: Int = #line
     ) {
         var message = "API Response: \(path) | Status: \(statusCode)"
-        if let body = body {
+        if let body {
             message += " | Body: \(body)"
         }
 
         // Use different categories based on status code
-        let category: Category = {
-            switch statusCode {
-            case 200...299:
-                return .success
-            case 400...499:
-                return .warning
-            case 500...599:
-                return .error
-            default:
-                return .network
-            }
-        }()
+        let category: Category = switch statusCode {
+        case 200 ... 299:
+            .success
+        case 400 ... 499:
+            .warning
+        case 500 ... 599:
+            .error
+        default:
+            .network
+        }
 
         log(message, category: category, file: file, function: function, line: line)
     }
@@ -266,7 +265,12 @@ class DebugLogger {
         let result = try block()
         let elapsed = (CFAbsoluteTimeGetCurrent() - start) * 1000 // Convert to milliseconds
 
-        performance("\(label) completed in \(String(format: "%.2f", elapsed))ms", file: file, function: function, line: line)
+        performance(
+            "\(label) completed in \(String(format: "%.2f", elapsed))ms",
+            file: file,
+            function: function,
+            line: line
+        )
 
         return result
     }
@@ -285,14 +289,19 @@ class DebugLogger {
         let result = try await block()
         let elapsed = (CFAbsoluteTimeGetCurrent() - start) * 1000 // Convert to milliseconds
 
-        performance("\(label) completed in \(String(format: "%.2f", elapsed))ms", file: file, function: function, line: line)
+        performance(
+            "\(label) completed in \(String(format: "%.2f", elapsed))ms",
+            file: file,
+            function: function,
+            line: line
+        )
 
         return result
     }
 
     /// Log an object's description (only in debug builds)
-    static func dump<T>(
-        _ object: T,
+    static func dump(
+        _ object: some Any,
         label: String? = nil,
         file: String = #file,
         function: String = #function,
@@ -311,14 +320,14 @@ class DebugLogger {
     /// - Parameter block: Code to execute only in debug builds
     static func debugOnly(_ block: () -> Void) {
         #if DEBUG
-        block()
+            block()
         #endif
     }
 
     /// Execute a block only in debug builds (async version)
     static func debugOnly(_ block: () async -> Void) async {
         #if DEBUG
-        await block()
+            await block()
         #endif
     }
 
@@ -336,7 +345,6 @@ class DebugLogger {
 
 /// Extended functionality using OSLog for better integration with Xcode Console and Instruments
 extension DebugLogger {
-
     /// Log levels for OSLog integration
     enum LogLevel {
         case debug
@@ -347,10 +355,10 @@ extension DebugLogger {
         @available(iOS 14.0, *)
         var osLogType: OSLogType {
             switch self {
-            case .debug: return .debug
-            case .info: return .info
-            case .warning: return .default
-            case .error: return .error
+            case .debug: .debug
+            case .info: .info
+            case .warning: .default
+            case .error: .error
             }
         }
     }

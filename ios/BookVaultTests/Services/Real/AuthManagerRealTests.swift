@@ -9,7 +9,7 @@
 import XCTest
 @testable import BookVault
 
-// MARK: - Mock Keychain for Testing
+// MARK: - MockKeychain
 
 final class MockKeychain: KeychainStoring {
     var storage: [String: String] = [:]
@@ -37,69 +37,78 @@ final class MockKeychain: KeychainStoring {
     }
 }
 
-// MARK: - Mock API Client for AuthManager Tests
+// MARK: - MockAPIClientForAuth
 
 final class MockAPIClientForAuth: APIClientProtocol {
     var accessToken: String?
-    var baseURL: URL = URL(string: "http://localhost:3000")!
+    var baseURL: URL = .init(string: "http://localhost:3000")!
 
-    var loginResult: Result<LoginMobile200Response, Error> = .failure(APIError.networkError(NSError(domain: "", code: -1)))
-    var refreshResult: Result<RefreshToken200Response, Error> = .failure(APIError.networkError(NSError(domain: "", code: -1)))
+    var loginResult: Result<LoginMobile200Response, Error> = .failure(APIError.networkError(NSError(
+        domain: "",
+        code: -1
+    )))
+    var refreshResult: Result<RefreshToken200Response, Error> = .failure(APIError.networkError(NSError(
+        domain: "",
+        code: -1
+    )))
     var logoutResult: Result<Void, Error> = .success(())
 
     var loginCallCount = 0
     var refreshCallCount = 0
     var logoutCallCount = 0
 
-    func login(email: String, password: String) async throws -> LoginMobile200Response {
+    func login(email _: String, password _: String) async throws -> LoginMobile200Response {
         loginCallCount += 1
         switch loginResult {
-        case .success(let response):
+        case let .success(response):
             return response
-        case .failure(let error):
+        case let .failure(error):
             throw error
         }
     }
 
-    func refreshToken(refreshToken: UUID) async throws -> RefreshToken200Response {
+    func refreshToken(refreshToken _: UUID) async throws -> RefreshToken200Response {
         refreshCallCount += 1
         switch refreshResult {
-        case .success(let response):
+        case let .success(response):
             return response
-        case .failure(let error):
+        case let .failure(error):
             throw error
         }
     }
 
-    func logout(refreshToken: UUID) async throws {
+    func logout(refreshToken _: UUID) async throws {
         logoutCallCount += 1
-        if case .failure(let error) = logoutResult {
+        if case let .failure(error) = logoutResult {
             throw error
         }
     }
 
     // Unused methods for this test
-    func fetchBooks(page: Int, limit: Int, sortBy: String?) async throws -> ListBooks200Response {
+    func fetchBooks(page _: Int, limit _: Int, sortBy _: String?) async throws -> ListBooks200Response {
         fatalError("Not implemented for auth tests")
     }
 
-    func fetchBook(id: UUID) async throws -> Book {
+    func fetchBook(id _: UUID) async throws -> Book {
         fatalError("Not implemented for auth tests")
     }
 
-    func fetchBookChapters(bookId: UUID) async throws -> [Chapter] {
+    func fetchBookChapters(bookId _: UUID) async throws -> [Chapter] {
         fatalError("Not implemented for auth tests")
     }
 
-    func fetchProgress(bookId: UUID) async throws -> GetProgress200Response {
+    func fetchProgress(bookId _: UUID) async throws -> GetProgress200Response {
         fatalError("Not implemented for auth tests")
     }
 
-    func updateProgress(bookId: UUID, positionSeconds: Double) async throws -> UpdateProgress200Response {
+    func updateProgress(bookId _: UUID, positionSeconds _: Double) async throws -> UpdateProgress200Response {
         fatalError("Not implemented for auth tests")
     }
 
-    func setProgressStatus(bookId: UUID, status: SetProgressStatusRequest.Status) async throws -> SetProgressStatus200Response {
+    func setProgressStatus(
+        bookId _: UUID,
+        status _: SetProgressStatusRequest.Status
+    ) async throws -> SetProgressStatus200Response {
         fatalError("Not implemented for auth tests")
     }
 
@@ -107,20 +116,19 @@ final class MockAPIClientForAuth: APIClientProtocol {
         fatalError("Not implemented for auth tests")
     }
 
-    func addToLibrary(bookId: UUID) async throws -> AddToLibrary201Response {
+    func addToLibrary(bookId _: UUID) async throws -> AddToLibrary201Response {
         fatalError("Not implemented for auth tests")
     }
 
-    func removeFromLibrary(bookId: UUID) async throws {
+    func removeFromLibrary(bookId _: UUID) async throws {
         fatalError("Not implemented for auth tests")
     }
 }
 
-// MARK: - AuthManager Real Tests
+// MARK: - AuthManagerRealTests
 
 @MainActor
 final class AuthManagerRealTests: XCTestCase {
-
     var sut: AuthManager!
     var mockAPIClient: MockAPIClientForAuth!
     var mockKeychain: MockKeychain!
@@ -190,7 +198,11 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testLoginNetworkError() async {
         // Given
-        let networkError = NSError(domain: "Network", code: -1009, userInfo: [NSLocalizedDescriptionKey: "No internet connection"])
+        let networkError = NSError(
+            domain: "Network",
+            code: -1009,
+            userInfo: [NSLocalizedDescriptionKey: "No internet connection"]
+        )
         mockAPIClient.loginResult = .failure(APIError.networkError(networkError))
 
         // When

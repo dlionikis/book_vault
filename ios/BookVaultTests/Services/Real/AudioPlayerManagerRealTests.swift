@@ -9,7 +9,7 @@
 import XCTest
 @testable import BookVault
 
-// MARK: - Mock Progress Manager for Audio Tests
+// MARK: - MockProgressManagerForAudio
 
 @MainActor
 final class MockProgressManagerForAudio: ProgressManaging {
@@ -36,7 +36,11 @@ final class MockProgressManagerForAudio: ProgressManaging {
     }
 
     @discardableResult
-    func saveProgress(for bookId: String, positionSeconds: Double, timestamp: Date?) async throws -> SaveProgressResponse {
+    func saveProgress(
+        for bookId: String,
+        positionSeconds: Double,
+        timestamp _: Date?
+    ) async throws -> SaveProgressResponse {
         saveCallCount += 1
         if shouldThrowOnSave {
             throw APIError.networkError(NSError(domain: "", code: -1))
@@ -45,16 +49,16 @@ final class MockProgressManagerForAudio: ProgressManaging {
         return SaveProgressResponse(positionSeconds: positionSeconds, completed: false, lastPlayed: nil, updated: true)
     }
 
-    func markCompleted(bookId: String) async throws {
+    func markCompleted(bookId _: String) async throws {
         // No-op for audio tests
     }
 
-    func resetProgress(bookId: String) async throws {
+    func resetProgress(bookId _: String) async throws {
         // No-op for audio tests
     }
 }
 
-// MARK: - Mock Download Manager for Audio Tests
+// MARK: - MockDownloadManagerForAudio
 
 @MainActor
 final class MockDownloadManagerForAudio: DownloadManaging {
@@ -63,40 +67,39 @@ final class MockDownloadManagerForAudio: DownloadManaging {
 
     var isDownloadingBookIds: Set<String> = []
 
-    func downloadState(for bookId: String) -> DownloadState {
-        return .notDownloaded
+    func downloadState(for _: String) -> DownloadState {
+        .notDownloaded
     }
 
     func isDownloading(bookId: String) -> Bool {
-        return isDownloadingBookIds.contains(bookId)
+        isDownloadingBookIds.contains(bookId)
     }
 
-    func startDownload(book: Book) async throws {
+    func startDownload(book _: Book) async throws {
         // No-op for audio tests
     }
 
-    func cancelDownload(bookId: String) {
+    func cancelDownload(bookId _: String) {
         // No-op for audio tests
     }
 
-    func pauseDownload(bookId: String) {
+    func pauseDownload(bookId _: String) {
         // No-op for audio tests
     }
 
-    func resumeDownload(book: Book) async throws {
+    func resumeDownload(book _: Book) async throws {
         // No-op for audio tests
     }
 
-    func deleteDownload(bookId: String) throws {
+    func deleteDownload(bookId _: String) throws {
         // No-op for audio tests
     }
 }
 
-// MARK: - AudioPlayerManager Real Tests
+// MARK: - AudioPlayerManagerRealTests
 
 @MainActor
 final class AudioPlayerManagerRealTests: XCTestCase {
-
     var sut: AudioPlayerManager!
     var mockProgressManager: MockProgressManagerForAudio!
     var mockDownloadManager: MockDownloadManagerForAudio!
@@ -111,7 +114,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
             progressManager: mockProgressManager,
             downloadManager: mockDownloadManager,
             storageManager: mockStorageManager,
-            skipAudioSetup: true  // Skip AVAudioSession setup for unit tests
+            skipAudioSetup: true // Skip AVAudioSession setup for unit tests
         )
 
         // Mock auth token provider
@@ -177,10 +180,10 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         let chapters = [
             TestFixtures.makeChapter(title: "Chapter 1", startTime: 0, endTime: 100, duration: 100, index: 0),
             TestFixtures.makeChapter(title: "Chapter 2", startTime: 100, endTime: 200, duration: 100, index: 1),
-            TestFixtures.makeChapter(title: "Chapter 3", startTime: 200, endTime: 300, duration: 100, index: 2)
+            TestFixtures.makeChapter(title: "Chapter 3", startTime: 200, endTime: 300, duration: 100, index: 2),
         ]
         sut.updateChapters(chapters)
-        sut.currentTime = 150  // Middle of Chapter 2
+        sut.currentTime = 150 // Middle of Chapter 2
 
         // When
         let currentChapter = sut.getCurrentChapter()
@@ -193,10 +196,10 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         // Given
         let chapters = [
             TestFixtures.makeChapter(title: "Chapter 1", startTime: 0, endTime: 100, duration: 100, index: 0),
-            TestFixtures.makeChapter(title: "Chapter 2", startTime: 100, endTime: 200, duration: 100, index: 1)
+            TestFixtures.makeChapter(title: "Chapter 2", startTime: 100, endTime: 200, duration: 100, index: 1),
         ]
         sut.updateChapters(chapters)
-        sut.currentTime = 100  // Exactly at boundary
+        sut.currentTime = 100 // Exactly at boundary
 
         // When
         let currentChapter = sut.getCurrentChapter()
@@ -209,7 +212,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         // Given
         let chapters = [
             TestFixtures.makeChapter(title: "Intro", startTime: 0, endTime: 60, duration: 60, index: 0),
-            TestFixtures.makeChapter(title: "Main", startTime: 60, endTime: 300, duration: 240, index: 1)
+            TestFixtures.makeChapter(title: "Main", startTime: 60, endTime: 300, duration: 240, index: 1),
         ]
 
         // When
@@ -223,24 +226,24 @@ final class AudioPlayerManagerRealTests: XCTestCase {
 
     func testUpdateChaptersUpdatesCurrentChapterId() {
         // Given
-        sut.currentTime = 75  // Set time before updating chapters
+        sut.currentTime = 75 // Set time before updating chapters
 
         let chapters = [
             TestFixtures.makeChapter(title: "Intro", startTime: 0, endTime: 60, duration: 60, index: 0),
-            TestFixtures.makeChapter(title: "Main", startTime: 60, endTime: 300, duration: 240, index: 1)
+            TestFixtures.makeChapter(title: "Main", startTime: 60, endTime: 300, duration: 240, index: 1),
         ]
 
         // When
         sut.updateChapters(chapters)
 
         // Then - should detect current chapter
-        XCTAssertEqual(sut.currentChapterId, chapters[1].id)  // Should be "Main"
+        XCTAssertEqual(sut.currentChapterId, chapters[1].id) // Should be "Main"
     }
 
     func testClearChapters() {
         // Given
         let chapters = [
-            TestFixtures.makeChapter(title: "Chapter 1", startTime: 0, endTime: 100, duration: 100, index: 0)
+            TestFixtures.makeChapter(title: "Chapter 1", startTime: 0, endTime: 100, duration: 100, index: 0),
         ]
         sut.updateChapters(chapters)
         sut.currentTime = 50
@@ -301,7 +304,13 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         sut.currentTime = 150
         sut.duration = 300
         sut.isPlayingOffline = true
-        sut.updateChapters([TestFixtures.makeChapter(title: "Test", startTime: 0, endTime: 300, duration: 300, index: 0)])
+        sut.updateChapters([TestFixtures.makeChapter(
+            title: "Test",
+            startTime: 0,
+            endTime: 300,
+            duration: 300,
+            index: 0
+        )])
 
         // When
         sut.stop()

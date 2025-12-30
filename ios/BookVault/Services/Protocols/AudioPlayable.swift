@@ -6,9 +6,11 @@
 //  Enables testing AudioPlayerManager without real AVPlayer.
 //
 
-import Foundation
 import AVFoundation
 import Combine
+import Foundation
+
+// MARK: - AudioPlayable
 
 /// Protocol for audio player operations to enable testing
 /// Wraps AVPlayer functionality for dependency injection
@@ -69,6 +71,8 @@ protocol AudioPlayable: AnyObject {
     /// - Parameter observer: Observer token from addPeriodicTimeObserver
     func removeTimeObserver(_ observer: Any)
 }
+
+// MARK: - AVPlayerWrapper
 
 /// Wrapper around AVPlayer that conforms to AudioPlayable
 /// Provides real AVPlayer functionality for production

@@ -9,6 +9,8 @@
 import Foundation
 import Network
 
+// MARK: - ConnectionType
+
 /// Connection type enumeration
 enum ConnectionType: String {
     case wifi = "WiFi"
@@ -16,6 +18,8 @@ enum ConnectionType: String {
     case ethernet = "Ethernet"
     case unknown = "Unknown"
 }
+
+// MARK: - NetworkMonitor
 
 /// Monitors network connectivity for WiFi-only downloads
 @MainActor
@@ -25,7 +29,7 @@ class NetworkMonitor: ObservableObject, NetworkMonitoring {
     // MARK: - Published Properties
 
     @Published var isConnected = false
-    @Published var isExpensive = false  // Cellular connections are "expensive"
+    @Published var isExpensive = false // Cellular connections are "expensive"
     @Published var connectionType: ConnectionType = .unknown
 
     // MARK: - Private Properties
@@ -54,7 +58,10 @@ class NetworkMonitor: ObservableObject, NetworkMonitoring {
         // Capture self strongly in the handler since NetworkMonitor is a singleton
         // and we want it to stay alive for the app's lifetime
         newMonitor.pathUpdateHandler = { path in
-            DebugLogger.network("NWPathMonitor callback received - status: \(path.status), interfaces: \(path.availableInterfaces.map { $0.type })")
+            DebugLogger
+                .network(
+                    "NWPathMonitor callback received - status: \(path.status), interfaces: \(path.availableInterfaces.map(\.type))"
+                )
             Task { @MainActor in
                 NetworkMonitor.shared.handlePathUpdate(path)
             }
@@ -73,7 +80,10 @@ class NetworkMonitor: ObservableObject, NetworkMonitoring {
         let wasConnected = isConnected
         let newConnected = path.status == .satisfied
 
-        DebugLogger.network("handlePathUpdate - wasConnected: \(wasConnected), newConnected: \(newConnected), status: \(path.status)")
+        DebugLogger
+            .network(
+                "handlePathUpdate - wasConnected: \(wasConnected), newConnected: \(newConnected), status: \(path.status)"
+            )
 
         isConnected = newConnected
         isExpensive = path.isExpensive
@@ -108,13 +118,16 @@ class NetworkMonitor: ObservableObject, NetworkMonitoring {
     /// Force a refresh of network status by checking the current path
     /// Call this when user taps "Retry Connection" button
     func refreshStatus() {
-        guard let monitor = monitor else {
+        guard let monitor else {
             DebugLogger.network("refreshStatus called but monitor is nil - recreating")
             setupMonitor()
             return
         }
         let currentPath = monitor.currentPath
-        DebugLogger.network("refreshStatus - manually checking currentPath: \(currentPath.status), interfaces: \(currentPath.availableInterfaces.map { $0.type })")
+        DebugLogger
+            .network(
+                "refreshStatus - manually checking currentPath: \(currentPath.status), interfaces: \(currentPath.availableInterfaces.map(\.type))"
+            )
         handlePathUpdate(currentPath)
     }
 
@@ -152,7 +165,7 @@ class NetworkMonitor: ObservableObject, NetworkMonitoring {
 
         let wifiOnly = UserDefaults.standard.bool(forKey: "downloadOnlyOnWiFi")
 
-        if wifiOnly && connectionType != .wifi {
+        if wifiOnly, connectionType != .wifi {
             return "Downloads require WiFi (change in Settings)"
         }
 
@@ -168,7 +181,7 @@ class NetworkMonitor: ObservableObject, NetworkMonitoring {
             if isConnected {
                 return true
             }
-            try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5 seconds
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
         }
 
         return false
@@ -177,39 +190,39 @@ class NetworkMonitor: ObservableObject, NetworkMonitoring {
     // MARK: - Testing Support
 
     #if DEBUG
-    /// Simulate a network state change for testing purposes
-    /// - Parameters:
-    ///   - connected: Whether the network is connected
-    ///   - expensive: Whether the connection is expensive (e.g., cellular)
-    ///   - type: The type of connection
-    /// - Note: This method is only available in DEBUG builds for testing
-    func simulateNetworkState(connected: Bool, expensive: Bool = false, type: ConnectionType = .wifi) {
-        DebugLogger.network("Simulating network state - connected: \(connected), expensive: \(expensive), type: \(type)")
-        self.isConnected = connected
-        self.isExpensive = expensive
-        self.connectionType = type
-    }
+        /// Simulate a network state change for testing purposes
+        /// - Parameters:
+        ///   - connected: Whether the network is connected
+        ///   - expensive: Whether the connection is expensive (e.g., cellular)
+        ///   - type: The type of connection
+        /// - Note: This method is only available in DEBUG builds for testing
+        func simulateNetworkState(connected: Bool, expensive: Bool = false, type: ConnectionType = .wifi) {
+            DebugLogger
+                .network("Simulating network state - connected: \(connected), expensive: \(expensive), type: \(type)")
+            self.isConnected = connected
+            self.isExpensive = expensive
+            self.connectionType = type
+        }
 
-    /// Create a testable instance that doesn't start the real NWPathMonitor
-    /// - Parameter userDefaults: UserDefaults to use for WiFi-only setting
-    /// - Returns: A NetworkMonitor instance suitable for testing
-    static func createForTesting(userDefaults: UserDefaults = .standard) -> NetworkMonitor {
-        // Create instance without starting real monitor
-        let instance = NetworkMonitor(forTesting: true)
-        return instance
-    }
+        /// Create a testable instance that doesn't start the real NWPathMonitor
+        /// - Parameter userDefaults: UserDefaults to use for WiFi-only setting
+        /// - Returns: A NetworkMonitor instance suitable for testing
+        static func createForTesting(userDefaults _: UserDefaults = .standard) -> NetworkMonitor {
+            // Create instance without starting real monitor
+            let instance = NetworkMonitor(forTesting: true)
+            return instance
+        }
 
-    /// Private testing initializer that skips NWPathMonitor setup
-    private convenience init(forTesting: Bool) {
-        // Call the default init but we'll skip monitor setup
-        self.init(skipMonitorSetup: true)
-    }
+        /// Private testing initializer that skips NWPathMonitor setup
+        private convenience init(forTesting _: Bool) {
+            // Call the default init but we'll skip monitor setup
+            self.init(skipMonitorSetup: true)
+        }
 
-    /// Private initializer that optionally skips monitor setup
-    private init(skipMonitorSetup: Bool) {
-        // Don't call setupMonitor() - for testing only
-        DebugLogger.network("NetworkMonitor created for testing (monitor not started)")
-    }
+        /// Private initializer that optionally skips monitor setup
+        private init(skipMonitorSetup _: Bool) {
+            // Don't call setupMonitor() - for testing only
+            DebugLogger.network("NetworkMonitor created for testing (monitor not started)")
+        }
     #endif
 }
-

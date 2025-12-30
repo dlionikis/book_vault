@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: - ProgressManaging
+
 // Note: UserProgress and SaveProgressResponse are defined in BookVault/Models/UserProgress.swift
 
 /// Protocol for ProgressManager to enable testing
@@ -27,7 +29,8 @@ protocol ProgressManaging {
     ///   - timestamp: Optional timestamp for conflict resolution
     /// - Returns: SaveProgressResponse with updated status
     @discardableResult
-    func saveProgress(for bookId: String, positionSeconds: Double, timestamp: Date?) async throws -> SaveProgressResponse
+    func saveProgress(for bookId: String, positionSeconds: Double, timestamp: Date?) async throws
+        -> SaveProgressResponse
 
     /// Mark a book as completed
     /// - Parameter bookId: The book's UUID string

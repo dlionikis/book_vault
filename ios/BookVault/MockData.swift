@@ -22,20 +22,20 @@ extension Book {
         "If you loved *The Martian*, you'll go crazy for Weir's latest."—*The Washington Post*
         """,
         runtimeMinutes: 967,
-        releaseDate: Date(timeIntervalSince1970: 1620000000), // May 2021
+        releaseDate: Date(timeIntervalSince1970: 1_620_000_000), // May 2021
         publisher: "Audible Studios",
         coverUrl: "https://m.media-amazon.com/images/I/91vS2wAT8jL._SL1500_.jpg",
         audioUrl: "https://example.com/audio/project-hail-mary.mp3",
         authors: [
-            Author(id: UUID(), name: "Andy Weir", asin: "B00G0WYW92")
+            Author(id: UUID(), name: "Andy Weir", asin: "B00G0WYW92"),
         ],
         narrators: [
-            Narrator(id: UUID(), name: "Ray Porter", asin: "B001PJTOQE")
+            Narrator(id: UUID(), name: "Ray Porter", asin: "B001PJTOQE"),
         ],
         series: nil,
         categories: [
             Category(id: UUID(), name: "Science Fiction"),
-            Category(id: UUID(), name: "Space Opera")
+            Category(id: UUID(), name: "Space Opera"),
         ]
     )
 
@@ -46,22 +46,22 @@ extension Book {
         title: "The Way of Kings: Book One of the Stormlight Archive",
         description: "Epic fantasy from Brandon Sanderson.",
         runtimeMinutes: 2735,
-        releaseDate: Date(timeIntervalSince1970: 1283299200), // Sept 2010
+        releaseDate: Date(timeIntervalSince1970: 1_283_299_200), // Sept 2010
         publisher: "Macmillan Audio",
         coverUrl: "https://m.media-amazon.com/images/I/91jW9GZ8aTL._SL1500_.jpg",
         audioUrl: "https://example.com/audio/way-of-kings.mp3",
         authors: [
-            Author(id: UUID(), name: "Brandon Sanderson", asin: "B001IGFHW6")
+            Author(id: UUID(), name: "Brandon Sanderson", asin: "B001IGFHW6"),
         ],
         narrators: [
             Narrator(id: UUID(), name: "Kate Reading", asin: "B001LBFQSO"),
-            Narrator(id: UUID(), name: "Michael Kramer", asin: "B001LBFQTI")
+            Narrator(id: UUID(), name: "Michael Kramer", asin: "B001LBFQTI"),
         ],
         series: [
-            SeriesInfo(id: UUID(), title: "The Stormlight Archive", sequence: "1", asin: "B006K1M4YI")
+            SeriesInfo(id: UUID(), title: "The Stormlight Archive", sequence: "1", asin: "B006K1M4YI"),
         ],
         categories: [
-            Category(id: UUID(), name: "Epic Fantasy")
+            Category(id: UUID(), name: "Epic Fantasy"),
         ]
     )
 
@@ -77,7 +77,7 @@ extension Book {
         coverUrl: "https://via.placeholder.com/300x450",
         audioUrl: "https://example.com/audio/short.mp3",
         authors: [
-            Author(id: UUID(), name: "Unknown Author", asin: nil)
+            Author(id: UUID(), name: "Unknown Author", asin: nil),
         ],
         narrators: nil,
         series: nil,
@@ -91,21 +91,21 @@ extension Book {
         title: "Good Omens",
         description: "The classic collaboration from the internationally bestselling authors Neil Gaiman and Terry Pratchett.",
         runtimeMinutes: 744,
-        releaseDate: Date(timeIntervalSince1970: 642643200), // May 1990
+        releaseDate: Date(timeIntervalSince1970: 642_643_200), // May 1990
         publisher: "Random House Audio",
         coverUrl: "https://m.media-amazon.com/images/I/81u7S+aEQyL._SL1500_.jpg",
         audioUrl: "https://example.com/audio/good-omens.mp3",
         authors: [
             Author(id: UUID(), name: "Neil Gaiman", asin: "B000AQ01G2"),
-            Author(id: UUID(), name: "Terry Pratchett", asin: "B000AQ0VQU")
+            Author(id: UUID(), name: "Terry Pratchett", asin: "B000AQ0VQU"),
         ],
         narrators: [
-            Narrator(id: UUID(), name: "Martin Jarvis", asin: "B001PJQX9E")
+            Narrator(id: UUID(), name: "Martin Jarvis", asin: "B001PJQX9E"),
         ],
         series: nil,
         categories: [
             Category(id: UUID(), name: "Fantasy"),
-            Category(id: UUID(), name: "Humor")
+            Category(id: UUID(), name: "Humor"),
         ]
     )
 }
@@ -161,7 +161,7 @@ extension Chapter {
             endTime: 9030.0,
             duration: 1806.0,
             index: 5
-        )
+        ),
     ]
 }
 

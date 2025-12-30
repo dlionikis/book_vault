@@ -12,7 +12,6 @@ import XCTest
 /// Integration tests for the full playback flow across multiple services
 @MainActor
 final class PlaybackFlowTests: XCTestCase {
-
     var mockOfflineStore: MockOfflineProgressStore!
     var mockLibraryCache: MockLibraryCacheManager!
     var mockSyncManager: MockSyncManager!
@@ -181,7 +180,7 @@ final class PlaybackFlowTests: XCTestCase {
         let libraryBooks = [
             TestFixtures.makeLibraryBook(id: UUID(), title: "Book 1"),
             TestFixtures.makeLibraryBook(id: UUID(), title: "Book 2"),
-            TestFixtures.makeLibraryBook(id: UUID(), title: "Book 3")
+            TestFixtures.makeLibraryBook(id: UUID(), title: "Book 3"),
         ]
         mockLibraryCache.preloadCache(books: libraryBooks)
 

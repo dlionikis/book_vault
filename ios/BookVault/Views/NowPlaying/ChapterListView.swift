@@ -8,6 +8,8 @@
 
 import SwiftUI
 
+// MARK: - ChapterListView
+
 /// Displays a list of chapters for the current audiobook
 struct ChapterListView: View {
     // MARK: - Properties
@@ -83,7 +85,7 @@ struct ChapterListView: View {
     }
 }
 
-// MARK: - Chapter Row
+// MARK: - ChapterRow
 
 private struct ChapterRow: View {
     let chapter: Chapter
@@ -162,7 +164,9 @@ private struct ChapterRow: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
-        .accessibilityLabel("\(chapter.title), starts at \(formatTime(chapter.startTime)), duration \(formatTime(chapter.duration))")
+        .accessibilityLabel(
+            "\(chapter.title), starts at \(formatTime(chapter.startTime)), duration \(formatTime(chapter.duration))"
+        )
         .accessibilityHint(isCurrentChapter ? "Currently playing" : "Tap to skip to this chapter")
     }
 

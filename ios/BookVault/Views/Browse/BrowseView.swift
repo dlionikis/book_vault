@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - BrowseView
+
 /// Main browse screen with four category tiles
 struct BrowseView: View {
     @StateObject private var searchManager = SearchManager.shared
@@ -115,7 +117,10 @@ struct BrowseView: View {
             narratorsCount = narrators.pagination.total
             categoriesCount = categories.pagination.total
 
-            DebugLogger.info("Browse counts loaded - Authors: \(authorsCount), Series: \(seriesCount), Narrators: \(narratorsCount), Categories: \(categoriesCount)")
+            DebugLogger
+                .info(
+                    "Browse counts loaded - Authors: \(authorsCount), Series: \(seriesCount), Narrators: \(narratorsCount), Categories: \(categoriesCount)"
+                )
         } catch {
             DebugLogger.error("Failed to load browse counts", error: error)
             errorMessage = error.localizedDescription
@@ -124,6 +129,8 @@ struct BrowseView: View {
         isLoading = false
     }
 }
+
+// MARK: - BrowseCategoryRow
 
 /// Row for a browse category with count and navigation
 private struct BrowseCategoryRow: View {
@@ -160,7 +167,7 @@ private struct BrowseCategoryRow: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - BrowseView_Previews
 
 struct BrowseView_Previews: PreviewProvider {
     static var previews: some View {

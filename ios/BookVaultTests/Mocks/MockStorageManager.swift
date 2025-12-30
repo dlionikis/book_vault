@@ -19,11 +19,11 @@ class MockStorageManager: ObservableObject, StorageManaging {
 
     // MARK: - Configurable Properties
 
-    var _storageLimit: Int64 = 5_000_000_000  // 5 GB default
-    var _availableDeviceSpace: Int64 = 10_000_000_000  // 10 GB default
+    var configurableStorageLimit: Int64 = 5_000_000_000 // 5 GB default
+    var configurableAvailableSpace: Int64 = 10_000_000_000 // 10 GB default
 
-    var storageLimit: Int64 { _storageLimit }
-    var availableDeviceSpace: Int64 { _availableDeviceSpace }
+    var storageLimit: Int64 { configurableStorageLimit }
+    var availableDeviceSpace: Int64 { configurableAvailableSpace }
 
     var remainingStorageLimit: Int64 {
         max(0, storageLimit - totalSize)
@@ -99,7 +99,7 @@ class MockStorageManager: ObservableObject, StorageManaging {
         return nil
     }
 
-    func downloadedFileSize(for bookId: String, extension fileExtension: String?) -> Int64? {
+    func downloadedFileSize(for bookId: String, extension _: String?) -> Int64? {
         if let downloadedBook = metadata[bookId.uppercased()] {
             return downloadedBook.fileSize
         }
@@ -109,7 +109,11 @@ class MockStorageManager: ObservableObject, StorageManaging {
     func deleteDownload(bookId: String) throws {
         deleteDownloadCalls.append(bookId)
         if deleteShouldFail {
-            throw NSError(domain: "MockStorageManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Delete failed"])
+            throw NSError(
+                domain: "MockStorageManager",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Delete failed"]
+            )
         }
         let normalizedId = bookId.uppercased()
         downloadedBooks.remove(normalizedId)
@@ -121,7 +125,11 @@ class MockStorageManager: ObservableObject, StorageManaging {
     func deleteAllDownloads() throws {
         deleteAllDownloadsCalled = true
         if deleteShouldFail {
-            throw NSError(domain: "MockStorageManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Delete failed"])
+            throw NSError(
+                domain: "MockStorageManager",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Delete failed"]
+            )
         }
         downloadedBooks = Set<String>()
         metadata = [String: DownloadedBook]()
@@ -167,7 +175,7 @@ class MockStorageManager: ObservableObject, StorageManaging {
 
     func verifyDownload(bookId: String) -> Bool {
         // In mock, just check if it's in our downloaded set
-        return downloadedBooks.contains(bookId.uppercased())
+        downloadedBooks.contains(bookId.uppercased())
     }
 
     func cleanupOrphanedFiles() {
@@ -190,7 +198,7 @@ class MockStorageManager: ObservableObject, StorageManaging {
         cleanupOrphanedFilesCalled = false
         saveShouldFail = false
         deleteShouldFail = false
-        _storageLimit = 5_000_000_000
-        _availableDeviceSpace = 10_000_000_000
+        configurableStorageLimit = 5_000_000_000
+        configurableAvailableSpace = 10_000_000_000
     }
 }

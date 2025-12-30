@@ -8,18 +8,20 @@
 
 import SwiftUI
 
+// MARK: - CatalogView
+
 struct CatalogView: View {
     @StateObject private var viewModel = CatalogViewModel()
     @StateObject private var authManager = AuthManager.shared
 
     private let columns = [
-        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
+        GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top),
     ]
 
     var body: some View {
         NavigationView {
             ScrollView {
-                if viewModel.isLoading && viewModel.books.isEmpty {
+                if viewModel.isLoading, viewModel.books.isEmpty {
                     // Initial loading state
                     VStack(spacing: 12) {
                         ProgressView()
@@ -106,7 +108,7 @@ struct CatalogView: View {
     }
 }
 
-// MARK: - Book Grid Item
+// MARK: - BookGridItem
 
 struct BookGridItem: View {
     let book: Book
@@ -124,7 +126,7 @@ struct BookGridItem: View {
                             .overlay {
                                 ProgressView()
                             }
-                    case .success(let image):
+                    case let .success(image):
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fit)
@@ -196,7 +198,7 @@ struct BookGridItem: View {
     }
 }
 
-// MARK: - View Model
+// MARK: - CatalogViewModel
 
 @MainActor
 class CatalogViewModel: ObservableObject {
@@ -230,7 +232,7 @@ class CatalogViewModel: ObservableObject {
     }
 
     func loadMoreBooks() async {
-        guard !isLoading && hasMorePages else { return }
+        guard !isLoading, hasMorePages else { return }
 
         isLoading = true
         currentPage += 1
@@ -252,7 +254,7 @@ class CatalogViewModel: ObservableObject {
     }
 }
 
-// MARK: - Continue Listening Card
+// MARK: - ContinueListeningCard
 
 struct ContinueListeningCard: View {
     let book: Book
@@ -264,11 +266,12 @@ struct ContinueListeningCard: View {
             ZStack(alignment: .bottomLeading) {
                 AsyncImage(url: URL(string: book.coverUrl ?? "")) { phase in
                     switch phase {
-                    case .success(let image):
+                    case let .success(image):
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                    case .failure, .empty:
+                    case .failure,
+                         .empty:
                         Rectangle()
                             .fill(Color.gray.opacity(0.2))
                             .overlay {
@@ -342,7 +345,7 @@ struct ContinueListeningCard: View {
     }
 }
 
-// MARK: - Progress Bar (simple version for Continue Listening)
+// MARK: - ProgressBar
 
 struct ProgressBar: View {
     let progress: UserProgress
@@ -371,7 +374,7 @@ struct ProgressBar: View {
     }
 }
 
-// MARK: - Progress Indicator
+// MARK: - ProgressIndicator
 
 struct ProgressIndicator: View {
     let progress: UserProgress
