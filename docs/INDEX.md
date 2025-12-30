@@ -122,9 +122,10 @@
 
 ## 🧪 Testing & Quality
 
-| File                     | Purpose                                      | Tokens |
-| ------------------------ | -------------------------------------------- | ------ |
-| [testing.md](testing.md) | Test patterns, Jest examples, best practices | ~750   |
+| File                                                                       | Purpose                                          | Tokens |
+| -------------------------------------------------------------------------- | ------------------------------------------------ | ------ |
+| [testing.md](testing.md)                                                   | Test patterns, Jest examples, best practices     | ~750   |
+| [code-quality-implementation-plan.md](code-quality-implementation-plan.md) | SwiftLint, Periphery, CI improvements (5 phases) | ~4,500 |
 
 ---
 
