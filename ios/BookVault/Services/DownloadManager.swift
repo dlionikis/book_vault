@@ -78,7 +78,7 @@ enum DownloadError: LocalizedError {
 
 /// Manages audiobook downloads with background support
 @MainActor
-class DownloadManager: NSObject, ObservableObject {
+class DownloadManager: NSObject, ObservableObject, DownloadManaging {
     static let shared = DownloadManager()
 
     // MARK: - Published Properties
