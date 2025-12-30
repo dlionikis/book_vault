@@ -99,6 +99,13 @@ class MockStorageManager: ObservableObject, StorageManaging {
         return nil
     }
 
+    func downloadedFileSize(for bookId: String, extension fileExtension: String?) -> Int64? {
+        if let downloadedBook = metadata[bookId.uppercased()] {
+            return downloadedBook.fileSize
+        }
+        return nil
+    }
+
     func deleteDownload(bookId: String) throws {
         deleteDownloadCalls.append(bookId)
         if deleteShouldFail {

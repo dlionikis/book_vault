@@ -40,6 +40,20 @@ class AudioPlayerManager: ObservableObject {
     // Phase 7: Offline Downloads
     @Published var isPlayingOffline = false
 
+    // MARK: - Dependencies (DI for testing)
+
+    private let progressManager: any ProgressManaging
+    private let downloadManager: any DownloadManaging
+    private let storageManager: any StorageManaging
+
+    // Concrete reference for download observation (protocols can't expose $publishers)
+    private weak var concreteDownloadManager: DownloadManager?
+
+    // Auth token provider (enables DI for testing)
+    var authTokenProvider: () -> String? = {
+        AuthManager.shared.token
+    }
+
     // MARK: - Private Properties
 
     private var player: AVPlayer?
@@ -47,9 +61,7 @@ class AudioPlayerManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var resourceLoaderDelegate: AuthenticatedAVAssetResourceLoaderDelegate?
     private var progressSaveTimer: Timer?
-    private var progressManager = ProgressManager.shared
     private var lastSavedPosition: TimeInterval = 0
-    private var downloadManager = DownloadManager.shared
     private var downloadObserver: AnyCancellable?
 
     // MARK: - Computed Properties
@@ -61,10 +73,37 @@ class AudioPlayerManager: ObservableObject {
 
     // MARK: - Initialization
 
-    private init() {
+    // Production singleton init
+    private convenience init() {
+        self.init(
+            progressManager: ProgressManager.shared,
+            downloadManager: DownloadManager.shared,
+            storageManager: StorageManager.shared,
+            concreteDownloadManager: DownloadManager.shared
+        )
         setupAudioSession()
         setupNotifications()
         setupRemoteCommandCenter()
+    }
+
+    // Testable initializer
+    init(
+        progressManager: any ProgressManaging,
+        downloadManager: any DownloadManaging,
+        storageManager: any StorageManaging,
+        concreteDownloadManager: DownloadManager? = nil,
+        skipAudioSetup: Bool = false
+    ) {
+        self.progressManager = progressManager
+        self.downloadManager = downloadManager
+        self.storageManager = storageManager
+        self.concreteDownloadManager = concreteDownloadManager
+
+        if !skipAudioSetup {
+            setupAudioSession()
+            setupNotifications()
+            setupRemoteCommandCenter()
+        }
     }
 
     deinit {
@@ -230,7 +269,7 @@ class AudioPlayerManager: ObservableObject {
         do {
             // Add authentication header for cover image
             var request = URLRequest(url: coverUrl)
-            if let token = AuthManager.shared.token {
+            if let token = authTokenProvider() {
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
 
@@ -267,7 +306,6 @@ class AudioPlayerManager: ObservableObject {
             let bookId = book.id.uuidString
 
             // Phase 7: Check if book is downloaded locally
-            let storageManager = StorageManager.shared
             if storageManager.isBookDownloaded(bookId: bookId) {
                 // Play from local file
                 DebugLogger.audio("Playing from local file: \(book.title)")
@@ -284,7 +322,6 @@ class AudioPlayerManager: ObservableObject {
 
     private func playFromLocalFile(book: Book) async {
         let bookId = book.id.uuidString
-        let storageManager = StorageManager.shared
         let localUrl = storageManager.audioFilePath(for: bookId)
 
         DebugLogger.audio("Starting local playback for \(book.title)")
@@ -340,7 +377,7 @@ class AudioPlayerManager: ObservableObject {
 
     private func playFromStreamingUrl(book: Book) async {
         // Ensure we have authentication token
-        guard let token = AuthManager.shared.token else {
+        guard let token = authTokenProvider() else {
             DebugLogger.error("AudioPlayerManager: No authentication token")
             self.error = NSError(
                 domain: "AudioPlayerManager",
@@ -810,7 +847,7 @@ class AudioPlayerManager: ObservableObject {
         let bookId = book.id.uuidString
 
         // Don't start if already downloaded or downloading
-        if StorageManager.shared.isBookDownloaded(bookId: bookId) {
+        if storageManager.isBookDownloaded(bookId: bookId) {
             DebugLogger.download("Book already downloaded, skipping auto-download")
             return
         }
@@ -840,8 +877,9 @@ class AudioPlayerManager: ObservableObject {
         // Cancel any existing observer
         downloadObserver?.cancel()
 
-        // Observe changes to activeDownloads
-        downloadObserver = downloadManager.$activeDownloads
+        // Observe changes to activeDownloads (requires concrete type for $publisher access)
+        guard let concreteManager = concreteDownloadManager else { return }
+        downloadObserver = concreteManager.$activeDownloads
             .receive(on: DispatchQueue.main)
             .sink { [weak self] downloads in
                 guard let self = self else { return }
@@ -865,7 +903,6 @@ class AudioPlayerManager: ObservableObject {
     /// Seamlessly switch from streaming to local file playback
     private func switchToLocalFile(book: Book) async {
         let bookId = book.id.uuidString
-        let storageManager = StorageManager.shared
         let localUrl = storageManager.audioFilePath(for: bookId)
 
         // Capture current state before switch

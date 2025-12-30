@@ -18,7 +18,8 @@ class AuthManager: ObservableObject, AuthManaging {
     @Published private(set) var isLoading = false
     @Published var errorMessage: String?
 
-    private let apiClient = APIClient.shared
+    private let apiClient: APIClientProtocol
+    private let keychain: KeychainStoring
     private var refreshTokenValue: UUID?
 
     // Keychain keys
@@ -26,9 +27,15 @@ class AuthManager: ObservableObject, AuthManaging {
     private let refreshTokenKey = "com.bookvault.refreshToken"
     private let userDataKey = "com.bookvault.userData"
 
+    // Callback for clearing caches on logout (enables DI for testing)
+    var clearCachesOnLogout: () -> Void = {
+        LibraryCacheManager.shared.clearCache()
+        OfflineProgressStore.shared.clearCache()
+    }
+
     // Public access to token for authenticated requests (e.g., audio streaming)
     var token: String? {
-        loadFromKeychain(key: accessTokenKey)
+        keychain.load(key: accessTokenKey)
     }
 
     // Public access to user email
@@ -36,11 +43,22 @@ class AuthManager: ObservableObject, AuthManaging {
         currentUser?.email
     }
 
-    private init() {
+    // Production singleton init
+    private convenience init() {
+        self.init(
+            apiClient: APIClient.shared,
+            keychain: SystemKeychain.shared
+        )
         // Try to restore session from keychain
         Task {
             await restoreSession()
         }
+    }
+
+    // Testable initializer
+    init(apiClient: APIClientProtocol, keychain: KeychainStoring) {
+        self.apiClient = apiClient
+        self.keychain = keychain
     }
 
     // MARK: - Public Methods
@@ -54,12 +72,12 @@ class AuthManager: ObservableObject, AuthManaging {
             let response = try await apiClient.login(email: email, password: password)
 
             // Store tokens securely
-            try saveToKeychain(key: accessTokenKey, value: response.accessToken)
-            try saveToKeychain(key: refreshTokenKey, value: response.refreshToken.uuidString)
+            try keychain.save(key: accessTokenKey, value: response.accessToken)
+            try keychain.save(key: refreshTokenKey, value: response.refreshToken.uuidString)
 
             // Store user data
             let userData = try JSONEncoder().encode(response.user)
-            try saveToKeychain(key: userDataKey, value: String(data: userData, encoding: .utf8)!)
+            try keychain.save(key: userDataKey, value: String(data: userData, encoding: .utf8)!)
 
             // Update state
             self.currentUser = response.user
@@ -112,7 +130,7 @@ class AuthManager: ObservableObject, AuthManaging {
             let response = try await apiClient.refreshToken(refreshToken: refreshToken)
 
             // Update stored access token
-            try saveToKeychain(key: accessTokenKey, value: response.accessToken)
+            try keychain.save(key: accessTokenKey, value: response.accessToken)
 
             return true
         } catch {
@@ -126,10 +144,10 @@ class AuthManager: ObservableObject, AuthManaging {
 
     /// Restore session from keychain
     private func restoreSession() async {
-        guard let accessToken = loadFromKeychain(key: accessTokenKey),
-              let refreshTokenString = loadFromKeychain(key: refreshTokenKey),
+        guard let accessToken = keychain.load(key: accessTokenKey),
+              let refreshTokenString = keychain.load(key: refreshTokenKey),
               let refreshToken = UUID(uuidString: refreshTokenString),
-              let userDataString = loadFromKeychain(key: userDataKey),
+              let userDataString = keychain.load(key: userDataKey),
               let userData = userDataString.data(using: .utf8) else {
             return
         }
@@ -138,7 +156,8 @@ class AuthManager: ObservableObject, AuthManaging {
             let user = try JSONDecoder().decode(User.self, from: userData)
 
             // Restore to API client
-            apiClient.accessToken = accessToken
+            var mutableApiClient = apiClient
+            mutableApiClient.accessToken = accessToken
 
             // Update state
             self.currentUser = user
@@ -153,76 +172,21 @@ class AuthManager: ObservableObject, AuthManaging {
     /// Clear all session data
     private func clearSession() {
         // Clear keychain
-        deleteFromKeychain(key: accessTokenKey)
-        deleteFromKeychain(key: refreshTokenKey)
-        deleteFromKeychain(key: userDataKey)
+        keychain.delete(key: accessTokenKey)
+        keychain.delete(key: refreshTokenKey)
+        keychain.delete(key: userDataKey)
 
-        // Clear API client token
-        apiClient.accessToken = nil
+        // Clear API client token (only if mutable - production APIClient has var accessToken)
+        var mutableApiClient = apiClient
+        mutableApiClient.accessToken = nil
 
         // Clear offline caches (Phase 8: security - prevent cross-user data access)
-        LibraryCacheManager.shared.clearCache()
-        OfflineProgressStore.shared.clearCache()
+        clearCachesOnLogout()
         DebugLogger.auth("Offline caches cleared on logout")
 
         // Clear state
         self.currentUser = nil
         self.refreshTokenValue = nil
         self.isAuthenticated = false
-    }
-
-    // MARK: - Keychain Helpers
-
-    /// Save a value to the keychain
-    private func saveToKeychain(key: String, value: String) throws {
-        let data = value.data(using: .utf8)!
-
-        // Create query
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key,
-            kSecValueData as String: data
-        ]
-
-        // Delete any existing item
-        SecItemDelete(query as CFDictionary)
-
-        // Add new item
-        let status = SecItemAdd(query as CFDictionary, nil)
-
-        guard status == errSecSuccess else {
-            throw NSError(domain: "KeychainError", code: Int(status), userInfo: nil)
-        }
-    }
-
-    /// Load a value from the keychain
-    private func loadFromKeychain(key: String) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-        guard status == errSecSuccess,
-              let data = result as? Data,
-              let value = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-
-        return value
-    }
-
-    /// Delete a value from the keychain
-    private func deleteFromKeychain(key: String) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key
-        ]
-
-        SecItemDelete(query as CFDictionary)
     }
 }

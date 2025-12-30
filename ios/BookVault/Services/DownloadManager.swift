@@ -86,11 +86,18 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
     @Published var activeDownloads: [String: ActiveDownload] = [:]
     @Published var error: DownloadError?
 
-    // MARK: - Private Properties
+    // MARK: - Dependencies (DI for testing)
 
-    private let apiClient = APIClient.shared
-    private let storageManager = StorageManager.shared
-    private let networkMonitor = NetworkMonitor.shared
+    private let apiClient: APIClientProtocol
+    private let storageManager: StorageManaging
+    private let networkMonitor: NetworkMonitoring
+
+    // Force logout handler (enables DI for testing)
+    var forceLogoutHandler: () -> Void = {
+        Task { @MainActor in
+            AuthManager.shared.forceLogout()
+        }
+    }
 
     private var backgroundSession: URLSession!
     private var downloadTasks: [String: URLSessionDownloadTask] = [:]
@@ -123,13 +130,41 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
     }
 
     // Background session identifier
-    private let backgroundSessionIdentifier = "com.bookvault.downloads"
+    private let backgroundSessionIdentifier: String
 
     // MARK: - Initialization
 
-    override private init() {
+    // Production singleton init
+    private convenience override init() {
+        self.init(
+            apiClient: APIClient.shared,
+            storageManager: StorageManager.shared,
+            networkMonitor: NetworkMonitor.shared,
+            sessionIdentifier: "com.bookvault.downloads"
+        )
+    }
+
+    // Testable initializer
+    init(
+        apiClient: APIClientProtocol,
+        storageManager: StorageManaging,
+        networkMonitor: NetworkMonitoring,
+        sessionIdentifier: String = "com.bookvault.downloads.test",
+        session: URLSession? = nil
+    ) {
+        self.apiClient = apiClient
+        self.storageManager = storageManager
+        self.networkMonitor = networkMonitor
+        self.backgroundSessionIdentifier = sessionIdentifier
         super.init()
-        setupBackgroundSession()
+
+        if let session = session {
+            // Use injected session (for testing)
+            self.backgroundSession = session
+        } else {
+            // Create background session
+            setupBackgroundSession()
+        }
     }
 
     private func setupBackgroundSession() {
@@ -342,10 +377,8 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
             DebugLogger.download("Eligibility result: \(result.eligible)")
             return result.eligible
         case 401:
-            // Force logout on main actor to redirect to login screen
-            Task { @MainActor in
-                AuthManager.shared.forceLogout()
-            }
+            // Force logout via handler (enables DI for testing)
+            forceLogoutHandler()
             throw DownloadError.unauthorized
         case 429:
             throw DownloadError.rateLimitExceeded
@@ -383,10 +416,8 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
             decoder.dateDecodingStrategy = .iso8601
             return try decoder.decode(GenerateDownloadUrl200Response.self, from: data)
         case 401:
-            // Force logout on main actor to redirect to login screen
-            Task { @MainActor in
-                AuthManager.shared.forceLogout()
-            }
+            // Force logout via handler (enables DI for testing)
+            forceLogoutHandler()
             throw DownloadError.unauthorized
         case 429:
             throw DownloadError.rateLimitExceeded

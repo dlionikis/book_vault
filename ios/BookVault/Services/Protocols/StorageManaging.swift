@@ -63,6 +63,9 @@ protocol StorageManaging: ObservableObject {
     /// Get file size of downloaded audio
     func downloadedFileSize(for bookId: String) -> Int64?
 
+    /// Get file size of downloaded audio with specific extension
+    func downloadedFileSize(for bookId: String, extension fileExtension: String?) -> Int64?
+
     /// Delete a downloaded book
     func deleteDownload(bookId: String) throws
 
