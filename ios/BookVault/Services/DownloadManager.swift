@@ -9,6 +9,8 @@
 import Foundation
 import UIKit
 
+// MARK: - DownloadState
+
 /// Download state enumeration
 enum DownloadState: Equatable {
     case notDownloaded
@@ -19,9 +21,11 @@ enum DownloadState: Equatable {
     case failed(error: String)
 }
 
+// MARK: - ActiveDownload
+
 /// Active download tracking
 struct ActiveDownload: Identifiable {
-    let id: String  // bookId
+    let id: String // bookId
     let book: Book
     var bytesDownloaded: Int64
     var totalBytes: Int64
@@ -40,6 +44,8 @@ struct ActiveDownload: Identifiable {
     }
 }
 
+// MARK: - DownloadError
+
 /// Download error types
 enum DownloadError: LocalizedError, Equatable {
     case networkError(String)
@@ -54,27 +60,29 @@ enum DownloadError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .networkError(let message):
-            return "Network error: \(message)"
+        case let .networkError(message):
+            "Network error: \(message)"
         case .insufficientStorage:
-            return "Not enough storage space"
+            "Not enough storage space"
         case .rateLimitExceeded:
-            return "Daily download limit reached (50/day)"
+            "Daily download limit reached (50/day)"
         case .urlExpired:
-            return "Download URL expired"
+            "Download URL expired"
         case .fileCorruption:
-            return "Downloaded file is corrupted"
+            "Downloaded file is corrupted"
         case .unauthorized:
-            return "Not authorized to download"
+            "Not authorized to download"
         case .notEligible:
-            return "Not eligible to download this book"
+            "Not eligible to download this book"
         case .wifiRequired:
-            return "WiFi required for downloads"
+            "WiFi required for downloads"
         case .cancelled:
-            return "Download was cancelled"
+            "Download was cancelled"
         }
     }
 }
+
+// MARK: - FileExtensionStorage
 
 /// Thread-safe storage for file extensions
 /// Used to pass file extension info from main actor to URLSession delegate callbacks
@@ -101,6 +109,8 @@ final class FileExtensionStorage: @unchecked Sendable {
         storage.removeValue(forKey: bookId)
     }
 }
+
+// MARK: - DownloadManager
 
 /// Manages audiobook downloads with background support
 @MainActor
@@ -138,7 +148,7 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
     // MARK: - Initialization
 
     // Production singleton init
-    private convenience override init() {
+    override private convenience init() {
         self.init(
             apiClient: APIClient.shared,
             storageManager: StorageManager.shared,
@@ -161,7 +171,7 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
         self.backgroundSessionIdentifier = sessionIdentifier
         super.init()
 
-        if let session = session {
+        if let session {
             // Use injected session (for testing)
             self.backgroundSession = session
         } else {
@@ -172,9 +182,9 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
 
     private func setupBackgroundSession() {
         let config = URLSessionConfiguration.background(withIdentifier: backgroundSessionIdentifier)
-        config.isDiscretionary = false  // Don't delay downloads
-        config.sessionSendsLaunchEvents = true  // Wake app when download completes
-        config.allowsCellularAccess = true  // WiFi-only is checked separately
+        config.isDiscretionary = false // Don't delay downloads
+        config.sessionSendsLaunchEvents = true // Wake app when download completes
+        config.allowsCellularAccess = true // WiFi-only is checked separately
 
         backgroundSession = URLSession(configuration: config, delegate: self, delegateQueue: nil)
 
@@ -202,7 +212,8 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
     func isDownloading(bookId: String) -> Bool {
         guard let active = activeDownloads[bookId] else { return false }
         switch active.state {
-        case .waiting, .downloading:
+        case .waiting,
+             .downloading:
             return true
         default:
             return false
@@ -252,7 +263,7 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
             fileExtensionStorage.set(fileExt, for: bookId)
             DebugLogger.download("File extension for \(book.title): \(fileExt)")
         } else {
-            fileExtensionStorage.set("mp3", for: bookId)  // Default to mp3
+            fileExtensionStorage.set("mp3", for: bookId) // Default to mp3
         }
 
         do {
@@ -298,14 +309,16 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
                 DebugLogger.download("Using pre-signed URL for S3 download")
             }
 
-            task.taskDescription = bookId  // Store bookId for delegate callbacks
+            task.taskDescription = bookId // Store bookId for delegate callbacks
             downloadTasks[bookId] = task
             activeDownloads[bookId]?.task = task
 
             task.resume()
 
-            DebugLogger.download("Download started: \(book.title) (\(StorageManager.formatFileSize(Int64(downloadInfo.fileSize))))")
-
+            DebugLogger
+                .download(
+                    "Download started: \(book.title) (\(StorageManager.formatFileSize(Int64(downloadInfo.fileSize))))"
+                )
         } catch {
             activeDownloads.removeValue(forKey: bookId)
             pendingBooks.removeValue(forKey: bookId)
@@ -458,12 +471,11 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
     }
 }
 
-// MARK: - URLSessionDownloadDelegate
+// MARK: URLSessionDownloadDelegate
 
 extension DownloadManager: URLSessionDownloadDelegate {
-
     nonisolated func urlSession(
-        _ session: URLSession,
+        _: URLSession,
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
@@ -512,9 +524,9 @@ extension DownloadManager: URLSessionDownloadDelegate {
     }
 
     nonisolated func urlSession(
-        _ session: URLSession,
+        _: URLSession,
         downloadTask: URLSessionDownloadTask,
-        didWriteData bytesWritten: Int64,
+        didWriteData _: Int64,
         totalBytesWritten: Int64,
         totalBytesExpectedToWrite: Int64
     ) {
@@ -530,14 +542,14 @@ extension DownloadManager: URLSessionDownloadDelegate {
     }
 
     nonisolated func urlSession(
-        _ session: URLSession,
+        _: URLSession,
         task: URLSessionTask,
         didCompleteWithError error: Error?
     ) {
         guard let downloadTask = task as? URLSessionDownloadTask,
               let bookId = downloadTask.taskDescription else { return }
 
-        if let error = error {
+        if let error {
             Task { @MainActor in
                 handleDownloadError(bookId: bookId, error: error)
             }
@@ -566,7 +578,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         activeDownloads[bookId]?.state = .completed
         downloadTasks.removeValue(forKey: bookId)
         pendingBooks.removeValue(forKey: bookId)
-        fileExtensionStorage.remove(for: bookId)  // Clean up thread-safe storage
+        fileExtensionStorage.remove(for: bookId) // Clean up thread-safe storage
 
         // Remove from active downloads after short delay (to show completion)
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -611,6 +623,6 @@ extension DownloadManager: URLSessionDownloadDelegate {
 
 extension DebugLogger {
     static func download(_ message: String) {
-        log(message, category: .info)  // Use info category for download operations
+        log(message, category: .info) // Use info category for download operations
     }
 }

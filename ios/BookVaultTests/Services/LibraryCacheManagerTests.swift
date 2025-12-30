@@ -11,7 +11,6 @@ import XCTest
 
 @MainActor
 final class LibraryCacheManagerTests: XCTestCase {
-
     var sut: MockLibraryCacheManager!
 
     override func setUp() {
@@ -259,7 +258,11 @@ final class LibraryCacheManagerTests: XCTestCase {
         // Then timestamp should be old
         let expectedDate = Date().addingTimeInterval(-age)
         XCTAssertNotNil(sut.cacheTimestamp)
-        XCTAssertEqual(sut.cacheTimestamp?.timeIntervalSince1970 ?? 0, expectedDate.timeIntervalSince1970, accuracy: 5.0)
+        XCTAssertEqual(
+            sut.cacheTimestamp?.timeIntervalSince1970 ?? 0,
+            expectedDate.timeIntervalSince1970,
+            accuracy: 5.0
+        )
     }
 
     // MARK: - Reset Tests

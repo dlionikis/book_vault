@@ -10,7 +10,6 @@ import XCTest
 
 @MainActor
 final class ProgressManagerTests: XCTestCase {
-
     var mockAPIClient: MockAPIClient!
     var mockNetworkMonitor: MockNetworkMonitor!
 

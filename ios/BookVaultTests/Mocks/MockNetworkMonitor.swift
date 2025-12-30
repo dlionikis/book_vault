@@ -5,8 +5,8 @@
 //  Mock NetworkMonitor for testing - allows simulating network conditions.
 //
 
-import Foundation
 import Combine
+import Foundation
 @testable import BookVault
 
 /// Mock network monitor for testing
@@ -34,7 +34,7 @@ class MockNetworkMonitor: ObservableObject, NetworkMonitoring {
         if !isConnected {
             return "No network connection"
         }
-        if wifiOnlyEnabled && connectionType != .wifi {
+        if wifiOnlyEnabled, connectionType != .wifi {
             return "Downloads require WiFi (change in Settings)"
         }
         return nil
@@ -57,7 +57,7 @@ class MockNetworkMonitor: ObservableObject, NetworkMonitoring {
         restartMonitorCalled = true
     }
 
-    func waitForConnection(timeout: TimeInterval) async -> Bool {
+    func waitForConnection(timeout _: TimeInterval) async -> Bool {
         if isConnected {
             return true
         }

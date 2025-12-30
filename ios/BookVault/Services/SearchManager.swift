@@ -8,6 +8,8 @@
 import Foundation
 import UIKit
 
+// MARK: - CacheEntry
+
 /// Cache entry for storing cached search/browse results
 private struct CacheEntry<T> {
     let data: T
@@ -18,6 +20,8 @@ private struct CacheEntry<T> {
         Date().timeIntervalSince(timestamp) > ttl
     }
 }
+
+// MARK: - SearchManager
 
 /// Manages search and browse functionality with caching and debouncing
 @MainActor
@@ -113,7 +117,10 @@ class SearchManager: ObservableObject {
                 return date
             }
 
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date string: \(dateString)")
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Cannot decode date string: \(dateString)"
+            )
         }
         return decoder
     }
@@ -259,7 +266,7 @@ class SearchManager: ObservableObject {
     ///   - limit: Results per page (default: 20)
     /// - Returns: List of authors with pagination info
     func fetchAuthors(page: Int = 1, limit: Int = 20) async throws -> ListAuthors200Response {
-        return try await fetchBrowseList(
+        try await fetchBrowseList(
             path: "/api/browse/authors",
             page: page,
             limit: limit,
@@ -273,7 +280,7 @@ class SearchManager: ObservableObject {
     ///   - limit: Results per page (default: 20)
     /// - Returns: List of series with pagination info
     func fetchSeries(page: Int = 1, limit: Int = 20) async throws -> ListSeries200Response {
-        return try await fetchBrowseList(
+        try await fetchBrowseList(
             path: "/api/browse/series",
             page: page,
             limit: limit,
@@ -287,7 +294,7 @@ class SearchManager: ObservableObject {
     ///   - limit: Results per page (default: 20)
     /// - Returns: List of narrators with pagination info
     func fetchNarrators(page: Int = 1, limit: Int = 20) async throws -> ListNarrators200Response {
-        return try await fetchBrowseList(
+        try await fetchBrowseList(
             path: "/api/browse/narrators",
             page: page,
             limit: limit,
@@ -301,7 +308,7 @@ class SearchManager: ObservableObject {
     ///   - limit: Results per page (default: 20)
     /// - Returns: List of categories with pagination info
     func fetchCategories(page: Int = 1, limit: Int = 20) async throws -> ListCategories200Response {
-        return try await fetchBrowseList(
+        try await fetchBrowseList(
             path: "/api/browse/categories",
             page: page,
             limit: limit,
@@ -377,7 +384,7 @@ class SearchManager: ObservableObject {
     /// - Parameter id: Author ID (UUID)
     /// - Returns: Author details with list of books
     func fetchAuthorDetail(id: String) async throws -> GetAuthor200Response {
-        return try await fetchDetail(
+        try await fetchDetail(
             path: "/api/authors/\(id)",
             cachePrefix: "author"
         )
@@ -387,7 +394,7 @@ class SearchManager: ObservableObject {
     /// - Parameter id: Series ID (UUID)
     /// - Returns: Series details with list of books (ordered by sequence)
     func fetchSeriesDetail(id: String) async throws -> GetSeries200Response {
-        return try await fetchDetail(
+        try await fetchDetail(
             path: "/api/series/\(id)",
             cachePrefix: "series"
         )
@@ -397,7 +404,7 @@ class SearchManager: ObservableObject {
     /// - Parameter id: Narrator ID (UUID)
     /// - Returns: Narrator details with list of books
     func fetchNarratorDetail(id: String) async throws -> GetNarrator200Response {
-        return try await fetchDetail(
+        try await fetchDetail(
             path: "/api/narrators/\(id)",
             cachePrefix: "narrator"
         )
@@ -407,7 +414,7 @@ class SearchManager: ObservableObject {
     /// - Parameter id: Category ID (UUID)
     /// - Returns: Category details with list of books
     func fetchCategoryDetail(id: String) async throws -> GetCategory200Response {
-        return try await fetchDetail(
+        try await fetchDetail(
             path: "/api/categories/\(id)",
             cachePrefix: "category"
         )

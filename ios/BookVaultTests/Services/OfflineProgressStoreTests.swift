@@ -11,7 +11,6 @@ import XCTest
 
 @MainActor
 final class OfflineProgressStoreTests: XCTestCase {
-
     var sut: MockOfflineProgressStore!
 
     override func setUp() {
@@ -29,7 +28,7 @@ final class OfflineProgressStoreTests: XCTestCase {
     func testSaveProgressStoresLocally() {
         // Given a book ID and position
         let bookId = TestFixtures.testBookId.uuidString
-        let position: Double = 123.45
+        let position = 123.45
 
         // When saveProgress is called
         sut.saveProgress(bookId: bookId, position: position, completed: false)

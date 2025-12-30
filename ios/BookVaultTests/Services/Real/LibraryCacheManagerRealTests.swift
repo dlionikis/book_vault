@@ -10,7 +10,6 @@ import XCTest
 @testable import BookVault
 
 final class LibraryCacheManagerRealTests: XCTestCase {
-
     // MARK: - Properties
 
     private var tempDirectory: URL!
@@ -19,13 +18,17 @@ final class LibraryCacheManagerRealTests: XCTestCase {
 
     // MARK: - Test Helpers
 
-    private func createTestLibraryBook(id: UUID = UUID(), title: String = "Test Book", authorName: String = "Test Author") -> LibraryBook {
+    private func createTestLibraryBook(
+        id: UUID = UUID(),
+        title: String = "Test Book",
+        authorName: String = "Test Author"
+    ) -> LibraryBook {
         let author = Author(id: UUID(), name: authorName)
         return LibraryBook(id: id, asin: "ASIN123", title: title, authors: [author], addedAt: Date())
     }
 
     private func createTestBooks(count: Int) -> [LibraryBook] {
-        return (1...count).map { i in
+        (1 ... count).map { i in
             createTestLibraryBook(id: UUID(), title: "Book \(i)", authorName: "Author \(i)")
         }
     }
@@ -206,7 +209,7 @@ final class LibraryCacheManagerRealTests: XCTestCase {
             title: "The Great Book",
             description: "A wonderful story",
             runtimeMinutes: 600,
-            releaseDate: Date(timeIntervalSince1970: 1700000000),
+            releaseDate: Date(timeIntervalSince1970: 1_700_000_000),
             publisher: "Great Publisher",
             coverUrl: "https://example.com/cover.jpg",
             audioUrl: "https://example.com/audio.mp3",

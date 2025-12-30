@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - NarratorListView
+
 /// List view for browsing all narrators alphabetically
 struct NarratorListView: View {
     @StateObject private var searchManager = SearchManager.shared
@@ -19,7 +21,7 @@ struct NarratorListView: View {
 
     var body: some View {
         ZStack {
-            if isLoading && narrators.isEmpty {
+            if isLoading, narrators.isEmpty {
                 ProgressView("Loading narrators...")
                     .accessibilityLabel("Loading narrators")
             } else if let error = errorMessage, narrators.isEmpty {
@@ -141,9 +143,9 @@ struct NarratorListView: View {
     /// Filters narrators based on search text
     private var filteredNarrators: [NarratorWithBookCount] {
         if searchText.isEmpty {
-            return narrators
+            narrators
         } else {
-            return narrators.filter { narrator in
+            narrators.filter { narrator in
                 narrator.name.localizedCaseInsensitiveContains(searchText)
             }
         }
@@ -163,7 +165,10 @@ struct NarratorListView: View {
             let response = try await searchManager.fetchNarrators(page: currentPage, limit: 50)
             narrators = response.results
             hasMorePages = currentPage < response.pagination.pages
-            DebugLogger.info("Loaded \(narrators.count) narrators (page \(currentPage) of \(response.pagination.pages), total: \(response.pagination.total))")
+            DebugLogger
+                .info(
+                    "Loaded \(narrators.count) narrators (page \(currentPage) of \(response.pagination.pages), total: \(response.pagination.total))"
+                )
         } catch {
             DebugLogger.error("Failed to load narrators", error: error)
             errorMessage = error.localizedDescription
@@ -199,8 +204,9 @@ struct NarratorListView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - NarratorListView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct NarratorListView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

@@ -6,8 +6,8 @@
 //  Phase 8: Offline Mode Support
 //
 
-import Foundation
 import Combine
+import Foundation
 
 /// Manages background sync when connectivity returns
 /// Monitors network state and syncs pending progress when online
@@ -83,8 +83,8 @@ class SyncManager: ObservableObject, SyncManaging {
         if let realMonitor = networkMonitor as? NetworkMonitor {
             realMonitor.$isConnected
                 .removeDuplicates()
-                .filter { $0 }  // Only when becomes connected
-                .debounce(for: .seconds(2), scheduler: DispatchQueue.main)  // Wait for stable connection
+                .filter { $0 } // Only when becomes connected
+                .debounce(for: .seconds(2), scheduler: DispatchQueue.main) // Wait for stable connection
                 .sink { [weak self] _ in
                     Task { @MainActor [weak self] in
                         await self?.syncPendingProgress()

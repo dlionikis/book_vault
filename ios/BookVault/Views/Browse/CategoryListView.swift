@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - CategoryListView
+
 /// List view for browsing all categories alphabetically
 struct CategoryListView: View {
     @StateObject private var searchManager = SearchManager.shared
@@ -19,7 +21,7 @@ struct CategoryListView: View {
 
     var body: some View {
         ZStack {
-            if isLoading && categories.isEmpty {
+            if isLoading, categories.isEmpty {
                 ProgressView("Loading categories...")
                     .accessibilityLabel("Loading categories")
             } else if let error = errorMessage, categories.isEmpty {
@@ -141,9 +143,9 @@ struct CategoryListView: View {
     /// Filters categories based on search text
     private var filteredCategories: [CategoryWithBookCount] {
         if searchText.isEmpty {
-            return categories
+            categories
         } else {
-            return categories.filter { category in
+            categories.filter { category in
                 category.name.localizedCaseInsensitiveContains(searchText)
             }
         }
@@ -163,7 +165,10 @@ struct CategoryListView: View {
             let response = try await searchManager.fetchCategories(page: currentPage, limit: 50)
             categories = response.results
             hasMorePages = currentPage < response.pagination.pages
-            DebugLogger.info("Loaded \(categories.count) categories (page \(currentPage) of \(response.pagination.pages), total: \(response.pagination.total))")
+            DebugLogger
+                .info(
+                    "Loaded \(categories.count) categories (page \(currentPage) of \(response.pagination.pages), total: \(response.pagination.total))"
+                )
         } catch {
             DebugLogger.error("Failed to load categories", error: error)
             errorMessage = error.localizedDescription
@@ -199,8 +204,9 @@ struct CategoryListView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - CategoryListView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct CategoryListView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

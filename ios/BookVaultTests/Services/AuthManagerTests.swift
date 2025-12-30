@@ -10,7 +10,6 @@ import XCTest
 
 @MainActor
 final class AuthManagerTests: XCTestCase {
-
     var mockAPIClient: MockAPIClient!
 
     override func setUp() {

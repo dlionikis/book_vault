@@ -6,8 +6,10 @@
 //  Phase 3: Playback Core Tests
 //
 
-import Foundation
 import Combine
+import Foundation
+
+// MARK: - PlaybackState
 
 /// Playback state enumeration for testing
 enum PlaybackState: Equatable {
@@ -19,15 +21,17 @@ enum PlaybackState: Equatable {
 
     static func == (lhs: PlaybackState, rhs: PlaybackState) -> Bool {
         switch (lhs, rhs) {
-        case (.idle, .idle): return true
-        case (.loading, .loading): return true
-        case (.playing, .playing): return true
-        case (.paused, .paused): return true
-        case (.error(let msg1), .error(let msg2)): return msg1 == msg2
-        default: return false
+        case (.idle, .idle): true
+        case (.loading, .loading): true
+        case (.playing, .playing): true
+        case (.paused, .paused): true
+        case let (.error(msg1), .error(msg2)): msg1 == msg2
+        default: false
         }
     }
 }
+
+// MARK: - AudioPlayerManaging
 
 /// Protocol for AudioPlayerManager to enable testing
 @MainActor

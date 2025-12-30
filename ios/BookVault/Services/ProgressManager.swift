@@ -6,8 +6,8 @@
 //  Phase 4: Progress Sync
 //
 
-import Foundation
 import Combine
+import Foundation
 
 /// Manages user progress sync with backend API
 /// This is a lightweight wrapper around APIClient for progress-related operations
@@ -92,7 +92,10 @@ class ProgressManager: ObservableObject, ProgressManaging {
             if let serverLastPlayed = serverProgress.lastPlayed,
                localProgress.lastPlayed > serverLastPlayed {
                 // Local is newer, return local and it will sync later
-                DebugLogger.database("Using local progress (newer): \(localProgress.positionSeconds)s vs server: \(serverProgress.positionSeconds)s")
+                DebugLogger
+                    .database(
+                        "Using local progress (newer): \(localProgress.positionSeconds)s vs server: \(serverProgress.positionSeconds)s"
+                    )
                 return UserProgress(
                     positionSeconds: localProgress.positionSeconds,
                     completed: localProgress.completed,
@@ -128,7 +131,7 @@ class ProgressManager: ObservableObject, ProgressManaging {
     func saveProgress(
         for bookId: String,
         positionSeconds: Double,
-        timestamp: Date? = nil
+        timestamp _: Date? = nil
     ) async throws -> SaveProgressResponse {
         // Always save locally first (local-first approach)
         offlineProgressStore.saveProgress(bookId: bookId, position: positionSeconds, completed: false)

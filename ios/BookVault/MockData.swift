@@ -22,7 +22,7 @@ extension Book {
         "If you loved *The Martian*, you'll go crazy for Weir's latest."—*The Washington Post*
         """,
         runtimeMinutes: 967,
-        releaseDate: Date(timeIntervalSince1970: 1620000000), // May 2021
+        releaseDate: Date(timeIntervalSince1970: 1_620_000_000), // May 2021
         publisher: "Audible Studios",
         coverUrl: "https://m.media-amazon.com/images/I/91vS2wAT8jL._SL1500_.jpg",
         audioUrl: "https://example.com/audio/project-hail-mary.mp3",
@@ -46,7 +46,7 @@ extension Book {
         title: "The Way of Kings: Book One of the Stormlight Archive",
         description: "Epic fantasy from Brandon Sanderson.",
         runtimeMinutes: 2735,
-        releaseDate: Date(timeIntervalSince1970: 1283299200), // Sept 2010
+        releaseDate: Date(timeIntervalSince1970: 1_283_299_200), // Sept 2010
         publisher: "Macmillan Audio",
         coverUrl: "https://m.media-amazon.com/images/I/91jW9GZ8aTL._SL1500_.jpg",
         audioUrl: "https://example.com/audio/way-of-kings.mp3",
@@ -91,7 +91,7 @@ extension Book {
         title: "Good Omens",
         description: "The classic collaboration from the internationally bestselling authors Neil Gaiman and Terry Pratchett.",
         runtimeMinutes: 744,
-        releaseDate: Date(timeIntervalSince1970: 642643200), // May 1990
+        releaseDate: Date(timeIntervalSince1970: 642_643_200), // May 1990
         publisher: "Random House Audio",
         coverUrl: "https://m.media-amazon.com/images/I/81u7S+aEQyL._SL1500_.jpg",
         audioUrl: "https://example.com/audio/good-omens.mp3",
@@ -167,6 +167,7 @@ extension Chapter {
 
 // MARK: - UserProgress Mock Data
 
+// periphery:ignore - Mock data for SwiftUI Previews and testing
 extension UserProgress {
     /// Just started
     static let mockStarted = UserProgress(
@@ -206,6 +207,7 @@ extension UserProgress {
 
 // MARK: - Supporting Types Mock Data
 
+// periphery:ignore - Mock data for SwiftUI Previews and testing
 extension Author {
     static let mockAndyWeir = Author(
         id: UUID(),
@@ -220,6 +222,7 @@ extension Author {
     )
 }
 
+// periphery:ignore - Mock data for SwiftUI Previews and testing
 extension Narrator {
     static let mockRayPorter = Narrator(
         id: UUID(),
@@ -234,6 +237,7 @@ extension Narrator {
     )
 }
 
+// periphery:ignore - Mock data for SwiftUI Previews and testing
 extension Category {
     static let mockSciFi = Category(
         id: UUID(),
@@ -246,6 +250,7 @@ extension Category {
     )
 }
 
+// periphery:ignore - Mock data for SwiftUI Previews and testing
 extension SeriesInfo {
     static let mockStormlightArchive = SeriesInfo(
         id: UUID(),

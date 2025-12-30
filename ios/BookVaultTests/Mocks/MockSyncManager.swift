@@ -6,14 +6,13 @@
 //  Phase 5: Offline Mode Tests
 //
 
-import Foundation
 import Combine
+import Foundation
 @testable import BookVault
 
 /// Mock sync manager for testing
 @MainActor
 class MockSyncManager: ObservableObject, SyncManaging {
-
     // MARK: - Published Properties
 
     @Published var isSyncing: Bool = false

@@ -12,7 +12,6 @@ import XCTest
 @testable import BookVault
 
 final class SyncManagerRealTests: XCTestCase {
-
     // MARK: - Properties
 
     private var syncManager: SyncManager!
@@ -90,7 +89,7 @@ final class SyncManagerRealTests: XCTestCase {
 
         // Then: Progress manager called for each pending item
         XCTAssertEqual(mockProgressManager.saveProgressCalls.count, 2)
-        let bookIds = mockProgressManager.saveProgressCalls.map { $0.bookId }
+        let bookIds = mockProgressManager.saveProgressCalls.map(\.bookId)
         XCTAssertTrue(bookIds.contains("book1"))
         XCTAssertTrue(bookIds.contains("book2"))
     }
@@ -239,7 +238,7 @@ final class SyncManagerRealTests: XCTestCase {
 
         // Then: Monitoring is active (we can verify by calling startMonitoring again)
         // Second call should be no-op
-        syncManager.startMonitoring()  // Should not crash or duplicate
+        syncManager.startMonitoring() // Should not crash or duplicate
     }
 
     @MainActor
@@ -251,7 +250,7 @@ final class SyncManagerRealTests: XCTestCase {
         syncManager.stopMonitoring()
 
         // Then: Can start monitoring again
-        syncManager.startMonitoring()  // Should work after stop
+        syncManager.startMonitoring() // Should work after stop
     }
 
     @MainActor
@@ -264,7 +263,7 @@ final class SyncManagerRealTests: XCTestCase {
         syncManager.startMonitoring()
 
         // Wait a bit for the async task to run
-        try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1s
+        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
 
         // Then: Sync is triggered (eventually)
         // Note: This depends on timing, so we just verify the mechanism is set up
@@ -310,7 +309,7 @@ final class SyncManagerRealTests: XCTestCase {
         await syncManager.syncPendingProgress()
 
         // Then: Syncing state was set and cleared
-        XCTAssertFalse(syncManager.isSyncing)  // Should be false after completion
+        XCTAssertFalse(syncManager.isSyncing) // Should be false after completion
     }
 
     @MainActor

@@ -10,7 +10,6 @@ import XCTest
 
 @MainActor
 final class AudioPlayerManagerTests: XCTestCase {
-
     var sut: MockAudioPlayerManager!
 
     override func setUp() {

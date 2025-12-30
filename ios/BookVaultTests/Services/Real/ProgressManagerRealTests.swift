@@ -12,7 +12,6 @@ import XCTest
 @testable import BookVault
 
 final class ProgressManagerRealTests: XCTestCase {
-
     // MARK: - Properties
 
     private var progressManager: ProgressManager!
@@ -96,7 +95,7 @@ final class ProgressManagerRealTests: XCTestCase {
         mockNetworkMonitor.isConnected = true
         let bookId = UUID()
 
-        let oldServerDate = Date().addingTimeInterval(-3600)  // 1 hour ago
+        let oldServerDate = Date().addingTimeInterval(-3600) // 1 hour ago
         let serverProgress = TestFixtures.makeGetProgressResponse(
             positionSeconds: 100.0,
             completed: false,
@@ -152,7 +151,7 @@ final class ProgressManagerRealTests: XCTestCase {
 
         // Then: Returns local progress
         XCTAssertEqual(result.positionSeconds, 150.0)
-        XCTAssertEqual(mockAPIClient.fetchProgressCalls.count, 0)  // No API call
+        XCTAssertEqual(mockAPIClient.fetchProgressCalls.count, 0) // No API call
     }
 
     @MainActor

@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - AppTheme
+
 enum AppTheme: String, CaseIterable {
     case system = "System"
     case light = "Light"
@@ -15,14 +17,16 @@ enum AppTheme: String, CaseIterable {
     var colorScheme: ColorScheme? {
         switch self {
         case .system:
-            return nil
+            nil
         case .light:
-            return .light
+            .light
         case .dark:
-            return .dark
+            .dark
         }
     }
 }
+
+// MARK: - ThemeManager
 
 /// Manages app theme preferences
 class ThemeManager: ObservableObject {

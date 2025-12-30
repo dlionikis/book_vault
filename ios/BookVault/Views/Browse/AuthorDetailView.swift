@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - AuthorDetailView
+
 /// Detail view showing an author and all their books
 struct AuthorDetailView: View {
     let authorId: String
@@ -150,8 +152,9 @@ struct AuthorDetailView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - AuthorDetailView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct AuthorDetailView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

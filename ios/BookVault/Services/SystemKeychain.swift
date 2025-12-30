@@ -9,6 +9,8 @@
 import Foundation
 import Security
 
+// MARK: - SystemKeychain
+
 /// Production implementation of KeychainStoring using the system Security framework
 final class SystemKeychain: KeychainStoring {
     static let shared = SystemKeychain()
@@ -51,7 +53,8 @@ final class SystemKeychain: KeychainStoring {
 
         guard status == errSecSuccess,
               let data = result as? Data,
-              let value = String(data: data, encoding: .utf8) else {
+              let value = String(data: data, encoding: .utf8)
+        else {
             return nil
         }
 
@@ -68,6 +71,8 @@ final class SystemKeychain: KeychainStoring {
     }
 }
 
+// MARK: - KeychainError
+
 /// Errors that can occur during keychain operations
 enum KeychainError: LocalizedError {
     case encodingFailed
@@ -76,9 +81,9 @@ enum KeychainError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .encodingFailed:
-            return "Failed to encode value for keychain storage"
-        case .saveFailed(let status):
-            return "Failed to save to keychain (status: \(status))"
+            "Failed to encode value for keychain storage"
+        case let .saveFailed(status):
+            "Failed to save to keychain (status: \(status))"
         }
     }
 }

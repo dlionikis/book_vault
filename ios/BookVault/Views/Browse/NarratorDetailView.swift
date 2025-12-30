@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - NarratorDetailView
+
 /// Detail view showing a narrator and all their books
 struct NarratorDetailView: View {
     let narratorId: String
@@ -150,8 +152,9 @@ struct NarratorDetailView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - NarratorDetailView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct NarratorDetailView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

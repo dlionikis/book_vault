@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - SeriesDetailView
+
 /// Detail view showing a series and all books in series order
 struct SeriesDetailView: View {
     let seriesId: String
@@ -122,9 +124,11 @@ struct SeriesDetailView: View {
                                                     .progressViewStyle(CircularProgressViewStyle())
                                                     .scaleEffect(0.8)
                                             } else {
-                                                Image(systemName: showingSuccessMessage ? "checkmark.circle.fill" : "plus.circle.fill")
+                                                Image(systemName: showingSuccessMessage ? "checkmark.circle.fill" :
+                                                    "plus.circle.fill")
                                             }
-                                            Text(showingSuccessMessage ? "Added to Library" : "Add Entire Series to Library")
+                                            Text(showingSuccessMessage ? "Added to Library" :
+                                                "Add Entire Series to Library")
                                                 .fontWeight(.semibold)
                                         }
                                         .frame(maxWidth: .infinity)
@@ -149,9 +153,11 @@ struct SeriesDetailView: View {
                                                     .progressViewStyle(CircularProgressViewStyle())
                                                     .scaleEffect(0.8)
                                             } else {
-                                                Image(systemName: showingSuccessMessage ? "checkmark.circle.fill" : "trash.circle.fill")
+                                                Image(systemName: showingSuccessMessage ? "checkmark.circle.fill" :
+                                                    "trash.circle.fill")
                                             }
-                                            Text(showingSuccessMessage ? "Removed from Library" : "Remove Series from Library")
+                                            Text(showingSuccessMessage ? "Removed from Library" :
+                                                "Remove Series from Library")
                                                 .fontWeight(.semibold)
                                         }
                                         .frame(maxWidth: .infinity)
@@ -301,7 +307,8 @@ struct SeriesDetailView: View {
                 showingSuccessMessage = false
             }
 
-            DebugLogger.info("Successfully removed \(detail.books.count) books from series '\(detail.title)' from library")
+            DebugLogger
+                .info("Successfully removed \(detail.books.count) books from series '\(detail.title)' from library")
         } catch {
             DebugLogger.error("Failed to remove series from library", error: error)
             errorMessage = "Failed to remove series from library: \(error.localizedDescription)"
@@ -337,8 +344,9 @@ struct SeriesDetailView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - SeriesDetailView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct SeriesDetailView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

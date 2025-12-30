@@ -8,6 +8,8 @@
 
 import Foundation
 
+// MARK: - LibraryManaging
+
 /// Protocol for LibraryManager to enable testing
 @MainActor
 protocol LibraryManaging {

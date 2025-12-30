@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - SearchView
+
 /// Main search screen with autocomplete suggestions and results
 struct SearchView: View {
     @StateObject private var searchManager = SearchManager.shared
@@ -73,7 +75,7 @@ struct SearchView: View {
 
                 // Content area
                 ScrollView {
-                    if isLoading && searchResults == nil {
+                    if isLoading, searchResults == nil {
                         // Loading state
                         ProgressView("Searching...")
                             .padding(.top, 100)
@@ -103,7 +105,7 @@ struct SearchView: View {
                     } else if let results = searchResults {
                         // Search results
                         searchResultsView(results)
-                    } else if !searchText.isEmpty, let suggestions = suggestions {
+                    } else if !searchText.isEmpty, let suggestions {
                         // Suggestions while typing
                         suggestionsView(suggestions)
                     } else {
@@ -167,12 +169,12 @@ struct SearchView: View {
 
     /// Generic suggestion section component
     @ViewBuilder
-    private func suggestionSection<Item: Identifiable, Destination: View>(
+    private func suggestionSection<Item: Identifiable>(
         title: String,
         icon: String,
         items: [Item],
         itemText: @escaping (Item) -> String,
-        destination: @escaping (Item) -> Destination
+        destination: @escaping (Item) -> some View
     ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
@@ -402,7 +404,8 @@ struct SearchView: View {
     private func loadMoreResults() {
         guard let results = searchResults,
               results.pagination.page < results.pagination.pages,
-              !isLoading else {
+              !isLoading
+        else {
             return
         }
 
@@ -439,8 +442,9 @@ struct SearchView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - SearchView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct SearchView_Previews: PreviewProvider {
     static var previews: some View {
         Group {

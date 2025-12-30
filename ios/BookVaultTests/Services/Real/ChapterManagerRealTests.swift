@@ -12,7 +12,6 @@ import XCTest
 @testable import BookVault
 
 final class ChapterManagerRealTests: XCTestCase {
-
     // MARK: - Properties
 
     private var chapterManager: ChapterManager!

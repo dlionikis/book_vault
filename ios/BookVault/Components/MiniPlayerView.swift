@@ -33,7 +33,7 @@ struct MiniPlayerView: View {
                                 .lineLimit(1)
                                 .foregroundColor(.primary)
 
-                            Text(book.authors.map { $0.name }.joined(separator: ", "))
+                            Text(book.authors.map(\.name).joined(separator: ", "))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
@@ -76,7 +76,7 @@ struct MiniPlayerView: View {
     }
 
     @ViewBuilder
-    private func coverArt(for book: Book) -> some View {
+    private func coverArt(for _: Book) -> some View {
         // Use cached cover image if available
         if let coverImage = audioManager.currentBookCoverImage {
             Image(uiImage: coverImage)

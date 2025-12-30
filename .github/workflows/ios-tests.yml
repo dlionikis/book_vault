@@ -31,6 +31,14 @@ jobs:
       - name: Install xcpretty
         run: gem install xcpretty
 
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Lint Swift code
+        working-directory: ios
+        run: swiftlint lint --config .swiftlint.yml --strict --reporter github-actions-logging
+        continue-on-error: true
+
       - name: Verify Swift models exist
         run: |
           echo "=== Checking tracked Swift models ==="

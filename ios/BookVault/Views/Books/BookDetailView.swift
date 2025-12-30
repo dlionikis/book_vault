@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - BookDetailView
+
 struct BookDetailView: View {
     let book: Book
     @StateObject private var chapterManager = ChapterManager()
@@ -41,7 +43,7 @@ struct BookDetailView: View {
                             .overlay {
                                 ProgressView()
                             }
-                    case .success(let image):
+                    case let .success(image):
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fit)
@@ -74,7 +76,7 @@ struct BookDetailView: View {
                         HStack(spacing: 4) {
                             Text("By")
                                 .foregroundColor(.secondary)
-                            Text(book.authors.map { $0.name }.joined(separator: ", "))
+                            Text(book.authors.map(\.name).joined(separator: ", "))
                                 .fontWeight(.medium)
                         }
                     }
@@ -84,7 +86,7 @@ struct BookDetailView: View {
                         HStack(spacing: 4) {
                             Text("Narrated by")
                                 .foregroundColor(.secondary)
-                            Text(narrators.map { $0.name }.joined(separator: ", "))
+                            Text(narrators.map(\.name).joined(separator: ", "))
                         }
                         .font(.subheadline)
                     }
@@ -172,7 +174,8 @@ struct BookDetailView: View {
                             // Render markdown as attributed text
                             if let attributedString = try? AttributedString(
                                 markdown: description,
-                                options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+                                options: AttributedString
+                                    .MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
                             ) {
                                 Text(attributedString)
                                     .font(.body)
@@ -257,7 +260,7 @@ struct BookDetailView: View {
         .onAppear {
             // DEBUG: Log book data once when view appears (only in debug builds)
             DebugLogger.ui("📖 Book Detail Appeared: \(book.title) (ID: \(book.id))")
-            DebugLogger.verbose("Categories: \(book.categories?.map { $0.name }.joined(separator: ", ") ?? "none")")
+            DebugLogger.verbose("Categories: \(book.categories?.map(\.name).joined(separator: ", ") ?? "none")")
 
             // Dump full JSON only if verbose logging is enabled
             if let jsonData = try? JSONEncoder().encode(book),
@@ -304,7 +307,7 @@ struct BookDetailView: View {
     }
 }
 
-// MARK: - Book Play Button
+// MARK: - BookPlayButton
 
 /// Isolated play button component that observes audio player state
 /// This prevents BookDetailView from re-rendering on every audio player update
@@ -351,7 +354,7 @@ struct BookPlayButton: View {
     }
 }
 
-// MARK: - Library Button
+// MARK: - LibraryButton
 
 /// Library management button component
 struct LibraryButton: View {
@@ -479,7 +482,7 @@ struct LibraryButton: View {
     }
 }
 
-// MARK: - Metadata Row
+// MARK: - MetadataRow
 
 struct MetadataRow: View {
     let icon: String
@@ -499,63 +502,6 @@ struct MetadataRow: View {
                 Text(value)
                     .font(.subheadline)
             }
-        }
-    }
-}
-
-// MARK: - Flow Layout (for categories)
-
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = FlowResult(
-            in: proposal.replacingUnspecifiedDimensions().width,
-            subviews: subviews,
-            spacing: spacing
-        )
-        return result.size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = FlowResult(
-            in: bounds.width,
-            subviews: subviews,
-            spacing: spacing
-        )
-        for (index, subview) in subviews.enumerated() {
-            subview.place(at: result.positions[index], proposal: .unspecified)
-        }
-    }
-
-    struct FlowResult {
-        var size: CGSize = .zero
-        var positions: [CGPoint] = []
-
-        init(in maxWidth: CGFloat, subviews: Subviews, spacing: CGFloat) {
-            var currentX: CGFloat = 0
-            var currentY: CGFloat = 0
-            var lineHeight: CGFloat = 0
-
-            for subview in subviews {
-                let size = subview.sizeThatFits(.unspecified)
-
-                if currentX + size.width > maxWidth && currentX > 0 {
-                    // Move to next line
-                    currentX = 0
-                    currentY += lineHeight + spacing
-                    lineHeight = 0
-                }
-
-                positions.append(CGPoint(x: currentX, y: currentY))
-                currentX += size.width + spacing
-                lineHeight = max(lineHeight, size.height)
-            }
-
-            self.size = CGSize(
-                width: maxWidth,
-                height: currentY + lineHeight
-            )
         }
     }
 }
@@ -586,7 +532,7 @@ struct FlowLayout: Layout {
     }
 }
 
-// MARK: - Download Button (Phase 7)
+// MARK: - DownloadButton
 
 /// Download management button component
 struct DownloadButton: View {
@@ -645,7 +591,7 @@ struct DownloadButton: View {
                 .foregroundColor(.secondary)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            case .downloading(let progress):
+            case let .downloading(progress):
                 // Show download progress
                 VStack(spacing: 8) {
                     ProgressView(value: progress)
@@ -669,7 +615,7 @@ struct DownloadButton: View {
                 .background(Color.gray.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            case .paused(let progress):
+            case let .paused(progress):
                 // Show paused state with resume option
                 VStack(spacing: 8) {
                     ProgressView(value: progress)
@@ -721,7 +667,7 @@ struct DownloadButton: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
-            case .failed(let errorMessage):
+            case let .failed(errorMessage):
                 // Show error state with retry option
                 VStack(spacing: 8) {
                     HStack {

@@ -6,8 +6,10 @@
 //  Phase 2: Library UX Alignment
 //
 
-import Foundation
 import Combine
+import Foundation
+
+// MARK: - LibraryError
 
 /// Error types for library operations
 enum LibraryError: LocalizedError {
@@ -16,10 +18,12 @@ enum LibraryError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .offlineNoCache:
-            return "You're offline and no cached library is available. Connect to the internet to load your library."
+            "You're offline and no cached library is available. Connect to the internet to load your library."
         }
     }
 }
+
+// MARK: - LibraryManager
 
 /// Manages user library operations with caching strategy
 /// This is a lightweight wrapper around APIClient for library-related operations
@@ -236,7 +240,8 @@ class LibraryManager: ObservableObject, LibraryManaging {
 
         do {
             let response: AddSeriesToLibrary200Response = try await executeRequest(request)
-            DebugLogger.success("Series added to library: \(response.message) (\(response.added)/\(response.total) books)")
+            DebugLogger
+                .success("Series added to library: \(response.message) (\(response.added)/\(response.total) books)")
 
             // Invalidate cache
             invalidateCache()
@@ -314,7 +319,7 @@ class LibraryManager: ObservableObject, LibraryManaging {
             ])
         }
 
-        guard (200...299).contains(httpResponse.statusCode) else {
+        guard (200 ... 299).contains(httpResponse.statusCode) else {
             throw NSError(domain: "LibraryManager", code: httpResponse.statusCode, userInfo: [
                 NSLocalizedDescriptionKey: "HTTP \(httpResponse.statusCode)"
             ])

@@ -8,16 +8,18 @@
 
 import Foundation
 
+// MARK: - DownloadedBook
+
 /// Metadata for a single downloaded book
 struct DownloadedBook: Codable, Identifiable {
-    let id: String  // bookId
+    let id: String // bookId
     let title: String
     let author: String
     let downloadedAt: Date
     let fileSize: Int64
     let audioPath: String
     let coverPath: String?
-    let fileExtension: String  // e.g., "mp3" or "m4a"
+    let fileExtension: String // e.g., "mp3" or "m4a"
 
     var formattedSize: String {
         ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file)
@@ -37,7 +39,16 @@ struct DownloadedBook: Codable, Identifiable {
         fileExtension = try container.decodeIfPresent(String.self, forKey: .fileExtension) ?? "mp3"
     }
 
-    init(id: String, title: String, author: String, downloadedAt: Date, fileSize: Int64, audioPath: String, coverPath: String?, fileExtension: String) {
+    init(
+        id: String,
+        title: String,
+        author: String,
+        downloadedAt: Date,
+        fileSize: Int64,
+        audioPath: String,
+        coverPath: String?,
+        fileExtension: String
+    ) {
         self.id = id
         self.title = title
         self.author = author
@@ -48,6 +59,8 @@ struct DownloadedBook: Codable, Identifiable {
         self.fileExtension = fileExtension
     }
 }
+
+// MARK: - DownloadMetadata
 
 /// Root metadata structure stored on disk
 struct DownloadMetadata: Codable {
@@ -60,6 +73,8 @@ struct DownloadMetadata: Codable {
         self.totalSize = 0
     }
 }
+
+// MARK: - StorageManager
 
 /// Manages local storage for downloaded audiobooks
 /// Handles file operations, metadata index, and storage limits
@@ -261,22 +276,24 @@ class StorageManager: ObservableObject, StorageManaging {
         // Both must be true for a valid download
         let isDownloaded = inMetadata && existsOnDisk
 
-        DebugLogger.storage("isBookDownloaded check: \(normalizedId) -> \(isDownloaded) (metadata: \(inMetadata), disk: \(existsOnDisk))")
+        DebugLogger
+            .storage(
+                "isBookDownloaded check: \(normalizedId) -> \(isDownloaded) (metadata: \(inMetadata), disk: \(existsOnDisk))"
+            )
         return isDownloaded
     }
 
     /// Get file size of downloaded audio
     func downloadedFileSize(for bookId: String) -> Int64? {
-        return downloadedFileSize(for: bookId, extension: nil)
+        downloadedFileSize(for: bookId, extension: nil)
     }
 
     /// Get file size of downloaded audio with explicit extension
     func downloadedFileSize(for bookId: String, extension fileExtension: String?) -> Int64? {
-        let audioPath: URL
-        if let ext = fileExtension {
-            audioPath = audioFilePath(for: bookId, extension: ext)
+        let audioPath: URL = if let ext = fileExtension {
+            audioFilePath(for: bookId, extension: ext)
         } else {
-            audioPath = audioFilePath(for: bookId)
+            audioFilePath(for: bookId)
         }
 
         do {
@@ -346,7 +363,8 @@ class StorageManager: ObservableObject, StorageManaging {
             downloads = metadata.downloads
             totalSize = metadata.totalSize
 
-            DebugLogger.storage("Loaded metadata: \(downloads.count) downloads, \(StorageManager.formatFileSize(totalSize))")
+            DebugLogger
+                .storage("Loaded metadata: \(downloads.count) downloads, \(StorageManager.formatFileSize(totalSize))")
         } catch {
             DebugLogger.error("Failed to load metadata", error: error)
         }
@@ -392,7 +410,8 @@ class StorageManager: ObservableObject, StorageManaging {
         totalSize = downloads.reduce(0) { $0 + $1.fileSize }
 
         saveMetadata()
-        DebugLogger.storage("Added to metadata: \(book.title) (\(StorageManager.formatFileSize(fileSize)), \(fileExtension))")
+        DebugLogger
+            .storage("Added to metadata: \(book.title) (\(StorageManager.formatFileSize(fileSize)), \(fileExtension))")
     }
 
     /// Remove a download from metadata
@@ -489,6 +508,6 @@ class StorageManager: ObservableObject, StorageManaging {
 
 extension DebugLogger {
     static func storage(_ message: String) {
-        log(message, category: .database)  // Use database category for storage operations
+        log(message, category: .database) // Use database category for storage operations
     }
 }

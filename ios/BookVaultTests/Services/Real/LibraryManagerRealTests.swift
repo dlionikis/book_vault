@@ -12,7 +12,6 @@ import XCTest
 @testable import BookVault
 
 final class LibraryManagerRealTests: XCTestCase {
-
     // MARK: - Properties
 
     private var libraryManager: LibraryManager!
@@ -164,7 +163,7 @@ final class LibraryManagerRealTests: XCTestCase {
         // Then: Returns cached books
         XCTAssertEqual(result.count, 3)
         XCTAssertTrue(libraryManager.isShowingCachedData)
-        XCTAssertEqual(mockAPIClient.fetchLibraryCalls, 0)  // No API call
+        XCTAssertEqual(mockAPIClient.fetchLibraryCalls, 0) // No API call
     }
 
     @MainActor
@@ -179,7 +178,9 @@ final class LibraryManagerRealTests: XCTestCase {
             XCTFail("Expected error to be thrown")
         } catch {
             XCTAssertTrue(error is LibraryError)
-            XCTAssertEqual((error as! LibraryError), .offlineNoCache)
+            if let libraryError = error as? LibraryError {
+                XCTAssertEqual(libraryError, .offlineNoCache)
+            }
         }
     }
 
@@ -346,7 +347,7 @@ final class LibraryManagerRealTests: XCTestCase {
 
         // Then: Returns true from cache (no additional API call)
         XCTAssertTrue(result)
-        XCTAssertEqual(mockAPIClient.fetchLibraryCalls, 1)  // Only the initial fetch
+        XCTAssertEqual(mockAPIClient.fetchLibraryCalls, 1) // Only the initial fetch
     }
 
     @MainActor

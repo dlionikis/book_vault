@@ -12,7 +12,6 @@ import Foundation
 /// Mock library manager for testing
 @MainActor
 class MockLibraryManager: LibraryManaging {
-
     // MARK: - Published-like Properties (for protocol conformance)
 
     var isLoading: Bool = false
@@ -26,7 +25,7 @@ class MockLibraryManager: LibraryManaging {
 
     // MARK: - Call Tracking
 
-    var fetchLibraryBooksCalls: [Bool] = []  // forceRefresh values
+    var fetchLibraryBooksCalls: [Bool] = [] // forceRefresh values
     var addToLibraryCalls: [String] = []
     var removeFromLibraryCalls: [String] = []
     var isInLibraryCalls: [String] = []
@@ -35,7 +34,11 @@ class MockLibraryManager: LibraryManaging {
     // MARK: - Behavior Configuration
 
     var fetchShouldFail: Bool = false
-    var fetchError: Error = NSError(domain: "MockLibraryManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Mock error"])
+    var fetchError: Error = NSError(
+        domain: "MockLibraryManager",
+        code: -1,
+        userInfo: [NSLocalizedDescriptionKey: "Mock error"]
+    )
     var addShouldFail: Bool = false
     var removeShouldFail: Bool = false
 

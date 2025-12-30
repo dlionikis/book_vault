@@ -6,13 +6,12 @@
 //  Phase 4: Download Tests
 //
 
-import XCTest
 import Combine
+import XCTest
 @testable import BookVault
 
 @MainActor
 final class DownloadManagerTests: XCTestCase {
-
     var sut: MockDownloadManager!
     var mockStorageManager: MockStorageManager!
     var mockNetworkMonitor: MockNetworkMonitor!
@@ -69,7 +68,7 @@ final class DownloadManagerTests: XCTestCase {
 
         // Then state should be downloading
         let bookId = book.id.uuidString
-        if case .downloading(let progress) = sut.activeDownloads[bookId]?.state {
+        if case let .downloading(progress) = sut.activeDownloads[bookId]?.state {
             XCTAssertEqual(progress, 0)
         } else {
             XCTFail("Expected downloading state with 0 progress")
@@ -89,7 +88,7 @@ final class DownloadManagerTests: XCTestCase {
             try await sut.startDownload(book: book)
             XCTFail("Expected error to be thrown")
         } catch let error as DownloadError {
-            if case .networkError(let message) = error {
+            if case let .networkError(message) = error {
                 XCTAssertEqual(message, "Connection failed")
             } else {
                 XCTFail("Expected networkError")
@@ -249,7 +248,7 @@ final class DownloadManagerTests: XCTestCase {
         // Then progress should be updated
         if let download = sut.activeDownloads[bookId] {
             XCTAssertEqual(download.progress, 0.5, accuracy: 0.01)
-            if case .downloading(let progress) = download.state {
+            if case let .downloading(progress) = download.state {
                 XCTAssertEqual(progress, 0.5)
             } else {
                 XCTFail("Expected downloading state")
@@ -270,7 +269,7 @@ final class DownloadManagerTests: XCTestCase {
 
         // Then state should reflect 75% progress
         let state = sut.downloadState(for: bookId)
-        if case .downloading(let progress) = state {
+        if case let .downloading(progress) = state {
             XCTAssertEqual(progress, 0.75)
         } else {
             XCTFail("Expected downloading state")
@@ -290,7 +289,7 @@ final class DownloadManagerTests: XCTestCase {
         sut.pauseDownload(bookId: bookId)
 
         // Then state should be paused with same progress
-        if case .paused(let progress) = sut.activeDownloads[bookId]?.state {
+        if case let .paused(progress) = sut.activeDownloads[bookId]?.state {
             XCTAssertEqual(progress, 0.3, accuracy: 0.01)
         } else {
             XCTFail("Expected paused state")
@@ -332,7 +331,7 @@ final class DownloadManagerTests: XCTestCase {
             try await sut.resumeDownload(book: book)
             XCTFail("Expected error to be thrown")
         } catch let error as DownloadError {
-            if case .networkError(let message) = error {
+            if case let .networkError(message) = error {
                 XCTAssertEqual(message, "Resume failed")
             } else {
                 XCTFail("Expected networkError")
@@ -442,7 +441,7 @@ final class DownloadManagerTests: XCTestCase {
         sut.simulateFailure(bookId: bookId, errorMessage: "Network timeout")
 
         // Then state should be failed
-        if case .failed(let error) = sut.activeDownloads[bookId]?.state {
+        if case let .failed(error) = sut.activeDownloads[bookId]?.state {
             XCTAssertEqual(error, "Network timeout")
         } else {
             XCTFail("Expected failed state")

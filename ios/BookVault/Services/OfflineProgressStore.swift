@@ -31,12 +31,12 @@ class OfflineProgressStore: ObservableObject, OfflineStoring {
         var positionSeconds: Double
         var completed: Bool
         var lastPlayed: Date
-        var needsSync: Bool  // True if not yet synced to server
+        var needsSync: Bool // True if not yet synced to server
     }
 
     struct ProgressCache: Codable {
         var version: Int = 1
-        var progress: [String: LocalProgress]  // bookId -> progress
+        var progress: [String: LocalProgress] // bookId -> progress
         var userId: String
     }
 
@@ -97,7 +97,7 @@ class OfflineProgressStore: ObservableObject, OfflineStoring {
             positionSeconds: position,
             completed: completed,
             lastPlayed: Date(),
-            needsSync: true  // Mark as needing sync
+            needsSync: true // Mark as needing sync
         )
 
         progressCache?.progress[bookId] = localProgress
@@ -114,7 +114,8 @@ class OfflineProgressStore: ObservableObject, OfflineStoring {
     func getProgress(bookId: String) -> LocalProgress? {
         guard let userId = getCurrentUserId(),
               let cache = progressCache,
-              cache.userId == userId else {
+              cache.userId == userId
+        else {
             return nil
         }
 
@@ -126,11 +127,12 @@ class OfflineProgressStore: ObservableObject, OfflineStoring {
     func getPendingSync() -> [LocalProgress] {
         guard let userId = getCurrentUserId(),
               let cache = progressCache,
-              cache.userId == userId else {
+              cache.userId == userId
+        else {
             return []
         }
 
-        return cache.progress.values.filter { $0.needsSync }
+        return cache.progress.values.filter(\.needsSync)
     }
 
     /// Mark a progress entry as synced (called after successful API sync)
@@ -177,7 +179,7 @@ class OfflineProgressStore: ObservableObject, OfflineStoring {
             positionSeconds: position,
             completed: completed,
             lastPlayed: lastPlayed,
-            needsSync: false  // Already synced from server
+            needsSync: false // Already synced from server
         )
 
         progressCache?.progress[bookId] = serverProgress

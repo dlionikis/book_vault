@@ -10,7 +10,6 @@ import XCTest
 @testable import BookVault
 
 final class OfflineProgressStoreRealTests: XCTestCase {
-
     // MARK: - Properties
 
     private var tempDirectory: URL!
@@ -263,21 +262,21 @@ final class OfflineProgressStoreRealTests: XCTestCase {
     func testUpdateFromServer_WithNewerServerData_UpdatesLocal() {
         // Given: Local progress with old timestamp
         let bookId = UUID().uuidString
-        let oldDate = Date().addingTimeInterval(-3600)  // 1 hour ago
+        let oldDate = Date().addingTimeInterval(-3600) // 1 hour ago
         store.saveProgress(bookId: bookId, position: 60.0, completed: false)
 
         // Simulate that local progress has old lastPlayed
         // (In reality, saveProgress sets lastPlayed to now, but we want to test the merge logic)
 
         // When: Updating from server with newer data
-        let serverDate = Date()  // Now
+        let serverDate = Date() // Now
         store.updateFromServer(bookId: bookId, position: 180.0, completed: true, lastPlayed: serverDate)
 
         // Then: Local is updated with server data
         let progress = store.getProgress(bookId: bookId)
         XCTAssertEqual(progress?.positionSeconds, 180.0)
         XCTAssertTrue(progress?.completed ?? false)
-        XCTAssertFalse(progress?.needsSync ?? true)  // Already synced from server
+        XCTAssertFalse(progress?.needsSync ?? true) // Already synced from server
     }
 
     @MainActor
@@ -423,7 +422,7 @@ final class OfflineProgressStoreRealTests: XCTestCase {
     func testUpdateFromServer_PreservesServerLastPlayed() {
         // Given: A specific server date
         let bookId = UUID().uuidString
-        let serverDate = Date(timeIntervalSince1970: 1700000000)  // Fixed date
+        let serverDate = Date(timeIntervalSince1970: 1_700_000_000) // Fixed date
 
         // When: Updating from server
         store.updateFromServer(bookId: bookId, position: 100.0, completed: false, lastPlayed: serverDate)
@@ -447,7 +446,7 @@ final class OfflineProgressStoreRealTests: XCTestCase {
     @MainActor
     func testSaveProgress_WithVeryLargePosition_Works() {
         let bookId = UUID().uuidString
-        let largePosition = 86400.0  // 24 hours in seconds
+        let largePosition = 86400.0 // 24 hours in seconds
         store.saveProgress(bookId: bookId, position: largePosition, completed: false)
 
         let progress = store.getProgress(bookId: bookId)

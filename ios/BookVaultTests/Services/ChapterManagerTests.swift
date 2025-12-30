@@ -10,7 +10,6 @@ import XCTest
 
 @MainActor
 final class ChapterManagerTests: XCTestCase {
-
     var sut: ChapterManager!
     var mockAPIClient: MockAPIClient!
 

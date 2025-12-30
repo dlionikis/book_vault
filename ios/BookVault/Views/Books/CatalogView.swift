@@ -8,6 +8,8 @@
 
 import SwiftUI
 
+// MARK: - CatalogView
+
 struct CatalogView: View {
     @StateObject private var viewModel = CatalogViewModel()
     @StateObject private var authManager = AuthManager.shared
@@ -19,7 +21,7 @@ struct CatalogView: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                if viewModel.isLoading && viewModel.books.isEmpty {
+                if viewModel.isLoading, viewModel.books.isEmpty {
                     // Initial loading state
                     VStack(spacing: 12) {
                         ProgressView()
@@ -106,7 +108,7 @@ struct CatalogView: View {
     }
 }
 
-// MARK: - Book Grid Item
+// MARK: - BookGridItem
 
 struct BookGridItem: View {
     let book: Book
@@ -124,7 +126,7 @@ struct BookGridItem: View {
                             .overlay {
                                 ProgressView()
                             }
-                    case .success(let image):
+                    case let .success(image):
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fit)
@@ -196,7 +198,7 @@ struct BookGridItem: View {
     }
 }
 
-// MARK: - View Model
+// MARK: - CatalogViewModel
 
 @MainActor
 class CatalogViewModel: ObservableObject {
@@ -230,7 +232,7 @@ class CatalogViewModel: ObservableObject {
     }
 
     func loadMoreBooks() async {
-        guard !isLoading && hasMorePages else { return }
+        guard !isLoading, hasMorePages else { return }
 
         isLoading = true
         currentPage += 1
@@ -252,97 +254,7 @@ class CatalogViewModel: ObservableObject {
     }
 }
 
-// MARK: - Continue Listening Card
-
-struct ContinueListeningCard: View {
-    let book: Book
-    @State private var userProgress: UserProgress?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Cover image
-            ZStack(alignment: .bottomLeading) {
-                AsyncImage(url: URL(string: book.coverUrl ?? "")) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .failure, .empty:
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.2))
-                            .overlay {
-                                Image(systemName: "book.fill")
-                                    .foregroundColor(.gray)
-                            }
-                    @unknown default:
-                        EmptyView()
-                    }
-                }
-                .frame(width: 200, height: 280)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                // Progress bar overlay
-                if let progress = userProgress {
-                    VStack(spacing: 0) {
-                        Spacer()
-                        ProgressBar(progress: progress, runtimeMinutes: book.runtimeMinutes ?? 0)
-                    }
-                }
-            }
-            .shadow(radius: 6)
-
-            // Book info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(book.title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .lineLimit(2)
-                    .foregroundColor(.primary)
-
-                if let firstAuthor = book.authors.first {
-                    Text(firstAuthor.name)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-
-                // Time remaining
-                if let progress = userProgress {
-                    let remainingSeconds = Double((book.runtimeMinutes ?? 0) * 60) - progress.positionSeconds
-                    Text(formatTimeRemaining(remainingSeconds))
-                        .font(.caption2)
-                        .foregroundColor(.blue)
-                }
-            }
-            .frame(width: 200)
-        }
-        .task {
-            await fetchProgress()
-        }
-    }
-
-    private func fetchProgress() async {
-        do {
-            userProgress = try await ProgressManager.shared.fetchProgress(for: book.id.uuidString)
-        } catch {
-            DebugLogger.verbose("Failed to fetch progress for book \(book.id): \(error)")
-        }
-    }
-
-    private func formatTimeRemaining(_ seconds: Double) -> String {
-        let hours = Int(seconds) / 3600
-        let minutes = (Int(seconds) % 3600) / 60
-
-        if hours > 0 {
-            return "\(hours)h \(minutes)m left"
-        } else {
-            return "\(minutes)m left"
-        }
-    }
-}
-
-// MARK: - Progress Bar (simple version for Continue Listening)
+// MARK: - ProgressBar
 
 struct ProgressBar: View {
     let progress: UserProgress
@@ -371,7 +283,7 @@ struct ProgressBar: View {
     }
 }
 
-// MARK: - Progress Indicator
+// MARK: - ProgressIndicator
 
 struct ProgressIndicator: View {
     let progress: UserProgress

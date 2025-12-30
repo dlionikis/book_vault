@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - CategoryDetailView
+
 /// Detail view showing a category and all books in that category
 struct CategoryDetailView: View {
     let categoryId: String
@@ -150,8 +152,9 @@ struct CategoryDetailView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - CategoryDetailView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct CategoryDetailView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

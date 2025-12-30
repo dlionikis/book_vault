@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - BookDetailLoader
+
 /// Wrapper view that loads a book by ID and displays BookDetailView
 struct BookDetailLoader: View {
     let bookId: String
@@ -43,7 +45,7 @@ struct BookDetailLoader: View {
                     .buttonStyle(.borderedProminent)
                 }
                 .padding()
-            } else if let book = book {
+            } else if let book {
                 BookDetailView(book: book)
             }
         }
@@ -75,8 +77,9 @@ struct BookDetailLoader: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - BookDetailLoader_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct BookDetailLoader_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

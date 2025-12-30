@@ -15,7 +15,8 @@ struct LoginView: View {
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case email, password
+        case email
+        case password
     }
 
     var body: some View {

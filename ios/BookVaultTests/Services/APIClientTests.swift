@@ -9,7 +9,6 @@ import XCTest
 @testable import BookVault
 
 final class APIClientTests: XCTestCase {
-
     // MARK: - URL Construction Tests
 
     func testBaseURLIsConfiguredCorrectly() {

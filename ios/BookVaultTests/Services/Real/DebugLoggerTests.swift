@@ -10,7 +10,6 @@ import XCTest
 @testable import BookVault
 
 final class DebugLoggerTests: XCTestCase {
-
     // MARK: - Category Tests
 
     func testCategoryRawValues() {
@@ -75,7 +74,7 @@ final class DebugLoggerTests: XCTestCase {
 
     func testMeasureSyncReturnsCorrectValue() {
         let result = DebugLogger.measure("Test operation") {
-            return 42
+            42
         }
         XCTAssertEqual(result, 42)
     }
@@ -103,7 +102,7 @@ final class DebugLoggerTests: XCTestCase {
 
         do {
             _ = try await DebugLogger.measure("Async throwing operation") {
-                try await Task.sleep(nanoseconds: 1_000) // Make it async
+                try await Task.sleep(nanoseconds: 1000) // Make it async
                 throw TestError.expected
             }
             XCTFail("Expected error to be thrown")
@@ -113,6 +112,7 @@ final class DebugLoggerTests: XCTestCase {
     }
 
     // MARK: - Static Method Invocation Tests
+
     // These tests verify that the static methods can be called without crashing
     // In DEBUG builds, they will print; in RELEASE builds, they will no-op
 
@@ -177,9 +177,9 @@ final class DebugLoggerTests: XCTestCase {
 
     func testApiResponseMethodDoesNotCrash() {
         // Test various status code ranges
-        DebugLogger.apiResponse(path: "/api/books", statusCode: 200)  // Success
+        DebugLogger.apiResponse(path: "/api/books", statusCode: 200) // Success
         DebugLogger.apiResponse(path: "/api/books", statusCode: 201, body: "{}")
-        DebugLogger.apiResponse(path: "/api/auth", statusCode: 401)   // Client error
+        DebugLogger.apiResponse(path: "/api/auth", statusCode: 401) // Client error
         DebugLogger.apiResponse(path: "/api/server", statusCode: 500) // Server error
         DebugLogger.apiResponse(path: "/api/redirect", statusCode: 301) // Other
     }
@@ -209,23 +209,23 @@ final class DebugLoggerTests: XCTestCase {
         // In DEBUG builds, this will be true; in RELEASE builds, false
         // We're testing that it doesn't crash
         #if DEBUG
-        XCTAssertTrue(executed)
+            XCTAssertTrue(executed)
         #else
-        XCTAssertFalse(executed)
+            XCTAssertFalse(executed)
         #endif
     }
 
     func testDebugOnlyAsyncExecutesBlock() async {
         var executed = false
         await DebugLogger.debugOnly {
-            try? await Task.sleep(nanoseconds: 1_000) // Make it async
+            try? await Task.sleep(nanoseconds: 1000) // Make it async
             executed = true
         }
         // In DEBUG builds, this will be true; in RELEASE builds, false
         #if DEBUG
-        XCTAssertTrue(executed)
+            XCTAssertTrue(executed)
         #else
-        XCTAssertFalse(executed)
+            XCTAssertFalse(executed)
         #endif
     }
 

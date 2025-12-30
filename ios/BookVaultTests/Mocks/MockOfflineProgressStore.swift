@@ -12,7 +12,6 @@ import Foundation
 /// Mock offline progress store for testing
 @MainActor
 class MockOfflineProgressStore: OfflineStoring {
-
     // MARK: - In-Memory Storage
 
     var progressData: [String: OfflineProgressStore.LocalProgress] = [:]
@@ -66,7 +65,7 @@ class MockOfflineProgressStore: OfflineStoring {
 
     func getPendingSync() -> [OfflineProgressStore.LocalProgress] {
         getPendingSyncCallCount += 1
-        return progressData.values.filter { $0.needsSync }
+        return progressData.values.filter(\.needsSync)
     }
 
     func markSynced(bookId: String) {

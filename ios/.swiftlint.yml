@@ -1,0 +1,71 @@
+# SwiftLint Configuration for BookVault iOS App
+# Docs: https://realm.github.io/SwiftLint/rule-directory.html
+
+included:
+  - BookVault
+  - BookVaultTests
+
+excluded:
+  - BookVault/Generated # Auto-generated OpenAPI models
+
+# Start with reasonable defaults, can tighten later
+disabled_rules:
+  - line_length # Too noisy initially
+  - file_length # Some views are legitimately long
+  - type_body_length # ViewModels can be large
+  - function_body_length # Some complex functions are fine
+  - trailing_whitespace # SwiftFormat handles this
+  - cyclomatic_complexity # Some functions are necessarily complex
+  - large_tuple # Mock data often needs larger tuples
+  - notification_center_detachment # False positive for managed observers
+  - non_optional_string_data_conversion # Minor optimization
+  - force_try # Acceptable in test fixtures
+  - force_cast # Acceptable in test code
+
+opt_in_rules:
+  - empty_count # Prefer .isEmpty over .count == 0
+  - empty_string # Prefer .isEmpty for strings
+  - fallthrough # Require explicit fallthrough
+  - fatal_error_message # Require message in fatalError
+  - first_where # Prefer .first(where:) over .filter().first
+  # - force_unwrapping # Disabled - too strict for initial adoption
+  # - implicitly_unwrapped_optional # Disabled - common in test setup
+  - last_where # Prefer .last(where:)
+  - legacy_random # Use modern random APIs
+  - modifier_order # Consistent modifier ordering
+  - overridden_super_call # Ensure super is called
+  - private_action # @IBAction should be private
+  - private_outlet # @IBOutlet should be private
+  - redundant_nil_coalescing # Remove redundant ?? nil
+  - sorted_first_last # Use .first/.last instead of sorted().first
+  - toggle_bool # Prefer .toggle() over x = !x
+  - unneeded_parentheses_in_closure_argument # Clean closure syntax
+  - vertical_whitespace_closing_braces # No blank line before }
+  - yoda_condition # Avoid constant == variable
+
+# Customize specific rules
+identifier_name:
+  min_length:
+    warning: 2 # Allow 2-char names like 'id', 'to'
+  excluded:
+    - id
+    - to
+    - x
+    - y
+    - i
+    - j
+
+type_name:
+  min_length:
+    warning: 3
+  max_length:
+    warning: 50
+
+nesting:
+  type_level:
+    warning: 2
+  function_level:
+    warning: 3
+
+# Reporter type (xcode for CI integration)
+reporter: xcode

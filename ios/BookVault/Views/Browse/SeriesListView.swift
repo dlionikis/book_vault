@@ -7,6 +7,8 @@
 
 import SwiftUI
 
+// MARK: - SeriesListView
+
 /// List view for browsing all series alphabetically
 struct SeriesListView: View {
     @StateObject private var searchManager = SearchManager.shared
@@ -19,7 +21,7 @@ struct SeriesListView: View {
 
     var body: some View {
         ZStack {
-            if isLoading && series.isEmpty {
+            if isLoading, series.isEmpty {
                 ProgressView("Loading series...")
                     .accessibilityLabel("Loading series")
             } else if let error = errorMessage, series.isEmpty {
@@ -141,9 +143,9 @@ struct SeriesListView: View {
     /// Filters series based on search text
     private var filteredSeries: [SeriesWithBookCount] {
         if searchText.isEmpty {
-            return series
+            series
         } else {
-            return series.filter { seriesItem in
+            series.filter { seriesItem in
                 seriesItem.title.localizedCaseInsensitiveContains(searchText)
             }
         }
@@ -163,7 +165,10 @@ struct SeriesListView: View {
             let response = try await searchManager.fetchSeries(page: currentPage, limit: 50)
             series = response.results
             hasMorePages = currentPage < response.pagination.pages
-            DebugLogger.info("Loaded \(series.count) series (page \(currentPage) of \(response.pagination.pages), total: \(response.pagination.total))")
+            DebugLogger
+                .info(
+                    "Loaded \(series.count) series (page \(currentPage) of \(response.pagination.pages), total: \(response.pagination.total))"
+                )
         } catch {
             DebugLogger.error("Failed to load series", error: error)
             errorMessage = error.localizedDescription
@@ -199,8 +204,9 @@ struct SeriesListView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - SeriesListView_Previews
 
+// periphery:ignore - Used by Xcode Previews
 struct SeriesListView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {

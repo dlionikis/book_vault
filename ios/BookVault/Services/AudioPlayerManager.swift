@@ -10,9 +10,9 @@
 //  Phase 7: Offline Downloads - Local file playback support
 //
 
-import Foundation
 import AVFoundation
 import Combine
+import Foundation
 import MediaPlayer
 
 /// Manages audio playback using AVPlayer
@@ -35,7 +35,7 @@ class AudioPlayerManager: ObservableObject {
 
     // Phase 5: Chapter Navigation
     @Published var chapters: [Chapter] = []
-    @Published var currentChapterId: UUID? = nil
+    @Published var currentChapterId: UUID?
 
     // Phase 7: Offline Downloads
     @Published var isPlayingOffline = false
@@ -135,7 +135,6 @@ class AudioPlayerManager: ObservableObject {
 
             // Setup route change handling
             setupRouteChangeObserver()
-
         } catch {
             DebugLogger.error("Failed to set up audio session", error: error)
             self.error = error
@@ -239,7 +238,7 @@ class AudioPlayerManager: ObservableObject {
 
         // Basic metadata
         nowPlayingInfo[MPMediaItemPropertyTitle] = book.title
-        nowPlayingInfo[MPMediaItemPropertyArtist] = book.authors.map { $0.name }.joined(separator: ", ")
+        nowPlayingInfo[MPMediaItemPropertyArtist] = book.authors.map(\.name).joined(separator: ", ")
         nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = book.series?.first?.title ?? "Audiobook"
 
         // Playback information
@@ -251,7 +250,7 @@ class AudioPlayerManager: ObservableObject {
         Task { @MainActor in
             if let coverImage = await loadCoverImage(from: book.coverUrl ?? "") {
                 let artwork = MPMediaItemArtwork(boundsSize: coverImage.size) { _ in
-                    return coverImage
+                    coverImage
                 }
                 nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
                 MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
@@ -360,7 +359,7 @@ class AudioPlayerManager: ObservableObject {
             DebugLogger.database("Loaded saved position: \(savedProgress.positionSeconds)s")
 
             // If book is not completed and has saved position, seek to it
-            if !savedProgress.completed && savedProgress.positionSeconds > 0 {
+            if !savedProgress.completed, savedProgress.positionSeconds > 0 {
                 self.lastSavedPosition = savedProgress.positionSeconds
             }
         }
@@ -460,7 +459,7 @@ class AudioPlayerManager: ObservableObject {
             DebugLogger.database("Loaded saved position: \(savedProgress.positionSeconds)s")
 
             // If book is not completed and has saved position, seek to it
-            if !savedProgress.completed && savedProgress.positionSeconds > 0 {
+            if !savedProgress.completed, savedProgress.positionSeconds > 0 {
                 self.lastSavedPosition = savedProgress.positionSeconds
             }
         }
@@ -612,18 +611,18 @@ class AudioPlayerManager: ObservableObject {
         }
 
         stopProgressSaveTimer()
-        downloadObserver?.cancel()  // Phase 7: Cancel download observer
+        downloadObserver?.cancel() // Phase 7: Cancel download observer
         downloadObserver = nil
         player?.pause()
         player?.replaceCurrentItem(with: nil)
         currentBook = nil
         currentBookCoverImage = nil
         isPlaying = false
-        isPlayingOffline = false  // Phase 7: Reset offline flag
+        isPlayingOffline = false // Phase 7: Reset offline flag
         currentTime = 0
         duration = 0
         lastSavedPosition = 0
-        clearChapters()  // Phase 5: Clear chapters
+        clearChapters() // Phase 5: Clear chapters
     }
 
     // MARK: - Private Methods
@@ -641,7 +640,7 @@ class AudioPlayerManager: ObservableObject {
             queue: .main
         ) { [weak self] time in
             Task { @MainActor in
-                guard let self = self else { return }
+                guard let self else { return }
                 self.currentTime = time.seconds
 
                 // Update current chapter (Phase 5)
@@ -659,7 +658,7 @@ class AudioPlayerManager: ObservableObject {
         // Observe status to get duration
         playerItem.publisher(for: \.status)
             .sink { [weak self] status in
-                guard let self = self else { return }
+                guard let self else { return }
 
                 DebugLogger.verbose("AVPlayerItem status: \(status.rawValue)")
 
@@ -674,7 +673,7 @@ class AudioPlayerManager: ObservableObject {
                         let cmTime = CMTime(seconds: self.lastSavedPosition, preferredTimescale: 1000)
                         self.player?.seek(to: cmTime) { [weak self] _ in
                             Task { @MainActor in
-                                guard let self = self else { return }
+                                guard let self else { return }
                                 // Start playback after seek completes
                                 self.player?.play()
 
@@ -711,7 +710,6 @@ class AudioPlayerManager: ObservableObject {
 
                     DebugLogger.verbose("Player rate: \(self.player?.rate ?? 0)")
                     DebugLogger.verbose("Player timeControlStatus: \(self.player?.timeControlStatus.rawValue ?? -1)")
-
                 } else if status == .failed {
                     DebugLogger.error("AVPlayerItem failed", error: playerItem.error)
                     self.error = playerItem.error
@@ -730,7 +728,8 @@ class AudioPlayerManager: ObservableObject {
     @objc private func handleInterruption(notification: Notification) {
         guard let userInfo = notification.userInfo,
               let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
-              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue)
+        else {
             return
         }
 
@@ -768,7 +767,8 @@ class AudioPlayerManager: ObservableObject {
     @objc private func handleRouteChange(notification: Notification) {
         guard let userInfo = notification.userInfo,
               let reasonValue = userInfo[AVAudioSessionRouteChangeReasonKey] as? UInt,
-              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else {
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue)
+        else {
             return
         }
 
@@ -783,11 +783,10 @@ class AudioPlayerManager: ObservableObject {
         case .newDeviceAvailable:
             // New audio device connected
             DebugLogger.audio("Audio route changed - new device available")
-            // Optionally resume playback here if desired
+// Optionally resume playback here if desired
 
         default:
             DebugLogger.verbose("Audio route changed - reason: \(reason.rawValue)")
-            break
         }
     }
 
@@ -819,7 +818,6 @@ class AudioPlayerManager: ObservableObject {
             DebugLogger.database("Stopped progress save timer")
         }
     }
-
 
     private func saveProgress() async {
         guard let book = currentBook else { return }
@@ -882,7 +880,7 @@ class AudioPlayerManager: ObservableObject {
         downloadObserver = concreteManager.$activeDownloads
             .receive(on: DispatchQueue.main)
             .sink { [weak self] downloads in
-                guard let self = self else { return }
+                guard let self else { return }
 
                 // Check if this book's download just completed
                 if let download = downloads[bookId], case .completed = download.state {

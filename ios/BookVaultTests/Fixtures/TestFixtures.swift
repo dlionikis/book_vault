@@ -16,7 +16,6 @@ import Foundation
 /// Factory methods for creating test instances of OpenAPI-generated models.
 /// All methods use sensible defaults that can be overridden as needed.
 enum TestFixtures {
-
     // MARK: - Static Test IDs (for consistent test data)
 
     static let testUserId = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
@@ -142,7 +141,7 @@ enum TestFixtures {
         var currentTime: Double = 0
         let chapterDuration: Double = 600 // 10 minutes each
 
-        for i in 0..<count {
+        for i in 0 ..< count {
             chapters.append(makeChapter(
                 id: UUID(),
                 title: "Chapter \(i + 1)",

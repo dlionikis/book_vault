@@ -7,15 +7,19 @@
 
 import SwiftUI
 
+// MARK: - Tab
+
 enum Tab {
-    case catalog   // All books (was library)
-    case browse    // Metadata browse
-    case search    // Keyword search
-    case library   // User's personal library
+    case catalog // All books (was library)
+    case browse // Metadata browse
+    case search // Keyword search
+    case library // User's personal library
     case downloads // Offline downloads (Phase 7)
-    case settings  // Settings and account
-    case offline   // Offline mode placeholder (Phase 8)
+    case settings // Settings and account
+    case offline // Offline mode placeholder (Phase 8)
 }
+
+// MARK: - ContentView
 
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -24,7 +28,7 @@ struct ContentView: View {
     @ObservedObject private var audioPlayer = AudioPlayerManager.shared
     @State private var hasLoadedInitialBook = false
     @State private var selectedTab: Tab = .catalog
-    @State private var previousOnlineTab: Tab? = nil  // Remember tab when going offline
+    @State private var previousOnlineTab: Tab? // Remember tab when going offline
 
     var body: some View {
         if authManager.isAuthenticated {
@@ -84,7 +88,7 @@ struct ContentView: View {
                 }
                 .task {
                     // Auto-load most recently played book on first appearance
-                    if !hasLoadedInitialBook && audioPlayer.currentBook == nil {
+                    if !hasLoadedInitialBook, audioPlayer.currentBook == nil {
                         await loadMostRecentlyPlayedBook()
                         hasLoadedInitialBook = true
                     }
@@ -114,7 +118,10 @@ struct ContentView: View {
         DebugLogger.network("handleNetworkChange called with isOnline: \(isOnline), currentTab: \(selectedTab)")
         if isOnline {
             // Going online: restore previous tab if it was Catalog/Browse/Search
-            DebugLogger.network("Going online - selectedTab: \(selectedTab), previousOnlineTab: \(String(describing: previousOnlineTab))")
+            DebugLogger
+                .network(
+                    "Going online - selectedTab: \(selectedTab), previousOnlineTab: \(String(describing: previousOnlineTab))"
+                )
             if selectedTab == .offline {
                 if let previousTab = previousOnlineTab {
                     DebugLogger.network("Restoring previous tab: \(previousTab)")
@@ -163,7 +170,7 @@ struct ContentView: View {
             if let mostRecent = booksWithProgress.first {
                 await MainActor.run {
                     audioPlayer.play(book: mostRecent.book)
-                    audioPlayer.pause()  // Immediately pause after loading
+                    audioPlayer.pause() // Immediately pause after loading
                 }
 
                 // Fetch and load chapters in background

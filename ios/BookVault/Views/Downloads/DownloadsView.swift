@@ -8,6 +8,8 @@
 
 import SwiftUI
 
+// MARK: - DownloadsView
+
 /// Main downloads management screen
 struct DownloadsView: View {
     @StateObject private var downloadManager = DownloadManager.shared
@@ -133,7 +135,9 @@ struct DownloadsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This will remove all \(storageManager.downloads.count) downloaded books from your device. You can always download them again.")
+                Text(
+                    "This will remove all \(storageManager.downloads.count) downloaded books from your device. You can always download them again."
+                )
             }
         }
     }
@@ -150,7 +154,7 @@ struct DownloadsView: View {
     }
 }
 
-// MARK: - Storage Summary Row
+// MARK: - StorageSummaryRow
 
 struct StorageSummaryRow: View {
     let label: String
@@ -175,7 +179,7 @@ struct StorageSummaryRow: View {
     }
 }
 
-// MARK: - Active Download Row
+// MARK: - ActiveDownloadRow
 
 struct ActiveDownloadRow: View {
     let download: ActiveDownload
@@ -209,7 +213,7 @@ struct ActiveDownloadRow: View {
                         .foregroundColor(.secondary)
                 }
 
-            case .downloading(let progress):
+            case let .downloading(progress):
                 VStack(alignment: .leading, spacing: 4) {
                     ProgressView(value: progress)
                         .tint(.blue)
@@ -227,7 +231,7 @@ struct ActiveDownloadRow: View {
                     }
                 }
 
-            case .paused(let progress):
+            case let .paused(progress):
                 VStack(alignment: .leading, spacing: 4) {
                     ProgressView(value: progress)
                         .tint(.orange)
@@ -237,7 +241,7 @@ struct ActiveDownloadRow: View {
                         .foregroundColor(.orange)
                 }
 
-            case .failed(let error):
+            case let .failed(error):
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.red)
@@ -255,7 +259,7 @@ struct ActiveDownloadRow: View {
     }
 }
 
-// MARK: - Downloaded Book Row
+// MARK: - DownloadedBookRow
 
 struct DownloadedBookRow: View {
     let download: DownloadedBook

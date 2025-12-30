@@ -6,12 +6,11 @@
 //  Phase 1: Real Services Testing - ThemeManager
 //
 
-import XCTest
 import SwiftUI
+import XCTest
 @testable import BookVault
 
 final class ThemeManagerRealTests: XCTestCase {
-
     // MARK: - Properties
 
     private var suiteName: String!

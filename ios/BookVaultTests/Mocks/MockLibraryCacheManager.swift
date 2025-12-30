@@ -12,7 +12,6 @@ import Foundation
 /// Mock library cache manager for testing
 @MainActor
 class MockLibraryCacheManager: LibraryCaching {
-
     // MARK: - In-Memory Storage
 
     var cachedBooks: [LibraryBook]?
