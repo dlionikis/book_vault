@@ -52,8 +52,8 @@ jobs:
           echo ""
           echo "=== Key model files check ==="
           ls -la ios/BookVault/Generated/Models/Book.swift 2>/dev/null || echo "Book.swift NOT FOUND"
-          ls -la ios/BookVault/Generated/Models/Chapter.swift 2>/dev/null || echo "Chapter.swift NOT FOUND"
-          ls -la ios/BookVault/Generated/Models/LoginMobile200Response.swift 2>/dev/null || echo "LoginMobile200Response.swift NOT FOUND"
+          ls -la ios/BookVault/Generated/Models/Validation.swift 2>/dev/null || echo "Validation.swift NOT FOUND (NumericRule will fail)"
+          ls -la ios/BookVault/Generated/Models/Models.swift 2>/dev/null || echo "Models.swift NOT FOUND"
 
       - name: Generate Xcode project
         working-directory: ios
