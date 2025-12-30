@@ -63,7 +63,7 @@ jobs:
             2>&1 | tee xcodebuild.log | xcpretty --report junit --output TestResults.xml || true
 
           # Check if tests passed by examining the log
-          if grep -q "** TEST SUCCEEDED **" xcodebuild.log; then
+          if grep -qF "** TEST SUCCEEDED **" xcodebuild.log; then
             echo "✅ Tests passed"
           else
             echo "❌ Tests failed"
