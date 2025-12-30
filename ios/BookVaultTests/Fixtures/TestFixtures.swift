@@ -6,6 +6,9 @@
 //  When the OpenAPI spec changes and models are regenerated, only this file
 //  needs to be updated instead of every test file.
 //
+//  Note: All BookVault types are fully qualified to avoid ambiguity with
+//  system types (e.g., BookVault.Category vs Objective-C Category).
+//
 
 import Foundation
 @testable import BookVault
@@ -28,8 +31,8 @@ enum TestFixtures {
     static func makeUser(
         id: UUID = testUserId,
         email: String = "test@example.com"
-    ) -> User {
-        User(id: id, email: email)
+    ) -> BookVault.User {
+        BookVault.User(id: id, email: email)
     }
 
     // MARK: - Authentication Responses
@@ -37,10 +40,10 @@ enum TestFixtures {
     static func makeLoginResponse(
         accessToken: String = "test-access-token",
         refreshToken: UUID = testRefreshToken,
-        user: User? = nil,
+        user: BookVault.User? = nil,
         expiresIn: Int = 3600
-    ) -> LoginMobile200Response {
-        LoginMobile200Response(
+    ) -> BookVault.LoginMobile200Response {
+        BookVault.LoginMobile200Response(
             accessToken: accessToken,
             refreshToken: refreshToken,
             user: user ?? makeUser(),
@@ -52,8 +55,8 @@ enum TestFixtures {
         accessToken: String = "new-access-token",
         refreshToken: UUID = UUID(),
         expiresIn: Int = 3600
-    ) -> RefreshToken200Response {
-        RefreshToken200Response(
+    ) -> BookVault.RefreshToken200Response {
+        BookVault.RefreshToken200Response(
             accessToken: accessToken,
             refreshToken: refreshToken,
             expiresIn: expiresIn
@@ -66,8 +69,8 @@ enum TestFixtures {
         id: UUID = testAuthorId,
         name: String = "Test Author",
         asin: String? = "B00AUTHOR"
-    ) -> Author {
-        Author(id: id, name: name, asin: asin)
+    ) -> BookVault.Author {
+        BookVault.Author(id: id, name: name, asin: asin)
     }
 
     // MARK: - Narrator
@@ -76,8 +79,8 @@ enum TestFixtures {
         id: UUID = testNarratorId,
         name: String = "Test Narrator",
         asin: String? = "B00NARRATOR"
-    ) -> Narrator {
-        Narrator(id: id, name: name, asin: asin)
+    ) -> BookVault.Narrator {
+        BookVault.Narrator(id: id, name: name, asin: asin)
     }
 
     // MARK: - Book
@@ -92,12 +95,12 @@ enum TestFixtures {
         publisher: String? = "Test Publisher",
         coverUrl: String? = "/api/images/test/cover.jpg",
         audioUrl: String? = "/api/audio/test/audio.mp3",
-        authors: [Author]? = nil,
-        narrators: [Narrator]? = nil,
-        series: [SeriesInfo]? = nil,
+        authors: [BookVault.Author]? = nil,
+        narrators: [BookVault.Narrator]? = nil,
+        series: [BookVault.SeriesInfo]? = nil,
         categories: [BookVault.Category]? = nil
-    ) -> Book {
-        Book(
+    ) -> BookVault.Book {
+        BookVault.Book(
             id: id,
             asin: asin,
             title: title,
@@ -123,8 +126,8 @@ enum TestFixtures {
         endTime: Double = 600.0,
         duration: Double = 600.0,
         index: Int = 0
-    ) -> Chapter {
-        Chapter(
+    ) -> BookVault.Chapter {
+        BookVault.Chapter(
             id: id,
             title: title,
             startTime: startTime,
@@ -134,8 +137,8 @@ enum TestFixtures {
         )
     }
 
-    static func makeChapterList(count: Int = 5) -> [Chapter] {
-        var chapters: [Chapter] = []
+    static func makeChapterList(count: Int = 5) -> [BookVault.Chapter] {
+        var chapters: [BookVault.Chapter] = []
         var currentTime: Double = 0
         let chapterDuration: Double = 600 // 10 minutes each
 
@@ -159,8 +162,8 @@ enum TestFixtures {
         positionSeconds: Double = 0.0,
         completed: Bool = false,
         lastPlayed: Date? = nil
-    ) -> GetProgress200Response {
-        GetProgress200Response(
+    ) -> BookVault.GetProgress200Response {
+        BookVault.GetProgress200Response(
             positionSeconds: positionSeconds,
             completed: completed,
             lastPlayed: lastPlayed
@@ -172,8 +175,8 @@ enum TestFixtures {
         completed: Bool = false,
         lastPlayed: Date = Date(),
         updated: Bool = true
-    ) -> UpdateProgress200Response {
-        UpdateProgress200Response(
+    ) -> BookVault.UpdateProgress200Response {
+        BookVault.UpdateProgress200Response(
             positionSeconds: positionSeconds,
             completed: completed,
             lastPlayed: lastPlayed,
@@ -185,8 +188,8 @@ enum TestFixtures {
         positionSeconds: Double = 0.0,
         completed: Bool = true,
         lastPlayed: Date? = Date()
-    ) -> SetProgressStatus200Response {
-        SetProgressStatus200Response(
+    ) -> BookVault.SetProgressStatus200Response {
+        BookVault.SetProgressStatus200Response(
             positionSeconds: positionSeconds,
             completed: completed,
             lastPlayed: lastPlayed
@@ -200,8 +203,8 @@ enum TestFixtures {
         limit: Int = 20,
         total: Int = 100,
         pages: Int = 5
-    ) -> ListBooks200ResponsePagination {
-        ListBooks200ResponsePagination(
+    ) -> BookVault.ListBooks200ResponsePagination {
+        BookVault.ListBooks200ResponsePagination(
             page: page,
             limit: limit,
             total: total,
@@ -210,10 +213,10 @@ enum TestFixtures {
     }
 
     static func makeListBooksResponse(
-        books: [Book]? = nil,
-        pagination: ListBooks200ResponsePagination? = nil
-    ) -> ListBooks200Response {
-        ListBooks200Response(
+        books: [BookVault.Book]? = nil,
+        pagination: BookVault.ListBooks200ResponsePagination? = nil
+    ) -> BookVault.ListBooks200Response {
+        BookVault.ListBooks200Response(
             books: books ?? [makeBook()],
             pagination: pagination ?? makePagination(total: books?.count ?? 1, pages: 1)
         )
@@ -222,11 +225,11 @@ enum TestFixtures {
     // MARK: - Library Responses
 
     static func makeGetLibraryResponse(
-        books: [Book]? = nil,
+        books: [BookVault.Book]? = nil,
         total: Int? = nil
-    ) -> GetLibrary200Response {
+    ) -> BookVault.GetLibrary200Response {
         let bookList = books ?? [makeBook()]
-        return GetLibrary200Response(
+        return BookVault.GetLibrary200Response(
             books: bookList,
             total: total ?? bookList.count
         )
@@ -234,8 +237,8 @@ enum TestFixtures {
 
     static func makeAddToLibraryResponse(
         message: String = "Book added to library"
-    ) -> AddToLibrary201Response {
-        AddToLibrary201Response(message: message)
+    ) -> BookVault.AddToLibrary201Response {
+        BookVault.AddToLibrary201Response(message: message)
     }
 
     // MARK: - JSON Samples (for decoding tests)
