@@ -186,6 +186,7 @@ private struct ChapterRow: View {
 private struct ChapterButtonStyle: ButtonStyle {
     let isCurrentChapter: Bool
 
+    @ViewBuilder
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .background(

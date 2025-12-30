@@ -76,6 +76,32 @@ enum DownloadError: LocalizedError, Equatable {
     }
 }
 
+/// Thread-safe storage for file extensions
+/// Used to pass file extension info from main actor to URLSession delegate callbacks
+/// Swift 5.9 compatible (no nonisolated(unsafe) required)
+final class FileExtensionStorage: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [String: String] = [:]
+
+    func set(_ ext: String, for bookId: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        storage[bookId] = ext
+    }
+
+    func get(for bookId: String) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage[bookId] ?? "mp3"
+    }
+
+    func remove(for bookId: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        storage.removeValue(forKey: bookId)
+    }
+}
+
 /// Manages audiobook downloads with background support
 @MainActor
 class DownloadManager: NSObject, ObservableObject, DownloadManaging {
@@ -88,9 +114,9 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
 
     // MARK: - Dependencies (DI for testing)
 
-    private let apiClient: APIClientProtocol
-    private let storageManager: StorageManaging
-    private let networkMonitor: NetworkMonitoring
+    private let apiClient: any APIClientProtocol
+    private let storageManager: any StorageManaging
+    private let networkMonitor: any NetworkMonitoring
 
     // Force logout handler (enables DI for testing)
     var forceLogoutHandler: () -> Void = {
@@ -103,31 +129,9 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
     private var downloadTasks: [String: URLSessionDownloadTask] = [:]
     private var pendingBooks: [String: Book] = [:]
 
-    // Thread-safe storage for file extensions (accessed from nonisolated delegate)
-    // Using NSLock for thread safety since delegate callbacks are on background queue
-    // nonisolated(unsafe) is required because we need to access from both main actor and delegate callbacks
-    private let fileExtensionsLock = NSLock()
-    private nonisolated(unsafe) var _pendingFileExtensions: [String: String] = [:]  // bookId -> file extension
-
-    // These methods are explicitly nonisolated because they use thread-safe locking
-    // and need to be called from both main actor context and URLSession delegate callbacks
-    private nonisolated func setFileExtension(_ ext: String, for bookId: String) {
-        fileExtensionsLock.lock()
-        defer { fileExtensionsLock.unlock() }
-        _pendingFileExtensions[bookId] = ext
-    }
-
-    private nonisolated func getFileExtension(for bookId: String) -> String {
-        fileExtensionsLock.lock()
-        defer { fileExtensionsLock.unlock() }
-        return _pendingFileExtensions[bookId] ?? "mp3"
-    }
-
-    private nonisolated func removeFileExtension(for bookId: String) {
-        fileExtensionsLock.lock()
-        defer { fileExtensionsLock.unlock() }
-        _pendingFileExtensions.removeValue(forKey: bookId)
-    }
+    // Thread-safe storage for file extensions (accessed from URLSession delegate callbacks)
+    // Uses a separate thread-safe class for Swift 5.9 compatibility
+    private let fileExtensionStorage = FileExtensionStorage()
 
     // Background session identifier
     private let backgroundSessionIdentifier: String
@@ -146,9 +150,9 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
 
     // Testable initializer
     init(
-        apiClient: APIClientProtocol,
-        storageManager: StorageManaging,
-        networkMonitor: NetworkMonitoring,
+        apiClient: any APIClientProtocol,
+        storageManager: any StorageManaging,
+        networkMonitor: any NetworkMonitoring,
         sessionIdentifier: String = "com.bookvault.downloads.test",
         session: URLSession? = nil
     ) {
@@ -246,10 +250,10 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
         if let audioUrl = book.audioUrl, let url = URL(string: audioUrl) {
             let ext = url.pathExtension.lowercased()
             let fileExt = ext.isEmpty ? "mp3" : ext
-            setFileExtension(fileExt, for: bookId)
+            fileExtensionStorage.set(fileExt, for: bookId)
             DebugLogger.download("File extension for \(book.title): \(fileExt)")
         } else {
-            setFileExtension("mp3", for: bookId)  // Default to mp3
+            fileExtensionStorage.set("mp3", for: bookId)  // Default to mp3
         }
 
         do {
@@ -322,7 +326,7 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
         downloadTasks.removeValue(forKey: bookId)
         activeDownloads.removeValue(forKey: bookId)
         pendingBooks.removeValue(forKey: bookId)
-        removeFileExtension(for: bookId)
+        fileExtensionStorage.remove(for: bookId)
 
         DebugLogger.download("Download cancelled: \(bookId)")
     }
@@ -476,7 +480,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         let audiobooksDir = documentsURL.appendingPathComponent("downloads/audiobooks")
 
         // Get the correct file extension (thread-safe access)
-        let fileExtension = getFileExtension(for: bookId)
+        let fileExtension = fileExtensionStorage.get(for: bookId)
         let destinationPath = audiobooksDir.appendingPathComponent("\(bookId).\(fileExtension)")
 
         do {
@@ -551,7 +555,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         }
 
         // Get file extension (thread-safe) before cleaning up
-        let fileExtension = getFileExtension(for: bookId)
+        let fileExtension = fileExtensionStorage.get(for: bookId)
 
         // Get file size using explicit extension (metadata not saved yet)
         let fileSize = storageManager.downloadedFileSize(for: bookId, extension: fileExtension) ?? 0
@@ -563,7 +567,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         activeDownloads[bookId]?.state = .completed
         downloadTasks.removeValue(forKey: bookId)
         pendingBooks.removeValue(forKey: bookId)
-        removeFileExtension(for: bookId)  // Clean up thread-safe storage
+        fileExtensionStorage.remove(for: bookId)  // Clean up thread-safe storage
 
         // Remove from active downloads after short delay (to show completion)
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
