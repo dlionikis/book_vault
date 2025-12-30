@@ -28,15 +28,33 @@ enum AppTheme: String, CaseIterable {
 class ThemeManager: ObservableObject {
     static let shared = ThemeManager()
 
+    // MARK: - Constants
+
+    static let themeKey = "selectedTheme"
+
+    // MARK: - Properties
+
+    private let userDefaults: UserDefaults
+
     @Published var selectedTheme: AppTheme {
         didSet {
-            UserDefaults.standard.set(selectedTheme.rawValue, forKey: "selectedTheme")
+            userDefaults.set(selectedTheme.rawValue, forKey: ThemeManager.themeKey)
         }
     }
 
-    private init() {
+    // MARK: - Initialization
+
+    /// Production singleton initializer using standard UserDefaults
+    private convenience init() {
+        self.init(userDefaults: .standard)
+    }
+
+    /// Testable initializer that accepts a UserDefaults instance
+    /// - Parameter userDefaults: The UserDefaults store to use for persistence
+    init(userDefaults: UserDefaults) {
+        self.userDefaults = userDefaults
         // Load saved theme or default to system
-        let savedTheme = UserDefaults.standard.string(forKey: "selectedTheme")
+        let savedTheme = userDefaults.string(forKey: ThemeManager.themeKey)
         self.selectedTheme = AppTheme(rawValue: savedTheme ?? "") ?? .system
     }
 }
