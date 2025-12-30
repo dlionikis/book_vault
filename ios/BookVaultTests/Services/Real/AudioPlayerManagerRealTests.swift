@@ -125,34 +125,6 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         mockStorageManager = nil
     }
 
-    // MARK: - Helper Methods
-
-    func makeTestBook(id: UUID = UUID(), title: String = "Test Audiobook") -> Book {
-        return Book(
-            id: id,
-            asin: "B123456",
-            title: title,
-            description: "A test audiobook",
-            runtimeMinutes: 300,
-            releaseDate: Date(),
-            coverUrl: "http://localhost:3000/api/covers/test.jpg",
-            audioUrl: "http://localhost:3000/api/audio/test.mp3",
-            authors: [Author(id: UUID(), name: "Test Author", asin: "A123")],
-            narrators: [Narrator(id: UUID(), name: "Test Narrator", asin: "N123")]
-        )
-    }
-
-    func makeTestChapter(id: UUID = UUID(), title: String, startTime: Double, endTime: Double, index: Int = 0) -> Chapter {
-        return Chapter(
-            id: id,
-            title: title,
-            startTime: startTime,
-            endTime: endTime,
-            duration: endTime - startTime,
-            index: index
-        )
-    }
-
     // MARK: - Initial State Tests
 
     func testInitialState() {
@@ -203,9 +175,9 @@ final class AudioPlayerManagerRealTests: XCTestCase {
     func testGetCurrentChapterFindsCorrectChapter() {
         // Given
         let chapters = [
-            makeTestChapter(title: "Chapter 1", startTime: 0, endTime: 100),
-            makeTestChapter(title: "Chapter 2", startTime: 100, endTime: 200),
-            makeTestChapter(title: "Chapter 3", startTime: 200, endTime: 300)
+            TestFixtures.makeChapter(title: "Chapter 1", startTime: 0, endTime: 100, duration: 100, index: 0),
+            TestFixtures.makeChapter(title: "Chapter 2", startTime: 100, endTime: 200, duration: 100, index: 1),
+            TestFixtures.makeChapter(title: "Chapter 3", startTime: 200, endTime: 300, duration: 100, index: 2)
         ]
         sut.updateChapters(chapters)
         sut.currentTime = 150  // Middle of Chapter 2
@@ -220,8 +192,8 @@ final class AudioPlayerManagerRealTests: XCTestCase {
     func testGetCurrentChapterAtBoundary() {
         // Given
         let chapters = [
-            makeTestChapter(title: "Chapter 1", startTime: 0, endTime: 100),
-            makeTestChapter(title: "Chapter 2", startTime: 100, endTime: 200)
+            TestFixtures.makeChapter(title: "Chapter 1", startTime: 0, endTime: 100, duration: 100, index: 0),
+            TestFixtures.makeChapter(title: "Chapter 2", startTime: 100, endTime: 200, duration: 100, index: 1)
         ]
         sut.updateChapters(chapters)
         sut.currentTime = 100  // Exactly at boundary
@@ -236,8 +208,8 @@ final class AudioPlayerManagerRealTests: XCTestCase {
     func testUpdateChapters() {
         // Given
         let chapters = [
-            makeTestChapter(title: "Intro", startTime: 0, endTime: 60),
-            makeTestChapter(title: "Main", startTime: 60, endTime: 300)
+            TestFixtures.makeChapter(title: "Intro", startTime: 0, endTime: 60, duration: 60, index: 0),
+            TestFixtures.makeChapter(title: "Main", startTime: 60, endTime: 300, duration: 240, index: 1)
         ]
 
         // When
@@ -254,8 +226,8 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         sut.currentTime = 75  // Set time before updating chapters
 
         let chapters = [
-            makeTestChapter(title: "Intro", startTime: 0, endTime: 60),
-            makeTestChapter(title: "Main", startTime: 60, endTime: 300)
+            TestFixtures.makeChapter(title: "Intro", startTime: 0, endTime: 60, duration: 60, index: 0),
+            TestFixtures.makeChapter(title: "Main", startTime: 60, endTime: 300, duration: 240, index: 1)
         ]
 
         // When
@@ -268,7 +240,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
     func testClearChapters() {
         // Given
         let chapters = [
-            makeTestChapter(title: "Chapter 1", startTime: 0, endTime: 100)
+            TestFixtures.makeChapter(title: "Chapter 1", startTime: 0, endTime: 100, duration: 100, index: 0)
         ]
         sut.updateChapters(chapters)
         sut.currentTime = 50
@@ -323,13 +295,13 @@ final class AudioPlayerManagerRealTests: XCTestCase {
 
     func testStopClearsState() {
         // Given - set up some state
-        let book = makeTestBook()
+        let book = TestFixtures.makeBook(title: "Test Audiobook")
         sut.currentBook = book
         sut.isPlaying = true
         sut.currentTime = 150
         sut.duration = 300
         sut.isPlayingOffline = true
-        sut.updateChapters([makeTestChapter(title: "Test", startTime: 0, endTime: 300)])
+        sut.updateChapters([TestFixtures.makeChapter(title: "Test", startTime: 0, endTime: 300, duration: 300, index: 0)])
 
         // When
         sut.stop()
@@ -478,7 +450,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
 
     func testSettingCurrentBook() {
         // Given
-        let book = makeTestBook(title: "My Audiobook")
+        let book = TestFixtures.makeBook(title: "My Audiobook")
 
         // When
         sut.currentBook = book
@@ -491,7 +463,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
 
     func testPlaySameBookJustResumes() {
         // Given
-        let book = makeTestBook()
+        let book = TestFixtures.makeBook()
         sut.currentBook = book
         sut.isPlaying = false
 

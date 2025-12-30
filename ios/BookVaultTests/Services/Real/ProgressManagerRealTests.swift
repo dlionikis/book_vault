@@ -52,7 +52,7 @@ final class ProgressManagerRealTests: XCTestCase {
         // Given: Online and server has progress
         mockNetworkMonitor.isConnected = true
         let bookId = UUID()
-        let serverProgress = GetProgress200Response(
+        let serverProgress = TestFixtures.makeGetProgressResponse(
             positionSeconds: 300.0,
             completed: false,
             lastPlayed: Date()
@@ -74,7 +74,7 @@ final class ProgressManagerRealTests: XCTestCase {
         mockNetworkMonitor.isConnected = true
         let bookId = UUID()
         let serverDate = Date()
-        let serverProgress = GetProgress200Response(
+        let serverProgress = TestFixtures.makeGetProgressResponse(
             positionSeconds: 500.0,
             completed: false,
             lastPlayed: serverDate
@@ -97,7 +97,7 @@ final class ProgressManagerRealTests: XCTestCase {
         let bookId = UUID()
 
         let oldServerDate = Date().addingTimeInterval(-3600)  // 1 hour ago
-        let serverProgress = GetProgress200Response(
+        let serverProgress = TestFixtures.makeGetProgressResponse(
             positionSeconds: 100.0,
             completed: false,
             lastPlayed: oldServerDate
@@ -176,7 +176,7 @@ final class ProgressManagerRealTests: XCTestCase {
         // Given: Online
         mockNetworkMonitor.isConnected = true
         let bookId = UUID()
-        mockAPIClient.updateProgressResult = .success(UpdateProgress200Response(
+        mockAPIClient.updateProgressResult = .success(TestFixtures.makeUpdateProgressResponse(
             positionSeconds: 200.0,
             completed: false,
             lastPlayed: Date(),
@@ -197,7 +197,7 @@ final class ProgressManagerRealTests: XCTestCase {
         // Given: Online
         mockNetworkMonitor.isConnected = true
         let bookId = UUID()
-        mockAPIClient.updateProgressResult = .success(UpdateProgress200Response(
+        mockAPIClient.updateProgressResult = .success(TestFixtures.makeUpdateProgressResponse(
             positionSeconds: 200.0,
             completed: false,
             lastPlayed: Date(),
@@ -218,7 +218,7 @@ final class ProgressManagerRealTests: XCTestCase {
         // Given: Online
         mockNetworkMonitor.isConnected = true
         let bookId = UUID()
-        mockAPIClient.updateProgressResult = .success(UpdateProgress200Response(
+        mockAPIClient.updateProgressResult = .success(TestFixtures.makeUpdateProgressResponse(
             positionSeconds: 200.0,
             completed: false,
             lastPlayed: Date(),
@@ -289,7 +289,7 @@ final class ProgressManagerRealTests: XCTestCase {
     func testMarkCompleted_CallsAPIWithCorrectStatus() async throws {
         // Given: Valid book ID
         let bookId = UUID()
-        mockAPIClient.setProgressStatusResult = .success(SetProgressStatus200Response(
+        mockAPIClient.setProgressStatusResult = .success(TestFixtures.makeSetProgressStatusResponse(
             positionSeconds: 3600.0,
             completed: true,
             lastPlayed: Date()
@@ -321,7 +321,7 @@ final class ProgressManagerRealTests: XCTestCase {
     func testResetProgress_CallsAPIWithCorrectStatus() async throws {
         // Given: Valid book ID
         let bookId = UUID()
-        mockAPIClient.setProgressStatusResult = .success(SetProgressStatus200Response(
+        mockAPIClient.setProgressStatusResult = .success(TestFixtures.makeSetProgressStatusResponse(
             positionSeconds: 0.0,
             completed: false,
             lastPlayed: nil
@@ -354,7 +354,7 @@ final class ProgressManagerRealTests: XCTestCase {
         // Given: Online with server response
         mockNetworkMonitor.isConnected = true
         let bookId = UUID()
-        mockAPIClient.fetchProgressResult = .success(GetProgress200Response(
+        mockAPIClient.fetchProgressResult = .success(TestFixtures.makeGetProgressResponse(
             positionSeconds: 100.0,
             completed: false,
             lastPlayed: Date()

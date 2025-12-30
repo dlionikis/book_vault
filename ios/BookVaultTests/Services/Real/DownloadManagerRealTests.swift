@@ -164,23 +164,6 @@ final class DownloadManagerRealTests: XCTestCase {
         mockNetworkMonitor = nil
     }
 
-    // MARK: - Helper Methods
-
-    func makeTestBook(id: UUID = UUID(), title: String = "Test Book") -> Book {
-        return Book(
-            id: id,
-            asin: "B123456",
-            title: title,
-            description: "A test audiobook",
-            runtimeMinutes: 300,
-            releaseDate: Date(),
-            coverUrl: "http://localhost:3000/api/covers/test.jpg",
-            audioUrl: "http://localhost:3000/api/audio/test.mp3",
-            authors: [Author(id: UUID(), name: "Test Author", asin: "A123")],
-            narrators: []
-        )
-    }
-
     // MARK: - Initial State Tests
 
     func testInitialState() {
@@ -208,7 +191,7 @@ final class DownloadManagerRealTests: XCTestCase {
     }
 
     func testDownloadStateWhenActivelyDownloading() {
-        let book = makeTestBook()
+        let book = TestFixtures.makeBook()
         let bookId = book.id.uuidString
 
         // Simulate active download
@@ -240,7 +223,7 @@ final class DownloadManagerRealTests: XCTestCase {
     }
 
     func testIsDownloadingWhenWaiting() {
-        let book = makeTestBook()
+        let book = TestFixtures.makeBook()
         let bookId = book.id.uuidString
 
         let activeDownload = ActiveDownload(
@@ -257,7 +240,7 @@ final class DownloadManagerRealTests: XCTestCase {
     }
 
     func testIsDownloadingWhenActivelyDownloading() {
-        let book = makeTestBook()
+        let book = TestFixtures.makeBook()
         let bookId = book.id.uuidString
 
         let activeDownload = ActiveDownload(
@@ -274,7 +257,7 @@ final class DownloadManagerRealTests: XCTestCase {
     }
 
     func testIsDownloadingWhenPaused() {
-        let book = makeTestBook()
+        let book = TestFixtures.makeBook()
         let bookId = book.id.uuidString
 
         let activeDownload = ActiveDownload(
@@ -297,7 +280,7 @@ final class DownloadManagerRealTests: XCTestCase {
         // Given
         mockNetworkMonitor.canDownload = false
 
-        let book = makeTestBook()
+        let book = TestFixtures.makeBook()
 
         // When/Then
         do {
@@ -318,7 +301,7 @@ final class DownloadManagerRealTests: XCTestCase {
 
     func testStartDownloadSkipsAlreadyDownloaded() async throws {
         // Given
-        let book = makeTestBook()
+        let book = TestFixtures.makeBook()
         mockStorageManager.downloadedBookIds.insert(book.id.uuidString)
 
         // When
@@ -332,7 +315,7 @@ final class DownloadManagerRealTests: XCTestCase {
 
     func testCancelDownload() {
         // Given
-        let book = makeTestBook()
+        let book = TestFixtures.makeBook()
         let bookId = book.id.uuidString
 
         let activeDownload = ActiveDownload(
@@ -356,7 +339,7 @@ final class DownloadManagerRealTests: XCTestCase {
 
     func testDeleteDownload() throws {
         // Given
-        let book = makeTestBook()
+        let book = TestFixtures.makeBook()
         let bookId = book.id.uuidString
         mockStorageManager.downloadedBookIds.insert(bookId)
 
@@ -371,7 +354,7 @@ final class DownloadManagerRealTests: XCTestCase {
 
     func testActiveDownloadProgress() {
         // Given
-        let book = makeTestBook()
+        let book = TestFixtures.makeBook()
         let bookId = book.id.uuidString
 
         var activeDownload = ActiveDownload(
@@ -393,7 +376,7 @@ final class DownloadManagerRealTests: XCTestCase {
 
     func testActiveDownloadProgressWithZeroTotal() {
         // Given
-        let book = makeTestBook()
+        let book = TestFixtures.makeBook()
         let bookId = book.id.uuidString
 
         let activeDownload = ActiveDownload(
@@ -413,7 +396,7 @@ final class DownloadManagerRealTests: XCTestCase {
 
     func testActiveDownloadFormattedProgress() {
         // Given
-        let book = makeTestBook()
+        let book = TestFixtures.makeBook()
         let bookId = book.id.uuidString
 
         let activeDownload = ActiveDownload(
