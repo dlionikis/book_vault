@@ -3,8 +3,7 @@
 > **Purpose**: Quick onboarding reference for Claude Code sessions. Read this first to understand the project instantly.
 
 **Last Updated**: December 29, 2025
-**Status**: Production-ready with S3 streaming support
-**Test Status**: 207 tests passing (23 OpenAPI contract tests + 184 unit tests)
+**Status**: Production-ready (Web + iOS complete)
 
 ---
 

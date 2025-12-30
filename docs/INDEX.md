@@ -4,6 +4,14 @@
 
 ---
 
+## 📢 Recent Changes (December 29, 2025)
+
+- **iOS app complete** - All 8 phases implemented (offline mode included)
+- **Web app complete** - Ready for AWS deployment
+- **Next priority**: AWS Deployment → User Lists (post-launch)
+
+---
+
 ## 🚀 Start Here (Required Reading)
 
 1. **[../CLAUDE.md](../CLAUDE.md)** - 📍 **READ THIS FIRST**

@@ -1,9 +1,9 @@
 # Development Roadmap
 
-**Last Updated**: December 28, 2025
-**Current Phase**: Phase 4 - Enhancement & Features Complete
+**Last Updated**: December 29, 2025
+**Current Phase**: Production-Ready (Web + iOS Complete)
 
-> **TL;DR**: Core app complete with auth, progress tracking, dark mode. Next priorities: AWS Deployment → iOS App → User Lists (post-launch).
+> **TL;DR**: Web app and iOS app complete. Next priorities: AWS Deployment → User Lists (post-launch).
 
 ---
 
@@ -47,25 +47,25 @@
 
 ---
 
-### 3. iOS Native App 📱
+### ~~3. iOS Native App~~ ✅ COMPLETE (December 2025)
 
-**Status**: Planning complete, implementation post-deployment
+**Status**: All 8 phases implemented
 **Technology**: Native Swift + SwiftUI
-**Timeline**: Start after AWS deployment
 
-**Implementation**: 7 phased rollout (User Lists moved to post-launch)
+**Completed Phases**:
 
-1. Auth & Browsing
-2. Audio Playback (Basic)
-3. Background Audio & Lock Screen
-4. Progress Sync
-5. Chapter Navigation
-6. Search & Browse
-7. Offline Downloads
+1. ✅ Auth & Browsing
+2. ✅ Audio Playback (Basic)
+3. ✅ Background Audio & Lock Screen
+4. ✅ Progress Sync
+5. ✅ Chapter Navigation
+6. ✅ Search & Browse
+7. ✅ Offline Downloads
+8. ✅ Offline Mode (library caching, offline progress queue)
 
-**Backend is ready**: JWT auth, RESTful JSON API, S3 streaming with range requests
+**Deferred**: User Lists (requires backend API development first)
 
-**See**: [mobile-ios-plan.md](mobile-ios-plan.md) for complete implementation guide
+**See**: [mobile-ios-plan.md](mobile-ios-plan.md) for maintenance docs and common commands
 
 ---
 
@@ -173,7 +173,7 @@ Allow users to organize books into custom collections:
 
 - **Books imported**: 11+ with full metadata
 - **API endpoints**: All functional and tested
-- **Test coverage**: 184 tests passing
+- **Test coverage**: All tests passing
 - **Features**: Browse, search, auth, progress, dark mode
 - **Performance**: <2s page loads, <1s audio start
 - **Mobile-ready**: Backend API supports iOS app development
@@ -181,34 +181,20 @@ Allow users to organize books into custom collections:
 ### Next Milestones
 
 - 🎯 Deployed to AWS production
-- 🎯 iOS app Phase 1-6 complete (all features except offline)
+- ~~🎯 iOS app complete~~ ✅ All 8 phases done
 - 🎯 50+ books imported
 - 🎯 User lists functional (post-launch)
 
 ---
 
-## 📁 Detailed Planning Docs
+## 📁 Related Documentation
 
-For implementation details, see `docs/roadmap/`:
-
-| File                                             | Purpose                                            |
-| ------------------------------------------------ | -------------------------------------------------- |
-| [user-lists.md](roadmap/user-lists.md)           | User lists feature spec (to be created)            |
-| [aws-deployment.md](roadmap/aws-deployment.md)   | AWS infrastructure guide (to be created)           |
-| [enhanced-search.md](roadmap/enhanced-search.md) | Search filters & advanced features (to be created) |
-
-For mobile development, see:
-
-- [mobile-ios-plan.md](mobile-ios-plan.md) - Complete iOS implementation plan
-- [api-mobile.md](api-mobile.md) - Mobile API quick reference
-
----
-
-## 🔄 Maintenance
-
-**Review frequency**: Update roadmap weekly during active development
-
-**Archive policy**: Move completed items to [STATUS.md](STATUS.md) and archive detailed plans to `archive/completed-plans/`
+| What                 | Where                                                |
+| -------------------- | ---------------------------------------------------- |
+| **iOS Maintenance**  | [mobile-ios-plan.md](mobile-ios-plan.md)             |
+| **API Reference**    | [api-quick-ref.md](api-quick-ref.md)                 |
+| **Architecture**     | [architecture.md](architecture.md)                   |
+| **Historical Plans** | [archive/completed-plans/](archive/completed-plans/) |
 
 ---
 
@@ -216,8 +202,4 @@ For mobile development, see:
 
 **Not sure what to work on next?** Check "Current Focus" section above.
 
-**Need implementation details?** See linked files in `roadmap/` folder.
-
-**Historical context?** Check archived plans in `docs/archive/completed-plans/`
-
-**Recent work?** See [STATUS.md](STATUS.md) for latest PRs and features.
+**Recent work?** See [STATUS.md](STATUS.md) for latest PRs.

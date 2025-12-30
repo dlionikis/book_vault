@@ -1,12 +1,12 @@
 # Book Vault - Architecture Overview
 
-**Last Updated**: December 25, 2025
-**Status**: Production-ready with S3 streaming support, mobile-ready API
+**Last Updated**: December 29, 2025
+**Status**: Production-ready (Web + iOS apps complete)
 
 > **TL;DR (30 seconds)**
 >
 > - **Stack**: Next.js 14 (TypeScript) + PostgreSQL + Prisma ORM + S3/CloudFront
-> - **Pattern**: API-first design (serves web + future iOS app)
+> - **Pattern**: API-first design (serves web + iOS app)
 > - **Auth**: NextAuth.js with JWT tokens (mobile-compatible)
 > - **Data**: 14 Prisma models with many-to-many relationships
 > - **Media**: S3 streaming with range request support (AVPlayer-ready)
@@ -34,7 +34,7 @@ This overview links to detailed architecture documentation:
 ```
 ┌─────────────────┐         ┌─────────────────┐
 │   Web Browser   │         │   iOS App       │
-│   (Frontend)    │         │   (Future)      │
+│   (Frontend)    │         │   (Complete)    │
 └────────┬────────┘         └────────┬────────┘
          │ HTTPS                     │ HTTPS
          └───────────┬───────────────┘
@@ -71,7 +71,7 @@ This overview links to detailed architecture documentation:
 - **ORM**: Prisma 5.22
 - **Auth**: NextAuth.js with JWT
 - **Styling**: Tailwind CSS
-- **Testing**: Jest + React Testing Library (184 tests)
+- **Testing**: Jest + React Testing Library
 
 ### Project Structure
 
@@ -206,17 +206,20 @@ User types query
 
 ## Mobile App Support
 
-### Backend is Mobile-Ready ✅
+### iOS App Complete ✅
 
-1. **RESTful JSON API**: All endpoints return JSON
-2. **JWT Authentication**: Token-based auth for mobile
-3. **Range Request Support**: iOS AVPlayer streaming
-4. **S3 Streaming**: Images + audio from S3
-5. **CORS Configuration**: Mobile app origins allowed
-6. **Pagination**: Efficient data loading
-7. **Progress Sync**: Timestamp-based conflict resolution
+Native Swift + SwiftUI app with all 8 phases implemented:
 
-**See**: [mobile-ios-plan.md](mobile-ios-plan.md) for iOS implementation plan
+1. ✅ Auth & Browsing
+2. ✅ Audio Playback
+3. ✅ Background Audio & Lock Screen
+4. ✅ Progress Sync
+5. ✅ Chapter Navigation
+6. ✅ Search & Browse
+7. ✅ Offline Downloads
+8. ✅ Offline Mode
+
+**See**: [mobile-ios-plan.md](mobile-ios-plan.md) for maintenance docs
 
 ---
 
@@ -230,16 +233,15 @@ User types query
 **Achieved**:
 
 - ✅ All targets met in development
-- ✅ 184 tests passing
+- ✅ All tests passing
 - ✅ No performance regressions
 
 ---
 
 ## Next Steps
 
-1. **User Lists Feature** - Allow custom book collections
-2. **AWS Deployment** - Production infrastructure
-3. **iOS App Development** - Native mobile app
+1. **AWS Deployment** - Production infrastructure
+2. **User Lists Feature** - Allow custom book collections (post-launch)
 
 **See**: [development-roadmap.md](development-roadmap.md) for detailed plans
 

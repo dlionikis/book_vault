@@ -1,596 +1,102 @@
-# Project Status - December 29, 2025
+# Project Status
+
+**Last Updated**: December 29, 2025
 
 ## Current State
 
-Book Vault is a functional personal audiobook library with comprehensive browsing, search, playback, and progress tracking capabilities. The application is ready for local use and testing. iOS mobile app development has completed Phase 8 (Offline Mode Support), completing all planned phases for the initial release.
+Book Vault is a **production-ready** personal audiobook library application.
 
-### Recent Accomplishments
+| Platform        | Status                                                               |
+| --------------- | -------------------------------------------------------------------- |
+| **Web App**     | ✅ Complete - Browse, search, playback, progress tracking, dark mode |
+| **iOS App**     | ✅ Complete - All 8 phases implemented (offline mode included)       |
+| **Backend API** | ✅ Complete - OpenAPI spec, contract tests, dual auth (web + mobile) |
 
-#### iOS Phase 8: Offline Mode Support (December 29, 2025) ✅ COMPLETE
-
-**Goal**: Enable comprehensive offline support so users can browse their cached library, play downloaded audiobooks, and have playback progress synced when back online.
-
-**Core Features:**
-
-**Library Caching:**
-
-- ✅ LibraryCacheManager service persists library to disk
-- ✅ Automatic cache population after successful API fetch
-- ✅ Offline library browsing from disk cache
-- ✅ Cache cleared on logout (user-specific)
-
-**Progress Persistence & Sync:**
-
-- ✅ OfflineProgressStore for local progress storage
-- ✅ Local-first progress saving (always saves locally, syncs when online)
-- ✅ SyncManager for automatic background sync when connectivity returns
-- ✅ Timestamp-based conflict resolution (latest wins)
-
-**Network-Aware UI:**
-
-- ✅ ContentView dynamically shows/hides tabs based on connectivity
-  - Online: 6 tabs (Catalog, Browse, Search, Library, Downloads, Settings)
-  - Offline: 4 tabs (Offline, Library, Downloads, Settings)
-- ✅ OfflineModeView with connection status and retry button
-- ✅ LibraryView shows "Cached" badge when displaying offline data
-- ✅ Book detail view hides Download button offline, shows Play only for downloaded books
-
-**Files Created:**
-
-- `ios/BookVault/Services/LibraryCacheManager.swift` (174 lines)
-- `ios/BookVault/Services/OfflineProgressStore.swift` (238 lines)
-- `ios/BookVault/Services/SyncManager.swift` (148 lines)
-- `ios/BookVault/Views/OfflineModeView.swift` (207 lines)
-
-**Files Modified:**
-
-- `ios/BookVault/ContentView.swift` - Conditional tabs based on network state
-- `ios/BookVault/Services/NetworkMonitor.swift` - Added refreshStatus(), restartMonitor()
-- `ios/BookVault/Services/LibraryManager.swift` - Integrated cache for offline fallback
-- `ios/BookVault/Services/ProgressManager.swift` - Local-first saving with sync
-- `ios/BookVault/Services/AuthManager.swift` - Clear caches on logout
-- `ios/BookVault/Views/Library/LibraryView.swift` - Cached badge, offline-aware refresh
-- `ios/BookVault/Views/Books/BookDetailView.swift` - Offline-aware button visibility
-
-**Testing:** Manual testing completed for offline library, progress sync, tab switching, and book detail behavior.
-
-**Impact:** iOS app now has complete offline functionality, enabling users to listen to downloaded books and track progress without internet connectivity.
-
-**Documentation:** `ios/archive/completed-phases/PHASE8_COMPLETE.md`
+**Next Priority**: AWS Deployment (see [development-roadmap.md](development-roadmap.md))
 
 ---
-
-#### API Code Quality: Entity Detail Endpoints DRY Refactor (December 28, 2025) ✅ COMPLETE
-
-**Goal**: Eliminate duplication across entity detail endpoints (authors, narrators, series, categories)
-
-**Results:**
-
-- ✅ Created generic `handleEntityDetailWithBooks()` helper in `lib/api-helpers.ts` (165 lines)
-- ✅ Added 21 comprehensive unit tests for helper (100% passing)
-- ✅ Refactored 4 endpoints using configuration-based approach:
-  - `GET /api/authors/{id}`: 82 lines → 17 lines (-79%)
-  - `GET /api/narrators/{id}`: 82 lines → 17 lines (-79%)
-  - `GET /api/series/{id}`: 78 lines → 19 lines (-76%)
-  - `GET /api/categories/{id}`: 84 lines → 18 lines (-79%)
-- ✅ **Code reduction**: 326 lines → 236 lines (~28% reduction, ~90 lines eliminated)
-- ✅ **Test coverage**: +21 tests (283 passing, up from 262)
-- ✅ 100% backward compatible (no API changes)
-- ✅ All contract tests passing (110/110)
-
-**Benefits:**
-
-- Single point of maintenance for auth, pagination, error handling
-- Type-safe configuration-based approach
-- Demonstrates customization: series uses sequence ordering, categories include parent relation
-- Easier to extend (new entity types can reuse pattern)
-- Better code consistency and reliability
-
-**Documentation**: See `docs/refactoring/entity-detail-endpoints-dry-plan.md`
-
-#### iOS Phase 6: Search & Browse (December 28, 2025) ✅ COMPLETE
-
-**Goal**: Enable comprehensive search and browse functionality for discovering audiobooks
-
-**Core Features:**
-
-**Search**:
-
-- ✅ SearchManager service with in-memory caching (5-minute TTL)
-- ✅ Real-time autocomplete suggestions (debounced 300ms)
-- ✅ Full-text search across books, authors, narrators, series
-- ✅ SearchView with autocomplete dropdown
-- ✅ Pagination and infinite scroll for search results
-- ✅ Empty states and error handling with retry
-- ✅ Search field focus management
-
-**Browse**:
-
-- ✅ BrowseView with four category tiles (Authors, Series, Narrators, Categories)
-- ✅ Dynamic counts for each browse category
-- ✅ AuthorListView & AuthorDetailView with alphabetical sorting and book counts
-- ✅ SeriesListView & SeriesDetailView with books in sequence order
-- ✅ NarratorListView & NarratorDetailView with alphabetical sorting
-- ✅ CategoryListView & CategoryDetailView with hierarchical browsing
-- ✅ Alphabetical section headers (A, B, C, etc.)
-- ✅ Pull-to-refresh on all list views
-- ✅ Local search filtering within lists
-
-**Technical Implementation:**
-
-- ✅ SearchManager caching strategy: 5min for search results, 10min for browse lists
-- ✅ Memory warning handling to clear caches automatically
-- ✅ APIClient.baseURL changed from private to internal for SearchManager access
-- ✅ BookDetailLoader helper component for loading books by ID
-- ✅ Consistent navigation patterns across all browse views
-- ✅ VoiceOver accessibility throughout all new screens
-
-**Files Created:**
-
-- `ios/BookVault/Services/SearchManager.swift` (550+ lines) - Centralized search/browse service
-- `ios/BookVault/Views/Search/SearchView.swift` (400+ lines) - Main search interface
-- `ios/BookVault/Views/Browse/BrowseView.swift` (200+ lines) - Browse categories hub
-- `ios/BookVault/Views/Browse/AuthorListView.swift` (250+ lines)
-- `ios/BookVault/Views/Browse/AuthorDetailView.swift` (200+ lines)
-- `ios/BookVault/Views/Browse/SeriesListView.swift` (250+ lines)
-- `ios/BookVault/Views/Browse/SeriesDetailView.swift` (200+ lines)
-- `ios/BookVault/Views/Browse/NarratorListView.swift` (250+ lines)
-- `ios/BookVault/Views/Browse/NarratorDetailView.swift` (200+ lines)
-- `ios/BookVault/Views/Browse/CategoryListView.swift` (250+ lines)
-- `ios/BookVault/Views/Browse/CategoryDetailView.swift` (200+ lines)
-- `ios/BookVault/Views/Books/BookDetailLoader.swift` (80 lines) - Helper for book ID navigation
-
-**Files Modified:**
-
-- `ios/BookVault/ContentView.swift` - Added Browse and Search tabs to TabView
-- `ios/BookVault/Services/APIClient.swift` - Made baseURL internal (was private)
-
-**Bug Fixes During Development:**
-
-- ✅ Fixed OpenAPI spec nullable fields alignment with database schema
-- ✅ Fixed categories missing from search endpoint response
-- ✅ Fixed optional Book fields handling after OpenAPI spec update
-- ✅ Resolved search and browse functionality issues
-
-**Testing:** All search and browse flows manually tested and working
-
-**Impact**: iOS app now has complete discovery features, enabling users to find audiobooks through multiple pathways (search, browse by author/series/narrator/category)
-
-**Next**: Phase 7 (Offline Downloads) - optional, can be deferred post-launch
-
-**Merged**: PR #43 - "iOS Phase 6: Search & Browse Implementation with Bug Fixes"
-
-**Documentation**:
-
-- Implementation plan: `docs/mobile/implementation-phases/phase-7-offline-downloads.md` (next phase)
-- Overall phases: `docs/mobile/implementation-phases.md`
-
-#### iOS Phase 5: Chapter Navigation (December 28, 2025) ✅ COMPLETE
-
-**Core Features:**
-
-- ✅ ChapterManager service for fetching and caching chapters from API
-- ✅ AudioPlayerManager enhanced with automatic chapter tracking during playback
-- ✅ ChapterListView UI component with current chapter highlighting
-- ✅ Sheet presentation from Now Playing screen (Chapters button)
-- ✅ Skip to chapter functionality with smooth seeking
-- ✅ Empty state handling for books without chapters
-- ✅ Accessibility support (VoiceOver labels, Dynamic Type, tap targets)
-
-**Technical Improvements:**
-
-- ✅ Fixed backend bug: Added `duration` field to chapter API responses (was causing "NaN" in web app)
-- ✅ Updated OpenAPI spec: Chapter schema now requires duration field
-- ✅ Auto-generated Swift models include duration property
-- ✅ Non-blocking chapter fetch (playback starts immediately, chapters load in background)
-- ✅ In-memory caching by book ID (prevents redundant API calls)
-- ✅ Silent failures with graceful degradation (chapters are optional)
-- ✅ Thread-safe with @MainActor annotations throughout
-- ✅ Automatic current chapter tracking via time observer
-
-**Files Created:**
-
-- `ios/BookVault/Services/ChapterManager.swift` (103 lines)
-- `ios/BookVault/Views/NowPlaying/ChapterListView.swift` (205 lines)
-- `docs/mobile/implementation-phases/phase-5-chapter-navigation.md` (detailed plan)
-- `ios/PHASE5_COMPLETE.md` (completion log)
-
-**Files Modified:**
-
-- `app/api/books/[id]/chapters/route.ts` - Added duration to responses
-- `docs/api/openapi.yaml` - Updated Chapter schema
-- `ios/BookVault/Services/AudioPlayerManager.swift` - Chapter tracking
-- `ios/BookVault/Views/Player/NowPlayingView.swift` - Chapters button
-- `ios/BookVault/Views/Books/BookDetailView.swift` - Chapter fetching
-
-**Testing:** Manual testing checklist created, ready for device testing
-
-**Impact**: iOS app now has full chapter navigation parity with web app, enabling quick navigation within audiobooks
-
-**Next**: Phase 6 (Search & Browse) ✅ COMPLETED
-
-**Documentation**: `ios/PHASE5_COMPLETE.md`, `docs/mobile/implementation-phases/phase-5-chapter-navigation.md`
-
-#### iOS Phase 4: Progress Sync (December 28, 2025) ✅ MERGED
-
-**Core Features:**
-
-- ✅ Backend integration with progress API endpoints (GET/POST/PUT /api/progress)
-- ✅ Auto-save progress every 10 seconds during playback (smart saving: only when position changes > 1s)
-- ✅ Load saved position on playback start (seamless resume across devices)
-- ✅ Progress indicators on book cards (blue progress bars + green completion badges)
-- ✅ Continue Listening section with horizontal scrolling carousel (top 5 recent books)
-- ✅ Cross-platform sync between iOS and web (unified progress tracking)
-
-**Technical Improvements:**
-
-- ✅ UUID normalization across all 13 API endpoints (case-insensitive matching)
-- ✅ ISO8601 date parsing with fractional seconds support (.withFractionalSeconds)
-- ✅ Thread-safe with @MainActor annotations throughout
-- ✅ Silent failures with graceful degradation (won't break UI if API fails)
-- ✅ Performance optimized (Continue Listening checks first 50 books only)
-- ✅ Timer reliability with DispatchQueue.main.async wrapper
-
-**Files Modified:**
-
-- `ios/BookVault/Models/UserProgress.swift` (new) - Progress data models
-- `ios/BookVault/Services/ProgressManager.swift` (new) - API client for progress endpoints
-- `ios/BookVault/Services/AudioPlayerManager.swift` - Auto-save integration
-- `ios/BookVault/Views/Books/BooksListView.swift` - Progress indicators + Continue Listening
-- `lib/api-utils.ts` - UUID normalization utility
-- 13 API endpoint files - Applied normalizeUuid() for case-insensitive UUIDs
-
-**Known Limitations:**
-
-- JWT tokens expire after 1 hour (requires manual re-login)
-- Continue Listening limited to first 50 books for performance
-- Requires network connection (offline support planned for Phase 8)
-
-**Testing:** Initial progress auto-save confirmed working, cross-platform sync validated
-
-**Impact**: iOS app now has full feature parity with web for progress tracking, enabling seamless cross-device listening experience
-
-**Merged**: Commit 1a7bf0b - Phase 4 complete with 9 commits
-**Documentation**: `ios/PHASE4_COMPLETE.md`
-
-#### iOS Phase 3 & 3.5: Background Audio + Mini Player (December 27, 2025) ✅ MERGED
-
-**Phase 3: Background Audio & Lock Screen Controls**
-
-- ✅ Background audio playback (audio continues when app is minimized)
-- ✅ Lock screen controls (play/pause/skip forward/skip backward)
-- ✅ Lock screen metadata display (cover art, title, author, progress)
-- ✅ Lock screen scrubbing support (change playback position)
-- ✅ Audio interruption handling (phone calls, alarms)
-- ✅ Route change handling (headphone disconnect)
-- ✅ MPNowPlayingInfoCenter integration
-- ✅ MPRemoteCommandCenter integration
-- ✅ AVAudioSession configured for .playback + .spokenAudio
-
-**Phase 3.5: Mini Player UI**
-
-- ✅ Persistent mini player bar at bottom of all authenticated screens
-- ✅ Shows cover art (40x40pt), book title/author, and play/pause button
-- ✅ Sheet presentation for full player (Spotify/Apple Music UX pattern)
-- ✅ Swipe-to-dismiss full player reveals mini player underneath
-- ✅ Smooth animations with .spring() for mini player appearance
-- ✅ Dark mode support with appropriate shadows and contrast
-- ✅ Uses `.safeAreaInset()` at ContentView root for universal visibility
-- ✅ Cached cover image in AudioPlayerManager for instant mini player rendering
-- ✅ Play/pause toggle logic on book detail page
-- ✅ Thread-safe UI updates with @MainActor annotations
-
-**Technical Improvements:**
-
-- Added @MainActor to play(), resume(), pause(), togglePlayPause() for UI thread safety
-- Wrapped MPRemoteCommandCenter callbacks in Task { @MainActor in } blocks
-- Enhanced AudioPlayerManager with currentBookCoverImage property
-- Moved mini player from BooksListView to ContentView for universal visibility
-- Refined button behavior: pause without showing player vs. play/resume with player
-
-**Bug Fixes:**
-
-- Fixed play/pause toggle not working on book detail page
-- Fixed mini player not appearing immediately after starting playback
-- Fixed sheet presentation not showing on Play button tap
-- Fixed mini player not visible on NavigationView children (BookDetailView)
-- Resolved main actor isolation errors in async callbacks
-
-- **Impact**: Professional iOS audiobook app with background playback, lock screen controls, and persistent mini player UI matching industry standards (Spotify/Apple Music)
-- **Files**: `MiniPlayerView.swift` (new), enhanced `AudioPlayerManager.swift`, updated `ContentView.swift`, `BookDetailView.swift`, `NowPlayingView.swift`
-- **Merged**: Commit a03625f (includes both Phase 3 and Phase 3.5)
-- **Documentation**: `docs/mobile/implementation-phases/phase-3.5-mini-player.md`, `ios/PHASE3_TESTING.md`
-
-#### Dual Authentication Implementation (December 26, 2025)
-
-- ✅ All 26 API endpoints now support both session cookies (web) and JWT Bearer tokens (mobile)
-- ✅ Applied dual auth pattern to all routes: books, browse, search, progress, library, downloads
-- ✅ 25/25 OpenAPI contract tests passing with Bearer token authentication
-- ✅ Mobile apps can now access full API using JWT tokens
-- ✅ Web sessions continue to work unchanged (backward compatible)
-- **Impact**: API is now fully mobile-ready with dual authentication support
-- **Completed In**: PR #35 - OpenAPI Implementation (commit db20b14)
-- **Implementation Plan**: `docs/archive/completed-plans/openapi-dual-auth-implementation-plan.md`
-
-#### OpenAPI Drift Prevention (December 26, 2025)
-
-- ✅ CI workflow validates spec, checks for stale types, runs contract tests
-- ✅ Pre-commit hooks auto-regenerate types on spec changes
-- ✅ OpenAPI spec cleaned (30 warnings → 0 warnings)
-- ✅ One-command contract testing: `npm run test:contract`
-- ✅ Full validation script: `npm run validate:full`
-- **Impact**: API contract guaranteed to stay in sync with implementation
-- **Files**: `.github/workflows/api.yml`, `.husky/pre-commit`, `docs/api/openapi.yaml`
-
-#### Previous Accomplishments (December 23, 2025)
-
-#### PR #12: Media Session API & HTTPS Development (Merged)
-
-- Implemented Media Session API for mobile lock screen controls
-- Lock screen metadata display (title, author, cover art)
-- Playback controls from lock screen (play, pause, skip forward/backward)
-- Position tracking and scrubbing support
-- Added HTTPS development server setup with mkcert
-- Custom server.js for local HTTPS testing
-- Network access configuration for mobile device testing
-- Continue Listening button for quick resume access
-- Graceful degradation for unsupported browsers
-
-#### PR #11: User Progress Tracking (Merged)
-
-- Implemented comprehensive progress tracking system
-- Three progress states: not started, in progress, finished
-- Automatic position saving during playback (5-second intervals)
-- Manual status controls on book detail pages
-- ProgressStatus component (display-only for library page)
-- ProgressControls component (interactive controls for book detail page)
-- Continue listening carousel on home page
-- Session-based authentication protection
-- 17 new tests, all passing (171 total tests)
-
-#### PR #7: Dedicated Playback Page (Merged)
-
-- Created dedicated playback interface at `/books/[id]/play`
-- Implemented interactive chapter navigation with ChapterList component
-- Added PlaybackClient wrapper for state management
-- Enhanced AudioPlayer with callback props for time tracking
-- Fixed race condition in chapter extraction API (P2002 handling)
-- Improved text contrast for book metadata
-- All 98 tests passing
-
-#### PR #8: Dark Mode Support (Merged)
-
-- Added complete dark mode support across entire application
-- Theme toggle in header with sun/moon icons
-- Theme persistence using next-themes library
-- Respects system theme preference by default
-- Updated all pages: home, search, playback, book details, browse pages
-- Updated all components: cards, navigation, forms, pagination, empty states
-- Smooth theme transitions
-
-### Database
-
-- **PostgreSQL 15** running in Docker
-- **11 audiobooks** imported from Libation export
-- **Chapter extraction**: Lazy loading on first playback access
-- **Schema**: Books, Authors, Narrators, Series, Categories, Chapters
-- **Relationships**: Many-to-many for authors, narrators, series, categories
-
-### Test Coverage
-
-- **207 total tests** - All passing ✅
-- **25 OpenAPI contract tests** - All passing ✅ (validate API against spec)
-- AudioPlayer: 22 tests
-- Pagination: 21 tests
-- Import script: 21 tests
-- Audio metadata extraction: 6 tests
-- API routes: 28 tests
-- Progress tracking: 17 tests
-- Page components: 26 tests
-- Other components: 30 tests
-
-## Current Features
-
-### Core Functionality
-
-- ✅ Browse books by title, author, narrator, series, category
-- ✅ Full-text search across all metadata
-- ✅ Pagination on all list views
-- ✅ Book detail pages with complete metadata
-- ✅ Audio playback with seek, speed control, volume
-- ✅ Chapter navigation with real-time highlighting
-- ✅ Dark mode with theme toggle
-- ✅ User authentication with session management
-- ✅ Progress tracking with automatic position saving
-- ✅ Continue listening carousel
-- ✅ Continue listening button for quick resume
-- ✅ Manual progress controls (mark as finished, reset)
-- ✅ Media Session API for mobile lock screen controls
-- ✅ HTTPS development server for mobile testing
-- ✅ Responsive design (mobile-ready)
-- ✅ Storybook integration (5 components documented)
-- ✅ Dual authentication (session cookies + JWT Bearer tokens)
-- ✅ Mobile-ready API with full authentication support
-
-### Technical Features
-
-- ✅ Next.js 14 with App Router
-- ✅ TypeScript with strict mode
-- ✅ Prisma ORM with PostgreSQL
-- ✅ Tailwind CSS for styling
-- ✅ Jest + React Testing Library
-- ✅ ESLint + Prettier + Husky
-- ✅ Docker for database
-- ✅ Environment-based configuration
-- ✅ OpenAPI 3.0 specification with automated type generation
-- ✅ Contract testing with OpenAPI validation
 
 ## Known Issues
 
-### None Currently Blocking
-
-All major functionality is working as expected. Minor improvements and feature additions are listed in Next Steps below.
-
-## Next Steps / TODO
-
-### High Priority
-
-1. **User Lists/Collections**
-   - "Want to Listen" list
-   - "Favorites" list
-   - Custom user-created lists
-   - Drag-and-drop list organization
-
-### Medium Priority
-
-4. **Advanced Search Filters**
-   - Filter by runtime (short/medium/long)
-   - Filter by release date range
-   - Filter by narrator
-   - Multiple category selection
-   - Series completion status
-
-5. **Reading Statistics**
-   - Total listening time
-   - Books completed this month/year
-   - Favorite authors/narrators
-   - Listening streaks
-   - Charts and visualizations
-
-6. **Book Recommendations**
-   - "More by this author"
-   - "Similar audiobooks"
-   - "Listeners also enjoyed"
-   - Based on listening history
-
-7. **Enhanced Chapter Features**
-   - Chapter bookmarks
-   - Chapter notes
-   - Skip intro/outro chapters
-   - Chapter preview/summary
-
-### Low Priority
-
-8. **Additional Metadata**
-   - Book ratings (import from Audible if available)
-   - User ratings and reviews
-   - Reading status (unread, in-progress, completed)
-   - Custom tags
-
-9. **Export/Import**
-   - Export listening history
-   - Export user lists
-   - Import from other sources (Goodreads, etc.)
-
-10. **Performance Optimizations**
-    - Image optimization (Next.js Image component already used)
-    - Lazy loading for large lists
-    - Caching strategies
-    - Database query optimization
-
-11. **iOS Mobile App** (Post-Deployment)
-    - Native Swift + SwiftUI app
-    - Full plan in [mobile-ios-plan.md](mobile-ios-plan.md)
-    - Backend API is already mobile-ready
-    - 8 phased implementation (Auth → Playback → Offline)
-
-## Technical Debt / Improvements
-
-### Code Quality
-
-- Consider extracting common UI patterns into reusable components
-- Add more integration tests for critical user flows
-- Document API endpoints with OpenAPI/Swagger
-- Add error boundaries for better error handling
-
-### Infrastructure
-
-- Set up CI/CD pipeline (GitHub Actions)
-- Configure staging environment
-- Plan AWS deployment architecture
-- Set up monitoring and logging
-
-### Developer Experience
-
-- Add Storybook for component development
-- Create component library documentation
-- Add VS Code workspace settings
-- Document development workflows
-
-## Environment Setup
-
-### Required Environment Variables
-
-```bash
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/book_vault"
-
-# Media Path
-MEDIA_DATA_PATH="/path/to/libation/export"
-
-# NextAuth (for future authentication)
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-here"
-```
-
-## Testing Commands
-
-```bash
-# Run all tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
-
-# Run specific test file
-npm test AudioPlayer.test.tsx
-
-# Run linting
-npm run lint
-
-# Format code
-npm run format
-```
-
-## Development Workflow
-
-1. **Start Database**: `docker-compose up -d`
-2. **Install Dependencies**: `npm install`
-3. **Run Migrations**: `npx prisma migrate dev`
-4. **Seed Test User**: `npm run db:seed` (creates test@example.com / password123)
-5. **Import Data**: `npm run import` (also seeds test user automatically)
-6. **Start Dev Server**: `npm run dev`
-7. **Run Tests**: `npm test`
-
-## Git Workflow
-
-- **Main Branch**: Always deployable, all tests passing
-- **Feature Branches**: `feature/feature-name`
-- **Pull Requests**: Required for all changes to main
-- **Commits**: Follow conventional commits format
-- **Pre-commit Hooks**: Lint and format staged files
-
-## Recent Merges
-
-- **PR #7**: Dedicated playback page with chapter navigation (Merged Dec 23)
-- **PR #8**: Dark mode support (Merged Dec 23)
-
-## Documentation
-
-All documentation is up to date:
-
-- ✅ README.md - Project overview and features
-- ✅ CHANGELOG.md - Recent changes and features
-- ✅ docs/STATUS.md - This file (project status and next steps)
-- ✅ docs/PR_chapter_navigation.md - PR #7 documentation
-- ✅ docs/PR_dark_mode.md - PR #8 documentation
-- ✅ docs/architecture.md - System architecture
-- ✅ docs/media-configuration.md - Media path setup
+None currently blocking. All tests passing.
 
 ---
 
-**Last Updated**: December 27, 2025, 1:30 PM CST
-**Next Review**: December 28, 2025
+## Recent Merges
+
+| PR  | Description                                | Date   |
+| --- | ------------------------------------------ | ------ |
+| #47 | iOS Phase 8 - Offline Mode Support         | Dec 29 |
+| #46 | iOS Phase 7 - Offline Downloads            | Dec 29 |
+| #45 | iOS Library UX Alignment                   | Dec 29 |
+| #44 | API DRY Refactor - Entity Detail Endpoints | Dec 28 |
+| #43 | iOS Phase 6 - Search & Browse              | Dec 28 |
+| #42 | iOS Phase 5 - Chapter Navigation           | Dec 28 |
+
+---
+
+## Quick Reference
+
+### Web App Features
+
+- Browse books by title, author, narrator, series, category
+- Full-text search with pagination
+- Audio playback with seek, speed control, chapters
+- Progress tracking with auto-save
+- Dark mode with theme toggle
+- Storybook for component development
+
+### iOS App Features
+
+All phases complete:
+
+1. ✅ Auth & Browsing
+2. ✅ Audio Playback
+3. ✅ Background Audio & Lock Screen
+4. ✅ Progress Sync
+5. ✅ Chapter Navigation
+6. ✅ Search & Browse
+7. ✅ Offline Downloads
+8. ✅ Offline Mode
+
+**Deferred**: User Lists (requires backend API)
+
+### Technical Stack
+
+- Next.js 14 + TypeScript + Tailwind CSS
+- PostgreSQL + Prisma ORM
+- OpenAPI 3.0 spec with contract tests
+- Jest + React Testing Library (all tests passing)
+- GitHub Actions CI/CD
+
+---
+
+## Links
+
+| What                     | Where                                                  |
+| ------------------------ | ------------------------------------------------------ |
+| **Priorities & Roadmap** | [development-roadmap.md](development-roadmap.md)       |
+| **iOS Maintenance**      | [mobile-ios-plan.md](mobile-ios-plan.md)               |
+| **API Reference**        | [api/openapi.yaml](api/openapi.yaml)                   |
+| **Architecture**         | [architecture.md](architecture.md)                     |
+| **Historical Details**   | [archive/status-history.md](archive/status-history.md) |
+
+---
+
+## Development Commands
+
+```bash
+# Start development
+docker-compose up -d && npm run dev
+
+# Run tests
+npm test                    # All tests
+npm run test:contract       # API contract tests
+npm run validate            # Full validation
+
+# iOS development
+npm run api:generate:swift  # Regenerate Swift models
+cd ios && xcodegen generate # Rebuild Xcode project
+```
+
+**Default credentials**: test@example.com / password123
