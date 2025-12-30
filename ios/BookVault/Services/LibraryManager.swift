@@ -23,18 +23,19 @@ enum LibraryError: LocalizedError {
 
 /// Manages user library operations with caching strategy
 /// This is a lightweight wrapper around APIClient for library-related operations
+@MainActor
 class LibraryManager: ObservableObject {
     static let shared = LibraryManager()
 
-    @MainActor @Published var isLoading = false
-    @MainActor @Published var error: Error?
+    @Published var isLoading = false
+    @Published var error: Error?
 
     /// Increments whenever the library is modified (add/remove book)
     /// Observers can watch this to know when to refresh their views
-    @MainActor @Published var libraryVersion: Int = 0
+    @Published var libraryVersion: Int = 0
 
     /// Indicates if current data is from cache (offline mode)
-    @MainActor @Published var isShowingCachedData = false
+    @Published var isShowingCachedData = false
 
     private let apiClient = APIClient.shared
     private let libraryCacheManager = LibraryCacheManager.shared

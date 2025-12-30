@@ -230,7 +230,7 @@ class AudioPlayerManager: ObservableObject {
         do {
             // Add authentication header for cover image
             var request = URLRequest(url: coverUrl)
-            if let token = await AuthManager.shared.token {
+            if let token = AuthManager.shared.token {
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             }
 
@@ -484,8 +484,10 @@ class AudioPlayerManager: ObservableObject {
         let cmTime = CMTime(seconds: time, preferredTimescale: 1000)
         player?.seek(to: cmTime) { [weak self] completed in
             if completed {
-                self?.currentTime = time
-                self?.updateNowPlayingInfo()
+                Task { @MainActor in
+                    self?.currentTime = time
+                    self?.updateNowPlayingInfo()
+                }
             }
         }
     }
@@ -601,14 +603,16 @@ class AudioPlayerManager: ObservableObject {
             forInterval: interval,
             queue: .main
         ) { [weak self] time in
-            guard let self = self else { return }
-            self.currentTime = time.seconds
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.currentTime = time.seconds
 
-            // Update current chapter (Phase 5)
-            if let currentChapter = self.getCurrentChapter() {
-                if self.currentChapterId != currentChapter.id {
-                    self.currentChapterId = currentChapter.id
-                    DebugLogger.audio("Chapter changed: \(currentChapter.title)")
+                // Update current chapter (Phase 5)
+                if let currentChapter = self.getCurrentChapter() {
+                    if self.currentChapterId != currentChapter.id {
+                        self.currentChapterId = currentChapter.id
+                        DebugLogger.audio("Chapter changed: \(currentChapter.title)")
+                    }
                 }
             }
         }
@@ -631,20 +635,23 @@ class AudioPlayerManager: ObservableObject {
                     if self.lastSavedPosition > 0 {
                         DebugLogger.audio("Seeking to saved position: \(self.lastSavedPosition)s")
                         let cmTime = CMTime(seconds: self.lastSavedPosition, preferredTimescale: 1000)
-                        self.player?.seek(to: cmTime) { _ in
-                            // Start playback after seek completes
-                            self.player?.play()
+                        self.player?.seek(to: cmTime) { [weak self] _ in
+                            Task { @MainActor in
+                                guard let self = self else { return }
+                                // Start playback after seek completes
+                                self.player?.play()
 
-                            // Set playback rate after calling play()
-                            if self.playbackRate != 1.0 {
-                                self.player?.rate = self.playbackRate
+                                // Set playback rate after calling play()
+                                if self.playbackRate != 1.0 {
+                                    self.player?.rate = self.playbackRate
+                                }
+
+                                self.isPlaying = true
+                                self.updateNowPlayingInfo()
+
+                                // Start auto-save timer
+                                self.startProgressSaveTimer()
                             }
-
-                            self.isPlaying = true
-                            self.updateNowPlayingInfo()
-
-                            // Start auto-save timer
-                            self.startProgressSaveTimer()
                         }
                     } else {
                         // Start playback now that we're ready
@@ -864,7 +871,6 @@ class AudioPlayerManager: ObservableObject {
         // Capture current state before switch
         let wasPlaying = isPlaying
         let savedPosition = currentTime
-        let savedRate = playbackRate
 
         DebugLogger.audio("Switching to local file at position: \(savedPosition)s, wasPlaying: \(wasPlaying)")
 
