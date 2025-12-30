@@ -252,7 +252,7 @@ final class NetworkMonitorRealTests: XCTestCase {
 
     func testNetworkMonitoringProtocolConformance() {
         // Verify NetworkMonitor conforms to NetworkMonitoring protocol
-        let monitor: NetworkMonitoring = networkMonitor
+        let monitor: any NetworkMonitoring = networkMonitor
         XCTAssertNotNil(monitor)
 
         // Test protocol properties are accessible
