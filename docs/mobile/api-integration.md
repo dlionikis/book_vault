@@ -1,8 +1,11 @@
 # iOS API Integration Guide
 
-**Last Updated**: December 25, 2025
+**Status**: ✅ Implementation Complete (Reference Document)
+**Last Updated**: December 29, 2025
 
 > **TL;DR**: All API endpoints documented with Swift implementation examples. Uses JWT authentication and generated models from OpenAPI spec.
+>
+> **Note**: This document contains patterns and examples from the completed iOS implementation. Use as reference for debugging or understanding API integration patterns.
 
 ---
 

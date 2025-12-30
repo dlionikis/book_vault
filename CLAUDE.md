@@ -2,7 +2,7 @@
 
 > **Purpose**: Quick onboarding reference for Claude Code sessions. Read this first to understand the project instantly.
 
-**Last Updated**: December 28, 2025
+**Last Updated**: December 29, 2025
 **Status**: Production-ready with S3 streaming support
 **Test Status**: 207 tests passing (23 OpenAPI contract tests + 184 unit tests)
 
@@ -637,15 +637,17 @@ When starting a new session:
 
 **Backend is mobile-ready**: See "AWS Deployment Readiness" section above.
 
-### iOS Mobile App (Pre-Development Complete)
+### iOS Mobile App (Complete)
 
 **Technology**: Native Swift + SwiftUI
 
-**Status**: ✅ Pre-development setup complete, ready for Phase 1 implementation
+**Status**: ✅ All 8 phases complete (December 2025)
 
-**Note**: User Lists feature moved to post-launch (nice to have, not essential for initial release)
+**Completed Features**: Auth, Playback, Background Audio, Progress Sync, Chapters, Search, Offline Downloads, Offline Mode
 
-**Getting Started**:
+**Deferred**: User Lists (post-launch, requires backend API development)
+
+**Common Commands**:
 
 ```bash
 # Generate Swift models from OpenAPI spec
@@ -654,28 +656,15 @@ npm run api:generate:swift
 # Regenerate Xcode project (after adding/removing files)
 cd ios && xcodegen generate
 
-# Watch for OpenAPI changes
-npm run api:watch
-
-# Open Xcode
+# Open Xcode project
 open ios/BookVault.xcodeproj
 ```
 
-**Adding New Swift Files**: We use **XcodeGen** to automatically manage the Xcode project. After creating new Swift files, run `cd ios && xcodegen generate` to update the project. See [docs/mobile/xcodegen-guide.md](docs/mobile/xcodegen-guide.md) for details.
+**Documentation**: See [docs/mobile-ios-plan.md](docs/mobile-ios-plan.md) for:
 
-**Test Fixtures**: Shared JSON fixtures for backend and iOS testing in `test-fixtures/`
-
-- `books-list.json`, `book-detail.json`, `user-progress.json`, etc.
-
-**Development Workflow**: See [docs/mobile/ios-development-setup.md](docs/mobile/ios-development-setup.md)
-
-**Full Implementation Plan**: See [docs/mobile-ios-plan.md](docs/mobile-ios-plan.md) for:
-
-- 7 phased implementation steps (User Lists moved to post-launch)
-- Technical architecture
-- API integration patterns
-- Testing strategy
-- App Store deployment process
+- Development workflow & commands
+- Maintenance notes
+- Links to detailed guides
 
 ---
 

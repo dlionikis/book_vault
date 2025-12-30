@@ -75,34 +75,40 @@
 
 ---
 
-## 📱 Mobile Development
+## 📱 Mobile Development (iOS - Complete)
 
-### Overview & Planning
+**Status**: ✅ All 8 phases implemented (December 2025)
 
-| File                                       | Purpose                                            | Tokens |
-| ------------------------------------------ | -------------------------------------------------- | ------ |
-| [mobile-ios-plan.md](mobile-ios-plan.md)   | **iOS implementation overview & development plan** | ~2,800 |
-| [ios-backend-sync.md](ios-backend-sync.md) | **iOS-Backend sync tracker** (API change impact)   | ~2,000 |
+### Overview & Workflow
 
-### Detailed iOS Guides (Read When Implementing)
+| File                                     | Purpose                                  | Tokens |
+| ---------------------------------------- | ---------------------------------------- | ------ |
+| [mobile-ios-plan.md](mobile-ios-plan.md) | **iOS overview, commands & maintenance** | ~800   |
+| [mobile/README.md](mobile/README.md)     | Quick reference & documentation index    | ~300   |
 
-| File                                                               | Purpose                                     | Tokens |
-| ------------------------------------------------------------------ | ------------------------------------------- | ------ |
-| [mobile/ios-development-setup.md](mobile/ios-development-setup.md) | iOS development environment setup           | ~1,500 |
-| [mobile/xcodegen-guide.md](mobile/xcodegen-guide.md)               | **XcodeGen: How to add files to Xcode**     | ~3,000 |
-| [mobile/vscode-ios-setup.md](mobile/vscode-ios-setup.md)           | VS Code for iOS development (optional)      | ~3,000 |
-| [mobile/implementation-phases.md](mobile/implementation-phases.md) | 8 phases with acceptance criteria           | ~1,500 |
-| [mobile/architecture.md](mobile/architecture.md)                   | SwiftUI + MVVM architecture, file structure | ~3,800 |
-| [mobile/api-integration.md](mobile/api-integration.md)             | Swift API client implementation examples    | ~4,000 |
-| [mobile/ios-features.md](mobile/ios-features.md)                   | Background audio, lock screen, CarPlay      | ~3,500 |
+### Setup Guides (Active)
+
+| File                                                               | Purpose                                 | Tokens |
+| ------------------------------------------------------------------ | --------------------------------------- | ------ |
+| [mobile/ios-development-setup.md](mobile/ios-development-setup.md) | iOS development environment setup       | ~1,200 |
+| [mobile/xcodegen-guide.md](mobile/xcodegen-guide.md)               | **XcodeGen: How to add files to Xcode** | ~3,000 |
+| [mobile/vscode-ios-setup.md](mobile/vscode-ios-setup.md)           | VS Code for iOS development (optional)  | ~3,000 |
+
+### Implementation Reference (Completed - Use for Debugging)
+
+| File                                                   | Purpose                                     | Tokens |
+| ------------------------------------------------------ | ------------------------------------------- | ------ |
+| [mobile/architecture.md](mobile/architecture.md)       | SwiftUI + MVVM architecture, file structure | ~3,800 |
+| [mobile/api-integration.md](mobile/api-integration.md) | Swift API client implementation examples    | ~4,000 |
+| [mobile/ios-features.md](mobile/ios-features.md)       | Background audio, lock screen, CarPlay      | ~3,500 |
 
 **Quick Start for iOS Development**:
 
-1. Read [mobile-ios-plan.md](mobile-ios-plan.md) for overview & workflow
-2. Check [ios-backend-sync.md](ios-backend-sync.md) for current API status
-3. Read specific guides in `mobile/` as needed per implementation phase
+1. Read [mobile-ios-plan.md](mobile-ios-plan.md) for overview & commands
+2. See [mobile/xcodegen-guide.md](mobile/xcodegen-guide.md) for adding files
+3. Reference implementation docs only when debugging
 
-**Note**: For detailed Swift code examples (legacy), see `archive/api-mobile-detailed.md` (2,925 lines, ~10,600 tokens).
+**Archived**: [archive/completed-plans/ios-implementation-phases.md](archive/completed-plans/ios-implementation-phases.md) - Original phase plan
 
 ---
 
@@ -128,6 +134,8 @@
 
 Located in `archive/` folder:
 
+- `archive/completed-plans/ios-implementation-phases.md` - iOS phase plan (all 8 phases complete)
+- `archive/completed-plans/ios-backend-sync.md` - iOS-backend sync tracker (historical)
 - `archive/completed-plans/implement-backend-support-for-mobile.md` (71K, 9,512 words)
 - `archive/completed-plans/storybook-plan.md` (30K, 3,913 words)
 - `archive/completed-plans/fix-api-tests.md` (10K, 1,311 words)
@@ -162,18 +170,17 @@ Located in `archive/implementation-plans/` folder:
 
 **I'm working on mobile iOS app**:
 
-1. Read [mobile-ios-plan.md](mobile-ios-plan.md) - Development workflow & overview
-2. Read [ios-backend-sync.md](ios-backend-sync.md) - Current API status
-3. Read phase-specific guides in `mobile/` directory as needed
-4. Check [API_SECURITY.md](API_SECURITY.md) - Auth patterns
+1. Read [mobile-ios-plan.md](mobile-ios-plan.md) - Overview & commands
+2. See [mobile/xcodegen-guide.md](mobile/xcodegen-guide.md) - Adding/removing files
+3. Reference [mobile/architecture.md](mobile/architecture.md) for patterns (if debugging)
 
 **I'm making API changes that affect iOS**:
 
-1. Read [ios-backend-sync.md](ios-backend-sync.md) - Check iOS impact
-2. Update OpenAPI spec first (`docs/api/openapi.yaml`)
-3. Run `npm run api:generate` to regenerate types
+1. Update OpenAPI spec first (`docs/api/openapi.yaml`)
+2. Run `npm run api:generate` to regenerate types (TypeScript + Swift)
+3. Run `cd ios && xcodegen generate` if new Swift files created
 4. Update iOS code if needed
-5. Document change in [ios-backend-sync.md](ios-backend-sync.md)
+5. Test both platforms before committing
 
 **I'm debugging an issue**:
 
@@ -216,7 +223,7 @@ Located in `archive/implementation-plans/` folder:
 
 ## 🔄 Maintenance
 
-**Last Updated**: December 25, 2025
+**Last Updated**: December 29, 2025
 
 **When to update this index**:
 

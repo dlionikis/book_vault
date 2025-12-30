@@ -1,8 +1,11 @@
 # iOS-Specific Features
 
-**Last Updated**: December 25, 2025
+**Status**: ✅ Implementation Complete (Reference Document)
+**Last Updated**: December 29, 2025
 
 > **TL;DR**: Background audio, lock screen controls, interruption handling, and future CarPlay support.
+>
+> **Note**: This document contains patterns and examples from the completed iOS implementation. Use as reference for debugging or understanding iOS-specific feature patterns.
 
 ---
 

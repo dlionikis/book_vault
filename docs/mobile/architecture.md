@@ -1,8 +1,11 @@
 # iOS Architecture
 
-**Last Updated**: December 25, 2025
+**Status**: ✅ Implementation Complete (Reference Document)
+**Last Updated**: December 29, 2025
 
 > **TL;DR**: SwiftUI + MVVM architecture with service layer for API calls and AVPlayer for audio.
+>
+> **Note**: This document contains patterns and examples from the completed iOS implementation. Use as reference for debugging or understanding architecture decisions.
 
 ---
 
