@@ -1,0 +1,62 @@
+# Dependencies
+node_modules
+
+# Build outputs (we build fresh in Docker)
+.next
+out
+dist
+
+# Development files
+*.log
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Testing
+coverage
+__tests__
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+jest.config.js
+jest.setup.js
+
+# iOS app (not needed for web deployment)
+ios
+
+# Documentation (not needed at runtime)
+docs
+*.md
+!README.md
+
+# Storybook
+.storybook
+stories
+**/*.stories.tsx
+**/*.stories.ts
+
+# Scripts (development only)
+scripts
+
+# Test data
+test-data
+
+# Docker files (avoid recursive copy)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# OS files
+.DS_Store
+Thumbs.db
