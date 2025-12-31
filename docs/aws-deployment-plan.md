@@ -150,9 +150,9 @@ aws s3api put-bucket-cors \
 ### Step 1.3: Upload Media Files
 
 ```bash
-# Sync Libation directory to S3 (preserves folder structure)
+# Sync audio book directory to S3 (preserves folder structure)
 # Excludes: .cue files, Icon files (macOS metadata), .DS_Store
-aws s3 sync /Volumes/BeeDrive/Libation s3://book-vault-media/ \
+aws s3 sync <AUDIO_BOOK_SOURCE_PATH> s3://book-vault-media/ \
   --exclude "*.cue" \
   --exclude "Icon*" \
   --exclude "Icon?" \
