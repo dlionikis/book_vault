@@ -93,7 +93,8 @@ struct LoginView: View {
 
                 Spacer()
 
-                // Development hint
+                #if DEBUG
+                // Development hint - only shown in Debug builds
                 VStack(spacing: 4) {
                     Text("Development Credentials")
                         .font(.caption)
@@ -103,6 +104,7 @@ struct LoginView: View {
                         .foregroundColor(.secondary)
                 }
                 .padding(.bottom, 20)
+                #endif
             }
             .navigationBarHidden(true)
         }

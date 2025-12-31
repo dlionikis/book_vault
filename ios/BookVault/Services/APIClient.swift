@@ -64,9 +64,18 @@ class APIClient: APIClientProtocol {
         }
     }
 
-    // Production singleton init
+    // Production singleton init - reads API URL from Info.plist (set via xcconfig)
     private convenience init() {
-        let urlString = "http://localhost:3000"
+        // Read API base URL from Info.plist (injected from xcconfig based on build configuration)
+        let urlString: String
+        if let configuredURL = Bundle.main.object(forInfoDictionaryKey: "APIBaseURL") as? String,
+           !configuredURL.isEmpty {
+            urlString = configuredURL
+        } else {
+            // Fallback to localhost for development if not configured
+            urlString = "http://localhost:3000"
+        }
+
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 30
         configuration.timeoutIntervalForResource = 300

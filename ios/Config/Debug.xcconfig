@@ -1,0 +1,8 @@
+// Debug.xcconfig
+// Development environment configuration
+
+// API Base URL - Local development server
+API_BASE_URL = http:/$()/localhost:3000
+
+// Build Settings
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG
