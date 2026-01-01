@@ -42,12 +42,12 @@ jobs:
       - name: Check for uncommitted changes
         run: |
           if ! git diff --exit-code lib/api-types.ts; then
-            echo "ERROR: Generated types are out of sync with OpenAPI spec"
+            echo "❌ ERROR: Generated types are out of sync with OpenAPI spec"
             echo "Please run: npm run api:generate:ts"
             echo "Then commit the updated lib/api-types.ts file"
             exit 1
           fi
-          echo "Generated TypeScript types are up-to-date"
+          echo "✅ Generated TypeScript types are up-to-date"
 
   check-generated-swift:
     name: Check Generated Swift Models are Up-to-Date
@@ -71,12 +71,12 @@ jobs:
       - name: Check for uncommitted changes
         run: |
           if ! git diff --exit-code ios/BookVault/Generated/Models/; then
-            echo "ERROR: Generated Swift models are out of sync with OpenAPI spec"
+            echo "❌ ERROR: Generated Swift models are out of sync with OpenAPI spec"
             echo "Please run: npm run api:generate:swift"
             echo "Then commit the updated ios/BookVault/Generated/Models/ files"
             exit 1
           fi
-          echo "Generated Swift models are up-to-date"
+          echo "✅ Generated Swift models are up-to-date"
 
   check-endpoint-coverage:
     name: Check Endpoint Coverage

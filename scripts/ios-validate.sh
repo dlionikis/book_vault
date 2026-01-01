@@ -7,12 +7,12 @@ set -e
 cd "$(dirname "$0")/../ios"
 
 run_lint() {
-  echo "Running SwiftLint..."
+  echo "🔍 Running SwiftLint..."
   swiftlint lint --config .swiftlint.yml --strict
 }
 
 run_build() {
-  echo "Building iOS app..."
+  echo "🔨 Building iOS app..."
   xcodebuild build \
     -scheme BookVault \
     -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
@@ -21,7 +21,7 @@ run_build() {
 }
 
 run_tests() {
-  echo "Running iOS tests..."
+  echo "🧪 Running iOS tests..."
   xcodebuild test \
     -scheme BookVault \
     -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
@@ -38,4 +38,4 @@ case "${1:-all}" in
   *)            echo "Usage: $0 [--lint-only|--build-only|--test-only]"; exit 1 ;;
 esac
 
-echo "iOS validation complete"
+echo "✅ iOS validation complete"

@@ -17,8 +17,8 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 log_step() { echo -e "${GREEN}==>${NC} $1"; }
-log_warn() { echo -e "${YELLOW}Warning: $1${NC}"; }
-log_error() { echo -e "${RED}Error: $1${NC}"; }
+log_warn() { echo -e "${YELLOW}⚠️  $1${NC}"; }
+log_error() { echo -e "${RED}❌ $1${NC}"; }
 
 # Parse arguments
 SKIP_WEB_CHECKS=false
@@ -117,5 +117,5 @@ curl -sf https://bookvault.lionikis.com/api/health || {
 }
 
 echo ""
-echo -e "${GREEN}Deployment complete!${NC}"
+echo -e "${GREEN}✅ Deployment complete!${NC}"
 echo "   URL: https://bookvault.lionikis.com"
