@@ -207,7 +207,7 @@ final class LibraryCacheManagerRealTests: XCTestCase {
             id: UUID(),
             asin: "B0123456789",
             title: "The Great Book",
-            description: "A wonderful story",
+            publisherSummary: "A wonderful story",
             runtimeMinutes: 600,
             releaseDate: Date(timeIntervalSince1970: 1_700_000_000),
             publisher: "Great Publisher",
@@ -228,7 +228,7 @@ final class LibraryCacheManagerRealTests: XCTestCase {
         let loadedBook = loaded?.first
         XCTAssertNotNil(loadedBook)
         XCTAssertEqual(loadedBook?.title, "The Great Book")
-        XCTAssertEqual(loadedBook?.description, "A wonderful story")
+        XCTAssertEqual(loadedBook?.publisherSummary, "A wonderful story")
         XCTAssertEqual(loadedBook?.runtimeMinutes, 600)
         XCTAssertEqual(loadedBook?.publisher, "Great Publisher")
         XCTAssertEqual(loadedBook?.authors.first?.name, "Famous Author")
