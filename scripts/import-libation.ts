@@ -55,8 +55,8 @@ export async function importBooks() {
         const metadataContent = await fs.readFile(metadataPath, 'utf-8');
         const metadata: LibationMetadata = JSON.parse(metadataContent);
 
-        // Find audio and cover files
-        const audioFile = files.find((f) => f.endsWith('.mp3'));
+        // Find audio and cover files (support both MP3 and M4B formats)
+        const audioFile = files.find((f) => f.endsWith('.mp3') || f.endsWith('.m4b'));
         const coverFile = files.find((f) => f.endsWith('.jpg'));
 
         // Import to database
