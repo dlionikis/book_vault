@@ -84,7 +84,7 @@ npm run db:studio              # Open Prisma Studio GUI
 npm run db:migrate             # Run migrations
 npm run db:generate            # Regenerate Prisma Client
 
-# Testing & Quality
+# Testing & Quality (see docs/testing.md for full guide)
 npm test                       # Run all Jest tests
 npm run test:watch             # Watch mode
 npm run test:coverage          # Coverage report
@@ -95,6 +95,12 @@ npm run lint:fix               # Auto-fix linting issues
 npm run format                 # Prettier format
 npm run validate               # Run all checks (format + lint + typecheck + test)
 npm run validate:full          # Full validation including API contract checks
+
+# iOS Validation
+npm run ios:validate           # Full iOS validation (lint + build + test)
+npm run ios:lint               # SwiftLint only
+npm run ios:build              # iOS build only
+npm run ios:test               # iOS tests only
 
 # Data Management
 npm run import                 # Import books from Libation directory
@@ -114,10 +120,14 @@ npm run api:docs               # Generate API documentation (HTML)
 npm run docs:generate          # Generate everything (types + docs)
 npm run api:watch              # Watch for changes and auto-regenerate
 npm run api:check-drift        # Check if generated types are stale
+npm run api:check-drift:swift  # Check if Swift models are stale
 
 # Build & Deploy
 npm run build                  # Production build
 npm start                      # Start production server
+npm run deploy                 # Full validation (web + iOS) + deploy
+npm run deploy:web             # Web validation + deploy (skip iOS)
+npm run deploy:only            # Deploy without checks
 ```
 
 ### Git Workflow

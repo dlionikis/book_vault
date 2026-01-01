@@ -37,10 +37,18 @@
     "api:watch:ts": "nodemon --watch docs/api/openapi.yaml --exec 'npm run api:generate:ts'",
     "api:watch:swift": "nodemon --watch docs/api/openapi.yaml --exec 'npm run api:generate:swift'",
     "api:check-drift": "npm run api:generate:ts && git diff --exit-code lib/api-types.ts",
+    "api:check-drift:swift": "npm run api:generate:swift && git diff --exit-code ios/BookVault/Generated/Models/",
     "api:check-coverage": "tsx scripts/check-endpoint-coverage.ts",
     "docs:generate": "npm run api:generate && npm run api:docs",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "ios:lint": "./scripts/ios-validate.sh --lint-only",
+    "ios:build": "./scripts/ios-validate.sh --build-only",
+    "ios:test": "./scripts/ios-validate.sh --test-only",
+    "ios:validate": "./scripts/ios-validate.sh",
+    "deploy": "./scripts/deploy.sh",
+    "deploy:web": "./scripts/deploy.sh --web",
+    "deploy:only": "./scripts/deploy.sh --deploy-only"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.958.0",

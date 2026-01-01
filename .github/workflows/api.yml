@@ -24,7 +24,7 @@ jobs:
         run: npm run api:validate
 
   check-generated-types:
-    name: Check Generated Types are Up-to-Date
+    name: Check Generated TypeScript Types are Up-to-Date
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,12 +42,41 @@ jobs:
       - name: Check for uncommitted changes
         run: |
           if ! git diff --exit-code lib/api-types.ts; then
-            echo "❌ ERROR: Generated types are out of sync with OpenAPI spec"
+            echo "ERROR: Generated types are out of sync with OpenAPI spec"
             echo "Please run: npm run api:generate:ts"
             echo "Then commit the updated lib/api-types.ts file"
             exit 1
           fi
-          echo "✅ Generated types are up-to-date"
+          echo "Generated TypeScript types are up-to-date"
+
+  check-generated-swift:
+    name: Check Generated Swift Models are Up-to-Date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install OpenAPI Generator
+        run: npm install -g @openapitools/openapi-generator-cli
+
+      - name: Generate Swift models
+        run: npm run api:generate:swift
+
+      - name: Check for uncommitted changes
+        run: |
+          if ! git diff --exit-code ios/BookVault/Generated/Models/; then
+            echo "ERROR: Generated Swift models are out of sync with OpenAPI spec"
+            echo "Please run: npm run api:generate:swift"
+            echo "Then commit the updated ios/BookVault/Generated/Models/ files"
+            exit 1
+          fi
+          echo "Generated Swift models are up-to-date"
 
   check-endpoint-coverage:
     name: Check Endpoint Coverage
