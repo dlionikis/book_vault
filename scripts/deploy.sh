@@ -21,6 +21,12 @@ log_step() { echo -e "${GREEN}==>${NC} $1"; }
 log_warn() { echo -e "${YELLOW}⚠️  $1${NC}"; }
 log_error() { echo -e "${RED}❌ $1${NC}"; }
 
+# Track current step for error reporting
+CURRENT_STEP=""
+
+# Trap to show failed step on error
+trap 'if [ -n "$CURRENT_STEP" ]; then echo ""; log_error "Failed: $CURRENT_STEP"; fi' ERR
+
 # === FUNCTIONS ===
 
 check_git_status() {
@@ -74,20 +80,24 @@ check_git_status() {
 }
 
 run_web_validation() {
+  CURRENT_STEP="Web validation (npm run validate:full)"
   log_step "Running web validation (npm run validate:full)..."
   npm run validate:full
 }
 
 run_ios_validation() {
+  CURRENT_STEP="iOS validation (drift check + lint + build + tests)"
   log_step "Running iOS validation (drift check + lint + build + tests)..."
   "$SCRIPT_DIR/ios-validate.sh"
 }
 
 run_deploy() {
+  CURRENT_STEP="Docker build (AMD64)"
   log_step "Building Docker image for AMD64..."
   docker buildx create --use --name amd64builder 2>/dev/null || true
   docker buildx build --platform linux/amd64 -t book-vault:amd64 --load .
 
+  CURRENT_STEP="ECR authentication"
   log_step "Authenticating to ECR..."
   mkdir -p /tmp/docker-config
   cat > /tmp/docker-config/config.json << 'EOF'
@@ -102,10 +112,12 @@ EOF
     DOCKER_CONFIG=/tmp/docker-config docker login --username AWS \
     --password-stdin "${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com"
 
+  CURRENT_STEP="ECR push"
   log_step "Tagging and pushing to ECR..."
   docker tag book-vault:amd64 "${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/book-vault:latest"
   DOCKER_CONFIG=/tmp/docker-config docker push "${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/book-vault:latest"
 
+  CURRENT_STEP="ECS deployment"
   log_step "Deploying to ECS..."
   aws ecs update-service \
     --cluster book-vault \
@@ -116,6 +128,7 @@ EOF
     --query 'service.{status:status,runningCount:runningCount,desiredCount:desiredCount}' \
     --output json
 
+  CURRENT_STEP="ECS service stabilization"
   log_step "Monitoring deployment..."
   echo "Waiting for service to stabilize..."
   aws ecs wait services-stable \
@@ -124,11 +137,15 @@ EOF
     --profile book_vault \
     --region us-east-1
 
+  CURRENT_STEP="Health check"
   log_step "Verifying health endpoint..."
   curl -sf https://bookvault.lionikis.com/api/health || {
     log_error "Health check failed!"
     return 1
   }
+
+  # Clear step tracking on success
+  CURRENT_STEP=""
 
   echo ""
   echo -e "${GREEN}✅ Deployment complete!${NC}"
