@@ -110,6 +110,12 @@
 | [mobile/api-integration.md](mobile/api-integration.md) | Swift API client implementation examples    | ~4,000 |
 | [mobile/ios-features.md](mobile/ios-features.md)       | Background audio, lock screen, CarPlay      | ~3,500 |
 
+### Planned Features (Not Yet Implemented)
+
+| File                                                                           | Purpose                              | Tokens |
+| ------------------------------------------------------------------------------ | ------------------------------------ | ------ |
+| [mobile/face-id-implementation-plan.md](mobile/face-id-implementation-plan.md) | Face ID / Touch ID login integration | ~2,500 |
+
 **Quick Start for iOS Development**:
 
 1. Read [mobile-ios-plan.md](mobile-ios-plan.md) for overview & commands
@@ -131,13 +137,17 @@
 
 ## 📦 Setup & Deployment
 
-| File                                             | Purpose                                        | Tokens |
-| ------------------------------------------------ | ---------------------------------------------- | ------ |
-| [project-setup.md](project-setup.md)             | Initial project setup, installation, first run | ~1,170 |
-| [aws-deployment-plan.md](aws-deployment-plan.md) | AWS infrastructure & **Quick Deploy Guide**    | ~8,000 |
+| File                                                           | Purpose                                                              | Tokens |
+| -------------------------------------------------------------- | -------------------------------------------------------------------- | ------ |
+| [project-setup.md](project-setup.md)                           | Initial project setup, installation, first run                       | ~1,170 |
+| [aws-deployment-plan.md](aws-deployment-plan.md)               | AWS infrastructure & **Quick Deploy Guide**                          | ~8,000 |
+| [aws-cost-optimization-plan.md](aws-cost-optimization-plan.md) | **Cost reduction plan** (billing alerts, S3 tiering, Fargate sizing) | ~4,500 |
 
 **Quick Deploy** (routine code deployments):
 See [aws-deployment-plan.md#quick-deploy-guide](aws-deployment-plan.md#quick-deploy-guide) for streamlined build → push → deploy commands.
+
+**Cost Optimization**:
+See [aws-cost-optimization-plan.md](aws-cost-optimization-plan.md) for reducing AWS costs by ~45% ($87 → $45/month).
 
 ---
 
