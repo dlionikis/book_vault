@@ -134,8 +134,8 @@ final class ChapterManagerRealTests: XCTestCase {
 
         // Then: Returns empty array
         XCTAssertTrue(result.isEmpty)
-        // And: Caches empty result
-        XCTAssertTrue(chapterManager.hasCachedChapters(bookId: invalidBookId))
+        // And: Does NOT cache empty result (allows retry)
+        XCTAssertFalse(chapterManager.hasCachedChapters(bookId: invalidBookId))
     }
 
     @MainActor
@@ -151,15 +151,15 @@ final class ChapterManagerRealTests: XCTestCase {
     }
 
     @MainActor
-    func testFetchChapters_APIError_CachesEmptyResult() async {
+    func testFetchChapters_APIError_DoesNotCacheEmptyResult() async {
         // Given: API returns error
         mockAPIClient.fetchBookChaptersResult = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
 
         // When: Fetching chapters
         _ = await chapterManager.fetchChapters(bookId: testBookId.uuidString)
 
-        // Then: Caches empty result to avoid repeated failed requests
-        XCTAssertTrue(chapterManager.hasCachedChapters(bookId: testBookId.uuidString))
+        // Then: Does NOT cache empty result (allows retry when network recovers)
+        XCTAssertFalse(chapterManager.hasCachedChapters(bookId: testBookId.uuidString))
     }
 
     @MainActor
@@ -315,15 +315,15 @@ final class ChapterManagerRealTests: XCTestCase {
     }
 
     @MainActor
-    func testFetchChapters_NoChapters_CachesEmptyResult() async {
+    func testFetchChapters_NoChapters_DoesNotCacheEmptyResult() async {
         // Given: API returns empty chapters
         mockAPIClient.fetchBookChaptersResult = .success([])
 
         // When: Fetching chapters
         _ = await chapterManager.fetchChapters(bookId: testBookId.uuidString)
 
-        // Then: Empty result is cached
-        XCTAssertTrue(chapterManager.hasCachedChapters(bookId: testBookId.uuidString))
+        // Then: Empty result is NOT cached (allows retry when chapters become available)
+        XCTAssertFalse(chapterManager.hasCachedChapters(bookId: testBookId.uuidString))
         XCTAssertTrue(chapterManager.getCachedChapters(bookId: testBookId.uuidString).isEmpty)
     }
 }

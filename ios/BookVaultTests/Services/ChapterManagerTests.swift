@@ -85,10 +85,10 @@ final class ChapterManagerTests: XCTestCase {
         // When fetchChapters is called
         let result = await sut.fetchChapters(bookId: bookId)
 
-        // Then should return empty array and cache empty
+        // Then should return empty array but NOT cache (allows retry)
         XCTAssertTrue(result.isEmpty)
         XCTAssertTrue(sut.chapters.isEmpty)
-        XCTAssertTrue(sut.hasCachedChapters(bookId: bookId)) // Empty array is cached
+        XCTAssertFalse(sut.hasCachedChapters(bookId: bookId)) // Empty results are NOT cached
         XCTAssertTrue(sut.getCachedChapters(bookId: bookId).isEmpty)
     }
 

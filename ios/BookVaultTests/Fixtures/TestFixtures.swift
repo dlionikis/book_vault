@@ -285,7 +285,7 @@ enum TestFixtures {
         "id": "22222222-2222-2222-2222-222222222222",
         "asin": "B00TEST123",
         "title": "Test Book Title",
-        "description": "A test book description",
+        "publisherSummary": "A test book description",
         "runtimeMinutes": 360,
         "publisher": "Test Publisher",
         "coverUrl": "/api/images/test/cover.jpg",
