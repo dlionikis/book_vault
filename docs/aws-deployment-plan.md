@@ -1042,6 +1042,79 @@ aws acm delete-certificate \
 
 ---
 
+## Quick Deploy Guide
+
+For routine deployments (code changes, bug fixes), use this streamlined process:
+
+### Prerequisites
+
+- AWS CLI configured with `book_vault` profile
+- Docker Desktop running
+- Working directory: project root
+
+### Deploy Commands
+
+```bash
+# 1. Build Docker image (cross-compile for AWS)
+docker buildx create --use --name amd64builder 2>/dev/null || true
+docker buildx build --platform linux/amd64 -t book-vault:amd64 --load .
+
+# 2. Authenticate to ECR
+mkdir -p /tmp/docker-config
+cat > /tmp/docker-config/config.json << 'EOF'
+{
+  "auths": {},
+  "credsStore": "osxkeychain"
+}
+EOF
+ACCOUNT_ID=$(AWS_PROFILE=book_vault aws sts get-caller-identity --query 'Account' --output text)
+AWS_PROFILE=book_vault aws ecr get-login-password --region us-east-1 | \
+  DOCKER_CONFIG=/tmp/docker-config docker login --username AWS \
+  --password-stdin ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com
+
+# 3. Tag and push to ECR
+docker tag book-vault:amd64 ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/book-vault:latest
+DOCKER_CONFIG=/tmp/docker-config docker push ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/book-vault:latest
+
+# 4. Deploy to ECS (triggers rolling update)
+aws ecs update-service \
+  --cluster book-vault \
+  --service book-vault-service \
+  --force-new-deployment \
+  --profile book_vault \
+  --region us-east-1 \
+  --query 'service.{status:status,runningCount:runningCount,desiredCount:desiredCount}' \
+  --output json
+```
+
+### Monitor Deployment
+
+```bash
+# Watch deployment progress
+aws ecs describe-services \
+  --cluster book-vault \
+  --services book-vault-service \
+  --profile book_vault \
+  --region us-east-1 \
+  --query 'services[0].deployments[*].{status:status,running:runningCount,desired:desiredCount,pending:pendingCount}'
+
+# View container logs
+aws logs tail /ecs/book-vault --follow --profile book_vault --region us-east-1
+
+# Test health endpoint
+curl -s https://bookvault.lionikis.com/api/health
+```
+
+### Deployment Time
+
+- **Build**: ~2-3 minutes (cached layers)
+- **Push**: ~1-2 minutes
+- **ECS rolling update**: ~3-5 minutes
+
+Total: **~6-10 minutes** from commit to live
+
+---
+
 ## Questions?
 
 Refer to:
