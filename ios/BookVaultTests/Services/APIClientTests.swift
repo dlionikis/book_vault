@@ -44,7 +44,7 @@ final class APIClientTests: XCTestCase {
         // Given JSON with "2025-12-28T19:07:21.367Z"
         // When decoded
         // Then date should be parsed correctly
-        let json = """
+        _ = """
         {"date": "2025-12-28T19:07:21.367Z"}
         """
         // Test decoder

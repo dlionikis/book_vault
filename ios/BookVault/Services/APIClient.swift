@@ -64,6 +64,15 @@ class APIClient: APIClientProtocol {
         }
     }
 
+    // Token refresh callback (enables DI for testing)
+    var tokenRefreshHandler: () async -> Bool = {
+        await AuthManager.shared.refreshAccessToken()
+    }
+
+    // Token refresh state to prevent infinite loops
+    private var isRefreshingToken = false
+    private let refreshLock = NSLock()
+
     // Production singleton init - reads API URL from Info.plist (set via xcconfig)
     private convenience init() {
         // Read API base URL from Info.plist (injected from xcconfig based on build configuration)
@@ -162,6 +171,7 @@ class APIClient: APIClientProtocol {
     }
 
     /// Executes a request and decodes the response
+    /// On 401, attempts token refresh before forcing logout
     private func execute<T: Decodable>(request: URLRequest) async throws -> T {
         let (data, response) = try await session.data(for: request)
 
@@ -181,32 +191,24 @@ class APIClient: APIClientProtocol {
         switch httpResponse.statusCode {
         case 200 ... 299:
             // Success - decode response
-            do {
-                return try decoder.decode(T.self, from: data)
-            } catch {
-                // Detailed error logging (automatically disabled in release builds)
-                DebugLogger.error("Failed to decode API response", error: error)
-
-                if let decodingError = error as? DecodingError {
-                    switch decodingError {
-                    case let .keyNotFound(key, context):
-                        DebugLogger.error("Missing key: \(key.stringValue) | Context: \(context.debugDescription)")
-                    case let .typeMismatch(type, context):
-                        DebugLogger.error("Type mismatch: expected \(type) | Context: \(context.debugDescription)")
-                    case let .valueNotFound(type, context):
-                        DebugLogger.error("Value not found: \(type) | Context: \(context.debugDescription)")
-                    case let .dataCorrupted(context):
-                        DebugLogger.error("Data corrupted: \(context.debugDescription)")
-                    @unknown default:
-                        DebugLogger.error("Unknown decoding error")
-                    }
-                }
-                throw APIError.decodingError(error)
-            }
+            return try decodeResponse(data: data)
         case 401:
-            // Force logout via handler (enables DI for testing)
-            forceLogoutHandler()
-            throw APIError.unauthorized
+            // Attempt token refresh before forcing logout
+            DebugLogger.auth("Received 401 - attempting token refresh...")
+            if await attemptTokenRefresh() {
+                // Retry the original request with new token
+                DebugLogger.auth("Token refresh successful - retrying request")
+                var retryRequest = request
+                if let newToken = accessToken {
+                    retryRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
+                }
+                return try await executeWithoutRefresh(request: retryRequest)
+            } else {
+                // Refresh failed - force logout
+                DebugLogger.auth("Token refresh failed - forcing logout")
+                forceLogoutHandler()
+                throw APIError.unauthorized
+            }
         case 404:
             throw APIError.notFound
         default:
@@ -214,6 +216,90 @@ class APIClient: APIClientProtocol {
             let errorMessage = try? decoder.decode([String: String].self, from: data)
             throw APIError.serverError(httpResponse.statusCode, errorMessage?["error"])
         }
+    }
+
+    /// Execute request without attempting refresh (used for retry after refresh)
+    private func executeWithoutRefresh<T: Decodable>(request: URLRequest) async throws -> T {
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        // Debug logging
+        let responseBody = String(data: data, encoding: .utf8)
+        DebugLogger.apiResponse(
+            path: request.url?.absoluteString ?? "unknown",
+            statusCode: httpResponse.statusCode,
+            body: responseBody
+        )
+
+        switch httpResponse.statusCode {
+        case 200 ... 299:
+            return try decodeResponse(data: data)
+        case 401:
+            // Second 401 after refresh - definitely log out
+            DebugLogger.auth("Second 401 after token refresh - forcing logout")
+            forceLogoutHandler()
+            throw APIError.unauthorized
+        case 404:
+            throw APIError.notFound
+        default:
+            let errorMessage = try? decoder.decode([String: String].self, from: data)
+            throw APIError.serverError(httpResponse.statusCode, errorMessage?["error"])
+        }
+    }
+
+    /// Decode response data with detailed error logging
+    private func decodeResponse<T: Decodable>(data: Data) throws -> T {
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            // Detailed error logging (automatically disabled in release builds)
+            DebugLogger.error("Failed to decode API response", error: error)
+
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case let .keyNotFound(key, context):
+                    DebugLogger.error("Missing key: \(key.stringValue) | Context: \(context.debugDescription)")
+                case let .typeMismatch(type, context):
+                    DebugLogger.error("Type mismatch: expected \(type) | Context: \(context.debugDescription)")
+                case let .valueNotFound(type, context):
+                    DebugLogger.error("Value not found: \(type) | Context: \(context.debugDescription)")
+                case let .dataCorrupted(context):
+                    DebugLogger.error("Data corrupted: \(context.debugDescription)")
+                @unknown default:
+                    DebugLogger.error("Unknown decoding error")
+                }
+            }
+            throw APIError.decodingError(error)
+        }
+    }
+
+    /// Attempt to refresh the access token
+    /// Returns true if refresh succeeded, false otherwise
+    private func attemptTokenRefresh() async -> Bool {
+        // Use lock to prevent multiple concurrent refresh attempts
+        refreshLock.lock()
+
+        // If already refreshing, don't start another refresh
+        if isRefreshingToken {
+            refreshLock.unlock()
+            DebugLogger.auth("Token refresh already in progress - skipping")
+            return false
+        }
+
+        isRefreshingToken = true
+        refreshLock.unlock()
+
+        defer {
+            refreshLock.lock()
+            isRefreshingToken = false
+            refreshLock.unlock()
+        }
+
+        // Call AuthManager to refresh the token
+        return await tokenRefreshHandler()
     }
 
     // MARK: - Authentication

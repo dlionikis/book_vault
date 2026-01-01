@@ -33,8 +33,9 @@ class ChapterManager: ObservableObject {
     /// - Parameter bookId: The book ID (UUID string)
     /// - Returns: Array of chapters (empty if none available)
     func fetchChapters(bookId: String) async -> [Chapter] {
-        // Check cache first
-        if let cached = chapterCache[bookId] {
+        // Check cache first - only return if we have actual chapters cached
+        // Empty arrays are not cached to allow retry when chapters become available
+        if let cached = chapterCache[bookId], !cached.isEmpty {
             self.chapters = cached
             return cached
         }
@@ -46,7 +47,6 @@ class ChapterManager: ObservableObject {
             // Convert bookId string to UUID
             guard let uuid = UUID(uuidString: bookId) else {
                 print("⚠️ ChapterManager: Invalid UUID format for bookId: \(bookId)")
-                chapterCache[bookId] = []
                 self.chapters = []
                 return []
             }
@@ -55,8 +55,11 @@ class ChapterManager: ObservableObject {
             let fetchedChapters = try await apiClient.fetchBookChapters(bookId: uuid)
             print("📖 ChapterManager: Received \(fetchedChapters.count) chapters")
 
-            // Cache the chapters
-            chapterCache[bookId] = fetchedChapters
+            // Only cache if we got chapters - don't cache empty results
+            // This allows retry when chapters become available on the server
+            if !fetchedChapters.isEmpty {
+                chapterCache[bookId] = fetchedChapters
+            }
             self.chapters = fetchedChapters
 
             return fetchedChapters
@@ -65,8 +68,7 @@ class ChapterManager: ObservableObject {
             print("⚠️ ChapterManager: Failed to fetch chapters for book \(bookId): \(error.localizedDescription)")
             print("⚠️ ChapterManager: Error details: \(error)")
 
-            // Cache empty array to avoid repeated failed requests
-            chapterCache[bookId] = []
+            // Don't cache failures - allow retry next time
             self.chapters = []
 
             return []

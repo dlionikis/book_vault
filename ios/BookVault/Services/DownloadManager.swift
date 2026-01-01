@@ -135,15 +135,15 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
         }
     }
 
-    private var backgroundSession: URLSession!
+    private var downloadSession: URLSession!
     private var downloadTasks: [String: URLSessionDownloadTask] = [:]
     private var pendingBooks: [String: Book] = [:]
 
     // Thread-safe storage for file extensions (accessed from URLSession delegate callbacks)
     private let fileExtensionStorage = FileExtensionStorage()
 
-    // Background session identifier
-    private let backgroundSessionIdentifier: String
+    // Session identifier (kept for potential future background session support)
+    private let sessionIdentifier: String
 
     // MARK: - Initialization
 
@@ -168,27 +168,29 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
         self.apiClient = apiClient
         self.storageManager = storageManager
         self.networkMonitor = networkMonitor
-        self.backgroundSessionIdentifier = sessionIdentifier
+        self.sessionIdentifier = sessionIdentifier
         super.init()
 
         if let session {
             // Use injected session (for testing)
-            self.backgroundSession = session
+            self.downloadSession = session
         } else {
-            // Create background session
-            setupBackgroundSession()
+            // Create foreground session for reliable progress reporting
+            setupDownloadSession()
         }
     }
 
-    private func setupBackgroundSession() {
-        let config = URLSessionConfiguration.background(withIdentifier: backgroundSessionIdentifier)
-        config.isDiscretionary = false // Don't delay downloads
-        config.sessionSendsLaunchEvents = true // Wake app when download completes
+    private func setupDownloadSession() {
+        // Use default configuration for foreground downloads with reliable progress updates
+        // Background sessions don't reliably fire didWriteData callbacks while app is active
+        let config = URLSessionConfiguration.default
         config.allowsCellularAccess = true // WiFi-only is checked separately
+        config.timeoutIntervalForResource = 3600 // 1 hour timeout for large files
+        config.waitsForConnectivity = true // Wait for network if unavailable
 
-        backgroundSession = URLSession(configuration: config, delegate: self, delegateQueue: nil)
+        downloadSession = URLSession(configuration: config, delegate: self, delegateQueue: nil)
 
-        DebugLogger.download("Background session initialized")
+        DebugLogger.download("Download session initialized (foreground mode)")
     }
 
     // MARK: - Public API
@@ -301,11 +303,11 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
                 if let token = apiClient.accessToken {
                     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                 }
-                task = backgroundSession.downloadTask(with: request)
+                task = downloadSession.downloadTask(with: request)
                 DebugLogger.download("Using authenticated request for API download")
             } else {
                 // S3 pre-signed URL - auth is in the URL itself
-                task = backgroundSession.downloadTask(with: url)
+                task = downloadSession.downloadTask(with: url)
                 DebugLogger.download("Using pre-signed URL for S3 download")
             }
 
@@ -461,12 +463,12 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
         return request
     }
 
-    // MARK: - Background Session Handling
+    // MARK: - Session Handling
 
     /// Handle background session events (call from AppDelegate/SceneDelegate)
+    /// Note: Currently using foreground session, but kept for future background download support
     func handleBackgroundSessionEvents(completionHandler: @escaping () -> Void) {
-        // Store completion handler to call when all tasks complete
-        DebugLogger.download("Handling background session events")
+        DebugLogger.download("handleBackgroundSessionEvents called (foreground session - no-op)")
         completionHandler()
     }
 }
