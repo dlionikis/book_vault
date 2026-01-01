@@ -123,18 +123,26 @@ class AuthManager: ObservableObject, AuthManaging {
     /// Refresh the access token using the refresh token
     func refreshAccessToken() async -> Bool {
         guard let refreshToken = refreshTokenValue else {
+            DebugLogger.auth("No refresh token available for refresh")
             return false
         }
 
         do {
+            DebugLogger.auth("Attempting token refresh...")
             let response = try await apiClient.refreshToken(refreshToken: refreshToken)
 
-            // Update stored access token
+            // Update stored access token in keychain
             try keychain.save(key: accessTokenKey, value: response.accessToken)
 
+            // Update APIClient's token so subsequent requests use the new token
+            var mutableApiClient = apiClient
+            mutableApiClient.accessToken = response.accessToken
+
+            DebugLogger.auth("Token refresh successful - new token stored")
             return true
         } catch {
-            // If refresh fails, clear session
+            DebugLogger.auth("Token refresh failed: \(error.localizedDescription)")
+            // If refresh fails, clear session (refresh token may be revoked/expired)
             clearSession()
             return false
         }
