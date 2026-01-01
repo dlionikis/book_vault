@@ -303,12 +303,10 @@ export async function extractChaptersBestMethod(audioFilePath: string): Promise<
   if (metadataPath) {
     const audibleChapters = await extractChaptersFromAudibleMetadata(metadataPath);
     if (audibleChapters && audibleChapters.length > 0) {
-      console.log('Using Audible metadata for chapter extraction');
       return audibleChapters;
     }
   }
 
   // Fall back to ffprobe extraction
-  console.log('Falling back to ffprobe for chapter extraction');
   return extractChapters(audioFilePath);
 }

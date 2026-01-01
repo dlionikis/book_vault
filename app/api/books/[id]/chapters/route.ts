@@ -77,7 +77,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       // Generate a presigned URL for ffprobe to read from S3
       // ffprobe only reads the header/metadata, not the entire file
       audioSource = await generatePresignedUrl(book.audioUrl, 300); // 5 min expiry
-      console.log('Using S3 presigned URL for chapter extraction');
     } else {
       // Local development: use filesystem path
       const mediaPath = getAbsoluteMediaPath();
@@ -217,8 +216,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const deletedCount = await prisma.chapter.deleteMany({
       where: { bookId: book.id },
     });
-
-    console.log(`Deleted ${deletedCount.count} existing chapters for book: ${book.title}`);
 
     // Determine the audio source path
     let audioSource: string;

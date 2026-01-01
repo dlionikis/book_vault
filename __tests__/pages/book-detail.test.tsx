@@ -76,9 +76,8 @@ jest.mock('@/components/ProgressControls', () => {
 // Mock next/image
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props: any) => {
-    return <img {...props} />;
-  },
+  // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+  default: (props: any) => <img {...props} />,
 }));
 
 describe('Book Detail Page', () => {

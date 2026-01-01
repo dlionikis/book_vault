@@ -1,12 +1,71 @@
 # Deployment Script & Swift Drift Check Implementation Plan
 
-> **Status**: Completed
+> **Status**: Completed & Archived
 > **Created**: January 1, 2026
 > **Completed**: January 1, 2026
+> **Archived**: January 1, 2026
 
 ## Summary
 
 Create a unified deployment script with validation options and add Swift type drift checking to match the existing TypeScript drift check pattern.
+
+## Post-Implementation Fixes
+
+Several issues were discovered and fixed during testing:
+
+### 1. Pipeline Error Handling (Critical)
+
+**Problem**: Test failures didn't stop the deployment script because Bash only checks the exit code of the last command in a pipeline (e.g., `xcodebuild | xcpretty`).
+
+**Fix**: Added `set -eo pipefail` to all scripts:
+
+- `scripts/deploy.sh`
+- `scripts/ios-validate.sh`
+- `scripts/validate.sh`
+
+### 2. Dynamic Simulator Detection
+
+**Problem**: Hardcoded `iPhone 15,OS=17.5` failed when system was updated to iOS 26.2.
+
+**Fix**: Dynamic simulator detection using JSON parsing:
+
+```bash
+SIMULATOR_DEST=$(xcrun simctl list devices available -j | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for runtime, devices in data.get('devices', {}).items():
+    if 'iOS' in runtime:
+        for d in devices:
+            if 'iPhone' in d['name'] and d['isAvailable']:
+                print(f\"platform=iOS Simulator,id={d['udid']}\")
+                sys.exit(0)
+print('platform=iOS Simulator,name=Any iOS Simulator Device')
+")
+```
+
+### 3. OpenAPI Generator Command Compatibility
+
+**Problem**: CI uses `openapi-generator-cli` (npm), local uses `openapi-generator` (brew).
+
+**Fix**: Updated `generate-swift.sh` to detect and use whichever is available.
+
+### 4. CI Concurrency Settings
+
+**Problem**: Multiple CI runs would pile up when pushing commits rapidly.
+
+**Fix**: Added concurrency groups to all workflow files for auto-cancellation:
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+```
+
+### 5. Optional xcpretty
+
+**Problem**: xcpretty might not be installed on all systems.
+
+**Fix**: Made xcpretty optional in both scripts with fallback to raw xcodebuild output.
 
 ## Prerequisites
 

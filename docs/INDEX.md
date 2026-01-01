@@ -147,6 +147,7 @@ See [aws-deployment-plan.md#quick-deploy-guide](aws-deployment-plan.md#quick-dep
 
 Located in `archive/` folder:
 
+- `archive/deployment-script-plan.md` - Deploy script & Swift drift check (completed January 2026)
 - `archive/completed-plans/ios-implementation-phases.md` - iOS phase plan (all 8 phases complete)
 - `archive/completed-plans/ios-testing-implementation-plan.md` - iOS testing (568 tests complete)
 - `archive/completed-plans/ios-testing-real-services-plan.md` - Real service testing strategy
