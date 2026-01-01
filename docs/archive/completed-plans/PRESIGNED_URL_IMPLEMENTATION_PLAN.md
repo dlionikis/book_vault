@@ -1,7 +1,18 @@
 # Presigned URL + iOS Image Caching Implementation Plan
 
 **Created**: December 31, 2025
-**Status**: Ready for Implementation
+**Completed**: December 31, 2025
+**Status**: ✅ COMPLETE - Deployed to Production
+**PR**: #51
+
+## Completion Notes
+
+All phases implemented and deployed:
+
+- Backend generates presigned S3 URLs (1-hour expiry)
+- iOS caches covers by book ID (not URL)
+- IAM task role support added for ECS Fargate (no explicit AWS credentials needed)
+- Web app and iOS app verified working in production
 
 ## Problem Statement
 

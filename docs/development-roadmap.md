@@ -1,49 +1,40 @@
 # Development Roadmap
 
-**Last Updated**: December 29, 2025
-**Current Phase**: Production-Ready (Web + iOS Complete)
+**Last Updated**: December 31, 2025
+**Current Phase**: ✅ DEPLOYED TO PRODUCTION
 
-> **TL;DR**: Web app and iOS app complete. Next priorities: AWS Deployment → User Lists (post-launch).
-
----
-
-## 🎯 Current Focus (Next 2 Weeks)
-
-### 1. Deployment Preparation 🚀
-
-**Priority**: HIGH - Required before production launch
-**Status**: Backend mobile-ready, infrastructure planning needed
-
-**Checklist**:
-
-- [ ] S3 upload script for audio files and images
-- [ ] CloudFront CDN configuration for asset delivery
-- [ ] Production environment variables setup
-- [ ] Monitoring and error tracking (Sentry/CloudWatch)
-- [ ] Performance testing and optimization
-- [ ] Database query optimization review
-- [ ] Caching strategy implementation (Redis/Memory)
-
-**See**: [roadmap/aws-deployment.md](roadmap/aws-deployment.md) for infrastructure details
+> **TL;DR**: Web app, iOS app, and AWS deployment complete. Live at https://bookvault.lionikis.com. Next priority: User Lists (post-launch).
 
 ---
 
----
+## 🎯 Current Status
 
-## 📅 Upcoming (Next Month)
+### ✅ AWS Deployment - COMPLETE (December 31, 2025)
 
-### 2. AWS Deployment
+**Live URL**: https://bookvault.lionikis.com
 
 **Infrastructure**:
 
 - **Database**: RDS PostgreSQL
-- **Storage**: S3 (audio + images) with CloudFront CDN
-- **Hosting**: ECS or Lambda
-- **Domain**: Route 53 + Certificate Manager (SSL)
+- **Storage**: S3 (514 GB, 691 books) with presigned URLs
+- **Hosting**: ECS Fargate with Application Load Balancer
+- **Domain**: Custom domain + ACM SSL certificate
 
-**Timeline**: 1-2 weeks after lists feature complete
+**Completed**:
 
-**See**: [roadmap/aws-deployment.md](roadmap/aws-deployment.md)
+- [x] S3 media upload (2,781 files)
+- [x] RDS PostgreSQL with migrations
+- [x] ECS Fargate deployment
+- [x] SSL/HTTPS with custom domain
+- [x] Presigned S3 URLs for secure media access
+- [x] IAM task role support for ECS credentials
+
+**Optional/Deferred**:
+
+- [ ] CloudFront CDN (not required, presigned URLs work well)
+- [ ] Monitoring/alerting (CloudWatch logs enabled)
+
+**See**: [aws-deployment-plan.md](aws-deployment-plan.md) for complete deployment reference
 
 ---
 
@@ -125,6 +116,16 @@ Allow users to organize books into custom collections:
 
 ## ✅ Completed Milestones
 
+### Phase 5: AWS Deployment (Dec 31, 2025)
+
+- ✅ S3 media storage (514 GB, 691 books)
+- ✅ RDS PostgreSQL database
+- ✅ ECS Fargate container hosting
+- ✅ Application Load Balancer + SSL
+- ✅ Custom domain (bookvault.lionikis.com)
+- ✅ Presigned S3 URLs for secure media access
+- ✅ IAM task role support for ECS credentials
+
 ### Phase 4: Enhancement & Features (Dec 2025)
 
 - ✅ Audio Player with seeking, volume, speed control
@@ -180,9 +181,9 @@ Allow users to organize books into custom collections:
 
 ### Next Milestones
 
-- 🎯 Deployed to AWS production
+- ~~🎯 Deployed to AWS production~~ ✅ Live at bookvault.lionikis.com
 - ~~🎯 iOS app complete~~ ✅ All 8 phases done
-- 🎯 50+ books imported
+- ~~🎯 50+ books imported~~ ✅ 691 books in production
 - 🎯 User lists functional (post-launch)
 
 ---
@@ -191,6 +192,7 @@ Allow users to organize books into custom collections:
 
 | What                 | Where                                                |
 | -------------------- | ---------------------------------------------------- |
+| **AWS Deployment**   | [aws-deployment-plan.md](aws-deployment-plan.md)     |
 | **iOS Maintenance**  | [mobile-ios-plan.md](mobile-ios-plan.md)             |
 | **API Reference**    | [api-quick-ref.md](api-quick-ref.md)                 |
 | **Architecture**     | [architecture.md](architecture.md)                   |

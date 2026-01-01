@@ -2,8 +2,9 @@
 
 > **Created**: December 30, 2025
 > **Updated**: December 31, 2025
-> **Status**: ✅ Deployed to Production (Phases 1-3, 5 Complete)
+> **Status**: ✅ COMPLETE - Deployed to Production
 > **Live URL**: https://bookvault.lionikis.com
+> **Archived**: This plan is complete. Kept for reference and future maintenance.
 
 ## TL;DR
 
@@ -1006,13 +1007,38 @@ aws acm delete-certificate \
 - [x] HTTP → HTTPS redirect configured
 - [x] NEXTAUTH_URL updated
 
-### Post-Deployment
+### Post-Deployment ✅
 
-- [ ] Test login flow
-- [ ] Test audio playback
-- [ ] Test iOS app connectivity
-- [ ] Monitor logs for errors
-- [ ] Set up billing alerts
+- [x] Test login flow
+- [x] Test audio playback (with presigned S3 URLs)
+- [x] Test iOS app connectivity (cover images + downloads working)
+- [x] Monitor logs for errors
+- [ ] Set up billing alerts (optional)
+
+---
+
+## Completion Summary
+
+**Deployed**: December 31, 2025
+
+### S3 Media Storage
+
+- **Total Size**: 513.6 GB (2,781 files)
+- **Books**: 691 audiobooks
+- **Content**: Audio files (.mp3/.m4b), cover images (.jpg), metadata (.json)
+
+### Key Learnings
+
+1. **IAM Task Roles**: ECS Fargate uses `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI` for credentials, not explicit `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`. Fixed in [lib/s3.ts](../lib/s3.ts) to support both modes.
+
+2. **Presigned URLs**: S3 bucket is private (correct). API generates 1-hour presigned URLs for secure media access. iOS caches covers by book ID to avoid cache misses on URL expiry.
+
+3. **Cross-Platform Build**: Apple Silicon (M1/M2) requires `docker buildx` with `--platform linux/amd64` for ECS Fargate compatibility.
+
+### Related PRs
+
+- **#50**: AWS Deployment (ECS Fargate, RDS, S3, Domain/SSL)
+- **#51**: Presigned URL Implementation (S3 media access, IAM task role fix)
 
 ---
 

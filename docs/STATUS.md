@@ -1,19 +1,25 @@
 # Project Status
 
-**Last Updated**: December 30, 2025
+**Last Updated**: December 31, 2025
 
 ## Current State
 
-Book Vault is a **production-ready** personal audiobook library application.
+Book Vault is a **production-ready** personal audiobook library application, now **live in production**.
 
 | Platform        | Status                                                               |
 | --------------- | -------------------------------------------------------------------- |
+| **Production**  | ✅ Live at https://bookvault.lionikis.com                            |
 | **Web App**     | ✅ Complete - Browse, search, playback, progress tracking, dark mode |
 | **iOS App**     | ✅ Complete - All 8 phases implemented (offline mode included)       |
 | **iOS Tests**   | ✅ Complete - 568 tests passing, real service coverage               |
 | **Backend API** | ✅ Complete - OpenAPI spec, contract tests, dual auth (web + mobile) |
 
-**Next Priority**: AWS Deployment (see [development-roadmap.md](development-roadmap.md))
+**AWS Infrastructure**:
+
+- ECS Fargate (container hosting)
+- RDS PostgreSQL (database)
+- S3 (media storage: 514 GB, 691 books)
+- Application Load Balancer + SSL
 
 ---
 
@@ -27,13 +33,13 @@ None currently blocking. All tests passing.
 
 | PR  | Description                                              | Date   |
 | --- | -------------------------------------------------------- | ------ |
+| #51 | Presigned URLs - S3 media access, IAM task role support  | Dec 31 |
+| #50 | AWS Deployment - ECS Fargate, RDS, S3, Domain/SSL        | Dec 31 |
 | #49 | Code Quality - lint-staged, SwiftLint, dead code removal | Dec 30 |
 | #48 | iOS Testing - 568 tests, real service coverage           | Dec 30 |
 | #47 | iOS Phase 8 - Offline Mode Support                       | Dec 29 |
 | #46 | iOS Phase 7 - Offline Downloads                          | Dec 29 |
 | #45 | iOS Library UX Alignment                                 | Dec 29 |
-| #44 | API DRY Refactor - Entity Detail Endpoints               | Dec 28 |
-| #43 | iOS Phase 6 - Search & Browse                            | Dec 28 |
 
 ---
 
@@ -77,6 +83,7 @@ All phases complete:
 
 | What                     | Where                                                  |
 | ------------------------ | ------------------------------------------------------ |
+| **AWS Deployment**       | [aws-deployment-plan.md](aws-deployment-plan.md)       |
 | **Priorities & Roadmap** | [development-roadmap.md](development-roadmap.md)       |
 | **iOS Maintenance**      | [mobile-ios-plan.md](mobile-ios-plan.md)               |
 | **API Reference**        | [api/openapi.yaml](api/openapi.yaml)                   |
