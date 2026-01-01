@@ -139,7 +139,10 @@ export async function handleEntityDetailWithBooks<TEntity>(
     ]);
 
     // 6. Transform book data to include full URLs and proper structure
-    const booksWithUrls = joinEntries.map((entry: any) => transformBook(entry.book));
+    // Note: transformBook is async (generates presigned URLs), so we must await all
+    const booksWithUrls = await Promise.all(
+      joinEntries.map((entry: any) => transformBook(entry.book))
+    );
 
     // 7. Build and return response
     return NextResponse.json({
