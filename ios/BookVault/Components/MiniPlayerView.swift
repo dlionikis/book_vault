@@ -18,10 +18,10 @@ struct MiniPlayerView: View {
     var body: some View {
         if let book = audioManager.currentBook {
             GeometryReader { geometry in
-                Button(action: {
-                    showingFullPlayer = true
-                }) {
-                    HStack(spacing: 12) {
+                Button(
+                    action: { showingFullPlayer = true },
+                    label: {
+                        HStack(spacing: 12) {
                         // Cover Art
                         coverArt(for: book)
 
@@ -42,14 +42,15 @@ struct MiniPlayerView: View {
                         Spacer()
 
                         // Play/Pause Button
-                        Button(action: {
-                            audioManager.togglePlayPause()
-                        }) {
-                            Image(systemName: audioManager.isPlaying ? "pause.fill" : "play.fill")
-                                .font(.title2)
-                                .foregroundColor(.primary)
-                                .frame(width: 44, height: 44)
-                        }
+                        Button(
+                            action: { audioManager.togglePlayPause() },
+                            label: {
+                                Image(systemName: audioManager.isPlaying ? "pause.fill" : "play.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.primary)
+                                    .frame(width: 44, height: 44)
+                            }
+                        )
                         .buttonStyle(PlainButtonStyle())
                     }
                     .padding(.horizontal, 16)
@@ -61,7 +62,8 @@ struct MiniPlayerView: View {
                     )
                     .frame(width: geometry.size.width * 0.70)
                     .frame(maxWidth: .infinity, alignment: .trailing)
-                }
+                    }
+                )
                 .buttonStyle(PlainButtonStyle())
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Now playing: \(book.title)")
