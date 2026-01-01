@@ -64,7 +64,7 @@ final class ModelDecodingTests: XCTestCase {
         XCTAssertEqual(book.id, TestFixtures.testBookId)
         XCTAssertEqual(book.asin, "B00TEST123")
         XCTAssertEqual(book.title, "Test Book Title")
-        XCTAssertEqual(book.description, "A test book description")
+        XCTAssertEqual(book.publisherSummary, "A test book description")
         XCTAssertEqual(book.runtimeMinutes, 360)
         XCTAssertEqual(book.publisher, "Test Publisher")
         XCTAssertEqual(book.authors.count, 1)
@@ -86,7 +86,7 @@ final class ModelDecodingTests: XCTestCase {
         let book = try decoder.decode(Book.self, from: data)
 
         XCTAssertEqual(book.title, "Minimal Book")
-        XCTAssertNil(book.description)
+        XCTAssertNil(book.publisherSummary)
         XCTAssertNil(book.runtimeMinutes)
         XCTAssertTrue(book.authors.isEmpty)
     }

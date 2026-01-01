@@ -17,6 +17,7 @@ final class LibraryManagerRealTests: XCTestCase {
     private var libraryManager: LibraryManager!
     private var mockAPIClient: MockAPIClient!
     private var mockLibraryCacheManager: MockLibraryCacheManager!
+    private var mockCoverCacheManager: MockCoverCacheManager!
     private var mockNetworkMonitor: MockNetworkMonitor!
     private var mockStorageManager: MockStorageManager!
 
@@ -31,12 +32,14 @@ final class LibraryManagerRealTests: XCTestCase {
         super.setUp()
         mockAPIClient = MockAPIClient()
         mockLibraryCacheManager = MockLibraryCacheManager()
+        mockCoverCacheManager = MockCoverCacheManager()
         mockNetworkMonitor = MockNetworkMonitor()
         mockStorageManager = MockStorageManager()
 
         libraryManager = LibraryManager(
             apiClient: mockAPIClient,
             libraryCacheManager: mockLibraryCacheManager,
+            coverCacheManager: mockCoverCacheManager,
             networkMonitor: mockNetworkMonitor,
             storageManager: mockStorageManager
         )
@@ -54,6 +57,7 @@ final class LibraryManagerRealTests: XCTestCase {
         libraryManager = nil
         mockAPIClient = nil
         mockLibraryCacheManager = nil
+        mockCoverCacheManager = nil
         mockNetworkMonitor = nil
         mockStorageManager = nil
         testBooks = nil
@@ -67,7 +71,7 @@ final class LibraryManagerRealTests: XCTestCase {
             id: UUID(),
             asin: "ASIN\(UUID().uuidString.prefix(8))",
             title: title,
-            description: "Test description",
+            publisherSummary: "Test description",
             runtimeMinutes: 360,
             releaseDate: Date(),
             publisher: "Test Publisher",
