@@ -29,9 +29,22 @@ fi
 rm -rf "$OUTPUT_DIR"/*
 mkdir -p "$OUTPUT_DIR"
 
+# Determine which openapi-generator command to use
+# CI uses openapi-generator-cli (npm package), local may use openapi-generator (brew)
+if command -v openapi-generator-cli &> /dev/null; then
+  OPENAPI_GEN="openapi-generator-cli"
+elif command -v openapi-generator &> /dev/null; then
+  OPENAPI_GEN="openapi-generator"
+else
+  echo "❌ Error: openapi-generator not found. Install with:"
+  echo "   brew install openapi-generator  # macOS"
+  echo "   npm install -g @openapitools/openapi-generator-cli  # npm"
+  exit 1
+fi
+
 # Generate Swift models
 echo "📝 Generating Swift models..."
-openapi-generator generate \
+$OPENAPI_GEN generate \
   -i "$SPEC_PATH" \
   -g swift5 \
   -o "$OUTPUT_DIR" \
