@@ -35,8 +35,13 @@ Native iOS app for Book Vault audiobook library with full feature parity to web 
 ### Deferred to Post-Launch
 
 - **User Lists**: Custom playlists, favorites, want-to-listen lists
-- **Reason**: Requires backend API development first
-- **Priority**: Nice to have, not essential for initial release
+  - Reason: Requires backend API development first
+  - Priority: Nice to have, not essential for initial release
+
+- **Face ID / Touch ID Login**: Biometric authentication after initial password login
+  - Reason: Enhancement for convenience, not core functionality
+  - Priority: Post-launch UX improvement
+  - Plan: See [mobile/face-id-implementation-plan.md](mobile/face-id-implementation-plan.md)
 
 ---
 
