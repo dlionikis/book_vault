@@ -4,6 +4,7 @@ import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { extractChapters, isFFProbeAvailable } from '@/lib/audio-metadata';
 import { getAbsoluteMediaPath } from '@/lib/media';
+import { isS3Enabled, generatePresignedUrl } from '@/lib/s3';
 import { normalizeUuid } from '@/lib/api-utils';
 import path from 'path';
 
@@ -58,10 +59,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       });
     }
 
-    // Otherwise, extract from audio file and save to database
-    const mediaPath = getAbsoluteMediaPath();
-    const audioFilePath = path.join(mediaPath, book.audioUrl);
-
     // Check if ffprobe is available
     const ffprobeAvailable = await isFFProbeAvailable();
     if (!ffprobeAvailable) {
@@ -72,10 +69,25 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       });
     }
 
+    // Determine the audio source path for ffprobe
+    // In production with S3: use presigned URL (ffprobe can read from HTTP)
+    // In development: use local file path
+    let audioSource: string;
+    if (isS3Enabled()) {
+      // Generate a presigned URL for ffprobe to read from S3
+      // ffprobe only reads the header/metadata, not the entire file
+      audioSource = await generatePresignedUrl(book.audioUrl, 300); // 5 min expiry
+      console.log('Using S3 presigned URL for chapter extraction');
+    } else {
+      // Local development: use filesystem path
+      const mediaPath = getAbsoluteMediaPath();
+      audioSource = path.join(mediaPath, book.audioUrl);
+    }
+
     // Extract chapters from audio file
     let extractedChapters;
     try {
-      extractedChapters = await extractChapters(audioFilePath);
+      extractedChapters = await extractChapters(audioSource);
     } catch (extractError) {
       // If extraction fails, return empty chapters instead of 500 error
       console.warn('Chapter extraction failed:', extractError);
