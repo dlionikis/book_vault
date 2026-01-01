@@ -277,6 +277,9 @@ cd "$PROJECT_ROOT"
 [ "$SKIP_WEB_CHECKS" = false ] && run_web_validation
 [ "$SKIP_IOS_CHECKS" = false ] && run_ios_validation
 
+[ "$SKIP_WEB_CHECKS" = false ] && log_step "All web validations passed."
+[ "$SKIP_IOS_CHECKS" = false ] && log_step "All iOS validations passed."
+
 # Deployment phase
 if [ "$DRY_RUN" = true ]; then
   log_warn "Dry run - skipping actual deployment"
@@ -285,3 +288,7 @@ fi
 
 check_git_status
 run_deploy
+
+[ "$SKIP_WEB_CHECKS" = false ] && log_step "All web validations passed."
+[ "$SKIP_IOS_CHECKS" = false ] && log_step "All iOS validations passed."
+log_step "Deployment finished successfully."
