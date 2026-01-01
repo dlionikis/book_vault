@@ -23,6 +23,56 @@ log_error() { echo -e "${RED}❌ $1${NC}"; }
 
 # === FUNCTIONS ===
 
+check_git_status() {
+  local current_branch=$(git branch --show-current)
+  local has_changes=false
+  local changed_files=""
+
+  # Check for uncommitted changes
+  if ! git diff --quiet HEAD 2>/dev/null; then
+    has_changes=true
+    changed_files=$(git diff --name-only HEAD)
+  fi
+
+  # Check for untracked files (excluding common ones)
+  local untracked=$(git ls-files --others --exclude-standard)
+  if [ -n "$untracked" ]; then
+    has_changes=true
+    if [ -n "$changed_files" ]; then
+      changed_files="$changed_files"$'\n'"$untracked"
+    else
+      changed_files="$untracked"
+    fi
+  fi
+
+  # If not on main or has changes, warn and ask for confirmation
+  if [ "$current_branch" != "main" ] || [ "$has_changes" = true ]; then
+    echo ""
+    log_warn "Deployment safety check"
+    echo ""
+    echo -e "  Branch: ${YELLOW}$current_branch${NC}"
+
+    if [ "$has_changes" = true ]; then
+      echo -e "  Status: ${YELLOW}uncommitted changes${NC}"
+      echo ""
+      echo "  Changed files:"
+      echo "$changed_files" | sed 's/^/    /'
+    fi
+
+    echo ""
+    echo -e "  ${YELLOW}Docker will build from your local filesystem, not from git.${NC}"
+    echo ""
+    read -p "  Continue with deployment? [y/N] " -n 1 -r
+    echo ""
+
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      echo "Deployment cancelled."
+      exit 1
+    fi
+    echo ""
+  fi
+}
+
 run_web_validation() {
   log_step "Running web validation (npm run validate:full)..."
   npm run validate:full
@@ -124,4 +174,5 @@ if [ "$DRY_RUN" = true ]; then
   exit 0
 fi
 
+check_git_status
 run_deploy
