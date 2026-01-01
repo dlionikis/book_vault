@@ -36,6 +36,12 @@ export interface paths {
   "/api/books/{id}/chapters": {
     /** Get chapters for a book (lazy extraction from audio file) */
     get: operations["getBookChapters"];
+    /**
+     * Re-extract chapters for a book (deletes existing and extracts fresh)
+     * @description Deletes all existing chapters for a book and re-extracts them from the audio file.
+     * Useful when chapter timing needs to be corrected or when the extraction method has improved.
+     */
+    post: operations["reExtractChapters"];
   };
   "/api/progress": {
     /** Get user progress for a book */
@@ -723,6 +729,48 @@ export interface operations {
         };
       };
       /** @description Book not found */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /**
+   * Re-extract chapters for a book (deletes existing and extracts fresh)
+   * @description Deletes all existing chapters for a book and re-extracts them from the audio file.
+   * Useful when chapter timing needs to be corrected or when the extraction method has improved.
+   */
+  reExtractChapters: {
+    parameters: {
+      path: {
+        /** @description Book ID */
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Chapters re-extracted successfully */
+      200: {
+        content: {
+          "application/json": {
+            chapters: components["schemas"]["Chapter"][];
+            /**
+             * @description Result of re-extraction
+             * @example re-extracted
+             * @enum {string}
+             */
+            source: "re-extracted" | "none" | "error";
+            /**
+             * @description Number of old chapters deleted
+             * @example 64
+             */
+            deletedCount?: number;
+            /** @example Re-extracted 64 chapters (deleted 64 old chapters) */
+            message?: string;
+          };
+        };
+      };
+      /** @description Book not found or no audio file */
       404: {
         content: {
           "application/json": components["schemas"]["Error"];

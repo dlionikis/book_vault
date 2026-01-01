@@ -785,6 +785,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    post:
+      operationId: reExtractChapters
+      tags: [Chapters]
+      summary: Re-extract chapters for a book (deletes existing and extracts fresh)
+      description: |
+        Deletes all existing chapters for a book and re-extracts them from the audio file.
+        Useful when chapter timing needs to be corrected or when the extraction method has improved.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Book ID
+      responses:
+        '200':
+          description: Chapters re-extracted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [chapters, source]
+                properties:
+                  chapters:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Chapter'
+                  source:
+                    type: string
+                    enum: [re-extracted, none, error]
+                    description: Result of re-extraction
+                    example: 're-extracted'
+                  deletedCount:
+                    type: integer
+                    minimum: 0
+                    description: Number of old chapters deleted
+                    example: 64
+                  message:
+                    type: string
+                    example: 'Re-extracted 64 chapters (deleted 64 old chapters)'
+        '404':
+          description: Book not found or no audio file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   # Progress endpoints
   /api/progress:
