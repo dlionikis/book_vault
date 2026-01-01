@@ -45,8 +45,8 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Install runtime dependencies for bcrypt and OpenSSL for Prisma
-RUN apk add --no-cache libc6-compat openssl
+# Install runtime dependencies for bcrypt, OpenSSL for Prisma, and FFmpeg for chapter extraction
+RUN apk add --no-cache libc6-compat openssl ffmpeg
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

@@ -394,18 +394,6 @@ class AudioPlayerManager: ObservableObject {
     /// Also auto-starts download in background if not already downloading
 
     private func playFromStreamingUrl(book: Book) async {
-        // Ensure we have authentication token
-        guard let token = authTokenProvider() else {
-            DebugLogger.error("AudioPlayerManager: No authentication token")
-            self.error = NSError(
-                domain: "AudioPlayerManager",
-                code: 401,
-                userInfo: [NSLocalizedDescriptionKey: "Not authenticated"]
-            )
-            self.isLoading = false
-            return
-        }
-
         DebugLogger.audio("Starting streaming playback for \(book.title)")
         DebugLogger.verbose("Audio URL: \(book.audioUrl ?? "")")
 
@@ -415,7 +403,6 @@ class AudioPlayerManager: ObservableObject {
         // Observe download completion to switch to local file
         observeDownloadCompletion(for: book)
 
-        // Create URL with custom scheme for resource loader interception
         guard let url = URL(string: book.audioUrl ?? "") else {
             DebugLogger.error("Invalid audio URL: \(book.audioUrl ?? "")")
             self.error = NSError(
@@ -427,38 +414,60 @@ class AudioPlayerManager: ObservableObject {
             return
         }
 
-        // Convert http:// to bookvault:// so resource loader can intercept
-        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            DebugLogger.error("Invalid URL components")
-            self.isLoading = false
-            return
+        let playerItem: AVPlayerItem
+
+        // Check if this is a presigned S3 URL (contains authentication in query params)
+        // S3 presigned URLs don't need our custom resource loader - play directly
+        if isPresignedS3Url(url) {
+            DebugLogger.audio("Detected presigned S3 URL - playing directly")
+            let asset = AVURLAsset(url: url)
+            playerItem = AVPlayerItem(asset: asset)
+        } else {
+            // Backend API URL - needs auth header via resource loader
+            guard let token = authTokenProvider() else {
+                DebugLogger.error("AudioPlayerManager: No authentication token")
+                self.error = NSError(
+                    domain: "AudioPlayerManager",
+                    code: 401,
+                    userInfo: [NSLocalizedDescriptionKey: "Not authenticated"]
+                )
+                self.isLoading = false
+                return
+            }
+
+            // Convert http:// to bookvault:// so resource loader can intercept
+            guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+                DebugLogger.error("Invalid URL components")
+                self.isLoading = false
+                return
+            }
+
+            if components.scheme == "http" {
+                components.scheme = "bookvault"
+            } else if components.scheme == "https" {
+                components.scheme = "bookvaults"
+            }
+
+            guard let customSchemeURL = components.url else {
+                DebugLogger.error("Failed to create custom scheme URL")
+                self.isLoading = false
+                return
+            }
+
+            DebugLogger.verbose("Custom scheme URL: \(customSchemeURL.absoluteString)")
+
+            // Create resource loader delegate
+            self.resourceLoaderDelegate = AuthenticatedAVAssetResourceLoaderDelegate(authToken: token)
+
+            // Create AVAsset with resource loader
+            let asset = AVURLAsset(url: customSchemeURL)
+            asset.resourceLoader.setDelegate(
+                self.resourceLoaderDelegate,
+                queue: DispatchQueue(label: "com.bookvault.resourceloader")
+            )
+
+            playerItem = AVPlayerItem(asset: asset)
         }
-
-        if components.scheme == "http" {
-            components.scheme = "bookvault"
-        } else if components.scheme == "https" {
-            components.scheme = "bookvaults"
-        }
-
-        guard let customSchemeURL = components.url else {
-            DebugLogger.error("Failed to create custom scheme URL")
-            self.isLoading = false
-            return
-        }
-
-        DebugLogger.verbose("Custom scheme URL: \(customSchemeURL.absoluteString)")
-
-        // Create resource loader delegate
-        self.resourceLoaderDelegate = AuthenticatedAVAssetResourceLoaderDelegate(authToken: token)
-
-        // Create AVAsset with resource loader
-        let asset = AVURLAsset(url: customSchemeURL)
-        asset.resourceLoader.setDelegate(
-            self.resourceLoaderDelegate,
-            queue: DispatchQueue(label: "com.bookvault.resourceloader")
-        )
-
-        let playerItem = AVPlayerItem(asset: asset)
 
         // Create or replace player
         if self.player == nil {
@@ -974,5 +983,24 @@ class AudioPlayerManager: ObservableObject {
         stopProgressSaveTimer()
         cancellables.removeAll()
         NotificationCenter.default.removeObserver(self)
+    }
+
+    // MARK: - URL Detection Helpers
+
+    /// Check if URL is a presigned S3 URL (contains authentication in query params)
+    /// Presigned S3 URLs can be played directly without our custom resource loader
+    private func isPresignedS3Url(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+
+        // Check for S3 host patterns
+        let isS3Host = host.contains(".s3.") ||
+            host.contains("s3.amazonaws.com") ||
+            host.hasSuffix(".amazonaws.com")
+
+        // Check for presigned URL signature parameters
+        let hasSignature = url.absoluteString.contains("X-Amz-Signature=") ||
+            url.absoluteString.contains("Signature=")
+
+        return isS3Host && hasSignature
     }
 }
