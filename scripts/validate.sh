@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
 # Web validation script wrapper - runs npm run validate:full with logging
 # Usage: ./scripts/validate.sh

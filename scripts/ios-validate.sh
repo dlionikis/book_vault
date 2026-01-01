@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 
 # iOS validation script - mirrors CI workflow (ios-tests.yml + api.yml Swift drift)
 # Usage: ./scripts/ios-validate.sh [--lint-only|--build-only|--test-only|--skip-drift]
