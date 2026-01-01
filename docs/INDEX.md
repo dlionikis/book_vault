@@ -122,10 +122,10 @@
 
 ## 🧪 Testing & Quality
 
-| File                                                                       | Purpose                                          | Tokens |
-| -------------------------------------------------------------------------- | ------------------------------------------------ | ------ |
-| [testing.md](testing.md)                                                   | Test patterns, Jest examples, best practices     | ~750   |
-| [code-quality-implementation-plan.md](code-quality-implementation-plan.md) | SwiftLint, Periphery, CI improvements (5 phases) | ~4,500 |
+| File                                                                       | Purpose                                                          | Tokens |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------ |
+| [testing.md](testing.md)                                                   | **Complete testing guide** (web, iOS, CI, deployment validation) | ~1,500 |
+| [code-quality-implementation-plan.md](code-quality-implementation-plan.md) | SwiftLint, Periphery, CI improvements (5 phases)                 | ~4,500 |
 
 ---
 
@@ -201,7 +201,7 @@ Located in `archive/implementation-plans/` folder:
 **I'm debugging an issue**:
 
 1. Check [STATUS.md](STATUS.md) - Known issues
-2. Read [testing.md](testing.md) - Test patterns
+2. Read [testing.md](testing.md) - Complete testing guide
 3. Review [architecture.md](architecture.md) - System design
 
 **I'm setting up the project**:
@@ -212,8 +212,9 @@ Located in `archive/implementation-plans/` folder:
 
 **I'm deploying to production**:
 
-1. See [aws-deployment-plan.md#quick-deploy-guide](aws-deployment-plan.md#quick-deploy-guide) - Quick deploy commands
-2. Full infrastructure setup in [aws-deployment-plan.md](aws-deployment-plan.md)
+1. Run `npm run deploy:dry-run` - Validate before deploying
+2. See [testing.md#deployment-validation](testing.md#deployment-validation) - Deploy commands
+3. Full infrastructure setup in [aws-deployment-plan.md](aws-deployment-plan.md)
 
 ---
 
@@ -228,7 +229,7 @@ Located in `archive/implementation-plans/` folder:
 
 - [data-flows.md](data-flows.md) - 1,170 tokens
 - [api-quick-ref.md](api-quick-ref.md) - 1,000 tokens
-- [testing.md](testing.md) - 750 tokens
+- [testing.md](testing.md) - 1,500 tokens (comprehensive)
 
 **Expensive** (read only when needed):
 

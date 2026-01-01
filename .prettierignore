@@ -11,3 +11,4 @@ prisma/migrations
 
 # Auto-generated from OpenAPI spec (don't reformat)
 lib/api-types.ts
+ios/BookVault/Generated/

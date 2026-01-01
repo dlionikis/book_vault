@@ -6,6 +6,10 @@ if git diff --cached --name-only | grep -q "docs/api/openapi.yaml"; then
   npm run api:generate:ts
   git add lib/api-types.ts
 
+  echo "📝 Regenerating Swift models..."
+  npm run api:generate:swift
+  git add ios/BookVault/Generated/Models/
+
   echo "✅ Validating OpenAPI spec..."
   npm run api:validate || {
     echo "❌ OpenAPI spec validation failed"
