@@ -16,10 +16,8 @@ extension Book {
         id: UUID(),
         asin: "B08G9PRS1K",
         title: "Project Hail Mary",
-        description: """
-        **#1 NEW YORK TIMES BESTSELLER • From the author of *The Martian*, a lone astronaut must save the earth from disaster in this "propulsive" (Entertainment Weekly), cinematic thriller full of suspense, humor, and fascinating science—in development as a major motion picture starring Ryan Gosling.
-
-        "If you loved *The Martian*, you'll go crazy for Weir's latest."—*The Washington Post*
+        publisherSummary: """
+        **#1 NEW YORK TIMES BESTSELLER** A lone astronaut must save the earth from disaster in this cinematic thriller full of suspense, humor, and fascinating science.
         """,
         runtimeMinutes: 967,
         releaseDate: Date(timeIntervalSince1970: 1_620_000_000), // May 2021
@@ -44,7 +42,7 @@ extension Book {
         id: UUID(),
         asin: "B002V1A0WE",
         title: "The Way of Kings: Book One of the Stormlight Archive",
-        description: "Epic fantasy from Brandon Sanderson.",
+        publisherSummary: "Epic fantasy from Brandon Sanderson.",
         runtimeMinutes: 2735,
         releaseDate: Date(timeIntervalSince1970: 1_283_299_200), // Sept 2010
         publisher: "Macmillan Audio",
@@ -70,7 +68,7 @@ extension Book {
         id: UUID(),
         asin: "B001234567",
         title: "Short Book",
-        description: nil,
+        publisherSummary: nil,
         runtimeMinutes: 120,
         releaseDate: nil,
         publisher: nil,
@@ -89,7 +87,7 @@ extension Book {
         id: UUID(),
         asin: "B07D23CFGR",
         title: "Good Omens",
-        description: "The classic collaboration from the internationally bestselling authors Neil Gaiman and Terry Pratchett.",
+        publisherSummary: "A comedy about the birth of the son of Satan and the coming of the End Times.",
         runtimeMinutes: 744,
         releaseDate: Date(timeIntervalSince1970: 642_643_200), // May 1990
         publisher: "Random House Audio",

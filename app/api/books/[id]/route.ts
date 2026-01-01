@@ -43,8 +43,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     // Transform the response (OpenAPI compliant - only return spec-defined fields)
+    // Note: transformBook is async (generates presigned URLs in production)
+    const baseBook = await transformBook(book);
     const transformedBook = {
-      ...transformBook(book),
+      ...baseBook,
       ...(includeChapters &&
         book.chapters && {
           chapters: book.chapters.map((chapter) => ({

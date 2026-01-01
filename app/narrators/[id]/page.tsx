@@ -4,7 +4,7 @@ import BookGrid from '@/components/BookGrid';
 import BackButton from '@/components/BackButton';
 import Pagination from '@/components/Pagination';
 import { prisma } from '@/lib/db';
-import { getCoverUrl, getAudioUrl } from '@/lib/media';
+import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
 
 interface NarratorWithBooks extends Narrator {
   books: Book[];
@@ -37,23 +37,7 @@ async function getNarrator(id: string, page?: string): Promise<NarratorWithBooks
         take: limit,
         include: {
           book: {
-            include: {
-              authors: {
-                include: {
-                  author: true,
-                },
-              },
-              narrators: {
-                include: {
-                  narrator: true,
-                },
-              },
-              series: {
-                include: {
-                  series: true,
-                },
-              },
-            },
+            include: BOOK_INCLUDE,
           },
         },
         orderBy: {
@@ -67,29 +51,8 @@ async function getNarrator(id: string, page?: string): Promise<NarratorWithBooks
       }),
     ]);
 
-    const books = bookNarratorEntries.map((entry) => {
-      const book = entry.book;
-      return {
-        id: book.id,
-        asin: book.asin,
-        title: book.title,
-        publisherSummary: book.publisherSummary,
-        runtimeMinutes: book.runtimeMinutes,
-        releaseDate: book.releaseDate,
-        publisher: book.publisher,
-        coverUrl: getCoverUrl(book.coverUrl),
-        audioUrl: getAudioUrl(book.audioUrl),
-        authors: book.authors.map((ba) => ba.author),
-        narrators: book.narrators.map((bn) => bn.narrator),
-        series: book.series.map((bs) => ({
-          id: bs.series.id,
-          title: bs.series.title,
-          asin: bs.series.asin,
-          sequence: bs.sequence,
-        })),
-        createdAt: book.createdAt.toISOString(),
-      };
-    });
+    // Transform books using centralized transformer
+    const books = await Promise.all(bookNarratorEntries.map((entry) => transformBook(entry.book)));
 
     return {
       ...narrator,

@@ -125,7 +125,7 @@ components:
         title:
           type: string
           example: 'The Name of the Wind'
-        description:
+        publisherSummary:
           type: string
           nullable: true
           example: "Told in Kvothe's own voice, this is the tale of the magically gifted young man..."

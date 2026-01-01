@@ -40,34 +40,11 @@ struct NowPlayingView: View {
 
                     if let book = audioPlayer.currentBook {
                         // Cover art - 40% of screen height (increased from 35%)
-                        AsyncImage(url: URL(string: book.coverUrl ?? "")) { phase in
-                            switch phase {
-                            case .empty:
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.3))
-                                    .overlay {
-                                        ProgressView()
-                                    }
-                            case let .success(image):
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                            case .failure:
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.3))
-                                    .overlay {
-                                        Image(systemName: "book.fill")
-                                            .font(.system(size: 80))
-                                            .foregroundColor(.gray)
-                                    }
-                            @unknown default:
-                                EmptyView()
-                            }
-                        }
-                        .frame(height: geometry.size.height * 0.40)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
-                        .padding(.horizontal, 40)
+                        CachedCoverImage(bookId: book.id, coverUrl: book.coverUrl)
+                            .frame(height: geometry.size.height * 0.40)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+                            .padding(.horizontal, 40)
 
                         // Book title and author - 12% of screen height
                         VStack(spacing: 4) {

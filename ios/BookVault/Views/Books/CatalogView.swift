@@ -118,29 +118,7 @@ struct BookGridItem: View {
         VStack(alignment: .leading, spacing: 8) {
             // Cover image with progress overlay
             ZStack(alignment: .bottom) {
-                AsyncImage(url: URL(string: book.coverUrl ?? "")) { phase in
-                    switch phase {
-                    case .empty:
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.2))
-                            .overlay {
-                                ProgressView()
-                            }
-                    case let .success(image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                    case .failure:
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.2))
-                            .overlay {
-                                Image(systemName: "book.fill")
-                                    .foregroundColor(.gray)
-                            }
-                    @unknown default:
-                        EmptyView()
-                    }
-                }
+                CachedCoverImage(bookId: book.id, coverUrl: book.coverUrl)
 
                 // Progress indicator
                 if let progress = userProgress {

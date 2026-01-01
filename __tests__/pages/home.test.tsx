@@ -95,6 +95,7 @@ describe('Home Page', () => {
           { narrator: { id: 'n1', name: 'Narrator 1', asin: 'NARR1', createdAt: new Date() } },
         ],
         series: [],
+        categories: [],
       },
       {
         id: '2',
@@ -115,6 +116,7 @@ describe('Home Page', () => {
           { narrator: { id: 'n2', name: 'Narrator 2', asin: 'NARR2', createdAt: new Date() } },
         ],
         series: [],
+        categories: [],
       },
     ];
 
@@ -164,6 +166,7 @@ describe('Home Page', () => {
           { narrator: { id: 'n1', name: 'Narrator', asin: 'NARR1', createdAt: new Date() } },
         ],
         series: [],
+        categories: [],
       },
     ];
 

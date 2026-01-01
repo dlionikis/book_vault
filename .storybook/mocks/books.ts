@@ -6,25 +6,21 @@ export const mockAuthors: Author[] = [
     id: 'author-1',
     name: 'Brandon Sanderson',
     asin: 'B001TEST1',
-    createdAt: '2025-01-01T00:00:00Z',
   },
   {
     id: 'author-2',
     name: 'Andy Weir',
     asin: 'B001TEST2',
-    createdAt: '2025-01-01T00:00:00Z',
   },
   {
     id: 'author-3',
     name: 'J.R.R. Tolkien',
     asin: 'B001TEST3',
-    createdAt: '2025-01-01T00:00:00Z',
   },
   {
     id: 'author-4',
     name: 'Multiple Authors Collaboration',
     asin: 'B001TEST4',
-    createdAt: '2025-01-01T00:00:00Z',
   },
 ];
 
@@ -34,19 +30,16 @@ export const mockNarrators: Narrator[] = [
     id: 'narrator-1',
     name: 'Michael Kramer',
     asin: 'B002TEST1',
-    createdAt: '2025-01-01T00:00:00Z',
   },
   {
     id: 'narrator-2',
     name: 'R.C. Bray',
     asin: 'B002TEST2',
-    createdAt: '2025-01-01T00:00:00Z',
   },
   {
     id: 'narrator-3',
     name: 'Andy Serkis',
     asin: 'B002TEST3',
-    createdAt: '2025-01-01T00:00:00Z',
   },
 ];
 
@@ -89,7 +82,6 @@ export const mockBooks: Book[] = [
     authors: [mockAuthors[0]],
     narrators: [mockNarrators[0]],
     series: [mockSeriesInfo[0]],
-    createdAt: '2025-01-01T00:00:00Z',
   },
 
   // Book with very long title (test text wrapping)
@@ -107,7 +99,6 @@ export const mockBooks: Book[] = [
     authors: [mockAuthors[3]],
     narrators: [mockNarrators[1]],
     series: [],
-    createdAt: '2025-01-02T00:00:00Z',
   },
 
   // Short runtime book
@@ -125,7 +116,6 @@ export const mockBooks: Book[] = [
     authors: [mockAuthors[1]],
     narrators: [mockNarrators[1]],
     series: [],
-    createdAt: '2025-01-03T00:00:00Z',
   },
 
   // Book with missing cover image
@@ -142,7 +132,6 @@ export const mockBooks: Book[] = [
     authors: [mockAuthors[2]],
     narrators: [mockNarrators[2]],
     series: [],
-    createdAt: '2025-01-04T00:00:00Z',
   },
 
   // Book in series (middle of series)
@@ -160,7 +149,6 @@ export const mockBooks: Book[] = [
     authors: [mockAuthors[0]],
     narrators: [mockNarrators[0]],
     series: [mockSeriesInfo[1]],
-    createdAt: '2025-01-05T00:00:00Z',
   },
 
   // Book with minimal data (no runtime, no publisher summary)
@@ -177,7 +165,6 @@ export const mockBooks: Book[] = [
     authors: [],
     narrators: [],
     series: [],
-    createdAt: '2025-01-06T00:00:00Z',
   },
 
   // Book with multiple authors
@@ -194,7 +181,6 @@ export const mockBooks: Book[] = [
     authors: [mockAuthors[0], mockAuthors[1], mockAuthors[2]],
     narrators: [mockNarrators[0], mockNarrators[1]],
     series: [],
-    createdAt: '2025-01-07T00:00:00Z',
   },
 
   // Very long runtime book
@@ -212,7 +198,6 @@ export const mockBooks: Book[] = [
     authors: [mockAuthors[2]],
     narrators: [mockNarrators[2]],
     series: [mockSeriesInfo[2]],
-    createdAt: '2025-01-08T00:00:00Z',
   },
 ];
 
@@ -241,7 +226,6 @@ export function createMockBook(overrides: Partial<Book> = {}): Book {
     authors: [mockAuthors[0]],
     narrators: [mockNarrators[0]],
     series: [],
-    createdAt: '2025-01-01T00:00:00Z',
     ...overrides,
   };
 }

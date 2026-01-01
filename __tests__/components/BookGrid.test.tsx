@@ -17,7 +17,6 @@ describe('BookGrid', () => {
       coverUrl: '/book1.jpg',
       audioUrl: '/audio1.mp3',
       releaseDate: '2024-01-01',
-      createdAt: '2024-01-01',
     },
     {
       id: '2',
@@ -32,7 +31,6 @@ describe('BookGrid', () => {
       coverUrl: '/book2.jpg',
       audioUrl: '/audio2.mp3',
       releaseDate: '2024-01-02',
-      createdAt: '2024-01-02',
     },
   ];
 

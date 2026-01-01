@@ -35,34 +35,11 @@ struct BookDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // Cover image
-                AsyncImage(url: URL(string: book.coverUrl ?? "")) { phase in
-                    switch phase {
-                    case .empty:
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.2))
-                            .overlay {
-                                ProgressView()
-                            }
-                    case let .success(image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                    case .failure:
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.2))
-                            .overlay {
-                                Image(systemName: "book.fill")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.gray)
-                            }
-                    @unknown default:
-                        EmptyView()
-                    }
-                }
-                .frame(height: 300)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .shadow(radius: 8)
-                .padding(.horizontal)
+                CachedCoverImage(bookId: book.id, coverUrl: book.coverUrl)
+                    .frame(height: 300)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(radius: 8)
+                    .padding(.horizontal)
 
                 // Book info
                 VStack(alignment: .leading, spacing: 16) {
@@ -166,14 +143,14 @@ struct BookDetailView: View {
                     Divider()
 
                     // Description (expecting markdown from backend)
-                    if let description = book.description {
+                    if let publisherSummary = book.publisherSummary {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Description")
                                 .font(.headline)
 
                             // Render markdown as attributed text
                             if let attributedString = try? AttributedString(
-                                markdown: description,
+                                markdown: publisherSummary,
                                 options: AttributedString
                                     .MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
                             ) {
@@ -182,7 +159,7 @@ struct BookDetailView: View {
                                     .foregroundColor(.secondary)
                             } else {
                                 // Fallback to plain text if markdown parsing fails
-                                Text(description)
+                                Text(publisherSummary)
                                     .font(.body)
                                     .foregroundColor(.secondary)
                             }
