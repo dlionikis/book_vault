@@ -317,6 +317,25 @@ class AudioPlayerManager: ObservableObject {
         }
     }
 
+    /// Load a book for mini-player display without triggering playback or download
+    /// Used when restoring the last-played book on app launch
+    /// - Parameter book: The book to display in the mini-player
+    /// - Parameter savedPosition: Optional saved position to restore
+    func loadForMiniPlayer(book: Book, savedPosition: TimeInterval = 0) {
+        // Only set the book info for mini-player display - no playback
+        currentBook = book
+        currentTime = savedPosition
+        isPlaying = false
+        isLoading = false
+
+        // Load cover image for mini player
+        Task {
+            currentBookCoverImage = await loadCoverImage(from: book.coverUrl ?? "")
+        }
+
+        DebugLogger.audio("Loaded book for mini-player: \(book.title) at \(savedPosition)s")
+    }
+
     /// Play from local downloaded file (Phase 7)
 
     private func playFromLocalFile(book: Book) async {

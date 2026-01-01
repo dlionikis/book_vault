@@ -145,11 +145,12 @@ struct ContentView: View {
 
     private func loadMostRecentlyPlayedBook() async {
         do {
-            // Fetch all books with progress
-            let response = try await APIClient.shared.fetchBooks(page: 1, limit: 50)
+            // Fetch only books in user's library (not all books)
+            let libraryBooks = try await LibraryManager.shared.fetchLibraryBooks()
             var booksWithProgress: [(book: Book, progress: UserProgress)] = []
 
-            for book in response.books {
+            for libraryBook in libraryBooks {
+                let book = libraryBook.asBook
                 if let progress = try? await ProgressManager.shared.fetchProgress(for: book.id.uuidString) {
                     // Only include books with position > 0 and last played date
                     if progress.positionSeconds > 0, progress.lastPlayed != nil {
@@ -166,11 +167,13 @@ struct ContentView: View {
                 return lhsDate > rhsDate
             }
 
-            // Load the most recent book (paused state)
+            // Load the most recent book for mini-player display only (no playback/download)
             if let mostRecent = booksWithProgress.first {
                 await MainActor.run {
-                    audioPlayer.play(book: mostRecent.book)
-                    audioPlayer.pause() // Immediately pause after loading
+                    audioPlayer.loadForMiniPlayer(
+                        book: mostRecent.book,
+                        savedPosition: mostRecent.progress.positionSeconds
+                    )
                 }
 
                 // Fetch and load chapters in background
