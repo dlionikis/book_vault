@@ -353,6 +353,18 @@ npm run deploy:web      # Web only + deploy
 npm run deploy:only     # Skip all validation
 ```
 
+### Log Files
+
+All validation and deploy scripts log output to files in `logs/` (gitignored):
+
+| Script                  | Log File                |
+| ----------------------- | ----------------------- |
+| `npm run validate:full` | `logs/validate.log`     |
+| `npm run ios:validate`  | `logs/ios-validate.log` |
+| `npm run deploy`        | `logs/deploy.log`       |
+
+Logs are appended with timestamps, making it easy to review failures without re-running commands.
+
 ---
 
 ## Pre-commit Hooks

@@ -7,9 +7,23 @@ set -e
 #   npm run deploy:dry-run  - Full validation only (no deploy)
 #   npm run deploy:web      - Web validation + deploy
 #   npm run deploy:only     - Deploy only (no validation)
+#
+# Logs are written to: logs/deploy.log
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Setup logging
+LOG_DIR="$PROJECT_ROOT/logs"
+LOG_FILE="$LOG_DIR/deploy.log"
+mkdir -p "$LOG_DIR"
+
+# Log with timestamp to file and display to console
+exec > >(tee -a "$LOG_FILE") 2>&1
+echo ""
+echo "========================================"
+echo "Deploy started: $(date)"
+echo "========================================"
 
 # Colors for output
 RED='\033[0;31m'
@@ -24,8 +38,15 @@ log_error() { echo -e "${RED}❌ $1${NC}"; }
 # Track current step for error reporting
 CURRENT_STEP=""
 
-# Trap to show failed step on error
-trap 'if [ -n "$CURRENT_STEP" ]; then echo ""; log_error "Failed: $CURRENT_STEP"; fi' ERR
+# Trap to show failed step on error (also write directly to log file)
+trap 'if [ -n "$CURRENT_STEP" ]; then
+  echo ""
+  log_error "Failed: $CURRENT_STEP"
+  echo "See full log: $LOG_FILE"
+  echo "" >> "$LOG_FILE"
+  echo "❌ Failed: $CURRENT_STEP" >> "$LOG_FILE"
+  echo "Timestamp: $(date)" >> "$LOG_FILE"
+fi' ERR
 
 # === FUNCTIONS ===
 
@@ -80,15 +101,58 @@ check_git_status() {
 }
 
 run_web_validation() {
-  CURRENT_STEP="Web validation (npm run validate:full)"
-  log_step "Running web validation (npm run validate:full)..."
-  npm run validate:full
+  log_step "Running web validation..."
+
+  CURRENT_STEP="Format check (prettier)"
+  npm run format:check
+
+  CURRENT_STEP="Lint (eslint)"
+  npm run lint
+
+  CURRENT_STEP="Type check (tsc)"
+  npm run type-check
+
+  CURRENT_STEP="API spec validation (redocly)"
+  npm run api:validate
+
+  CURRENT_STEP="TypeScript type drift check"
+  npm run api:check-drift
+
+  CURRENT_STEP="API endpoint coverage"
+  npm run api:check-coverage
+
+  CURRENT_STEP="Jest tests"
+  npm test
 }
 
 run_ios_validation() {
-  CURRENT_STEP="iOS validation (drift check + lint + build + tests)"
-  log_step "Running iOS validation (drift check + lint + build + tests)..."
-  "$SCRIPT_DIR/ios-validate.sh"
+  log_step "Running iOS validation..."
+  cd "$PROJECT_ROOT/ios"
+
+  CURRENT_STEP="Swift type drift check"
+  cd "$PROJECT_ROOT"
+  npm run api:check-drift:swift
+  cd "$PROJECT_ROOT/ios"
+
+  CURRENT_STEP="SwiftLint"
+  swiftlint lint --config .swiftlint.yml --strict
+
+  CURRENT_STEP="iOS build"
+  xcodebuild build \
+    -scheme BookVault \
+    -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+    CODE_SIGNING_ALLOWED=NO \
+    | xcpretty
+
+  CURRENT_STEP="iOS tests"
+  xcodebuild test \
+    -scheme BookVault \
+    -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+    -enableCodeCoverage YES \
+    CODE_SIGNING_ALLOWED=NO \
+    | xcpretty
+
+  cd "$PROJECT_ROOT"
 }
 
 run_deploy() {
@@ -150,6 +214,7 @@ EOF
   echo ""
   echo -e "${GREEN}✅ Deployment complete!${NC}"
   echo "   URL: https://bookvault.lionikis.com"
+  echo "   Log: $LOG_FILE"
 }
 
 # === ARGUMENT PARSING ===

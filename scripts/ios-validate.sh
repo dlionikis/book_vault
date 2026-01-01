@@ -3,19 +3,43 @@ set -e
 
 # iOS validation script - mirrors CI workflow (ios-tests.yml + api.yml Swift drift)
 # Usage: ./scripts/ios-validate.sh [--lint-only|--build-only|--test-only|--skip-drift]
+#
+# Logs are written to: logs/ios-validate.log
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Setup logging
+LOG_DIR="$PROJECT_ROOT/logs"
+LOG_FILE="$LOG_DIR/ios-validate.log"
+mkdir -p "$LOG_DIR"
+
+# Log with timestamp to file and display to console
+exec > >(tee -a "$LOG_FILE") 2>&1
+echo ""
+echo "========================================"
+echo "iOS validation started: $(date)"
+echo "========================================"
+
 cd "$SCRIPT_DIR/../ios"
 
 # Colors for output
 RED='\033[0;31m'
+GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
 # Track current step for error reporting
 CURRENT_STEP=""
 
-# Trap to show failed step on error
-trap 'if [ -n "$CURRENT_STEP" ]; then echo ""; echo -e "${RED}❌ Failed: $CURRENT_STEP${NC}"; fi' ERR
+# Trap to show failed step on error (also write directly to log file)
+trap 'if [ -n "$CURRENT_STEP" ]; then
+  echo ""
+  echo -e "${RED}❌ Failed: $CURRENT_STEP${NC}"
+  echo "See full log: $LOG_FILE"
+  echo "" >> "$LOG_FILE"
+  echo "❌ Failed: $CURRENT_STEP" >> "$LOG_FILE"
+  echo "Timestamp: $(date)" >> "$LOG_FILE"
+fi' ERR
 
 run_drift_check() {
   CURRENT_STEP="Swift type drift check"
@@ -64,4 +88,5 @@ esac
 # Clear step tracking on success
 CURRENT_STEP=""
 
-echo "✅ iOS validation complete"
+echo -e "${GREEN}✅ iOS validation complete${NC}"
+echo "   Log: $LOG_FILE"

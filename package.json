@@ -20,7 +20,7 @@
     "security:audit": "npm audit --production",
     "security:fix": "npm audit fix",
     "validate": "npm run format:check && npm run lint && npm run type-check && npm run test",
-    "validate:full": "npm run format:check && npm run lint && npm run type-check && npm run api:validate && npm run api:check-drift && npm run api:check-coverage && npm test",
+    "validate:full": "./scripts/validate.sh",
     "prepare": "husky",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
