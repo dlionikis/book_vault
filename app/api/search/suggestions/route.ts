@@ -94,12 +94,14 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // Transform book results
-    const transformedBooks = books.map((book) => ({
-      id: book.id,
-      title: book.title,
-      coverUrl: getCoverUrl(book.coverUrl),
-    }));
+    // Transform book results (async for presigned S3 URLs in production)
+    const transformedBooks = await Promise.all(
+      books.map(async (book) => ({
+        id: book.id,
+        title: book.title,
+        coverUrl: await getCoverUrl(book.coverUrl),
+      }))
+    );
 
     return NextResponse.json({
       books: transformedBooks,

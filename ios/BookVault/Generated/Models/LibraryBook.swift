@@ -16,7 +16,7 @@ public struct LibraryBook: Codable, JSONEncodable, Hashable {
     public var id: UUID
     public var asin: String
     public var title: String
-    public var description: String?
+    public var publisherSummary: String?
     public var runtimeMinutes: Int?
     public var releaseDate: Date?
     public var publisher: String?
@@ -29,11 +29,11 @@ public struct LibraryBook: Codable, JSONEncodable, Hashable {
     /** Timestamp when book was added to library */
     public var addedAt: Date
 
-    public init(id: UUID, asin: String, title: String, description: String? = nil, runtimeMinutes: Int? = nil, releaseDate: Date? = nil, publisher: String? = nil, coverUrl: String? = nil, audioUrl: String? = nil, authors: [Author], narrators: [Narrator]? = nil, series: [SeriesInfo]? = nil, categories: [Category]? = nil, addedAt: Date) {
+    public init(id: UUID, asin: String, title: String, publisherSummary: String? = nil, runtimeMinutes: Int? = nil, releaseDate: Date? = nil, publisher: String? = nil, coverUrl: String? = nil, audioUrl: String? = nil, authors: [Author], narrators: [Narrator]? = nil, series: [SeriesInfo]? = nil, categories: [Category]? = nil, addedAt: Date) {
         self.id = id
         self.asin = asin
         self.title = title
-        self.description = description
+        self.publisherSummary = publisherSummary
         self.runtimeMinutes = runtimeMinutes
         self.releaseDate = releaseDate
         self.publisher = publisher
@@ -50,7 +50,7 @@ public struct LibraryBook: Codable, JSONEncodable, Hashable {
         case id
         case asin
         case title
-        case description
+        case publisherSummary
         case runtimeMinutes
         case releaseDate
         case publisher
@@ -70,7 +70,7 @@ public struct LibraryBook: Codable, JSONEncodable, Hashable {
         try container.encode(id, forKey: .id)
         try container.encode(asin, forKey: .asin)
         try container.encode(title, forKey: .title)
-        try container.encodeIfPresent(description, forKey: .description)
+        try container.encodeIfPresent(publisherSummary, forKey: .publisherSummary)
         try container.encodeIfPresent(runtimeMinutes, forKey: .runtimeMinutes)
         try container.encodeIfPresent(releaseDate, forKey: .releaseDate)
         try container.encodeIfPresent(publisher, forKey: .publisher)

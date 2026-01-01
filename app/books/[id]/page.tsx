@@ -6,81 +6,48 @@ import BackButton from '@/components/BackButton';
 import AddToLibraryButton from '@/components/AddToLibraryButton';
 import ProgressControls from '@/components/ProgressControls';
 import { prisma } from '@/lib/db';
-import { getCoverUrl, getAudioUrl } from '@/lib/media';
+import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { htmlToMarkdown } from '@/lib/html-to-markdown';
 import ReactMarkdown from 'react-markdown';
+
+// Type for customer reviews from Libation metadata
+interface CustomerReview {
+  id: string;
+  title: string;
+  body: string;
+  author_name: string;
+  submission_date: string;
+  ratings: {
+    overall_rating: number;
+    story_rating: number;
+    performance_rating: number;
+  };
+  review_content_scores: {
+    num_helpful_votes: number;
+    num_unhelpful_votes: number;
+  };
+}
+
+function getCustomerReviews(metadata?: Record<string, unknown>): CustomerReview[] {
+  if (!metadata || !Array.isArray(metadata.customer_reviews)) {
+    return [];
+  }
+  return metadata.customer_reviews as CustomerReview[];
+}
 
 async function getBook(id: string): Promise<Book | null> {
   try {
     const book = await prisma.book.findUnique({
       where: { id },
-      include: {
-        authors: {
-          include: {
-            author: true,
-          },
-          orderBy: {
-            author: {
-              name: 'asc',
-            },
-          },
-        },
-        narrators: {
-          include: {
-            narrator: true,
-          },
-          orderBy: {
-            narrator: {
-              name: 'asc',
-            },
-          },
-        },
-        series: {
-          include: {
-            series: true,
-          },
-          orderBy: {
-            series: {
-              title: 'asc',
-            },
-          },
-        },
-        categories: {
-          include: {
-            category: true,
-          },
-        },
-      },
+      include: BOOK_INCLUDE,
     });
 
     if (!book) {
       return null;
     }
 
-    return {
-      id: book.id,
-      asin: book.asin,
-      title: book.title,
-      publisherSummary: htmlToMarkdown(book.publisherSummary),
-      runtimeMinutes: book.runtimeMinutes,
-      releaseDate: book.releaseDate,
-      publisher: book.publisher,
-      coverUrl: getCoverUrl(book.coverUrl),
-      audioUrl: getAudioUrl(book.audioUrl),
-      authors: book.authors.map((ba) => ba.author),
-      narrators: book.narrators.map((bn) => bn.narrator),
-      series: book.series.map((bs) => ({
-        id: bs.series.id,
-        title: bs.series.title,
-        asin: bs.series.asin,
-        sequence: bs.sequence,
-      })),
-      categories: book.categories.map((bc) => bc.category),
-      metadata: book.metadata as any,
-      createdAt: book.createdAt.toISOString(),
-    };
+    return await transformBook(book);
   } catch (error) {
     console.error('Error fetching book:', error);
     return null;
@@ -335,124 +302,131 @@ export default async function BookDetailPage({ params }: { params: { id: string 
               )}
 
               {/* Customer Reviews */}
-              {book.metadata?.customer_reviews && book.metadata.customer_reviews.length > 0 && (
-                <div className="mt-8">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                    Customer Reviews ({book.metadata.customer_reviews.length})
-                  </h3>
-                  <div className="space-y-6">
-                    {book.metadata.customer_reviews.map((review: any) => (
-                      <div
-                        key={review.id}
-                        className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-b-0"
-                      >
-                        {/* Review Header */}
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h4 className="font-semibold text-gray-900 dark:text-white">
-                              {review.title}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-sm text-gray-600 dark:text-gray-400">
-                                {review.author_name}
-                              </span>
-                              <span className="text-gray-400 dark:text-gray-600">•</span>
-                              <span className="text-sm text-gray-500 dark:text-gray-500">
-                                {new Date(review.submission_date).toLocaleDateString('en-US', {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric',
-                                })}
-                              </span>
+              {(() => {
+                const reviews = getCustomerReviews(book.metadata);
+                return (
+                  reviews.length > 0 && (
+                    <div className="mt-8">
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                        Customer Reviews ({reviews.length})
+                      </h3>
+                      <div className="space-y-6">
+                        {reviews.map((review) => (
+                          <div
+                            key={review.id}
+                            className="border-b border-gray-200 dark:border-gray-700 pb-6 last:border-b-0"
+                          >
+                            {/* Review Header */}
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <h4 className="font-semibold text-gray-900 dark:text-white">
+                                  {review.title}
+                                </h4>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                                    {review.author_name}
+                                  </span>
+                                  <span className="text-gray-400 dark:text-gray-600">•</span>
+                                  <span className="text-sm text-gray-500 dark:text-gray-500">
+                                    {new Date(review.submission_date).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric',
+                                    })}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
 
-                        {/* Rating Stars */}
-                        <div className="flex gap-4 mb-3 text-sm">
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-600 dark:text-gray-400">Overall:</span>
-                            <div className="flex">
-                              {[...Array(5)].map((_, i) => (
-                                <svg
-                                  key={i}
-                                  className={`w-4 h-4 ${
-                                    i < review.ratings.overall_rating
-                                      ? 'text-yellow-400 fill-current'
-                                      : 'text-gray-300'
-                                  }`}
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                              ))}
-                              <span className="ml-1 text-gray-700 dark:text-gray-300">
-                                {review.ratings.overall_rating}
-                              </span>
+                            {/* Rating Stars */}
+                            <div className="flex gap-4 mb-3 text-sm">
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-600 dark:text-gray-400">Overall:</span>
+                                <div className="flex">
+                                  {[...Array(5)].map((_, i) => (
+                                    <svg
+                                      key={i}
+                                      className={`w-4 h-4 ${
+                                        i < review.ratings.overall_rating
+                                          ? 'text-yellow-400 fill-current'
+                                          : 'text-gray-300'
+                                      }`}
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                  ))}
+                                  <span className="ml-1 text-gray-700 dark:text-gray-300">
+                                    {review.ratings.overall_rating}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-600 dark:text-gray-400">Story:</span>
+                                <div className="flex">
+                                  {[...Array(5)].map((_, i) => (
+                                    <svg
+                                      key={i}
+                                      className={`w-4 h-4 ${
+                                        i < review.ratings.story_rating
+                                          ? 'text-yellow-400 fill-current'
+                                          : 'text-gray-300'
+                                      }`}
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                  ))}
+                                  <span className="ml-1 text-gray-700 dark:text-gray-300">
+                                    {review.ratings.story_rating}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  Performance:
+                                </span>
+                                <div className="flex">
+                                  {[...Array(5)].map((_, i) => (
+                                    <svg
+                                      key={i}
+                                      className={`w-4 h-4 ${
+                                        i < review.ratings.performance_rating
+                                          ? 'text-yellow-400 fill-current'
+                                          : 'text-gray-300'
+                                      }`}
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                  ))}
+                                  <span className="ml-1 text-gray-700 dark:text-gray-300">
+                                    {review.ratings.performance_rating}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-600 dark:text-gray-400">Story:</span>
-                            <div className="flex">
-                              {[...Array(5)].map((_, i) => (
-                                <svg
-                                  key={i}
-                                  className={`w-4 h-4 ${
-                                    i < review.ratings.story_rating
-                                      ? 'text-yellow-400 fill-current'
-                                      : 'text-gray-300'
-                                  }`}
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                              ))}
-                              <span className="ml-1 text-gray-700 dark:text-gray-300">
-                                {review.ratings.story_rating}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-600 dark:text-gray-400">Performance:</span>
-                            <div className="flex">
-                              {[...Array(5)].map((_, i) => (
-                                <svg
-                                  key={i}
-                                  className={`w-4 h-4 ${
-                                    i < review.ratings.performance_rating
-                                      ? 'text-yellow-400 fill-current'
-                                      : 'text-gray-300'
-                                  }`}
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                              ))}
-                              <span className="ml-1 text-gray-700 dark:text-gray-300">
-                                {review.ratings.performance_rating}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* Review Body */}
-                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                          {review.body}
-                        </p>
+                            {/* Review Body */}
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                              {review.body}
+                            </p>
 
-                        {/* Helpful Votes */}
-                        {(review.review_content_scores.num_helpful_votes > 0 ||
-                          review.review_content_scores.num_unhelpful_votes > 0) && (
-                          <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-                            {review.review_content_scores.num_helpful_votes} people found this
-                            helpful
+                            {/* Helpful Votes */}
+                            {(review.review_content_scores.num_helpful_votes > 0 ||
+                              review.review_content_scores.num_unhelpful_votes > 0) && (
+                              <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+                                {review.review_content_scores.num_helpful_votes} people found this
+                                helpful
+                              </div>
+                            )}
                           </div>
-                        )}
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    </div>
+                  )
+                );
+              })()}
             </div>
           </div>
         </div>

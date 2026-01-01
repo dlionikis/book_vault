@@ -7,7 +7,7 @@ import ContinueListening from '@/components/ContinueListening';
 import ContinueListeningButton from '@/components/ContinueListeningButton';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
-import { getCoverUrl, getAudioUrl } from '@/lib/media';
+import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
 
 async function getBooks(page?: string, sort?: string): Promise<BooksResponse> {
   const pageNum = parseInt(page || '1');
@@ -16,7 +16,7 @@ async function getBooks(page?: string, sort?: string): Promise<BooksResponse> {
   const sortBy = sort || 'title';
 
   // Build orderBy based on sort parameter
-  let orderBy: any = { title: 'asc' };
+  let orderBy: object = { title: 'asc' };
   if (sortBy === 'title') {
     orderBy = { title: 'asc' };
   }
@@ -26,64 +26,14 @@ async function getBooks(page?: string, sort?: string): Promise<BooksResponse> {
     prisma.book.findMany({
       skip,
       take: limit,
-      include: {
-        authors: {
-          include: {
-            author: true,
-          },
-          orderBy: {
-            author: {
-              name: 'asc',
-            },
-          },
-        },
-        narrators: {
-          include: {
-            narrator: true,
-          },
-          orderBy: {
-            narrator: {
-              name: 'asc',
-            },
-          },
-        },
-        series: {
-          include: {
-            series: true,
-          },
-          orderBy: {
-            series: {
-              title: 'asc',
-            },
-          },
-        },
-      },
+      include: BOOK_INCLUDE,
       orderBy,
     }),
     prisma.book.count(),
   ]);
 
-  // Transform the response
-  let transformedBooks = books.map((book) => ({
-    id: book.id,
-    asin: book.asin,
-    title: book.title,
-    publisherSummary: book.publisherSummary,
-    runtimeMinutes: book.runtimeMinutes,
-    releaseDate: book.releaseDate,
-    publisher: book.publisher,
-    coverUrl: getCoverUrl(book.coverUrl),
-    audioUrl: getAudioUrl(book.audioUrl),
-    authors: book.authors.map((ba) => ba.author),
-    narrators: book.narrators.map((bn) => bn.narrator),
-    series: book.series.map((bs) => ({
-      id: bs.series.id,
-      title: bs.series.title,
-      asin: bs.series.asin,
-      sequence: bs.sequence,
-    })),
-    createdAt: book.createdAt.toISOString(),
-  }));
+  // Transform books using centralized transformer
+  let transformedBooks = await Promise.all(books.map(transformBook));
 
   // Apply client-side sorting for author/narrator/series
   if (sortBy === 'author') {

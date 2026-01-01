@@ -16,7 +16,6 @@ describe('BookCard', () => {
     coverUrl: '/test-image.jpg',
     audioUrl: '/test-audio.mp3',
     releaseDate: '2024-01-01',
-    createdAt: '2024-01-01',
   };
 
   it('renders book title', () => {

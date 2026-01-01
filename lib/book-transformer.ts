@@ -12,12 +12,14 @@
  *   include: BOOK_INCLUDE,
  * });
  *
- * const transformedBooks = books.map(transformBook);
+ * // Note: transformBook is async (generates presigned URLs in production)
+ * const transformedBooks = await Promise.all(books.map(transformBook));
  * ```
  */
 
 import { Prisma } from '@prisma/client';
 import { getCoverUrl, getAudioUrl } from './media';
+import { htmlToMarkdown } from './html-to-markdown';
 
 /**
  * Standard book include for Prisma queries
@@ -60,20 +62,28 @@ export type BookWithIncludes = Prisma.BookGetPayload<{
  * This ensures all endpoints return books with the same structure,
  * preventing issues where fields are missing from some responses.
  *
+ * Note: This function is async because it generates presigned S3 URLs in production.
+ *
  * @param book - Book from Prisma with standard includes
- * @returns Transformed book matching OpenAPI Book schema
+ * @returns Promise resolving to transformed book matching OpenAPI Book schema
  */
-export function transformBook(book: BookWithIncludes) {
+export async function transformBook(book: BookWithIncludes) {
+  // Generate URLs (async in production for presigned S3 URLs)
+  const [coverUrl, audioUrl] = await Promise.all([
+    getCoverUrl(book.coverUrl),
+    getAudioUrl(book.audioUrl),
+  ]);
+
   return {
     id: book.id,
     asin: book.asin,
     title: book.title,
-    description: book.description,
+    publisherSummary: htmlToMarkdown(book.publisherSummary),
     runtimeMinutes: book.runtimeMinutes,
     releaseDate: book.releaseDate ? book.releaseDate.toISOString().split('T')[0] : null,
     publisher: book.publisher,
-    coverUrl: getCoverUrl(book.coverUrl),
-    audioUrl: getAudioUrl(book.audioUrl),
+    coverUrl,
+    audioUrl,
     authors: book.authors.map((ba) => ({
       id: ba.author.id,
       name: ba.author.name,
@@ -94,6 +104,7 @@ export function transformBook(book: BookWithIncludes) {
       id: bc.category.id,
       name: bc.category.name,
     })),
+    metadata: book.metadata as Record<string, unknown> | undefined,
   };
 }
 
@@ -104,17 +115,18 @@ export function transformBook(book: BookWithIncludes) {
  * Used by GET /api/library endpoint to return books with their library metadata.
  *
  * @param libraryBook - UserListBook entry with nested book and addedAt timestamp
- * @returns Transformed book with addedAt field
+ * @returns Promise resolving to transformed book with addedAt field
  *
  * @example
  * const libraryBooks = await prisma.userListBook.findMany({
  *   include: { book: { include: BOOK_INCLUDE } }
  * });
- * const transformed = libraryBooks.map(transformLibraryBook);
+ * const transformed = await Promise.all(libraryBooks.map(transformLibraryBook));
  */
-export function transformLibraryBook(libraryBook: { book: BookWithIncludes; addedAt: Date }) {
+export async function transformLibraryBook(libraryBook: { book: BookWithIncludes; addedAt: Date }) {
+  const transformedBook = await transformBook(libraryBook.book);
   return {
-    ...transformBook(libraryBook.book),
+    ...transformedBook,
     addedAt: libraryBook.addedAt.toISOString(),
   };
 }

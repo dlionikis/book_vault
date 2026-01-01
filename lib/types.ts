@@ -24,9 +24,6 @@ export interface Series {
 export interface Category {
   id: string;
   name: string;
-  parentId?: string | null;
-  level: number;
-  createdAt?: Date | string;
 }
 
 // SeriesInfo (includes sequence from join table)
@@ -52,8 +49,7 @@ export interface Book {
   narrators: Narrator[];
   series: SeriesInfo[];
   categories?: Category[];
-  metadata?: any; // JSON field from Prisma
-  createdAt: Date | string;
+  metadata?: Record<string, unknown>; // JSON field from Prisma
 }
 
 // Pagination helper

@@ -3,77 +3,21 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Book, SeriesInfo, Author, Narrator } from '@/lib/types';
 import { prisma } from '@/lib/db';
-import { getCoverUrl, getAudioUrl } from '@/lib/media';
+import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
 import PlaybackClient from '@/components/PlaybackClient';
 
 async function getBook(id: string): Promise<Book | null> {
   try {
     const book = await prisma.book.findUnique({
       where: { id },
-      include: {
-        authors: {
-          include: {
-            author: true,
-          },
-          orderBy: {
-            author: {
-              name: 'asc',
-            },
-          },
-        },
-        narrators: {
-          include: {
-            narrator: true,
-          },
-          orderBy: {
-            narrator: {
-              name: 'asc',
-            },
-          },
-        },
-        series: {
-          include: {
-            series: true,
-          },
-          orderBy: {
-            series: {
-              title: 'asc',
-            },
-          },
-        },
-        categories: {
-          include: {
-            category: true,
-          },
-        },
-      },
+      include: BOOK_INCLUDE,
     });
 
     if (!book) {
       return null;
     }
 
-    return {
-      id: book.id,
-      asin: book.asin,
-      title: book.title,
-      publisherSummary: book.publisherSummary,
-      runtimeMinutes: book.runtimeMinutes,
-      releaseDate: book.releaseDate,
-      publisher: book.publisher,
-      coverUrl: getCoverUrl(book.coverUrl),
-      audioUrl: getAudioUrl(book.audioUrl),
-      authors: book.authors.map((ba) => ba.author),
-      narrators: book.narrators.map((bn) => bn.narrator),
-      series: book.series.map((bs) => ({
-        id: bs.series.id,
-        title: bs.series.title,
-        asin: bs.series.asin,
-        sequence: bs.sequence,
-      })),
-      categories: book.categories.map((bc) => bc.category),
-      createdAt: book.createdAt.toISOString(),
-    };
+    return await transformBook(book);
   } catch (error) {
     console.error('Error fetching book:', error);
     return null;

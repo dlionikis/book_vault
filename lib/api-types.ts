@@ -242,7 +242,7 @@ export interface components {
       /** @example The Name of the Wind */
       title: string;
       /** @example Told in Kvothe's own voice, this is the tale of the magically gifted young man... */
-      description?: string | null;
+      publisherSummary?: string | null;
       /** @example 1068 */
       runtimeMinutes?: number | null;
       /**

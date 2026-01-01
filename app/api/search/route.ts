@@ -139,23 +139,26 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Transform the response
+    // Note: transformBook and URL functions are async (generate presigned URLs in production)
     const transformedBooks = select
       ? // If using field filtering, return books as-is (with selected fields only)
-        books.map((book) => {
-          const result: Record<string, unknown> = {};
-          for (const [key, value] of Object.entries(book)) {
-            if (key === 'coverUrl') {
-              result[key] = getCoverUrl(value as string | null);
-            } else if (key === 'audioUrl') {
-              result[key] = getAudioUrl(value as string | null);
-            } else {
-              result[key] = value;
+        await Promise.all(
+          books.map(async (book) => {
+            const result: Record<string, unknown> = {};
+            for (const [key, value] of Object.entries(book)) {
+              if (key === 'coverUrl') {
+                result[key] = await getCoverUrl(value as string | null);
+              } else if (key === 'audioUrl') {
+                result[key] = await getAudioUrl(value as string | null);
+              } else {
+                result[key] = value;
+              }
             }
-          }
-          return result;
-        })
+            return result;
+          })
+        )
       : // Otherwise, return full transformed books using centralized transformer
-        books.map((book) => transformBook(book as any));
+        await Promise.all(books.map((book) => transformBook(book as any)));
 
     return NextResponse.json({
       results: transformedBooks,

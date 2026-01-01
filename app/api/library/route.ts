@@ -45,7 +45,8 @@ export async function GET(request: NextRequest) {
     });
 
     // Transform using centralized library book transformer
-    const books = libraryBooks.map(transformLibraryBook);
+    // Note: transformLibraryBook is async (generates presigned URLs in production)
+    const books = await Promise.all(libraryBooks.map(transformLibraryBook));
 
     return NextResponse.json({ books, total: books.length });
   } catch (error) {

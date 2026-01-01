@@ -21,7 +21,7 @@ extension LibraryBook {
             id: id,
             asin: asin,
             title: title,
-            description: description,
+            publisherSummary: publisherSummary,
             runtimeMinutes: runtimeMinutes,
             releaseDate: releaseDate,
             publisher: publisher,

@@ -45,7 +45,8 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Transform the response to match OpenAPI Book schema
-    let transformedBooks: Book[] = books.map(transformBook);
+    // Note: transformBook is async (generates presigned URLs in production)
+    let transformedBooks: Book[] = await Promise.all(books.map(transformBook));
 
     // Apply client-side sorting for author/narrator/series
     if (sort === 'author') {

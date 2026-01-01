@@ -45,6 +45,7 @@ class LibraryManager: ObservableObject, LibraryManaging {
 
     private let apiClient: any APIClientProtocol
     private let libraryCacheManager: any LibraryCaching
+    private let coverCacheManager: any CoverCaching
     private let networkMonitor: any NetworkMonitoring
     private let storageManager: any StorageManaging
 
@@ -64,6 +65,7 @@ class LibraryManager: ObservableObject, LibraryManaging {
         self.init(
             apiClient: APIClient.shared,
             libraryCacheManager: LibraryCacheManager.shared,
+            coverCacheManager: CoverCacheManager.shared,
             networkMonitor: NetworkMonitor.shared,
             storageManager: StorageManager.shared
         )
@@ -73,16 +75,19 @@ class LibraryManager: ObservableObject, LibraryManaging {
     /// - Parameters:
     ///   - apiClient: API client for server communication
     ///   - libraryCacheManager: Library cache for offline access
+    ///   - coverCacheManager: Cover image cache
     ///   - networkMonitor: Network connectivity monitor
     ///   - storageManager: Storage manager for download deletion
     init(
         apiClient: any APIClientProtocol,
         libraryCacheManager: any LibraryCaching,
+        coverCacheManager: any CoverCaching,
         networkMonitor: any NetworkMonitoring,
         storageManager: any StorageManaging
     ) {
         self.apiClient = apiClient
         self.libraryCacheManager = libraryCacheManager
+        self.coverCacheManager = coverCacheManager
         self.networkMonitor = networkMonitor
         self.storageManager = storageManager
     }
@@ -131,9 +136,45 @@ class LibraryManager: ObservableObject, LibraryManaging {
         // Save to disk cache for offline access
         libraryCacheManager.saveLibrary(books: response.books)
 
+        // Cache cover images in background (don't block return)
+        Task.detached(priority: .background) { [coverCacheManager] in
+            await self.cacheCoversForBooks(response.books, using: coverCacheManager)
+        }
+
         DebugLogger.success("Fetched \(response.books.count) library books (total: \(response.total))")
 
         return response.books
+    }
+
+    /// Cache cover images for library books in background
+    /// - Parameters:
+    ///   - books: Array of library books to cache covers for
+    ///   - cache: Cover cache manager to use
+    private func cacheCoversForBooks(_ books: [LibraryBook], using cache: any CoverCaching) async {
+        var cachedCount = 0
+
+        for book in books {
+            guard let urlString = book.coverUrl,
+                  let url = URL(string: urlString)
+            else { continue }
+
+            // Skip if already cached
+            if await cache.hasCover(for: book.id) {
+                continue
+            }
+
+            do {
+                try await cache.cacheCover(for: book.id, from: url)
+                cachedCount += 1
+            } catch {
+                // Log but don't fail - cover caching is best-effort
+                DebugLogger.warning("Failed to cache cover for \(book.title): \(error.localizedDescription)")
+            }
+        }
+
+        if cachedCount > 0 {
+            DebugLogger.success("Cached \(cachedCount) new cover images")
+        }
     }
 
     /// Add book to user's library
