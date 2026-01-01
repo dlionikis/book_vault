@@ -233,6 +233,12 @@ class LibraryManager: ObservableObject, LibraryManaging {
             }
         }
 
+        // Stop playback if this book is currently playing
+        if AudioPlayerManager.shared.currentBook?.id.uuidString == bookId {
+            AudioPlayerManager.shared.stop()
+            DebugLogger.info("Stopped playback of removed book")
+        }
+
         // Invalidate cache
         invalidateCache()
     }
