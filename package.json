@@ -47,6 +47,7 @@
     "ios:test": "./scripts/ios-validate.sh --test-only",
     "ios:validate": "./scripts/ios-validate.sh",
     "deploy": "./scripts/deploy.sh",
+    "deploy:dry-run": "./scripts/deploy.sh --dry-run",
     "deploy:web": "./scripts/deploy.sh --web",
     "deploy:only": "./scripts/deploy.sh --deploy-only"
   },

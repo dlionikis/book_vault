@@ -212,7 +212,7 @@ Located in `archive/implementation-plans/` folder:
 
 **I'm deploying to production**:
 
-1. Run `npm run deploy --dry-run` - Validate before deploying
+1. Run `npm run deploy:dry-run` - Validate before deploying
 2. See [testing.md#deployment-validation](testing.md#deployment-validation) - Deploy commands
 3. Full infrastructure setup in [aws-deployment-plan.md](aws-deployment-plan.md)
 

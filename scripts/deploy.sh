@@ -3,10 +3,10 @@ set -e
 
 # Deployment script for Book Vault
 # Usage:
-#   npm run deploy            - Full validation (web + iOS) + deploy
-#   npm run deploy:web        - Web validation + deploy
-#   npm run deploy:only       - Deploy only (no validation)
-#   ./scripts/deploy.sh --dry-run  - Validate without deploying
+#   npm run deploy          - Full validation (web + iOS) + deploy
+#   npm run deploy:dry-run  - Full validation only (no deploy)
+#   npm run deploy:web      - Web validation + deploy
+#   npm run deploy:only     - Deploy only (no validation)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"

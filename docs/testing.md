@@ -8,21 +8,22 @@
 
 ## Quick Reference
 
-| Command                 | Purpose                                         |
-| ----------------------- | ----------------------------------------------- |
-| `npm test`              | Run Jest tests                                  |
-| `npm run test:watch`    | Jest watch mode                                 |
-| `npm run test:coverage` | Jest with coverage report                       |
-| `npm run test:contract` | Run OpenAPI contract tests (auto-starts server) |
-| `npm run validate`      | Format + lint + types + tests                   |
-| `npm run validate:full` | Above + API validation + drift checks           |
-| `npm run ios:validate`  | iOS drift check + lint + build + tests          |
-| `npm run ios:lint`      | SwiftLint only                                  |
-| `npm run ios:build`     | iOS build only                                  |
-| `npm run ios:test`      | iOS tests only                                  |
-| `npm run deploy`        | Full validation (web + iOS) + deploy            |
-| `npm run deploy:web`    | Web validation + deploy                         |
-| `npm run deploy:only`   | Deploy without checks                           |
+| Command                  | Purpose                                         |
+| ------------------------ | ----------------------------------------------- |
+| `npm test`               | Run Jest tests                                  |
+| `npm run test:watch`     | Jest watch mode                                 |
+| `npm run test:coverage`  | Jest with coverage report                       |
+| `npm run test:contract`  | Run OpenAPI contract tests (auto-starts server) |
+| `npm run validate`       | Format + lint + types + tests                   |
+| `npm run validate:full`  | Above + API validation + drift checks           |
+| `npm run ios:validate`   | iOS drift check + lint + build + tests          |
+| `npm run ios:lint`       | SwiftLint only                                  |
+| `npm run ios:build`      | iOS build only                                  |
+| `npm run ios:test`       | iOS tests only                                  |
+| `npm run deploy`         | Full validation (web + iOS) + deploy            |
+| `npm run deploy:dry-run` | Full validation only (no deploy)                |
+| `npm run deploy:web`     | Web validation + deploy                         |
+| `npm run deploy:only`    | Deploy without checks                           |
 
 ---
 
@@ -332,8 +333,7 @@ npm run deploy:web
 npm run deploy:only
 
 # Dry run (validate without deploying)
-./scripts/deploy.sh --dry-run
-./scripts/deploy.sh --web --dry-run
+npm run deploy:dry-run
 ```
 
 ### What Validation Runs
@@ -347,10 +347,10 @@ npm run deploy:only
 ### Deploy Script Options
 
 ```bash
-./scripts/deploy.sh              # Full validation + deploy
-./scripts/deploy.sh --web        # Web only + deploy
-./scripts/deploy.sh --deploy-only # Skip all validation
-./scripts/deploy.sh --dry-run    # Validate only, no deploy
+npm run deploy          # Full validation + deploy
+npm run deploy:dry-run  # Validate only, no deploy
+npm run deploy:web      # Web only + deploy
+npm run deploy:only     # Skip all validation
 ```
 
 ---
