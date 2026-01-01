@@ -131,9 +131,13 @@
 
 ## 📦 Setup & Deployment
 
-| File                                 | Purpose                                        | Tokens |
-| ------------------------------------ | ---------------------------------------------- | ------ |
-| [project-setup.md](project-setup.md) | Initial project setup, installation, first run | ~1,170 |
+| File                                             | Purpose                                        | Tokens |
+| ------------------------------------------------ | ---------------------------------------------- | ------ |
+| [project-setup.md](project-setup.md)             | Initial project setup, installation, first run | ~1,170 |
+| [aws-deployment-plan.md](aws-deployment-plan.md) | AWS infrastructure & **Quick Deploy Guide**    | ~8,000 |
+
+**Quick Deploy** (routine code deployments):
+See [aws-deployment-plan.md#quick-deploy-guide](aws-deployment-plan.md#quick-deploy-guide) for streamlined build → push → deploy commands.
 
 ---
 
@@ -205,6 +209,11 @@ Located in `archive/implementation-plans/` folder:
 1. Read [project-setup.md](project-setup.md) - Installation
 2. Check [media-configuration.md](media-configuration.md) - Media setup
 3. Read [security.md](security.md) - Git hooks, linting
+
+**I'm deploying to production**:
+
+1. See [aws-deployment-plan.md#quick-deploy-guide](aws-deployment-plan.md#quick-deploy-guide) - Quick deploy commands
+2. Full infrastructure setup in [aws-deployment-plan.md](aws-deployment-plan.md)
 
 ---
 
