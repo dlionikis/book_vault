@@ -16,7 +16,7 @@
 | `npm run test:contract` | Run OpenAPI contract tests (auto-starts server) |
 | `npm run validate`      | Format + lint + types + tests                   |
 | `npm run validate:full` | Above + API validation + drift checks           |
-| `npm run ios:validate`  | iOS lint + build + tests                        |
+| `npm run ios:validate`  | iOS drift check + lint + build + tests          |
 | `npm run ios:lint`      | SwiftLint only                                  |
 | `npm run ios:build`     | iOS build only                                  |
 | `npm run ios:test`      | iOS tests only                                  |
@@ -216,8 +216,11 @@ it('GET /api/books returns valid response', async () => {
 ### Running iOS Tests
 
 ```bash
-# Full iOS validation (lint + build + test)
+# Full iOS validation (drift check + lint + build + test)
 npm run ios:validate
+
+# Skip drift check (useful if you've already run it)
+./scripts/ios-validate.sh --skip-drift
 
 # Individual steps
 npm run ios:lint       # SwiftLint only

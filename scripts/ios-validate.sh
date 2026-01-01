@@ -1,10 +1,18 @@
 #!/bin/bash
 set -e
 
-# iOS validation script - mirrors CI workflow (ios-tests.yml)
-# Usage: ./scripts/ios-validate.sh [--lint-only|--build-only|--test-only]
+# iOS validation script - mirrors CI workflow (ios-tests.yml + api.yml Swift drift)
+# Usage: ./scripts/ios-validate.sh [--lint-only|--build-only|--test-only|--skip-drift]
 
-cd "$(dirname "$0")/../ios"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/../ios"
+
+run_drift_check() {
+  echo "🔄 Checking Swift type drift..."
+  cd "$SCRIPT_DIR/.."
+  npm run api:check-drift:swift
+  cd "$SCRIPT_DIR/../ios"
+}
 
 run_lint() {
   echo "🔍 Running SwiftLint..."
@@ -34,8 +42,9 @@ case "${1:-all}" in
   --lint-only)  run_lint ;;
   --build-only) run_build ;;
   --test-only)  run_tests ;;
-  all|"")       run_lint && run_build && run_tests ;;
-  *)            echo "Usage: $0 [--lint-only|--build-only|--test-only]"; exit 1 ;;
+  --skip-drift) run_lint && run_build && run_tests ;;
+  all|"")       run_drift_check && run_lint && run_build && run_tests ;;
+  *)            echo "Usage: $0 [--lint-only|--build-only|--test-only|--skip-drift]"; exit 1 ;;
 esac
 
 echo "✅ iOS validation complete"

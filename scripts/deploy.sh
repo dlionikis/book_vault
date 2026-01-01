@@ -55,12 +55,7 @@ if [ "$SKIP_WEB_CHECKS" = false ]; then
 fi
 
 if [ "$SKIP_IOS_CHECKS" = false ]; then
-  log_step "Running iOS validation..."
-
-  log_step "Checking Swift type drift..."
-  npm run api:check-drift:swift
-
-  log_step "Running iOS lint, build, and tests..."
+  log_step "Running iOS validation (drift check + lint + build + tests)..."
   "$SCRIPT_DIR/ios-validate.sh"
 fi
 
