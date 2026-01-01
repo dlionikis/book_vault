@@ -61,13 +61,13 @@ run_build() {
   if command -v xcpretty &> /dev/null; then
     xcodebuild build \
       -scheme BookVault \
-      -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+      -destination 'generic/platform=iOS Simulator' \
       CODE_SIGNING_ALLOWED=NO \
       | xcpretty
   else
     xcodebuild build \
       -scheme BookVault \
-      -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+      -destination 'generic/platform=iOS Simulator' \
       CODE_SIGNING_ALLOWED=NO
   fi
 }
@@ -75,17 +75,29 @@ run_build() {
 run_tests() {
   CURRENT_STEP="iOS tests"
   echo "🧪 Running iOS tests..."
+  # Tests need a specific simulator - find the first available iPhone simulator
+  SIMULATOR_DEST=$(xcrun simctl list devices available -j | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for runtime, devices in data.get('devices', {}).items():
+    if 'iOS' in runtime:
+        for d in devices:
+            if 'iPhone' in d['name'] and d['isAvailable']:
+                print(f\"platform=iOS Simulator,id={d['udid']}\")
+                sys.exit(0)
+print('platform=iOS Simulator,name=Any iOS Simulator Device')
+")
   if command -v xcpretty &> /dev/null; then
     xcodebuild test \
       -scheme BookVault \
-      -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+      -destination "$SIMULATOR_DEST" \
       -enableCodeCoverage YES \
       CODE_SIGNING_ALLOWED=NO \
       | xcpretty
   else
     xcodebuild test \
       -scheme BookVault \
-      -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+      -destination "$SIMULATOR_DEST" \
       -enableCodeCoverage YES \
       CODE_SIGNING_ALLOWED=NO
   fi

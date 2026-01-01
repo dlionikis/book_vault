@@ -66,6 +66,14 @@ jobs:
           echo "=== Available iOS Simulators ==="
           xcrun simctl list devices available | grep -E "iPhone|iPad" | head -20
 
+      - name: Find available simulator
+        id: simulator
+        run: |
+          # Find the first available iPhone simulator
+          DEST=$(xcrun simctl list devices available | grep -E "iPhone" | head -1 | sed 's/.*(\([^)]*\)).*/\1/')
+          echo "Using simulator: $DEST"
+          echo "destination=platform=iOS Simulator,id=$DEST" >> $GITHUB_OUTPUT
+
       - name: Run tests with coverage
         working-directory: ios
         run: |
@@ -75,7 +83,7 @@ jobs:
           # Run tests without xcpretty piping to preserve coverage data
           xcodebuild test \
             -scheme BookVault \
-            -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+            -destination '${{ steps.simulator.outputs.destination }}' \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
