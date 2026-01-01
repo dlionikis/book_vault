@@ -58,22 +58,37 @@ run_lint() {
 run_build() {
   CURRENT_STEP="iOS build"
   echo "🔨 Building iOS app..."
-  xcodebuild build \
-    -scheme BookVault \
-    -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
-    CODE_SIGNING_ALLOWED=NO \
-    | xcpretty
+  if command -v xcpretty &> /dev/null; then
+    xcodebuild build \
+      -scheme BookVault \
+      -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+      CODE_SIGNING_ALLOWED=NO \
+      | xcpretty
+  else
+    xcodebuild build \
+      -scheme BookVault \
+      -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+      CODE_SIGNING_ALLOWED=NO
+  fi
 }
 
 run_tests() {
   CURRENT_STEP="iOS tests"
   echo "🧪 Running iOS tests..."
-  xcodebuild test \
-    -scheme BookVault \
-    -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
-    -enableCodeCoverage YES \
-    CODE_SIGNING_ALLOWED=NO \
-    | xcpretty
+  if command -v xcpretty &> /dev/null; then
+    xcodebuild test \
+      -scheme BookVault \
+      -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+      -enableCodeCoverage YES \
+      CODE_SIGNING_ALLOWED=NO \
+      | xcpretty
+  else
+    xcodebuild test \
+      -scheme BookVault \
+      -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+      -enableCodeCoverage YES \
+      CODE_SIGNING_ALLOWED=NO
+  fi
 }
 
 case "${1:-all}" in

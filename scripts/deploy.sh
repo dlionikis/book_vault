@@ -138,19 +138,34 @@ run_ios_validation() {
   swiftlint lint --config .swiftlint.yml --strict
 
   CURRENT_STEP="iOS build"
-  xcodebuild build \
-    -scheme BookVault \
-    -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
-    CODE_SIGNING_ALLOWED=NO \
-    | xcpretty
+  if command -v xcpretty &> /dev/null; then
+    xcodebuild build \
+      -scheme BookVault \
+      -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+      CODE_SIGNING_ALLOWED=NO \
+      | xcpretty
+  else
+    xcodebuild build \
+      -scheme BookVault \
+      -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+      CODE_SIGNING_ALLOWED=NO
+  fi
 
   CURRENT_STEP="iOS tests"
-  xcodebuild test \
-    -scheme BookVault \
-    -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
-    -enableCodeCoverage YES \
-    CODE_SIGNING_ALLOWED=NO \
-    | xcpretty
+  if command -v xcpretty &> /dev/null; then
+    xcodebuild test \
+      -scheme BookVault \
+      -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+      -enableCodeCoverage YES \
+      CODE_SIGNING_ALLOWED=NO \
+      | xcpretty
+  else
+    xcodebuild test \
+      -scheme BookVault \
+      -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+      -enableCodeCoverage YES \
+      CODE_SIGNING_ALLOWED=NO
+  fi
 
   cd "$PROJECT_ROOT"
 }
