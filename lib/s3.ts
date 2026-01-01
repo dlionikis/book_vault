@@ -18,35 +18,58 @@ let s3Client: S3Client | null = null;
 /**
  * Get or create S3 client singleton
  * Only initializes when S3 is enabled
+ *
+ * Supports two credential modes:
+ * 1. Explicit credentials via AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY (local dev)
+ * 2. IAM task role (ECS Fargate) - SDK auto-discovers from metadata service
  */
 export function getS3Client(): S3Client {
   if (!s3Client) {
-    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-      throw new Error('AWS credentials not configured');
-    }
+    // Check if explicit credentials are provided
+    const hasExplicitCredentials =
+      process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY;
 
-    s3Client = new S3Client({
-      region: S3_REGION,
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      },
-    });
+    if (hasExplicitCredentials) {
+      // Use explicit credentials (local development)
+      s3Client = new S3Client({
+        region: S3_REGION,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+        },
+      });
+    } else {
+      // Use default credential provider chain (IAM task role on ECS)
+      // SDK will automatically discover credentials from:
+      // - ECS container credentials (ECS_CONTAINER_CREDENTIALS_RELATIVE_URI)
+      // - EC2 instance metadata
+      // - Environment variables
+      s3Client = new S3Client({
+        region: S3_REGION,
+      });
+    }
   }
   return s3Client;
 }
 
 /**
  * Check if S3 is enabled and properly configured
- * Returns true only in production with valid credentials
+ * Returns true in production when:
+ * - AWS_S3_BUCKET is set, AND
+ * - Either explicit credentials exist OR running on ECS (has task role)
  */
 export function isS3Enabled(): boolean {
-  return !!(
-    process.env.NODE_ENV === 'production' &&
-    S3_BUCKET &&
-    process.env.AWS_ACCESS_KEY_ID &&
-    process.env.AWS_SECRET_ACCESS_KEY
-  );
+  if (process.env.NODE_ENV !== 'production' || !S3_BUCKET) {
+    return false;
+  }
+
+  // Check for explicit credentials (local dev with S3)
+  const hasExplicitCredentials = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY;
+
+  // Check for ECS task role (container credentials relative URI is set by ECS)
+  const hasTaskRole = !!process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI;
+
+  return !!(hasExplicitCredentials || hasTaskRole);
 }
 
 /**
