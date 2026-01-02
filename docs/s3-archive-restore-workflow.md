@@ -4,6 +4,7 @@
 > **Status**: Planned (not yet implemented)
 > **Priority**: Medium (implement after cost optimization Phase 2)
 > **Dependencies**: S3 Intelligent-Tiering with Archive tiers enabled
+> **⚠️ PREREQUISITE**: Requires refactoring to on-demand URL generation (Phase 0 below)
 
 ---
 
@@ -13,35 +14,293 @@ When S3 Intelligent-Tiering moves audiobook files to Archive Access or Deep Arch
 
 This document outlines how to implement a graceful restore workflow that:
 
-1. Detects when files are archived
-2. Initiates restore operations automatically
-3. Shows users restore progress
-4. Notifies users when books are ready to play
+1. **Phase 0**: Refactor to on-demand presigned URL generation (prerequisite)
+2. Detects when files are archived
+3. Initiates restore operations automatically
+4. Shows users restore progress
+5. Notifies users when books are ready to play
 
 ---
 
 ## Table of Contents
 
-1. [Problem Statement](#problem-statement)
-2. [Architecture Overview](#architecture-overview)
-3. [Database Schema Changes](#database-schema-changes)
-4. [API Implementation](#api-implementation)
-5. [Frontend Implementation](#frontend-implementation)
-6. [iOS App Implementation](#ios-app-implementation)
-7. [Background Jobs](#background-jobs)
-8. [Testing Strategy](#testing-strategy)
-9. [Cost Considerations](#cost-considerations)
-10. [Implementation Checklist](#implementation-checklist)
+1. [Current State vs Desired State](#current-state-vs-desired-state)
+2. [Phase 0: Prerequisite Refactor](#phase-0-prerequisite-refactor---on-demand-url-generation)
+3. [Problem Statement](#problem-statement)
+4. [Architecture Overview](#architecture-overview)
+5. [Database Schema Changes](#database-schema-changes)
+6. [API Implementation](#api-implementation)
+7. [Frontend Implementation](#frontend-implementation)
+8. [iOS App Implementation](#ios-app-implementation)
+9. [Background Jobs](#background-jobs)
+10. [Testing Strategy](#testing-strategy)
+11. [Cost Considerations](#cost-considerations)
+12. [Implementation Checklist](#implementation-checklist)
+
+---
+
+## Current State vs Desired State
+
+### How It Works Now ❌
+
+**Presigned URLs are generated eagerly in book list responses:**
+
+```typescript
+// lib/book-transformer.ts
+export async function transformBook(book: BookWithIncludes) {
+  const [coverUrl, audioUrl] = await Promise.all([
+    getCoverUrl(book.coverUrl), // Generates presigned URL
+    getAudioUrl(book.audioUrl), // Generates presigned URL
+  ]);
+
+  return {
+    id: book.id,
+    audioUrl, // ⚠️ Presigned URL embedded in response
+    // ...
+  };
+}
+```
+
+**Problems:**
+
+- Generates 100+ presigned URLs for `/api/books` list requests
+- URLs expire in 1 hour - wasted if user doesn't play
+- Unnecessary S3 API calls (costs money, hits rate limits)
+- Security: URLs exposed in list responses when not needed
+- Archive handling impossible: can't check storage class before generating URL
+
+### How It Should Work ✅
+
+**Presigned URLs generated on-demand when needed:**
+
+```typescript
+// User clicks "Play" or "Download"
+const response = await fetch(`/api/books/${bookId}/stream`);
+const { streamUrl } = await response.json();
+
+// Use fresh URL immediately
+audioPlayer.src = streamUrl;
+```
+
+**Benefits:**
+
+- ✅ Only generate URLs when actually needed (99% reduction in S3 calls)
+- ✅ URLs generated right before use - no expiry issues
+- ✅ Can check storage class and handle archives before generating URL
+- ✅ Better security - URLs only exposed when needed
+- ✅ Dramatically lower costs
+
+---
+
+## Phase 0: Prerequisite Refactor - On-Demand URL Generation
+
+**⚠️ This must be implemented BEFORE archive restore functionality**
+
+### Step 1: Create Stream Endpoint
+
+**File**: `app/api/books/[id]/stream/route.ts`
+
+```typescript
+import { NextRequest } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { prisma } from '@/lib/db';
+import { generatePresignedUrl } from '@/lib/s3';
+
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  try {
+    const book = await prisma.book.findUnique({
+      where: { id: params.id },
+      select: { audioUrl: true },
+    });
+
+    if (!book || !book.audioUrl) {
+      return new Response('Book not found', { status: 404 });
+    }
+
+    // Generate presigned URL on-demand
+    const streamUrl = await generatePresignedUrl(book.audioUrl, 3600);
+
+    return Response.json({
+      streamUrl,
+      expiresAt: new Date(Date.now() + 3600 * 1000).toISOString(),
+    });
+  } catch (error) {
+    console.error('Error generating stream URL:', error);
+    return new Response('Internal server error', { status: 500 });
+  }
+}
+```
+
+### Step 2: Update Book Transformer
+
+**File**: `lib/book-transformer.ts`
+
+```typescript
+export async function transformBook(book: BookWithIncludes) {
+  // Remove presigned URL generation - return S3 keys instead
+  return {
+    id: book.id,
+    asin: book.asin,
+    title: book.title,
+    // ... other fields
+
+    // Return null for URLs - clients fetch on-demand
+    coverUrl: book.coverUrl ? `/api/books/${book.id}/cover` : null,
+    audioUrl: null, // Client calls /api/books/[id]/stream when needed
+  };
+}
+```
+
+**Alternative**: Keep static cover URLs but make audio on-demand only.
+
+### Step 3: Update iOS AudioPlayerManager
+
+**File**: `ios/BookVault/Services/AudioPlayerManager.swift`
+
+```swift
+func play(book: Book) async {
+    // Check if downloaded first
+    guard !offlineStorage.hasBook(book.id) else {
+        playLocalFile(book)
+        return
+    }
+
+    // Fetch stream URL on-demand
+    do {
+        let streamUrl = try await apiClient.getBookStreamUrl(bookId: book.id)
+        await playRemoteFile(streamUrl)
+    } catch {
+        DebugLogger.error("Failed to get stream URL: \(error)")
+        showError("Unable to stream audiobook")
+    }
+}
+```
+
+### Step 4: Add APIClient Method
+
+**File**: `ios/BookVault/Services/APIClient.swift`
+
+```swift
+func getBookStreamUrl(bookId: UUID) async throws -> String {
+    let request = try createRequest(
+        path: "/api/books/\(bookId.uuidString)/stream",
+        method: "GET",
+        requiresAuth: true
+    )
+
+    let response: BookStreamResponse = try await execute(request: request)
+    return response.streamUrl
+}
+
+// Add to generated models or define locally
+struct BookStreamResponse: Codable {
+    let streamUrl: String
+    let expiresAt: String
+}
+```
+
+### Step 5: Update Web AudioPlayer
+
+**File**: `components/AudioPlayer.tsx`
+
+```typescript
+const fetchStreamUrl = async (bookId: string): Promise<string> => {
+  const response = await fetch(`/api/books/${bookId}/stream`);
+  if (!response.ok) throw new Error('Failed to get stream URL');
+
+  const { streamUrl } = await response.json();
+  return streamUrl;
+};
+
+// Use in audio player
+useEffect(() => {
+  if (bookId && !isDownloaded) {
+    fetchStreamUrl(bookId).then((url) => {
+      audioRef.current.src = url;
+      audioRef.current.load();
+    });
+  }
+}, [bookId]);
+```
+
+### Step 6: Update OpenAPI Spec
+
+**File**: `docs/api/openapi.yaml`
+
+```yaml
+/books/{id}/stream:
+  get:
+    summary: Get streaming URL for audiobook
+    description: Returns a presigned S3 URL for streaming the audiobook
+    security:
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Stream URL generated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                streamUrl:
+                  type: string
+                  format: uri
+                  description: Presigned S3 URL valid for 1 hour
+                expiresAt:
+                  type: string
+                  format: date-time
+                  description: ISO 8601 timestamp when URL expires
+      '401':
+        description: Unauthorized
+      '404':
+        description: Book not found
+```
+
+### Step 7: Testing the Refactor
+
+```typescript
+// __tests__/api/books/stream.test.ts
+describe('GET /api/books/[id]/stream', () => {
+  it('should return stream URL for authenticated user', async () => {
+    const response = await fetch(`/api/books/${bookId}/stream`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.streamUrl).toMatch(/^https:\/\/.+\.s3\..+\.amazonaws\.com/);
+    expect(data.expiresAt).toBeDefined();
+  });
+
+  it('should return 401 for unauthenticated request', async () => {
+    const response = await fetch(`/api/books/${bookId}/stream`);
+    expect(response.status).toBe(401);
+  });
+});
+```
 
 ---
 
 ## Problem Statement
 
-### Current Behavior
+### Current Behavior (After Phase 0 Refactor)
 
 When a user tries to play an archived audiobook:
 
-1. Frontend requests presigned URL from `/api/media/[id]/stream`
+1. Frontend requests presigned URL from `/api/books/[id]/stream`
 2. Backend generates presigned URL successfully (no error)
 3. Audio player attempts to load the file from S3
 4. S3 returns: `403 Forbidden - InvalidObjectState`
@@ -63,9 +322,11 @@ When a user tries to play an archived audiobook:
 ### High-Level Flow
 
 ```
-User clicks "Play" on archived book
+User clicks "Play" on book (not downloaded locally)
   ↓
-API checks S3 storage class
+Client calls /api/books/[id]/stream
+  ↓
+API checks S3 storage class (HeadObject)
   ↓
 If ARCHIVE_ACCESS or DEEP_ARCHIVE_ACCESS:
   ↓
@@ -80,6 +341,8 @@ When restored:
   1. Update database: status = 'available'
   2. Send notification (optional: email/push)
   3. Keep available for N days (configurable)
+  ↓
+Client receives 200 with streamUrl
   ↓
 User can now play the book
 ```
@@ -746,14 +1009,38 @@ Setting `Days: 1` in restore request means:
 
 ## Implementation Checklist
 
+### Phase 0: Prerequisite - On-Demand URL Generation (4-6 hours)
+
+**⚠️ Must be completed before archive restore implementation**
+
+- [ ] Create `/api/books/[id]/stream` endpoint
+- [ ] Update `transformBook()` to remove presigned URL generation
+- [ ] Add `APIClient.getBookStreamUrl()` method (iOS)
+- [ ] Update `AudioPlayerManager` to fetch URLs on-demand (iOS)
+- [ ] Update `AudioPlayer` component to fetch URLs on-demand (Web)
+- [ ] Update OpenAPI spec with new stream endpoint
+- [ ] Add tests for stream endpoint
+- [ ] Verify S3 API call reduction (check CloudWatch metrics)
+- [ ] Test playback still works on all platforms
+- [ ] Update documentation
+
+**Success Metrics:**
+
+- `/api/books` responses no longer include presigned URLs
+- S3 API calls reduced by ~99%
+- Playback still works on web and iOS
+- URLs only generated when user clicks play/download
+
 ### Phase 1: Database & API (2-3 hours)
+
+**After Phase 0 is complete**
 
 - [ ] Create `media_restore_requests` table migration
 - [ ] Add Prisma schema for MediaRestoreRequest
-- [ ] Update `/api/media/[id]/stream` to check storage class
+- [ ] Update `/api/books/[id]/stream` to check storage class
 - [ ] Add restore initiation logic
-- [ ] Create `/api/media/[id]/restore-status` endpoint
-- [ ] Create `/api/media/restores` list endpoint
+- [ ] Create `/api/books/[id]/restore-status` endpoint
+- [ ] Create `/api/books/restores` list endpoint
 - [ ] Test with manually archived file
 
 ### Phase 2: Frontend (2-3 hours)

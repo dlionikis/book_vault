@@ -150,7 +150,7 @@ export async function importBook(
   }
 
   // Process series
-  const seriesData: Array<{ seriesId: string; sequence?: string }> = [];
+  const seriesData: Array<{ seriesId: string; sequence?: number }> = [];
   for (const seriesInfo of metadata.series || []) {
     const series = await prisma.series.upsert({
       where: { title: seriesInfo.title },
@@ -162,7 +162,7 @@ export async function importBook(
     });
     seriesData.push({
       seriesId: series.id,
-      sequence: seriesInfo.sequence,
+      sequence: seriesInfo.sequence ? parseInt(seriesInfo.sequence, 10) : undefined,
     });
   }
 

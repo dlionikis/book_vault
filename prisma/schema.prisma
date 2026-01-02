@@ -148,12 +148,12 @@ model BookNarrator {
 }
 
 model BookSeries {
-  bookId   String  @map("book_id")
-  seriesId String  @map("series_id")
-  sequence String?
+  bookId   String @map("book_id")
+  seriesId String @map("series_id")
+  sequence Int?
 
-  book     Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  series   Series  @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  series Series @relation(fields: [seriesId], references: [id], onDelete: Cascade)
 
   @@id([bookId, seriesId])
   @@index([seriesId, sequence])
