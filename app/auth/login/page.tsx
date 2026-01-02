@@ -22,7 +22,7 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError(result.error);
+        setError('Incorrect email or password');
       } else if (result?.ok) {
         // Use window.location for full page reload to ensure session is picked up
         window.location.href = '/';
