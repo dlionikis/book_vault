@@ -140,11 +140,15 @@
 | File                                                             | Purpose                                                                 | Tokens |
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------- | ------ |
 | [project-setup.md](project-setup.md)                             | Initial project setup, installation, first run                          | ~1,170 |
+| [database-migration-guide.md](database-migration-guide.md)       | **Secure database migrations** using AWS Secrets Manager                | ~800   |
 | [aws-deployment-plan.md](aws-deployment-plan.md)                 | AWS infrastructure & **Quick Deploy Guide**                             | ~8,000 |
 | [s3-archive-restore-workflow.md](s3-archive-restore-workflow.md) | Implementation plan for handling S3 archived files (future enhancement) | ~7,000 |
 
 **Quick Deploy** (routine code deployments):
 See [aws-deployment-plan.md#quick-deploy-guide](aws-deployment-plan.md#quick-deploy-guide) for streamlined build → push → deploy commands.
+
+**Database Migrations** (production RDS):
+See [database-migration-guide.md](database-migration-guide.md) for secure migration workflow using AWS Secrets Manager.
 
 **Completed**: [archive/aws-cost-optimization-plan.md](archive/aws-cost-optimization-plan.md) - ✅ Cost optimization complete (Jan 2, 2026). Achieved 40-45% cost reduction (~$87 → ~$47-52/month).
 
