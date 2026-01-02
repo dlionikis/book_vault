@@ -16,6 +16,7 @@ class AuthManager: ObservableObject, AuthManaging {
     @Published private(set) var isAuthenticated = false
     @Published private(set) var currentUser: User?
     @Published private(set) var isLoading = false
+    @Published private(set) var isRestoringSession = true  // Track session restoration state
     @Published var errorMessage: String?
 
     private var apiClient: APIClientProtocol
@@ -55,10 +56,11 @@ class AuthManager: ObservableObject, AuthManaging {
         }
     }
 
-    // Testable initializer
+    // Testable initializer (no automatic session restoration)
     init(apiClient: APIClientProtocol, keychain: KeychainStoring) {
         self.apiClient = apiClient
         self.keychain = keychain
+        self.isRestoringSession = false  // Tests manage their own session state
     }
 
     // MARK: - Public Methods
@@ -154,27 +156,39 @@ class AuthManager: ObservableObject, AuthManaging {
 
     /// Restore session from keychain
     private func restoreSession() async {
+        defer {
+            isRestoringSession = false
+            DebugLogger.auth("Session restoration complete - isAuthenticated: \(isAuthenticated), hasRefreshToken: \(refreshTokenValue != nil)")
+        }
+
         guard let accessToken = keychain.load(key: accessTokenKey),
               let refreshTokenString = keychain.load(key: refreshTokenKey),
               let refreshToken = UUID(uuidString: refreshTokenString),
               let userDataString = keychain.load(key: userDataKey),
               let userData = userDataString.data(using: .utf8)
         else {
+            DebugLogger.auth("Session restoration: No valid session data in keychain")
             return
         }
 
         do {
             let user = try JSONDecoder().decode(User.self, from: userData)
 
+            // IMPORTANT: Set refreshTokenValue BEFORE accessToken to prevent race condition
+            // where API call triggers 401 before refresh token is available
+            self.refreshTokenValue = refreshToken
+
             // Restore to API client
             apiClient.accessToken = accessToken
 
             // Update state
             self.currentUser = user
-            self.refreshTokenValue = refreshToken
             self.isAuthenticated = true
+
+            DebugLogger.auth("Session restored for user: \(user.email)")
         } catch {
             // If we can't decode user data, clear everything
+            DebugLogger.auth("Session restoration failed: \(error.localizedDescription)")
             clearSession()
         }
     }

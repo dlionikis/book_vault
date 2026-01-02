@@ -534,6 +534,64 @@ AWS_SECRET_ACCESS_KEY="..."
    - Reduces S3 costs and latency
    - Not required for initial deployment
 
+### Production Testing (Claude Code)
+
+**Production URL**: `https://bookvault.lionikis.com`
+
+**Test User Credentials**: Stored securely in AWS Secrets Manager (NOT in this repo)
+
+```bash
+# Retrieve production test credentials
+aws secretsmanager get-secret-value \
+  --secret-id book-vault/prod/test-user \
+  --region us-east-1 \
+  --query 'SecretString' \
+  --output text
+
+# Returns: {"email":"test@example.com","password":"<secure-password>"}
+```
+
+**Test login to production**:
+
+```bash
+# Get credentials and test
+CREDS=$(aws secretsmanager get-secret-value --secret-id book-vault/prod/test-user --region us-east-1 --query 'SecretString' --output text)
+EMAIL=$(echo "$CREDS" | node -e "console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).email)")
+PASSWORD=$(echo "$CREDS" | node -e "console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).password)")
+
+curl -s -X POST "https://bookvault.lionikis.com/api/auth/mobile/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}"
+```
+
+**Update production password** (via ECS Exec):
+
+```bash
+# 1. Generate new bcrypt hash locally
+NEW_PASSWORD="your-new-password"
+HASH=$(node -e "console.log(require('bcryptjs').hashSync('$NEW_PASSWORD', 10))")
+
+# 2. Get task ID
+TASK_ID=$(aws ecs list-tasks --cluster book-vault --service-name book-vault-service \
+  --region us-east-1 --query 'taskArns[0]' --output text | awk -F'/' '{print $NF}')
+
+# 3. Update password in production DB via ECS Exec
+aws ecs execute-command --cluster book-vault --task "$TASK_ID" --container book-vault \
+  --command "node -e 'const{PrismaClient}=require(\"@prisma/client\");(async()=>{const p=new PrismaClient();await p.user.update({where:{email:\"test@example.com\"},data:{passwordHash:\"$HASH\"}});console.log(\"Updated\");await p.\$disconnect()})();'" \
+  --interactive --region us-east-1
+
+# 4. Update Secrets Manager
+aws secretsmanager put-secret-value --secret-id book-vault/prod/test-user \
+  --secret-string "{\"email\":\"test@example.com\",\"password\":\"$NEW_PASSWORD\"}" \
+  --region us-east-1
+```
+
+**Available AWS Secrets**:
+
+- `book-vault/database` - Production DATABASE_URL
+- `book-vault/auth` - NEXTAUTH_SECRET
+- `book-vault/prod/test-user` - Production test user credentials
+
 ### Data Flow Example: Audio Playback
 
 ```typescript

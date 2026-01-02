@@ -51,9 +51,30 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.email = user.email;
       }
+
+      // Verify user still exists in database on each token refresh
+      // This invalidates sessions for deleted users
+      if (token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { id: true },
+        });
+
+        if (!dbUser) {
+          // User was deleted - clear user info from token
+          token.id = undefined;
+          token.email = undefined;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
+      // If user was deleted, token.id will be undefined
+      if (!token.id) {
+        throw new Error('User not found');
+      }
+
       if (session.user) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;

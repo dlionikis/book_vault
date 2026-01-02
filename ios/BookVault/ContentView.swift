@@ -31,7 +31,17 @@ struct ContentView: View {
     @State private var previousOnlineTab: Tab? // Remember tab when going offline
 
     var body: some View {
-        if authManager.isAuthenticated {
+        if authManager.isRestoringSession {
+            // Show loading state while restoring session from keychain
+            VStack(spacing: 16) {
+                ProgressView()
+                    .scaleEffect(1.5)
+                Text("Loading...")
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemBackground))
+        } else if authManager.isAuthenticated {
             // User is logged in - show tab view with mini player
             ZStack(alignment: .top) {
                 TabView(selection: $selectedTab) {

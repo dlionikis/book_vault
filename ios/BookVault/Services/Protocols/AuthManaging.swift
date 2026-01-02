@@ -11,6 +11,7 @@ import Foundation
 @MainActor
 protocol AuthManaging: ObservableObject {
     var isAuthenticated: Bool { get }
+    var isRestoringSession: Bool { get }
     var currentUser: User? { get }
     var isLoading: Bool { get }
     var errorMessage: String? { get set }
