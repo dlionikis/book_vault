@@ -18,7 +18,7 @@ class AuthManager: ObservableObject, AuthManaging {
     @Published private(set) var isLoading = false
     @Published var errorMessage: String?
 
-    private let apiClient: APIClientProtocol
+    private var apiClient: APIClientProtocol
     private let keychain: KeychainStoring
     private var refreshTokenValue: UUID?
 
@@ -79,6 +79,9 @@ class AuthManager: ObservableObject, AuthManaging {
             let userData = try JSONEncoder().encode(response.user)
             try keychain.save(key: userDataKey, value: String(data: userData, encoding: .utf8)!)
 
+            // Update APIClient's token for subsequent requests
+            apiClient.accessToken = response.accessToken
+
             // Update state
             self.currentUser = response.user
             self.refreshTokenValue = response.refreshToken
@@ -135,8 +138,7 @@ class AuthManager: ObservableObject, AuthManaging {
             try keychain.save(key: accessTokenKey, value: response.accessToken)
 
             // Update APIClient's token so subsequent requests use the new token
-            var mutableApiClient = apiClient
-            mutableApiClient.accessToken = response.accessToken
+            apiClient.accessToken = response.accessToken
 
             DebugLogger.auth("Token refresh successful - new token stored")
             return true
@@ -165,8 +167,7 @@ class AuthManager: ObservableObject, AuthManaging {
             let user = try JSONDecoder().decode(User.self, from: userData)
 
             // Restore to API client
-            var mutableApiClient = apiClient
-            mutableApiClient.accessToken = accessToken
+            apiClient.accessToken = accessToken
 
             // Update state
             self.currentUser = user
@@ -185,9 +186,8 @@ class AuthManager: ObservableObject, AuthManaging {
         keychain.delete(key: refreshTokenKey)
         keychain.delete(key: userDataKey)
 
-        // Clear API client token (only if mutable - production APIClient has var accessToken)
-        var mutableApiClient = apiClient
-        mutableApiClient.accessToken = nil
+        // Clear API client token
+        apiClient.accessToken = nil
 
         // Clear offline caches (Phase 8: security - prevent cross-user data access)
         clearCachesOnLogout()

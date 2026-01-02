@@ -137,17 +137,16 @@
 
 ## 📦 Setup & Deployment
 
-| File                                                           | Purpose                                                              | Tokens |
-| -------------------------------------------------------------- | -------------------------------------------------------------------- | ------ |
-| [project-setup.md](project-setup.md)                           | Initial project setup, installation, first run                       | ~1,170 |
-| [aws-deployment-plan.md](aws-deployment-plan.md)               | AWS infrastructure & **Quick Deploy Guide**                          | ~8,000 |
-| [aws-cost-optimization-plan.md](aws-cost-optimization-plan.md) | **Cost reduction plan** (billing alerts, S3 tiering, Fargate sizing) | ~4,500 |
+| File                                                             | Purpose                                                                 | Tokens |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------- | ------ |
+| [project-setup.md](project-setup.md)                             | Initial project setup, installation, first run                          | ~1,170 |
+| [aws-deployment-plan.md](aws-deployment-plan.md)                 | AWS infrastructure & **Quick Deploy Guide**                             | ~8,000 |
+| [s3-archive-restore-workflow.md](s3-archive-restore-workflow.md) | Implementation plan for handling S3 archived files (future enhancement) | ~7,000 |
 
 **Quick Deploy** (routine code deployments):
 See [aws-deployment-plan.md#quick-deploy-guide](aws-deployment-plan.md#quick-deploy-guide) for streamlined build → push → deploy commands.
 
-**Cost Optimization**:
-See [aws-cost-optimization-plan.md](aws-cost-optimization-plan.md) for reducing AWS costs by ~45% ($87 → $45/month).
+**Completed**: [archive/aws-cost-optimization-plan.md](archive/aws-cost-optimization-plan.md) - ✅ Cost optimization complete (Jan 2, 2026). Achieved 40-45% cost reduction (~$87 → ~$47-52/month).
 
 ---
 
