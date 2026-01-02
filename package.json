@@ -24,6 +24,8 @@
     "prepare": "husky",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "./scripts/db-migrate.sh",
+    "db:connect": "./scripts/db-connect.sh",
     "db:studio": "prisma studio",
     "db:seed": "tsx scripts/seed-test-user.ts",
     "user:create": "tsx scripts/create-user.ts",

@@ -2,7 +2,7 @@
 
 > **Purpose**: Quick onboarding reference for Claude Code sessions. Read this first to understand the project instantly.
 
-**Last Updated**: December 29, 2025
+**Last Updated**: January 2, 2026
 **Status**: Production-ready (Web + iOS complete)
 
 ---
@@ -128,6 +128,11 @@ npm start                      # Start production server
 npm run deploy                 # Full validation (web + iOS) + deploy
 npm run deploy:web             # Web validation + deploy (skip iOS)
 npm run deploy:only            # Deploy without checks
+
+# Production Database (via ECS Exec)
+npm run db:connect             # Interactive shell in ECS container
+npm run db:migrate:deploy      # Run Prisma migrations on production
+# Requires: brew install --cask session-manager-plugin
 ```
 
 ### Git Workflow
@@ -512,6 +517,12 @@ AWS_SECRET_ACCESS_KEY="..."
 
 3. **Environment Variables** - Standardized to AWS conventions
    - Uses `AWS_S3_BUCKET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+
+4. **ECS Exec for Database Access** - Secure shell access via SSM
+   - RDS locked down (no public 0.0.0.0/0 access)
+   - Access via `npm run db:connect` (requires session-manager-plugin)
+   - Migrations via `npm run db:migrate:deploy`
+   - See [docs/aws-deployment-plan.md#database-operations](docs/aws-deployment-plan.md#database-operations)
 
 ⏳ **REMAINING** (Optional optimizations):
 

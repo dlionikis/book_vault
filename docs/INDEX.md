@@ -147,8 +147,14 @@
 **Quick Deploy** (routine code deployments):
 See [aws-deployment-plan.md#quick-deploy-guide](aws-deployment-plan.md#quick-deploy-guide) for streamlined build → push → deploy commands.
 
-**Database Migrations** (production RDS):
-See [database-migration-guide.md](database-migration-guide.md) for secure migration workflow using AWS Secrets Manager.
+**Database Operations** (production RDS via ECS Exec):
+See [aws-deployment-plan.md#database-operations](aws-deployment-plan.md#database-operations) for:
+
+- `npm run db:connect` - Interactive shell access via ECS Exec
+- `npm run db:migrate:deploy` - Run Prisma migrations on production
+
+**Database Migrations** (alternative - AWS Secrets Manager):
+See [database-migration-guide.md](database-migration-guide.md) for migration workflow using AWS Secrets Manager.
 
 **Completed**: [archive/aws-cost-optimization-plan.md](archive/aws-cost-optimization-plan.md) - ✅ Cost optimization complete (Jan 2, 2026). Achieved 40-45% cost reduction (~$87 → ~$47-52/month).
 
@@ -259,7 +265,7 @@ Located in `archive/implementation-plans/` folder:
 
 ## 🔄 Maintenance
 
-**Last Updated**: December 29, 2025
+**Last Updated**: January 2, 2026
 
 **When to update this index**:
 

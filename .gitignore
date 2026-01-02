@@ -114,6 +114,10 @@ temp/
 *.tfstate
 *.tfstate.*
 
+# Infrastructure Audit (raw outputs are sensitive, keep docs tracked)
+infra-audit/out/raw/
+infra-audit/out/*.json
+
 # Secrets
 secrets/
 *.pem

@@ -1,7 +1,7 @@
 # AWS Deployment Plan
 
 > **Created**: December 30, 2025
-> **Updated**: December 31, 2025
+> **Updated**: January 2, 2026
 > **Status**: ✅ COMPLETE - Deployed to Production
 > **Live URL**: https://bookvault.lionikis.com
 > **Archived**: This plan is complete. Kept for reference and future maintenance.
@@ -27,8 +27,9 @@ Deploy Book Vault to AWS using:
 6. [Phase 4: CloudFront CDN](#phase-4-cloudfront-cdn-optional)
 7. [Phase 5: Domain & SSL](#phase-5-domain--ssl) ✅
 8. [Environment Variables](#environment-variables)
-9. [Cost Estimates](#cost-estimates)
-10. [Rollback & Cleanup](#rollback--cleanup)
+9. [Database Operations](#database-operations) - Connecting & migrations via ECS Exec
+10. [Cost Estimates](#cost-estimates)
+11. [Rollback & Cleanup](#rollback--cleanup)
 
 ---
 
@@ -667,6 +668,118 @@ aws logs tail /ecs/book-vault --follow --profile book_vault --region us-east-1
 curl http://<ALB_DNS_NAME>/api/health
 ```
 
+### Step 3.11: Enable ECS Exec for Container Access
+
+ECS Exec allows secure shell access to running containers via AWS Systems Manager. This is required for database operations (migrations, troubleshooting).
+
+#### Add SSM Permissions to ECS Task Role
+
+```bash
+# Attach the ECSExecAccess policy to the task role
+aws iam attach-role-policy \
+  --role-name book-vault-ecs-task \
+  --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore \
+  --profile book_vault \
+  --region us-east-1
+
+# Or create a custom inline policy with minimal permissions:
+aws iam put-role-policy \
+  --role-name book-vault-ecs-task \
+  --policy-name ECSExecAccess \
+  --policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "ssmmessages:CreateControlChannel",
+          "ssmmessages:CreateDataChannel",
+          "ssmmessages:OpenControlChannel",
+          "ssmmessages:OpenDataChannel"
+        ],
+        "Resource": "*"
+      }
+    ]
+  }' \
+  --profile book_vault \
+  --region us-east-1
+```
+
+#### Enable ECS Exec on the Service
+
+```bash
+aws ecs update-service \
+  --cluster book-vault \
+  --service book-vault-service \
+  --enable-execute-command \
+  --force-new-deployment \
+  --profile book_vault \
+  --region us-east-1
+```
+
+Wait for new tasks to deploy with ECS Exec enabled:
+
+```bash
+# Check service deployment status
+aws ecs describe-services \
+  --cluster book-vault \
+  --services book-vault-service \
+  --query 'services[0].deployments' \
+  --profile book_vault \
+  --region us-east-1
+
+# Verify ECS Exec is enabled on tasks
+aws ecs describe-tasks \
+  --cluster book-vault \
+  --tasks $(aws ecs list-tasks --cluster book-vault --query 'taskArns[0]' --output text --profile book_vault --region us-east-1) \
+  --query 'tasks[0].enableExecuteCommand' \
+  --profile book_vault \
+  --region us-east-1
+# Should return: true
+```
+
+### Step 3.12: Secure RDS Security Group
+
+Once ECS Exec is working, remove public access from the RDS security group. The database should only be accessible from ECS tasks.
+
+#### Find the Rule to Remove
+
+```bash
+# List current ingress rules on RDS security group
+aws ec2 describe-security-groups \
+  --group-ids <RDS_SG_ID> \
+  --query 'SecurityGroups[0].IpPermissions' \
+  --profile book_vault \
+  --region us-east-1
+```
+
+#### Remove the 0.0.0.0/0 Rule (if present)
+
+```bash
+aws ec2 revoke-security-group-ingress \
+  --group-id <RDS_SG_ID> \
+  --protocol tcp \
+  --port 5432 \
+  --cidr 0.0.0.0/0 \
+  --profile book_vault \
+  --region us-east-1
+```
+
+#### Verify the Change
+
+```bash
+# Confirm only ECS security group has access
+aws ec2 describe-security-groups \
+  --group-ids <RDS_SG_ID> \
+  --query 'SecurityGroups[0].IpPermissions' \
+  --profile book_vault \
+  --region us-east-1
+
+# Should show only: sg-xxxxxxxx (ECS security group) on port 5432
+```
+
+**Important**: After this change, database access is only possible via ECS Exec. See [Database Operations](#database-operations) for connection commands.
+
 ---
 
 ## Phase 4: CloudFront CDN (Optional)
@@ -865,6 +978,94 @@ aws secretsmanager update-secret \
   --secret-string '{"DATABASE_URL":"new-value"}' \
   --profile book_vault \
   --region us-east-1
+```
+
+---
+
+## Database Operations
+
+### Security Configuration
+
+RDS is configured to **only accept connections from ECS tasks** - there is no public internet access.
+
+**Security Group Rules** (`book-vault-rds-sg`):
+
+- Allow TCP 5432 from `book-vault-ecs-sg` (ECS tasks only)
+- No 0.0.0.0/0 rules (locked down January 2026)
+
+This means you cannot connect directly to the database from your local machine. All database access must go through ECS Exec.
+
+### Prerequisites
+
+Install the AWS Session Manager Plugin (one-time):
+
+```bash
+brew install --cask session-manager-plugin
+```
+
+### Connecting to the Database
+
+Use ECS Exec to get a shell inside a running container:
+
+```bash
+# Interactive shell in the container
+npm run db:connect
+
+# Or directly:
+./scripts/db-connect.sh
+```
+
+From the container shell, you can use Node.js/Prisma to query the database:
+
+```javascript
+// The container has DATABASE_URL set
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+await prisma.$queryRaw`SELECT * FROM "Book" LIMIT 5`;
+```
+
+### Running Migrations
+
+**Apply pending migrations (production):**
+
+```bash
+npm run db:migrate:deploy production
+# Runs: npx prisma migrate deploy (inside container)
+```
+
+**Run a specific SQL file:**
+
+```bash
+npm run db:migrate:deploy production prisma/migrations/YYYYMMDD_name/migration.sql
+```
+
+**For local development:**
+
+```bash
+npm run db:migrate:deploy local
+# Or the usual: npm run db:migrate
+```
+
+### How ECS Exec Works
+
+ECS Exec uses AWS Systems Manager to create a secure WebSocket tunnel to the container. This was enabled by:
+
+1. Adding `--enable-execute-command` to the ECS service
+2. Adding SSM permissions to the task role (`book-vault-ecs-task`)
+3. Installing the Session Manager Plugin locally
+
+The task role has these SSM permissions:
+
+```json
+{
+  "Action": [
+    "ssmmessages:CreateControlChannel",
+    "ssmmessages:CreateDataChannel",
+    "ssmmessages:OpenControlChannel",
+    "ssmmessages:OpenDataChannel"
+  ],
+  "Resource": "*"
+}
 ```
 
 ---
