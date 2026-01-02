@@ -100,7 +100,7 @@ struct BookDetailView: View {
                                     MetadataRow(
                                         icon: "books.vertical",
                                         label: "Series",
-                                        value: "\(seriesInfo.title) #\(seriesInfo.sequence ?? "?")"
+                                        value: "\(seriesInfo.title) #\(seriesInfo.sequence.map { String($0) } ?? "?")"
                                     )
                                 }
                             }

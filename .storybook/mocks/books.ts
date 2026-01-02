@@ -49,19 +49,19 @@ export const mockSeriesInfo: SeriesInfo[] = [
     id: 'series-1',
     title: 'The Stormlight Archive',
     asin: 'B003TEST1',
-    sequence: '1',
+    sequence: 1,
   },
   {
     id: 'series-2',
     title: 'The Stormlight Archive',
     asin: 'B003TEST1',
-    sequence: '2',
+    sequence: 2,
   },
   {
     id: 'series-3',
     title: 'The Lord of the Rings',
     asin: 'B003TEST3',
-    sequence: '1',
+    sequence: 1,
   },
 ];
 

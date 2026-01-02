@@ -14,11 +14,11 @@ public struct SeriesInfo: Codable, JSONEncodable, Hashable {
 
     public var id: UUID
     public var title: String
-    /** Book number in series (can be '1', '1.5', 'Prequel', etc.) */
-    public var sequence: String?
+    /** Book number in series */
+    public var sequence: Int?
     public var asin: String?
 
-    public init(id: UUID, title: String, sequence: String? = nil, asin: String? = nil) {
+    public init(id: UUID, title: String, sequence: Int? = nil, asin: String? = nil) {
         self.id = id
         self.title = title
         self.sequence = sequence

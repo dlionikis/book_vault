@@ -25,7 +25,7 @@ interface LibraryBook {
   series: Array<{
     id: string;
     title: string;
-    sequence: string | null;
+    sequence: number | null;
   }>;
   addedAt: string;
   progress: {

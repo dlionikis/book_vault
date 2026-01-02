@@ -302,10 +302,10 @@ export interface components {
       /** @example The Kingkiller Chronicle */
       title: string;
       /**
-       * @description Book number in series (can be '1', '1.5', 'Prequel', etc.)
+       * @description Book number in series
        * @example 1
        */
-      sequence?: string | null;
+      sequence?: number | null;
       asin?: string | null;
     };
     Category: {

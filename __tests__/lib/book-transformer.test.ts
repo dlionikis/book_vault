@@ -55,7 +55,7 @@ describe('book-transformer', () => {
       {
         bookId: '550e8400-e29b-41d4-a716-446655440000',
         seriesId: 'series-1',
-        sequence: '1',
+        sequence: 1,
         series: {
           id: 'series-1',
           title: 'The Kingkiller Chronicle',
@@ -145,7 +145,7 @@ describe('book-transformer', () => {
         id: 'series-1',
         title: 'The Kingkiller Chronicle',
         asin: 'SERIES1',
-        sequence: '1',
+        sequence: 1,
       });
     });
 

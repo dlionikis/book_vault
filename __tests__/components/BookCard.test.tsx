@@ -9,7 +9,7 @@ describe('BookCard', () => {
     asin: 'TEST123',
     authors: [{ id: 'author1', name: 'Test Author', asin: 'AUTH123' }],
     narrators: [{ id: 'narrator1', name: 'Test Narrator', asin: 'NARR123' }],
-    series: [{ id: 'series1', title: 'Test Series', sequence: '1', asin: 'SERIES123' }],
+    series: [{ id: 'series1', title: 'Test Series', sequence: 1, asin: 'SERIES123' }],
     categories: [],
     publisherSummary: 'Test summary',
     runtimeMinutes: 120,

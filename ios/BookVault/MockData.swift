@@ -56,7 +56,7 @@ extension Book {
             Narrator(id: UUID(), name: "Michael Kramer", asin: "B001LBFQTI")
         ],
         series: [
-            SeriesInfo(id: UUID(), title: "The Stormlight Archive", sequence: "1", asin: "B006K1M4YI")
+            SeriesInfo(id: UUID(), title: "The Stormlight Archive", sequence: 1, asin: "B006K1M4YI")
         ],
         categories: [
             Category(id: UUID(), name: "Epic Fantasy")
@@ -253,7 +253,7 @@ extension SeriesInfo {
     static let mockStormlightArchive = SeriesInfo(
         id: UUID(),
         title: "The Stormlight Archive",
-        sequence: "1",
+        sequence: 1,
         asin: "B006K1M4YI"
     )
 }

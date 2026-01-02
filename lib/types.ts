@@ -31,7 +31,7 @@ export interface SeriesInfo {
   id: string;
   title: string;
   asin?: string | null;
-  sequence?: string | null;
+  sequence?: number | null;
 }
 
 // Transformed Book type (with URLs and flattened relationships)

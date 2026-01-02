@@ -105,7 +105,7 @@ const SCHEMA_DEFINITIONS: Record<string, SchemaDefinition> = {
   SeriesInfo: {
     id: { required: true, type: 'string' },
     title: { required: true, type: 'string' },
-    sequence: { required: false, type: 'string' },
+    sequence: { required: false, type: 'number' },
     asin: { required: false, type: 'string' },
   },
   Category: {

@@ -222,10 +222,10 @@ components:
           type: string
           example: 'The Kingkiller Chronicle'
         sequence:
-          type: string
+          type: integer
           nullable: true
-          description: "Book number in series (can be '1', '1.5', 'Prequel', etc.)"
-          example: '1'
+          description: 'Book number in series'
+          example: 1
         asin:
           type: string
           nullable: true

@@ -38,7 +38,7 @@ export const NarratorSchema = z.object({
 export const SeriesInfoSchema = z.object({
   id: z.string().uuid(),
   title: z.string(),
-  sequence: z.string().nullable().optional(),
+  sequence: z.number().nullable().optional(),
   asin: z.string().nullable().optional(),
 });
 

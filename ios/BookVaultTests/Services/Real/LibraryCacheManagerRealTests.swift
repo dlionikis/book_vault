@@ -215,7 +215,7 @@ final class LibraryCacheManagerRealTests: XCTestCase {
             audioUrl: "https://example.com/audio.mp3",
             authors: [Author(id: UUID(), name: "Famous Author", asin: "A123")],
             narrators: [Narrator(id: UUID(), name: "Voice Actor", asin: "N456")],
-            series: [SeriesInfo(id: UUID(), title: "Epic Series", sequence: "1")],
+            series: [SeriesInfo(id: UUID(), title: "Epic Series", sequence: 1)],
             categories: [Category(id: UUID(), name: "Fiction")],
             addedAt: Date()
         )
