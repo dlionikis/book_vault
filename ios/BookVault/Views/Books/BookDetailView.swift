@@ -48,22 +48,40 @@ struct BookDetailView: View {
                         .font(.title)
                         .fontWeight(.bold)
 
-                    // Authors
+                    // Authors (tappable links to author detail)
                     if !book.authors.isEmpty {
                         HStack(spacing: 4) {
                             Text("By")
                                 .foregroundColor(.secondary)
-                            Text(book.authors.map(\.name).joined(separator: ", "))
-                                .fontWeight(.medium)
+                            ForEach(Array(book.authors.enumerated()), id: \.element.id) { index, author in
+                                if index > 0 {
+                                    Text(",")
+                                        .foregroundColor(.secondary)
+                                }
+                                NavigationLink(destination: AuthorDetailView(authorId: author.id.uuidString)) {
+                                    Text(author.name)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.accentColor)
+                                }
+                            }
                         }
                     }
 
-                    // Narrators
+                    // Narrators (tappable links to narrator detail)
                     if let narrators = book.narrators, !narrators.isEmpty {
                         HStack(spacing: 4) {
                             Text("Narrated by")
                                 .foregroundColor(.secondary)
-                            Text(narrators.map(\.name).joined(separator: ", "))
+                            ForEach(Array(narrators.enumerated()), id: \.element.id) { index, narrator in
+                                if index > 0 {
+                                    Text(",")
+                                        .foregroundColor(.secondary)
+                                }
+                                NavigationLink(destination: NarratorDetailView(narratorId: narrator.id.uuidString)) {
+                                    Text(narrator.name)
+                                        .foregroundColor(.accentColor)
+                                }
+                            }
                         }
                         .font(.subheadline)
                     }
@@ -94,19 +112,31 @@ struct BookDetailView: View {
                             )
                         }
 
+                        // Series (tappable links to series detail)
                         if let series = book.series, !series.isEmpty {
                             VStack(alignment: .leading, spacing: 6) {
-                                ForEach(series, id: \.asin) { seriesInfo in
-                                    MetadataRow(
-                                        icon: "books.vertical",
-                                        label: "Series",
-                                        value: "\(seriesInfo.title) #\(seriesInfo.sequence.map { String($0) } ?? "?")"
-                                    )
+                                ForEach(series, id: \.id) { seriesInfo in
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "books.vertical")
+                                            .foregroundColor(.blue)
+                                            .frame(width: 24)
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Series")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                            NavigationLink(destination: SeriesDetailView(seriesId: seriesInfo.id.uuidString)) {
+                                                Text("\(seriesInfo.title) #\(seriesInfo.sequence.map { String($0) } ?? "?")")
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.accentColor)
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
 
-                        // Categories
+                        // Categories (tappable links to category detail)
                         if let categories = book.categories, !categories.isEmpty {
                             HStack(alignment: .top, spacing: 12) {
                                 Image(systemName: "tag")
@@ -118,16 +148,19 @@ struct BookDetailView: View {
                                         .font(.caption)
                                         .foregroundColor(.secondary)
 
-                                    // Use simple wrapping for now
+                                    // Tappable category pills
                                     HStack(alignment: .top, spacing: 6) {
                                         ForEach(categories.prefix(3), id: \.id) { category in
-                                            Text(category.name)
-                                                .font(.caption)
-                                                .padding(.horizontal, 10)
-                                                .padding(.vertical, 4)
-                                                .background(Color.blue.opacity(0.1))
-                                                .foregroundColor(.blue)
-                                                .clipShape(Capsule())
+                                            NavigationLink(destination: CategoryDetailView(categoryId: category.id.uuidString)) {
+                                                Text(category.name)
+                                                    .font(.caption)
+                                                    .padding(.horizontal, 10)
+                                                    .padding(.vertical, 4)
+                                                    .background(Color.accentColor.opacity(0.1))
+                                                    .foregroundColor(.accentColor)
+                                                    .clipShape(Capsule())
+                                            }
+                                            .buttonStyle(.plain)
                                         }
                                         if categories.count > 3 {
                                             Text("+\(categories.count - 3)")
