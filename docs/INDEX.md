@@ -141,6 +141,7 @@
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------- | ------ |
 | [project-setup.md](project-setup.md)                             | Initial project setup, installation, first run                          | ~1,170 |
 | [database-migration-guide.md](database-migration-guide.md)       | **Secure database migrations** using AWS Secrets Manager                | ~800   |
+| [database-reset-procedure.md](database-reset-procedure.md)       | **Full database reset** for re-importing audiobook data                 | ~1,200 |
 | [aws-deployment-plan.md](aws-deployment-plan.md)                 | AWS infrastructure & **Quick Deploy Guide**                             | ~8,000 |
 | [s3-archive-restore-workflow.md](s3-archive-restore-workflow.md) | Implementation plan for handling S3 archived files (future enhancement) | ~7,000 |
 
@@ -235,6 +236,12 @@ Located in `archive/implementation-plans/` folder:
 1. Run `npm run deploy:dry-run` - Validate before deploying
 2. See [testing.md#deployment-validation](testing.md#deployment-validation) - Deploy commands
 3. Full infrastructure setup in [aws-deployment-plan.md](aws-deployment-plan.md)
+
+**I'm resetting the database / re-importing data**:
+
+1. Read [database-reset-procedure.md](database-reset-procedure.md) - Complete reset workflow
+2. Follow local validation steps before production
+3. Use production checklist for safe deployment
 
 ---
 

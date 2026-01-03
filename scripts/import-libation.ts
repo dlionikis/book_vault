@@ -3,6 +3,13 @@ import fs from 'fs/promises';
 import path from 'path';
 import { prisma } from '@/lib/db';
 import { seedTestUser } from './seed-test-user';
+import {
+  extractChapters,
+  findCueFile,
+  extractChaptersFromCueFile,
+  extractChaptersFromAudibleMetadata,
+  extractAudioMetadata,
+} from '@/lib/audio-metadata';
 
 // Use LIBATION_PATH from env, or fall back to MEDIA_DATA_PATH, or default to test-data
 const LIBATION_PATH =
@@ -219,7 +226,66 @@ export async function importBook(
   // Store relative paths from media data directory
   const relativeFolderPath = path.relative(LIBATION_PATH, folderPath);
 
-  // Create book with all relationships
+  // Extract chapters before creating book
+  // Priority: M4B/ffprobe -> CUE file -> metadata.json
+  let chapters: Array<{
+    chapterNumber: number;
+    title: string;
+    startTime: number;
+    endTime: number;
+    duration: number;
+  }> = [];
+
+  if (audioFile) {
+    const audioPath = path.join(folderPath, audioFile);
+
+    // 1. Try ffprobe extraction from audio file (most accurate)
+    try {
+      const ffprobeChapters = await extractChapters(audioPath);
+      if (ffprobeChapters.length > 0) {
+        chapters = ffprobeChapters;
+      }
+    } catch {
+      // ffprobe failed, continue to fallbacks
+    }
+
+    // 2. Try CUE file if no chapters yet
+    if (chapters.length === 0) {
+      try {
+        const cuePath = await findCueFile(audioPath);
+        if (cuePath) {
+          let audioDuration: number | undefined;
+          try {
+            const audioMeta = await extractAudioMetadata(audioPath);
+            audioDuration = audioMeta.duration;
+          } catch {
+            // Ignore duration errors
+          }
+          const cueChapters = await extractChaptersFromCueFile(cuePath, audioDuration);
+          if (cueChapters && cueChapters.length > 0) {
+            chapters = cueChapters;
+          }
+        }
+      } catch {
+        // CUE parsing failed, continue to fallback
+      }
+    }
+  }
+
+  // 3. Try metadata.json ChapterInfo if still no chapters
+  if (chapters.length === 0) {
+    try {
+      const metadataJsonPath = path.join(folderPath, path.basename(folderPath) + '.metadata.json');
+      const audibleChapters = await extractChaptersFromAudibleMetadata(metadataJsonPath);
+      if (audibleChapters && audibleChapters.length > 0) {
+        chapters = audibleChapters;
+      }
+    } catch {
+      // No chapters available from any source
+    }
+  }
+
+  // Create book with all relationships including chapters
   await prisma.book.create({
     data: {
       asin: metadata.asin,
@@ -250,6 +316,15 @@ export async function importBook(
       categories: {
         create: uniqueCategoryIds.map((categoryId) => ({
           category: { connect: { id: categoryId } },
+        })),
+      },
+      chapters: {
+        create: chapters.map((ch) => ({
+          chapterNumber: ch.chapterNumber,
+          title: ch.title,
+          startTime: ch.startTime,
+          endTime: ch.endTime,
+          duration: ch.duration,
         })),
       },
     },
