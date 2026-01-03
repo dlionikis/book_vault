@@ -55,6 +55,7 @@ final class BiometricAuthManager: ObservableObject {
     /// Returns user-friendly name for biometric type
     var biometryName: String {
         switch biometryType {
+        case .none: return "Biometrics"
         case .faceID: return "Face ID"
         case .touchID: return "Touch ID"
         case .opticID: return "Optic ID"

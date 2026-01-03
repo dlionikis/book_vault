@@ -159,7 +159,7 @@ class LibraryManager: ObservableObject, LibraryManaging {
             else { continue }
 
             // Skip if already cached
-            if await cache.hasCover(for: book.id) {
+            if cache.hasCover(for: book.id) {
                 continue
             }
 
