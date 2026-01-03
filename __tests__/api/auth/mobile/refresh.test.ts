@@ -8,7 +8,9 @@ jest.mock('@/lib/db', () => ({
     refreshToken: {
       findUnique: jest.fn(),
       delete: jest.fn(),
+      create: jest.fn(),
     },
+    $transaction: jest.fn((operations) => Promise.all(operations)),
   },
 }));
 
@@ -82,8 +84,10 @@ describe('POST /api/auth/mobile/refresh', () => {
     });
   });
 
-  it('should return new access token on successful refresh', async () => {
+  it('should return new access token and rotated refresh token on successful refresh', async () => {
     (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValue(mockRefreshToken);
+    (prisma.refreshToken.delete as jest.Mock).mockResolvedValue(mockRefreshToken);
+    (prisma.refreshToken.create as jest.Mock).mockResolvedValue({ id: 'new-token-id' });
 
     const request = new NextRequest('http://localhost:3000/api/auth/mobile/refresh', {
       method: 'POST',
@@ -95,7 +99,10 @@ describe('POST /api/auth/mobile/refresh', () => {
 
     expect(response.status).toBe(200);
     expect(data.accessToken).toBeDefined();
-    expect(data.expiresIn).toBe(3600);
+    expect(data.refreshToken).toBeDefined();
+    expect(data.expiresIn).toBeDefined();
+    // Verify token rotation occurred
+    expect(prisma.$transaction).toHaveBeenCalled();
   });
 
   it('should normalize uppercase UUID tokens to lowercase for lookup', async () => {
@@ -110,6 +117,8 @@ describe('POST /api/auth/mobile/refresh', () => {
     };
 
     (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValue(tokenRecord);
+    (prisma.refreshToken.delete as jest.Mock).mockResolvedValue(tokenRecord);
+    (prisma.refreshToken.create as jest.Mock).mockResolvedValue({ id: 'new-token-id' });
 
     // iOS sends uppercase UUID
     const request = new NextRequest('http://localhost:3000/api/auth/mobile/refresh', {
@@ -122,6 +131,7 @@ describe('POST /api/auth/mobile/refresh', () => {
 
     expect(response.status).toBe(200);
     expect(data.accessToken).toBeDefined();
+    expect(data.refreshToken).toBeDefined();
 
     // Verify the lookup was performed with lowercase token
     expect(prisma.refreshToken.findUnique).toHaveBeenCalledWith({

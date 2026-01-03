@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { generateAccessToken } from '@/lib/jwt';
+import { generateAccessToken, generateRefreshToken, getAccessTokenExpiry } from '@/lib/jwt';
 import { logger, withLogging } from '@/lib/logger';
 
 export const POST = withLogging(async (request: NextRequest) => {
@@ -42,12 +42,32 @@ export const POST = withLogging(async (request: NextRequest) => {
     // Generate new access token
     const accessToken = await generateAccessToken(tokenRecord.user.id, tokenRecord.user.email);
 
+    // Rotate refresh token for security (invalidate old, create new)
+    const newRefreshToken = generateRefreshToken();
+    const refreshTokenExpiry = parseInt(process.env.JWT_REFRESH_TOKEN_EXPIRY || '2592000');
+    const expiresAt = new Date(Date.now() + refreshTokenExpiry * 1000);
+
+    // Delete old token and create new one in a transaction
+    await prisma.$transaction([
+      prisma.refreshToken.delete({
+        where: { id: tokenRecord.id },
+      }),
+      prisma.refreshToken.create({
+        data: {
+          userId: tokenRecord.user.id,
+          token: newRefreshToken,
+          expiresAt,
+        },
+      }),
+    ]);
+
     logger.info('Token refresh successful', { userId: tokenRecord.user.id });
 
-    // Return new access token
+    // Return new access token and rotated refresh token
     return NextResponse.json({
       accessToken,
-      expiresIn: parseInt(process.env.JWT_ACCESS_TOKEN_EXPIRY || '3600'),
+      refreshToken: newRefreshToken,
+      expiresIn: getAccessTokenExpiry(),
     });
   } catch (error) {
     logger.error('Token refresh failed', { error: String(error) });

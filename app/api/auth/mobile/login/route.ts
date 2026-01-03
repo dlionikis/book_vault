@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
-import { generateAccessToken, generateRefreshToken } from '@/lib/jwt';
+import { generateAccessToken, generateRefreshToken, getAccessTokenExpiry } from '@/lib/jwt';
 import { withLogging } from '@/lib/logger';
 
 export const POST = withLogging(async (request: NextRequest) => {
@@ -55,7 +55,7 @@ export const POST = withLogging(async (request: NextRequest) => {
         id: user.id,
         email: user.email,
       },
-      expiresIn: parseInt(process.env.JWT_ACCESS_TOKEN_EXPIRY || '3600'),
+      expiresIn: getAccessTokenExpiry(),
     });
   } catch (error) {
     console.error('Login failed:', error);
