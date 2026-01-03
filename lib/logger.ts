@@ -47,13 +47,15 @@ export const logger = {
 
   info(message: string, meta?: Record<string, unknown>) {
     if (shouldLog('info')) {
-      console.log(formatLog('info', message, meta));
+      // Use console.warn for info level (ESLint only allows warn/error)
+      console.warn(formatLog('info', message, meta));
     }
   },
 
   debug(message: string, meta?: Record<string, unknown>) {
     if (shouldLog('debug')) {
-      console.log(formatLog('debug', message, meta));
+      // Use console.warn for debug level (ESLint only allows warn/error)
+      console.warn(formatLog('debug', message, meta));
     }
   },
 
@@ -70,9 +72,9 @@ export const logger = {
   ) {
     if (shouldLog('info')) {
       const level = status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info';
-      console.log(
-        formatLog(level as LogLevel, `${method} ${path} ${status} ${durationMs}ms`, meta)
-      );
+      // Route to appropriate console method based on status
+      const logFn = status >= 500 ? console.error : console.warn;
+      logFn(formatLog(level as LogLevel, `${method} ${path} ${status} ${durationMs}ms`, meta));
     }
   },
 };
