@@ -295,6 +295,9 @@ class AudioPlayerManager: ObservableObject {
         isLoading = true
         currentBook = book
 
+        // Apply default playback rate from settings for new books
+        playbackRate = PlaybackSettings.shared.defaultPlaybackRate
+
         // Load cover image for mini player
         Task {
             currentBookCoverImage = await loadCoverImage(from: book.coverUrl ?? "")
@@ -503,6 +506,7 @@ class AudioPlayerManager: ObservableObject {
 
     func resume() {
         player?.play()
+        player?.rate = playbackRate
         isPlaying = true
         updateNowPlayingInfo()
         startProgressSaveTimer()

@@ -12,9 +12,11 @@ struct SettingsView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var themeManager = ThemeManager.shared
     @StateObject private var biometricManager = BiometricAuthManager.shared
+    @StateObject private var playbackSettings = PlaybackSettings.shared
     @State private var showingLogoutConfirmation = false
     @State private var showingDisableBiometricConfirmation = false
     @State private var showingClearCacheConfirmation = false
+    @State private var showingPlaybackSpeedPicker = false
     @State private var isLoggingOut = false
 
     // Cache statistics
@@ -38,6 +40,28 @@ struct SettingsView: View {
                     Text("Appearance")
                 } footer: {
                     Text("Choose your preferred color scheme")
+                }
+
+                // Playback Section
+                Section {
+                    Button {
+                        showingPlaybackSpeedPicker = true
+                    } label: {
+                        HStack {
+                            Text("Default Speed")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text(String(format: "%.2fx", playbackSettings.defaultPlaybackRate))
+                                .foregroundColor(.secondary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Playback")
+                } footer: {
+                    Text("New audiobooks will start at this speed")
                 }
 
                 // Security Section
@@ -257,6 +281,14 @@ struct SettingsView: View {
                     Text("This will remove \(stats.count) cached cover images (\(formatBytes(stats.totalSize))). They will be re-downloaded as needed.")
                 } else {
                     Text("This will clear all cached cover images.")
+                }
+            }
+            .sheet(isPresented: $showingPlaybackSpeedPicker) {
+                PlaybackSpeedPicker(
+                    currentRate: playbackSettings.defaultPlaybackRate
+                ) { selectedRate in
+                    playbackSettings.defaultPlaybackRate = selectedRate
+                    showingPlaybackSpeedPicker = false
                 }
             }
         }
