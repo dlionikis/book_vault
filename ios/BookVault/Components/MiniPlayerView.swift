@@ -78,25 +78,11 @@ struct MiniPlayerView: View {
     }
 
     @ViewBuilder
-    private func coverArt(for _: Book) -> some View {
-        // Use cached cover image if available
-        if let coverImage = audioManager.currentBookCoverImage {
-            Image(uiImage: coverImage)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: 40, height: 40)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-        } else {
-            // Placeholder while loading
-            ZStack {
-                Color(.systemGray5)
-                Image(systemName: "book.fill")
-                    .font(.title3)
-                    .foregroundColor(.secondary)
-            }
+    private func coverArt(for book: Book) -> some View {
+        CachedCoverImage(bookId: book.id, coverUrl: book.coverUrl)
+            .aspectRatio(contentMode: .fill)
             .frame(width: 40, height: 40)
             .clipShape(RoundedRectangle(cornerRadius: 4))
-        }
     }
 }
 

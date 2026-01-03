@@ -31,7 +31,6 @@ class AudioPlayerManager: ObservableObject {
     @Published var volume: Float = 1.0
     @Published var isLoading = false
     @Published var error: Error?
-    @Published var currentBookCoverImage: UIImage?
 
     // Phase 5: Chapter Navigation
     @Published var chapters: [Chapter] = []
@@ -246,38 +245,37 @@ class AudioPlayerManager: ObservableObject {
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? playbackRate : 0.0
 
-        // Cover artwork (load asynchronously)
-        Task { @MainActor in
-            if let coverImage = await loadCoverImage(from: book.coverUrl ?? "") {
-                let artwork = MPMediaItemArtwork(boundsSize: coverImage.size) { _ in
-                    coverImage
+        // Cover artwork from cache (single source of truth)
+        // CoverCacheManager is populated by LibraryManager on library fetch
+        // and by CachedCoverImage views when displaying covers
+        if let coverImage = CoverCacheManager.shared.getCover(for: book.id) {
+            let artwork = MPMediaItemArtwork(boundsSize: coverImage.size) { _ in
+                coverImage
+            }
+            nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
+        } else if let coverUrlString = book.coverUrl, let coverUrl = URL(string: coverUrlString) {
+            // Cache miss - trigger async cache population, then update
+            Task { @MainActor in
+                do {
+                    try await CoverCacheManager.shared.cacheCover(for: book.id, from: coverUrl)
+                    if let cachedImage = CoverCacheManager.shared.getCover(for: book.id) {
+                        var updatedInfo = nowPlayingInfo
+                        let artwork = MPMediaItemArtwork(boundsSize: cachedImage.size) { _ in
+                            cachedImage
+                        }
+                        updatedInfo[MPMediaItemPropertyArtwork] = artwork
+                        MPNowPlayingInfoCenter.default().nowPlayingInfo = updatedInfo
+                        DebugLogger.audio("Updated Now Playing artwork after cache")
+                    }
+                } catch {
+                    DebugLogger.error("Failed to cache cover for Now Playing", error: error)
                 }
-                nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
-                MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
             }
         }
 
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
 
         DebugLogger.audio("Updated Now Playing info: \(book.title)")
-    }
-
-    private func loadCoverImage(from urlString: String) async -> UIImage? {
-        guard let coverUrl = URL(string: urlString) else { return nil }
-
-        do {
-            // Add authentication header for cover image
-            var request = URLRequest(url: coverUrl)
-            if let token = authTokenProvider() {
-                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            }
-
-            let (data, _) = try await URLSession.shared.data(for: request)
-            return UIImage(data: data)
-        } catch {
-            DebugLogger.error("Failed to load cover image", error: error)
-            return nil
-        }
     }
 
     // MARK: - Public Methods
@@ -297,11 +295,6 @@ class AudioPlayerManager: ObservableObject {
 
         // Apply default playback rate from settings for new books
         playbackRate = PlaybackSettings.shared.defaultPlaybackRate
-
-        // Load cover image for mini player
-        Task {
-            currentBookCoverImage = await loadCoverImage(from: book.coverUrl ?? "")
-        }
 
         // Get token and setup player asynchronously
         Task {
@@ -330,11 +323,6 @@ class AudioPlayerManager: ObservableObject {
         currentTime = savedPosition
         isPlaying = false
         isLoading = false
-
-        // Load cover image for mini player
-        Task {
-            currentBookCoverImage = await loadCoverImage(from: book.coverUrl ?? "")
-        }
 
         DebugLogger.audio("Loaded book for mini-player: \(book.title) at \(savedPosition)s")
     }
@@ -648,7 +636,6 @@ class AudioPlayerManager: ObservableObject {
         player?.pause()
         player?.replaceCurrentItem(with: nil)
         currentBook = nil
-        currentBookCoverImage = nil
         isPlaying = false
         isPlayingOffline = false // Phase 7: Reset offline flag
         currentTime = 0
