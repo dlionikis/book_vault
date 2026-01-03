@@ -45,7 +45,9 @@ struct LoginView: View {
                 // Face ID button (shown if enabled for this email or no email entered yet)
                 if biometricManager.canUseBiometrics && biometricManager.isBiometricEnabled {
                     VStack(spacing: 12) {
-                        Button(action: { Task { await authenticateWithBiometric() } }) {
+                        Button {
+                            Task { await authenticateWithBiometric() }
+                        } label: {
                             HStack(spacing: 8) {
                                 Image(systemName: biometricManager.biometryType == .faceID ? "faceid" : "touchid")
                                     .font(.title2)
