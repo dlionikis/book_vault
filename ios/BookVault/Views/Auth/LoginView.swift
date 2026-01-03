@@ -13,9 +13,7 @@ struct LoginView: View {
 
     @State private var email = ""
     @State private var password = ""
-    @State private var showEnableBiometricPrompt = false
-    @State private var pendingBiometricEmail = ""
-    @State private var pendingBiometricPassword = ""
+    @State private var enableBiometricOnLogin = false
     @FocusState private var focusedField: Field?
 
     enum Field {
@@ -92,6 +90,19 @@ struct LoginView: View {
                             login()
                         }
 
+                    // Enable Face ID toggle (only shown if device supports biometrics and not already enabled)
+                    if biometricManager.canUseBiometrics && !biometricManager.isBiometricEnabled {
+                        Toggle(isOn: $enableBiometricOnLogin) {
+                            HStack(spacing: 6) {
+                                Image(systemName: biometricManager.biometryType == .faceID ? "faceid" : "touchid")
+                                Text("Enable \(biometricManager.biometryName)")
+                            }
+                            .font(.subheadline)
+                        }
+                        .toggleStyle(.switch)
+                        .padding(.top, 4)
+                    }
+
                     // Error message
                     if let errorMessage = authManager.errorMessage {
                         Text(errorMessage)
@@ -135,24 +146,6 @@ struct LoginView: View {
                 #endif
             }
             .navigationBarHidden(true)
-            .alert("Enable \(biometricManager.biometryName)?", isPresented: $showEnableBiometricPrompt) {
-                Button("Enable") {
-                    do {
-                        try biometricManager.enableBiometric(
-                            email: pendingBiometricEmail,
-                            password: pendingBiometricPassword
-                        )
-                    } catch {
-                        // Silently fail - user can enable later in settings
-                    }
-                    clearPendingCredentials()
-                }
-                Button("Not Now", role: .cancel) {
-                    clearPendingCredentials()
-                }
-            } message: {
-                Text("Log in faster next time using \(biometricManager.biometryName)")
-            }
         }
     }
 
@@ -162,21 +155,22 @@ struct LoginView: View {
         // Dismiss keyboard
         focusedField = nil
 
-        // Store credentials for potential biometric enrollment
+        // Capture values before async call
         let loginEmail = email
         let loginPassword = password
+        let shouldEnableBiometric = enableBiometricOnLogin
 
         // Perform login
         Task {
             await authManager.login(email: loginEmail, password: loginPassword)
 
-            // Check if login succeeded and biometric prompt should be shown
-            if authManager.isAuthenticated &&
-               biometricManager.canUseBiometrics &&
-               !biometricManager.isBiometricEnabled {
-                pendingBiometricEmail = loginEmail
-                pendingBiometricPassword = loginPassword
-                showEnableBiometricPrompt = true
+            // If login succeeded and user opted to enable biometrics, do it now
+            if authManager.isAuthenticated && shouldEnableBiometric {
+                do {
+                    try biometricManager.enableBiometric(email: loginEmail, password: loginPassword)
+                } catch {
+                    // Silently fail - user can enable later in settings
+                }
             }
         }
     }
@@ -189,11 +183,6 @@ struct LoginView: View {
             // Show error - user can fall back to password
             authManager.errorMessage = error.localizedDescription
         }
-    }
-
-    private func clearPendingCredentials() {
-        pendingBiometricEmail = ""
-        pendingBiometricPassword = ""
     }
 }
 
