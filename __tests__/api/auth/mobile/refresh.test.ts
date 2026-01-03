@@ -97,4 +97,36 @@ describe('POST /api/auth/mobile/refresh', () => {
     expect(data.accessToken).toBeDefined();
     expect(data.expiresIn).toBe(3600);
   });
+
+  it('should normalize uppercase UUID tokens to lowercase for lookup', async () => {
+    // This test ensures iOS compatibility - Swift's UUID type encodes as uppercase
+    // but the backend stores lowercase UUIDs from crypto.randomUUID()
+    const lowercaseToken = '698a4976-f7ac-4040-b5a8-39309998b8b0';
+    const uppercaseToken = '698A4976-F7AC-4040-B5A8-39309998B8B0';
+
+    const tokenRecord = {
+      ...mockRefreshToken,
+      token: lowercaseToken,
+    };
+
+    (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValue(tokenRecord);
+
+    // iOS sends uppercase UUID
+    const request = new NextRequest('http://localhost:3000/api/auth/mobile/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken: uppercaseToken }),
+    });
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.accessToken).toBeDefined();
+
+    // Verify the lookup was performed with lowercase token
+    expect(prisma.refreshToken.findUnique).toHaveBeenCalledWith({
+      where: { token: lowercaseToken },
+      include: { user: true },
+    });
+  });
 });

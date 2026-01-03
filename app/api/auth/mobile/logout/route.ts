@@ -12,9 +12,13 @@ export const POST = withLogging(async (request: NextRequest) => {
       return NextResponse.json({ error: 'Refresh token required' }, { status: 400 });
     }
 
+    // Normalize token to lowercase (iOS Swift UUID encodes as uppercase,
+    // but we store lowercase UUIDs from crypto.randomUUID())
+    const normalizedToken = refreshToken.toLowerCase();
+
     // Delete refresh token
     await prisma.refreshToken.deleteMany({
-      where: { token: refreshToken },
+      where: { token: normalizedToken },
     });
 
     return NextResponse.json({ message: 'Logged out successfully' });
