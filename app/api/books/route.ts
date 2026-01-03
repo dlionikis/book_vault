@@ -4,11 +4,12 @@ import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
 import { buildPagination } from '@/lib/api-utils';
+import { withLogging } from '@/lib/logger';
 import type { components } from '@/lib/api-types';
 
 type Book = components['schemas']['Book'];
 
-export async function GET(request: NextRequest) {
+export const GET = withLogging(async (request: NextRequest) => {
   // Check both auth methods
   const session = await getServerSession(authOptions);
   const mobileUser = await getAuthUserFromRequest(request);
@@ -77,4 +78,4 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching books:', error);
     return NextResponse.json({ error: 'Failed to fetch books' }, { status: 500 });
   }
-}
+});

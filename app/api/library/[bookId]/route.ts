@@ -3,9 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { normalizeUuid } from '@/lib/api-utils';
+import { withLogging } from '@/lib/logger';
 
 // DELETE /api/library/[bookId] - Remove book from library
-export async function DELETE(request: NextRequest, { params }: { params: { bookId: string } }) {
+export const DELETE = withLogging(async (request: NextRequest, context) => {
+  const { bookId: bookIdParam } = await context!.params;
   try {
     // Check both auth methods
     const session = await getServerSession(authOptions);
@@ -16,7 +18,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { bookI
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const bookId = normalizeUuid(params.bookId);
+    const bookId = normalizeUuid(bookIdParam);
     if (!bookId) {
       return NextResponse.json({ error: 'Invalid book ID' }, { status: 400 });
     }
@@ -46,4 +48,4 @@ export async function DELETE(request: NextRequest, { params }: { params: { bookI
     console.error('Error removing from library:', error);
     return NextResponse.json({ error: 'Failed to remove book from library' }, { status: 500 });
   }
-}
+});

@@ -80,9 +80,8 @@ describe('Chapter Performance Tests', () => {
     const request = new NextRequest(
       `http://localhost:3000/api/books/${mockBookId}?include=chapters`
     );
-    const params = { id: mockBookId };
 
-    const response = await GET(request, { params });
+    const response = await GET(request, { params: Promise.resolve({ id: mockBookId }) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -123,9 +122,8 @@ describe('Chapter Performance Tests', () => {
     (prisma.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
 
     const request = new NextRequest(`http://localhost:3000/api/books/${mockBookId}`);
-    const params = { id: mockBookId };
 
-    const response = await GET(request, { params });
+    const response = await GET(request, { params: Promise.resolve({ id: mockBookId }) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -171,9 +169,8 @@ describe('Chapter Performance Tests', () => {
     const request = new NextRequest(
       `http://localhost:3000/api/books/${mockBookId}?include=chapters`
     );
-    const params = { id: mockBookId };
 
-    const response = await GET(request, { params });
+    const response = await GET(request, { params: Promise.resolve({ id: mockBookId }) });
     const data = await response.json();
 
     expect(data.chapters[0].startTime).toBe(123.45);
@@ -223,10 +220,9 @@ describe('Chapter Performance Tests', () => {
     const request = new NextRequest(
       `http://localhost:3000/api/books/${mockBookId}?include=chapters`
     );
-    const params = { id: mockBookId };
 
     const startTime = Date.now();
-    const response = await GET(request, { params });
+    const response = await GET(request, { params: Promise.resolve({ id: mockBookId }) });
     const duration = Date.now() - startTime;
     const data = await response.json();
 
@@ -245,9 +241,8 @@ describe('Chapter Performance Tests', () => {
     const request = new NextRequest(
       `http://localhost:3000/api/books/${mockBookId}?include=chapters`
     );
-    const params = { id: mockBookId };
 
-    const response = await GET(request, { params });
+    const response = await GET(request, { params: Promise.resolve({ id: mockBookId }) });
     const data = await response.json();
 
     expect(response.status).toBe(401);
@@ -260,9 +255,8 @@ describe('Chapter Performance Tests', () => {
     const request = new NextRequest(
       `http://localhost:3000/api/books/${mockBookId}?include=chapters`
     );
-    const params = { id: mockBookId };
 
-    const response = await GET(request, { params });
+    const response = await GET(request, { params: Promise.resolve({ id: mockBookId }) });
     const data = await response.json();
 
     expect(response.status).toBe(404);

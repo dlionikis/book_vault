@@ -88,3 +88,45 @@ export function startTimer(): () => number {
   const start = Date.now();
   return () => Date.now() - start;
 }
+
+// MARK: - Route Wrapper for Automatic Logging
+
+import { NextRequest, NextResponse } from 'next/server';
+
+type RouteHandler = (
+  request: NextRequest,
+  context?: { params: Promise<Record<string, string>> }
+) => Promise<NextResponse>;
+
+/**
+ * Wraps an API route handler with automatic request/response logging.
+ * Logs method, path, status code, and duration for every request.
+ *
+ * Usage:
+ * ```typescript
+ * import { withLogging } from '@/lib/logger';
+ *
+ * export const GET = withLogging(async (request) => {
+ *   // Your handler logic
+ *   return NextResponse.json({ data });
+ * });
+ * ```
+ */
+export function withLogging(handler: RouteHandler): RouteHandler {
+  return async (request: NextRequest, context?: { params: Promise<Record<string, string>> }) => {
+    const timer = startTimer();
+    const method = request.method;
+    const path = request.nextUrl.pathname;
+
+    try {
+      const response = await handler(request, context);
+      const duration = timer();
+      logger.request(method, path, response.status, duration);
+      return response;
+    } catch (error) {
+      const duration = timer();
+      logger.error(`${method} ${path} failed`, { error: String(error), durationMs: duration });
+      throw error;
+    }
+  };
+}

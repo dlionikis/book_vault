@@ -4,8 +4,10 @@ import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
 import { normalizeUuid } from '@/lib/api-utils';
+import { withLogging } from '@/lib/logger';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export const GET = withLogging(async (request: NextRequest, context) => {
+  const { id } = await context!.params;
   // Check both auth methods
   const session = await getServerSession(authOptions);
   const mobileUser = await getAuthUserFromRequest(request);
@@ -15,7 +17,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
-    const bookId = normalizeUuid(params.id);
+    const bookId = normalizeUuid(id);
     if (!bookId) {
       return NextResponse.json({ error: 'Invalid book ID' }, { status: 400 });
     }
@@ -72,4 +74,4 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     console.error('Error fetching book:', error);
     return NextResponse.json({ error: 'Failed to fetch book' }, { status: 500 });
   }
-}
+});

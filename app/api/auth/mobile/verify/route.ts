@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAccessToken } from '@/lib/jwt';
+import { withLogging } from '@/lib/logger';
 
-export async function GET(request: NextRequest) {
+export const GET = withLogging(async (request: NextRequest) => {
   try {
     // Extract Bearer token from Authorization header
     const authHeader = request.headers.get('authorization');
@@ -40,4 +41,4 @@ export async function GET(request: NextRequest) {
       user: null,
     });
   }
-}
+});
