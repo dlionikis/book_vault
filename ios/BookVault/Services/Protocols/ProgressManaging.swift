@@ -39,6 +39,9 @@ protocol ProgressManaging {
     /// Reset a book's progress (mark as not started)
     /// - Parameter bookId: The book's UUID string
     func resetProgress(bookId: String) async throws
+
+    /// Clear all cached progress (call on logout)
+    func clearCache()
 }
 
 // Default parameter extension

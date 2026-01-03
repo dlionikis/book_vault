@@ -11,8 +11,17 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var themeManager = ThemeManager.shared
+    @StateObject private var biometricManager = BiometricAuthManager.shared
     @State private var showingLogoutConfirmation = false
+    @State private var showingDisableBiometricConfirmation = false
+    @State private var showingClearCacheConfirmation = false
     @State private var isLoggingOut = false
+
+    // Cache statistics
+    @State private var coverCacheStats: CoverCacheManager.CoverCacheStats?
+    @State private var libraryCacheStats: LibraryCacheManager.LibraryCacheStats?
+    @State private var downloadedBooksCount: Int = 0
+    @State private var downloadedBooksSize: Int64 = 0
 
     var body: some View {
         NavigationView {
@@ -29,6 +38,33 @@ struct SettingsView: View {
                     Text("Appearance")
                 } footer: {
                     Text("Choose your preferred color scheme")
+                }
+
+                // Security Section
+                if biometricManager.canUseBiometrics {
+                    Section {
+                        Toggle(
+                            "\(biometricManager.biometryName) Login",
+                            isOn: Binding(
+                                get: { biometricManager.isBiometricEnabled },
+                                set: { newValue in
+                                    if !newValue {
+                                        showingDisableBiometricConfirmation = true
+                                    }
+                                    // Enable is handled via login flow, not here
+                                }
+                            )
+                        )
+                        .disabled(!biometricManager.isBiometricEnabled)
+
+                        if !biometricManager.isBiometricEnabled {
+                            Text("Log in with your password to enable \(biometricManager.biometryName)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    } header: {
+                        Text("Security")
+                    }
                 }
 
                 // Account Section
@@ -73,6 +109,114 @@ struct SettingsView: View {
                 } header: {
                     Text("About")
                 }
+
+                // Storage Section
+                Section {
+                    // Cover images cache
+                    if let stats = coverCacheStats {
+                        DisclosureGroup {
+                            if let cachedAt = stats.newestCachedAt {
+                                HStack {
+                                    Text("Last Cached")
+                                    Spacer()
+                                    Text(cachedAt, style: .relative)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            if let accessed = stats.lastAccessedAt {
+                                HStack {
+                                    Text("Last Accessed")
+                                    Spacer()
+                                    Text(accessed, style: .relative)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            HStack {
+                                Text("Total Accesses")
+                                Spacer()
+                                Text("\(stats.totalAccessCount)")
+                                    .foregroundColor(.secondary)
+                            }
+                        } label: {
+                            HStack {
+                                Label("Cover Images", systemImage: "photo.stack")
+                                Spacer()
+                                Text("\(stats.count) (\(formatBytes(stats.totalSize)))")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+
+                    // Library cache
+                    if let stats = libraryCacheStats {
+                        DisclosureGroup {
+                            if let createdAt = stats.createdAt {
+                                HStack {
+                                    Text("Created")
+                                    Spacer()
+                                    Text(createdAt, style: .relative)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            if let syncDate = stats.lastSyncDate {
+                                HStack {
+                                    Text("Last Synced")
+                                    Spacer()
+                                    Text(syncDate, style: .relative)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            if let accessed = stats.lastAccessedAt {
+                                HStack {
+                                    Text("Last Accessed")
+                                    Spacer()
+                                    Text(accessed, style: .relative)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            HStack {
+                                Text("Access Count")
+                                Spacer()
+                                Text("\(stats.accessCount)")
+                                    .foregroundColor(.secondary)
+                            }
+                        } label: {
+                            HStack {
+                                Label("Library Cache", systemImage: "books.vertical")
+                                Spacer()
+                                if stats.bookCount > 0 {
+                                    Text("\(stats.bookCount) books")
+                                        .foregroundColor(.secondary)
+                                } else {
+                                    Text("Empty")
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    }
+
+                    // Downloaded audiobooks
+                    HStack {
+                        Label("Downloaded Books", systemImage: "arrow.down.circle.fill")
+                        Spacer()
+                        Text("\(downloadedBooksCount) books (\(formatBytes(downloadedBooksSize)))")
+                            .foregroundColor(.secondary)
+                    }
+
+                    // Clear cache button
+                    Button(role: .destructive) {
+                        showingClearCacheConfirmation = true
+                    } label: {
+                        Label("Clear Cover Cache", systemImage: "trash")
+                    }
+                } header: {
+                    Text("Storage")
+                } footer: {
+                    Text("Cover images are cached locally for faster loading. Access counts show cache usage.")
+                }
+            }
+            .onAppear {
+                refreshCacheStats()
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
@@ -88,7 +232,55 @@ struct SettingsView: View {
             } message: {
                 Text("Are you sure you want to log out?")
             }
+            .confirmationDialog(
+                "Disable \(biometricManager.biometryName)?",
+                isPresented: $showingDisableBiometricConfirmation
+            ) {
+                Button("Disable", role: .destructive) {
+                    biometricManager.disableBiometric()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("You'll need to enter your password to log in")
+            }
+            .confirmationDialog(
+                "Clear Cover Cache?",
+                isPresented: $showingClearCacheConfirmation
+            ) {
+                Button("Clear Cache", role: .destructive) {
+                    CoverCacheManager.shared.clearCache()
+                    refreshCacheStats()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                if let stats = coverCacheStats {
+                    Text("This will remove \(stats.count) cached cover images (\(formatBytes(stats.totalSize))). They will be re-downloaded as needed.")
+                } else {
+                    Text("This will clear all cached cover images.")
+                }
+            }
         }
+    }
+
+    // MARK: - Private Methods
+
+    private func refreshCacheStats() {
+        // Cover cache stats
+        coverCacheStats = CoverCacheManager.shared.getCacheStats()
+
+        // Library cache stats (use getCacheStats to avoid incrementing access count)
+        libraryCacheStats = LibraryCacheManager.shared.getCacheStats()
+
+        // Downloaded books stats
+        let downloadStats = DownloadManager.shared.getStorageStats()
+        downloadedBooksCount = downloadStats.count
+        downloadedBooksSize = downloadStats.size
+    }
+
+    private func formatBytes(_ bytes: Int64) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: bytes)
     }
 }
 

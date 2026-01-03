@@ -96,8 +96,8 @@ class LibraryManager: ObservableObject, LibraryManaging {
 
     /// Fetch user's library books
     /// Uses cached data if available and fresh, otherwise fetches from API
-    /// When offline, returns disk-cached data if available
-    /// - Parameter forceRefresh: If true, bypasses cache and fetches from API
+    /// Cache priority: in-memory → disk → API
+    /// - Parameter forceRefresh: If true, bypasses all caches and fetches from API
     /// - Returns: Array of library books (includes addedAt timestamp)
     @MainActor
     func fetchLibraryBooks(forceRefresh: Bool = false) async throws -> [LibraryBook] {
@@ -119,6 +119,16 @@ class LibraryManager: ObservableObject, LibraryManaging {
             DebugLogger.database("Using in-memory cached library books (\(cached.count) books)")
             isShowingCachedData = false
             return cached
+        }
+
+        // Online, no in-memory cache: Check disk cache before hitting API
+        if !forceRefresh, let diskCached = libraryCacheManager.loadLibrary() {
+            DebugLogger.database("Using disk-cached library (online, no memory cache): \(diskCached.count) books")
+            // Populate in-memory cache from disk
+            cachedBooks = diskCached
+            lastCacheUpdate = Date()
+            isShowingCachedData = false
+            return diskCached
         }
 
         isLoading = true
@@ -159,7 +169,7 @@ class LibraryManager: ObservableObject, LibraryManaging {
             else { continue }
 
             // Skip if already cached
-            if await cache.hasCover(for: book.id) {
+            if cache.hasCover(for: book.id) {
                 continue
             }
 

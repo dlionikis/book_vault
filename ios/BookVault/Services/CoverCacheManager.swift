@@ -29,6 +29,41 @@ class CoverCacheManager: ObservableObject, CoverCaching {
     /// Provider for current user ID (injected for testing)
     private let userIdProvider: () -> String?
 
+    // Metadata tracking
+    private let metadataFileName = "cover_metadata.json"
+    private var metadataFileURL: URL {
+        cacheDirectory.appendingPathComponent(metadataFileName)
+    }
+
+    // MARK: - Metadata Structure
+
+    struct CoverMetadata: Codable {
+        var version: Int = 1
+        var covers: [String: CoverInfo] // bookId -> info
+
+        init() {
+            self.version = 1
+            self.covers = [:]
+        }
+    }
+
+    struct CoverInfo: Codable {
+        let bookId: String
+        let cachedAt: Date
+        var lastAccessedAt: Date
+        var accessCount: Int
+    }
+
+    /// Statistics about the cover cache
+    struct CoverCacheStats {
+        let count: Int
+        let totalSize: Int64
+        let oldestCachedAt: Date?
+        let newestCachedAt: Date?
+        let lastAccessedAt: Date?
+        let totalAccessCount: Int
+    }
+
     // MARK: - Initialization
 
     /// Production singleton initializer
@@ -63,6 +98,8 @@ class CoverCacheManager: ObservableObject, CoverCaching {
     func getCover(for bookId: UUID) -> UIImage? {
         // Check memory cache first
         if let cached = memoryCache[bookId] {
+            recordAccess(for: bookId)
+            DebugLogger.storage("Cover cache HIT (memory): \(bookId)")
             return cached
         }
 
@@ -77,6 +114,8 @@ class CoverCacheManager: ObservableObject, CoverCaching {
 
         // Add to memory cache
         addToMemoryCache(bookId: bookId, image: image)
+        recordAccess(for: bookId)
+        DebugLogger.storage("Cover cache HIT (disk): \(bookId)")
         return image
     }
 
@@ -120,7 +159,10 @@ class CoverCacheManager: ObservableObject, CoverCaching {
         // Add to memory cache
         addToMemoryCache(bookId: bookId, image: image)
 
-        DebugLogger.storage("Cached cover for book: \(bookId)")
+        // Record in metadata
+        recordCacheAdd(for: bookId)
+
+        DebugLogger.storage("Cover CACHED: \(bookId)")
     }
 
     /// Delete cached cover for a book
@@ -170,6 +212,27 @@ class CoverCacheManager: ObservableObject, CoverCaching {
         }
     }
 
+    /// Get comprehensive cache statistics
+    /// - Returns: CoverCacheStats with all cache information
+    func getCacheStats() -> CoverCacheStats {
+        let metadata = loadMetadata()
+        let covers = metadata.covers.values
+
+        let oldestCached = covers.map(\.cachedAt).min()
+        let newestCached = covers.map(\.cachedAt).max()
+        let lastAccessed = covers.map(\.lastAccessedAt).max()
+        let totalAccess = covers.reduce(0) { $0 + $1.accessCount }
+
+        return CoverCacheStats(
+            count: getCacheCount(),
+            totalSize: getCacheSize(),
+            oldestCachedAt: oldestCached,
+            newestCachedAt: newestCached,
+            lastAccessedAt: lastAccessed,
+            totalAccessCount: totalAccess
+        )
+    }
+
     // MARK: - Private Helpers
 
     private func coverFileURL(for bookId: UUID) -> URL {
@@ -182,6 +245,56 @@ class CoverCacheManager: ObservableObject, CoverCaching {
             memoryCache.removeValue(forKey: memoryCache.keys.first!)
         }
         memoryCache[bookId] = image
+    }
+
+    // MARK: - Metadata Management
+
+    private func loadMetadata() -> CoverMetadata {
+        guard fileManager.fileExists(atPath: metadataFileURL.path),
+              let data = try? Data(contentsOf: metadataFileURL)
+        else {
+            return CoverMetadata()
+        }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return (try? decoder.decode(CoverMetadata.self, from: data)) ?? CoverMetadata()
+    }
+
+    private func saveMetadata(_ metadata: CoverMetadata) {
+        do {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let data = try encoder.encode(metadata)
+            try data.write(to: metadataFileURL, options: .atomic)
+        } catch {
+            DebugLogger.error("Failed to save cover metadata", error: error)
+        }
+    }
+
+    private func recordCacheAdd(for bookId: UUID) {
+        var metadata = loadMetadata()
+        let now = Date()
+        metadata.covers[bookId.uuidString] = CoverInfo(
+            bookId: bookId.uuidString,
+            cachedAt: now,
+            lastAccessedAt: now,
+            accessCount: 1
+        )
+        saveMetadata(metadata)
+    }
+
+    private func recordAccess(for bookId: UUID) {
+        var metadata = loadMetadata()
+        guard var info = metadata.covers[bookId.uuidString] else {
+            // Cover exists but no metadata (migrated from old cache)
+            recordCacheAdd(for: bookId)
+            return
+        }
+        info.lastAccessedAt = Date()
+        info.accessCount += 1
+        metadata.covers[bookId.uuidString] = info
+        saveMetadata(metadata)
     }
 }
 

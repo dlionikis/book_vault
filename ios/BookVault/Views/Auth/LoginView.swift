@@ -9,9 +9,11 @@ import SwiftUI
 
 struct LoginView: View {
     @StateObject private var authManager = AuthManager.shared
+    @StateObject private var biometricManager = BiometricAuthManager.shared
 
     @State private var email = ""
     @State private var password = ""
+    @State private var enableBiometricOnLogin = false
     @FocusState private var focusedField: Field?
 
     enum Field {
@@ -40,6 +42,30 @@ struct LoginView: View {
                 }
                 .padding(.bottom, 40)
 
+                // Face ID button (shown if enabled for this email or no email entered yet)
+                if biometricManager.canUseBiometrics && biometricManager.isBiometricEnabled {
+                    VStack(spacing: 12) {
+                        Button(action: { Task { await authenticateWithBiometric() } }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: biometricManager.biometryType == .faceID ? "faceid" : "touchid")
+                                    .font(.title2)
+                                Text("Use \(biometricManager.biometryName)")
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(authManager.isLoading)
+
+                        Text("or sign in with password")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 8)
+                }
+
                 // Login form
                 VStack(spacing: 16) {
                     // Email field
@@ -63,6 +89,19 @@ struct LoginView: View {
                         .onSubmit {
                             login()
                         }
+
+                    // Enable Face ID toggle (only shown if device supports biometrics and not already enabled)
+                    if biometricManager.canUseBiometrics && !biometricManager.isBiometricEnabled {
+                        Toggle(isOn: $enableBiometricOnLogin) {
+                            HStack(spacing: 6) {
+                                Image(systemName: biometricManager.biometryType == .faceID ? "faceid" : "touchid")
+                                Text("Enable \(biometricManager.biometryName)")
+                            }
+                            .font(.subheadline)
+                        }
+                        .toggleStyle(.switch)
+                        .padding(.top, 4)
+                    }
 
                     // Error message
                     if let errorMessage = authManager.errorMessage {
@@ -110,13 +149,39 @@ struct LoginView: View {
         }
     }
 
+    // MARK: - Private Methods
+
     private func login() {
         // Dismiss keyboard
         focusedField = nil
 
+        // Capture values before async call
+        let loginEmail = email
+        let loginPassword = password
+        let shouldEnableBiometric = enableBiometricOnLogin
+
         // Perform login
         Task {
-            await authManager.login(email: email, password: password)
+            await authManager.login(email: loginEmail, password: loginPassword)
+
+            // If login succeeded and user opted to enable biometrics, do it now
+            if authManager.isAuthenticated && shouldEnableBiometric {
+                do {
+                    try biometricManager.enableBiometric(email: loginEmail, password: loginPassword)
+                } catch {
+                    // Silently fail - user can enable later in settings
+                }
+            }
+        }
+    }
+
+    private func authenticateWithBiometric() async {
+        do {
+            let credentials = try await biometricManager.authenticateAndGetCredentials()
+            await authManager.login(email: credentials.email, password: credentials.password)
+        } catch {
+            // Show error - user can fall back to password
+            authManager.errorMessage = error.localizedDescription
         }
     }
 }

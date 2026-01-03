@@ -176,6 +176,27 @@ struct BookGridItem: View {
     }
 }
 
+// MARK: - CatalogCache
+
+/// In-memory cache for catalog pages
+private struct CatalogCache {
+    var pages: [Int: [Book]] = [:]
+    var totalPages: Int = 1
+    var lastUpdate: Date?
+    let ttl: TimeInterval = 600 // 10 minutes
+
+    var isValid: Bool {
+        guard let lastUpdate else { return false }
+        return Date().timeIntervalSince(lastUpdate) < ttl
+    }
+
+    mutating func invalidate() {
+        pages.removeAll()
+        totalPages = 1
+        lastUpdate = nil
+    }
+}
+
 // MARK: - CatalogViewModel
 
 @MainActor
@@ -190,8 +211,21 @@ class CatalogViewModel: ObservableObject {
     private let pageSize = 20
     private var totalPages = 1
 
+    /// In-memory cache shared across all CatalogViewModel instances
+    private static var cache = CatalogCache()
+
     func loadBooks() async {
         guard !isLoading else { return }
+
+        // Check cache first
+        if Self.cache.isValid, !Self.cache.pages.isEmpty {
+            DebugLogger.network("Using cached catalog (page 1)")
+            self.books = Self.cache.pages.sorted { $0.key < $1.key }.flatMap(\.value)
+            self.totalPages = Self.cache.totalPages
+            self.currentPage = Self.cache.pages.keys.max() ?? 1
+            self.hasMorePages = currentPage < totalPages
+            return
+        }
 
         isLoading = true
         errorMessage = nil
@@ -202,6 +236,12 @@ class CatalogViewModel: ObservableObject {
             self.books = response.books
             self.totalPages = response.pagination.pages
             self.hasMorePages = currentPage < totalPages
+
+            // Update cache
+            Self.cache.pages = [1: response.books]
+            Self.cache.totalPages = response.pagination.pages
+            Self.cache.lastUpdate = Date()
+
             isLoading = false
         } catch {
             isLoading = false
@@ -212,14 +252,31 @@ class CatalogViewModel: ObservableObject {
     func loadMoreBooks() async {
         guard !isLoading, hasMorePages else { return }
 
+        let nextPage = currentPage + 1
+
+        // Check if next page is cached
+        if Self.cache.isValid, let cachedPage = Self.cache.pages[nextPage] {
+            DebugLogger.network("Using cached catalog (page \(nextPage))")
+            self.books.append(contentsOf: cachedPage)
+            self.currentPage = nextPage
+            self.hasMorePages = currentPage < totalPages
+            return
+        }
+
         isLoading = true
-        currentPage += 1
+        currentPage = nextPage
 
         do {
             let response = try await apiClient.fetchBooks(page: currentPage, limit: pageSize)
             self.books.append(contentsOf: response.books)
             self.totalPages = response.pagination.pages
             self.hasMorePages = currentPage < totalPages
+
+            // Update cache
+            Self.cache.pages[currentPage] = response.books
+            Self.cache.totalPages = response.pagination.pages
+            Self.cache.lastUpdate = Date()
+
             isLoading = false
         } catch {
             isLoading = false
@@ -228,6 +285,8 @@ class CatalogViewModel: ObservableObject {
     }
 
     func refreshBooks() async {
+        // Invalidate cache on pull-to-refresh
+        Self.cache.invalidate()
         await loadBooks()
     }
 }

@@ -46,6 +46,7 @@
 		41333DC3A6B4A182E037D2D5 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30EB210CC802D6C40312FBF3 /* APIClientTests.swift */; };
 		435AC307300FA2C7304D1EA6 /* GetUserLists200ResponseListsInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D0EC39D508AD58A9D3C933 /* GetUserLists200ResponseListsInner.swift */; };
 		455757CD89F2F2B0136F5994 /* SetProgressStatusRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B81CEAE39433EA2A81E137D /* SetProgressStatusRequest.swift */; };
+		45854C4250CFDC639EA8A3FB /* BiometricAuthManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83D3D5F1F28570B3C742079C /* BiometricAuthManagerTests.swift */; };
 		46BF51D0F90BD8A981FC8CBB /* DownloadManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 838C2DF91502C78FE7780948 /* DownloadManagerTests.swift */; };
 		46F6A6CE497132D4063BACEC /* UpdatePasswordRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B2036AC1AC6FCC2E3C628C4 /* UpdatePasswordRequest.swift */; };
 		4713295415C9B391820F099A /* SyncManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F2378E84C9D4AC4F1C9A06D /* SyncManaging.swift */; };
@@ -167,6 +168,7 @@
 		DFA1A5BD97A3E5A88B711F3A /* CoverCaching.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BE572A604F3BE1377E8E70F /* CoverCaching.swift */; };
 		DFE63B52B26C132AD9B366CA /* Category.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F81E9584E20CF16F786CBC5 /* Category.swift */; };
 		E0A0670569C88EA54D0FFD79 /* UpdateList200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1361C265845DA03FFB4AD259 /* UpdateList200Response.swift */; };
+		E2A9C2DB9050EBCFEABC7928 /* BiometricAuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E71D2EB1DC78146E59E1642 /* BiometricAuthManager.swift */; };
 		E2E4E08925A41398B2C02732 /* MockCoverCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17626602EC12A066BCBE1A4C /* MockCoverCacheManager.swift */; };
 		E8321028FDBCAF704BDB31DF /* CheckDownloadEligibility200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2410CA8DD90ADA200E3EFD62 /* CheckDownloadEligibility200Response.swift */; };
 		E91B076E96FD01788A0B448C /* ListNarrators200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = A77745CAEAAE7ECFFFDC8104 /* ListNarrators200Response.swift */; };
@@ -310,6 +312,7 @@
 		7E37891EF3008D51D12702BD /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		80426BFEB1D0A891C16DE064 /* CodableHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodableHelper.swift; sourceTree = "<group>"; };
 		838C2DF91502C78FE7780948 /* DownloadManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadManagerTests.swift; sourceTree = "<group>"; };
+		83D3D5F1F28570B3C742079C /* BiometricAuthManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricAuthManagerTests.swift; sourceTree = "<group>"; };
 		85F4D93A4222E1B6C36FBB11 /* Validation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Validation.swift; sourceTree = "<group>"; };
 		864A15F8124FC77C372D5521 /* BookDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookDetailView.swift; sourceTree = "<group>"; };
 		88CF71EB172FCD831BA3DFA2 /* OfflineStoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineStoring.swift; sourceTree = "<group>"; };
@@ -320,6 +323,7 @@
 		8A6AEFAEB77241AC4F30C4C7 /* ProgressManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressManager.swift; sourceTree = "<group>"; };
 		8BE572A604F3BE1377E8E70F /* CoverCaching.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverCaching.swift; sourceTree = "<group>"; };
 		8D02B5FF2DF4BBC98EADBF8C /* Book.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Book.swift; sourceTree = "<group>"; };
+		8E71D2EB1DC78146E59E1642 /* BiometricAuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricAuthManager.swift; sourceTree = "<group>"; };
 		8EFD79F799C012860F9795B2 /* SearchAll200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchAll200Response.swift; sourceTree = "<group>"; };
 		91B83BB8F73620BCDC5A4329 /* JSONEncodingHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONEncodingHelper.swift; sourceTree = "<group>"; };
 		94F101CA540D3E1946BDC4AF /* XCTestCase+Async.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "XCTestCase+Async.swift"; sourceTree = "<group>"; };
@@ -443,6 +447,7 @@
 				30EB210CC802D6C40312FBF3 /* APIClientTests.swift */,
 				D71CB719A9962A71E6BD13DE /* AudioPlayerManagerTests.swift */,
 				29661D097AA4FFF2CCD70207 /* AuthManagerTests.swift */,
+				83D3D5F1F28570B3C742079C /* BiometricAuthManagerTests.swift */,
 				385EB15DDF57C20F636082D2 /* ChapterManagerTests.swift */,
 				838C2DF91502C78FE7780948 /* DownloadManagerTests.swift */,
 				D0B032F462065A0958E8FB73 /* LibraryCacheManagerTests.swift */,
@@ -513,6 +518,7 @@
 				A973EE511EEC0C57149BFEBE /* AudioPlayerManager.swift */,
 				5F15A745E95A423467AC9244 /* AuthenticatedAVAssetResourceLoaderDelegate.swift */,
 				54FC39529303A45403BCA016 /* AuthManager.swift */,
+				8E71D2EB1DC78146E59E1642 /* BiometricAuthManager.swift */,
 				35A41D938656BA710F410348 /* ChapterManager.swift */,
 				89BDE48BD07FAB47BCBDDE17 /* CoverCacheManager.swift */,
 				6ED36DF67725DBD3FB27532B /* DebugLogger.swift */,
@@ -926,6 +932,7 @@
 				7A50313796F8EB20ADF5E2E4 /* AudioPlayerManagerTests.swift in Sources */,
 				DB3C1016C5AC00F490B72DF7 /* AuthManagerRealTests.swift in Sources */,
 				A1F0AD20ACE3B37F4BB97CA5 /* AuthManagerTests.swift in Sources */,
+				45854C4250CFDC639EA8A3FB /* BiometricAuthManagerTests.swift in Sources */,
 				268E98174B0C26405194323F /* ChapterManagerRealTests.swift in Sources */,
 				6398C614A569D8CFC3B3B5F3 /* ChapterManagerTests.swift in Sources */,
 				078A3715479BE45F28C1A74A /* DebugLoggerTests.swift in Sources */,
@@ -988,6 +995,7 @@
 				A6F2FB52EF8236AACAA9B94E /* BatchUpdateProgress200ResponseDetailsInner.swift in Sources */,
 				89EE06A02EF4B094A2654BEB /* BatchUpdateProgressRequest.swift in Sources */,
 				3471536D04E70571BE5F8A24 /* BatchUpdateProgressRequestUpdatesInner.swift in Sources */,
+				E2A9C2DB9050EBCFEABC7928 /* BiometricAuthManager.swift in Sources */,
 				6F1265258DA7336F7A85B2B7 /* Book.swift in Sources */,
 				DDDD60C4A3A4762A11C25057 /* BookDetailLoader.swift in Sources */,
 				FF39A6526EE5DAE548200679 /* BookDetailView.swift in Sources */,

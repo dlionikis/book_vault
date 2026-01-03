@@ -73,6 +73,10 @@ class MockProgressManager: ProgressManaging {
         }
     }
 
+    func clearCache() {
+        cachedProgress = [:]
+    }
+
     // MARK: - Reset
 
     func reset() {

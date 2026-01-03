@@ -56,6 +56,11 @@ final class MockProgressManagerForAudio: ProgressManaging {
     func resetProgress(bookId _: String) async throws {
         // No-op for audio tests
     }
+
+    func clearCache() {
+        fetchedProgress = [:]
+        savedProgress = [:]
+    }
 }
 
 // MARK: - MockDownloadManagerForAudio
