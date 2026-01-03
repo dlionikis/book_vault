@@ -4,6 +4,9 @@ import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { normalizeUuid } from '@/lib/api-utils';
 
+// Force dynamic rendering - this route uses headers() via getServerSession
+export const dynamic = 'force-dynamic';
+
 // GET /api/library/check?bookId=xxx - Check if book is in library
 export async function GET(request: NextRequest) {
   try {
