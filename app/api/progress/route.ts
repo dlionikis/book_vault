@@ -4,9 +4,10 @@ import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { normalizeUuid } from '@/lib/api-utils';
+import { logger, withLogging } from '@/lib/logger';
 
 // GET /api/progress?bookId=xxx - Get user's progress for a book
-export async function GET(request: NextRequest) {
+export const GET = withLogging(async (request: NextRequest) => {
   // Check both auth methods
   const session = await getServerSession(authOptions);
   const mobileUser = await getAuthUserFromRequest(request);
@@ -47,13 +48,13 @@ export async function GET(request: NextRequest) {
       lastPlayed: progress.lastPlayed.toISOString(),
     });
   } catch (error) {
-    console.error('Error fetching progress:', error);
+    logger.error('Error fetching progress', { error: String(error) });
     return NextResponse.json({ error: 'Failed to fetch progress' }, { status: 500 });
   }
-}
+});
 
 // POST /api/progress - Update user's progress (save position)
-export async function POST(request: NextRequest) {
+export const POST = withLogging(async (request: NextRequest) => {
   // Support both session-based (web) and Bearer token (mobile) auth
   const session = await getServerSession(authOptions);
   const mobileUser = await getAuthUserFromRequest(request);
@@ -70,7 +71,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const startTime = Date.now();
     const body = await request.json();
     const { positionSeconds, timestamp } = body;
     const bookId = normalizeUuid(body.bookId);
@@ -136,17 +136,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const duration = Date.now() - startTime;
-
-    // Performance monitoring: warn on slow queries
-    if (duration > 100) {
-      console.warn('Slow progress query', {
-        userId: user.id,
-        bookId,
-        durationMs: duration,
-      });
-    }
-
     return NextResponse.json({
       positionSeconds: progress!.positionSeconds,
       completed: progress!.completed,
@@ -154,13 +143,13 @@ export async function POST(request: NextRequest) {
       updated,
     });
   } catch (error) {
-    console.error('Error updating progress:', error);
+    logger.error('Error updating progress', { error: String(error) });
     return NextResponse.json({ error: 'Failed to update progress' }, { status: 500 });
   }
-}
+});
 
 // PUT /api/progress - Mark book as completed or reset to not started
-export async function PUT(request: NextRequest) {
+export const PUT = withLogging(async (request: NextRequest) => {
   // Check both auth methods
   const session = await getServerSession(authOptions);
   const mobileUser = await getAuthUserFromRequest(request);
@@ -228,7 +217,7 @@ export async function PUT(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error('Error updating progress status:', error);
+    logger.error('Error updating progress status', { error: String(error) });
     return NextResponse.json({ error: 'Failed to update progress status' }, { status: 500 });
   }
-}
+});

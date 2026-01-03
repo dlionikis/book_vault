@@ -4,9 +4,10 @@ import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { normalizeUuid } from '@/lib/api-utils';
 import { BOOK_INCLUDE, transformLibraryBook } from '@/lib/book-transformer';
+import { withLogging } from '@/lib/logger';
 
 // GET /api/library - Get user's library books
-export async function GET(request: NextRequest) {
+export const GET = withLogging(async (request: NextRequest) => {
   try {
     // Check both auth methods
     const session = await getServerSession(authOptions);
@@ -53,10 +54,10 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching library:', error);
     return NextResponse.json({ error: 'Failed to fetch library' }, { status: 500 });
   }
-}
+});
 
 // POST /api/library - Add book to library
-export async function POST(request: NextRequest) {
+export const POST = withLogging(async (request: NextRequest) => {
   try {
     // Check both auth methods
     const session = await getServerSession(authOptions);
@@ -119,4 +120,4 @@ export async function POST(request: NextRequest) {
     console.error('Error adding to library:', error);
     return NextResponse.json({ error: 'Failed to add book to library' }, { status: 500 });
   }
-}
+});

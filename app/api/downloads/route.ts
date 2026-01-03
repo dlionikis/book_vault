@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { withLogging } from '@/lib/logger';
 
-export async function GET(request: NextRequest) {
+export const GET = withLogging(async (request: NextRequest) => {
   try {
     // Check both auth methods
     const session = await getServerSession(authOptions);
@@ -53,4 +54,4 @@ export async function GET(request: NextRequest) {
     console.error('Download history fetch error:', error);
     return NextResponse.json({ error: 'Failed to fetch download history' }, { status: 500 });
   }
-}
+});

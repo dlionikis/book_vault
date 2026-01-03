@@ -89,8 +89,11 @@ function scanAPIRoutes(apiDir: string): Map<string, Set<string>> {
         const methods = new Set<string>();
 
         // Check for exported HTTP method handlers
+        // Supports both: `export async function GET` and `export const GET = withLogging(...)`
         for (const method of ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']) {
-          if (routeContent.includes(`export async function ${method}`)) {
+          const functionPattern = `export async function ${method}`;
+          const constPattern = `export const ${method}`;
+          if (routeContent.includes(functionPattern) || routeContent.includes(constPattern)) {
             methods.add(method);
           }
         }

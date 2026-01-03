@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { withLogging } from '@/lib/logger';
 
-export async function POST(request: NextRequest) {
+export const POST = withLogging(async (request: NextRequest) => {
   try {
     const body = await request.json();
     const { refreshToken } = body;
@@ -21,4 +22,4 @@ export async function POST(request: NextRequest) {
     console.error('Logout failed:', error);
     return NextResponse.json({ error: 'Logout failed' }, { status: 500 });
   }
-}
+});

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateAccessToken } from '@/lib/jwt';
+import { logger, withLogging } from '@/lib/logger';
 
-export async function POST(request: NextRequest) {
+export const POST = withLogging(async (request: NextRequest) => {
   try {
     const body = await request.json();
     const { refreshToken } = body;
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!tokenRecord) {
+      logger.info('Token refresh failed - invalid token');
       return NextResponse.json({ error: 'Invalid or expired refresh token' }, { status: 401 });
     }
 
@@ -29,11 +31,14 @@ export async function POST(request: NextRequest) {
         where: { id: tokenRecord.id },
       });
 
+      logger.info('Token refresh failed - token expired', { userId: tokenRecord.user.id });
       return NextResponse.json({ error: 'Invalid or expired refresh token' }, { status: 401 });
     }
 
     // Generate new access token
     const accessToken = await generateAccessToken(tokenRecord.user.id, tokenRecord.user.email);
+
+    logger.info('Token refresh successful', { userId: tokenRecord.user.id });
 
     // Return new access token
     return NextResponse.json({
@@ -41,7 +46,7 @@ export async function POST(request: NextRequest) {
       expiresIn: parseInt(process.env.JWT_ACCESS_TOKEN_EXPIRY || '3600'),
     });
   } catch (error) {
-    console.error('Token refresh failed:', error);
+    logger.error('Token refresh failed', { error: String(error) });
     return NextResponse.json({ error: 'Token refresh failed' }, { status: 500 });
   }
-}
+});
