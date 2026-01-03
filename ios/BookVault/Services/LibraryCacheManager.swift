@@ -27,10 +27,45 @@ class LibraryCacheManager: ObservableObject, LibraryCaching {
     // MARK: - Cache Data Structure
 
     struct LibraryCache: Codable {
-        var version: Int = 1
+        var version: Int = 2 // Bumped to 2 for cache stats tracking
         var books: [LibraryBook]
         var lastSyncDate: Date
         var userId: String // Tied to user to avoid cross-account issues
+        var createdAt: Date // When the cache was first created
+        var lastAccessedAt: Date // When the cache was last read
+        var accessCount: Int // Number of times the cache has been read
+
+        // Custom decoder for backwards compatibility
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
+            books = try container.decode([LibraryBook].self, forKey: .books)
+            lastSyncDate = try container.decode(Date.self, forKey: .lastSyncDate)
+            userId = try container.decode(String.self, forKey: .userId)
+            // Backwards compatibility: use lastSyncDate if no createdAt
+            createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? lastSyncDate
+            lastAccessedAt = try container.decodeIfPresent(Date.self, forKey: .lastAccessedAt) ?? Date()
+            accessCount = try container.decodeIfPresent(Int.self, forKey: .accessCount) ?? 0
+        }
+
+        init(books: [LibraryBook], lastSyncDate: Date, userId: String, createdAt: Date, lastAccessedAt: Date, accessCount: Int) {
+            self.version = 2
+            self.books = books
+            self.lastSyncDate = lastSyncDate
+            self.userId = userId
+            self.createdAt = createdAt
+            self.lastAccessedAt = lastAccessedAt
+            self.accessCount = accessCount
+        }
+    }
+
+    /// Statistics about the library cache
+    struct LibraryCacheStats {
+        let bookCount: Int
+        let createdAt: Date?
+        let lastSyncDate: Date?
+        let lastAccessedAt: Date?
+        let accessCount: Int
     }
 
     // MARK: - Initialization
@@ -69,11 +104,17 @@ class LibraryCacheManager: ObservableObject, LibraryCaching {
             return
         }
 
+        // Try to load existing cache to preserve createdAt and accessCount
+        let existingStats = getCacheStats()
+        let now = Date()
+
         let cache = LibraryCache(
-            version: 1,
             books: books,
-            lastSyncDate: Date(),
-            userId: userId
+            lastSyncDate: now,
+            userId: userId,
+            createdAt: existingStats.createdAt ?? now, // Preserve or set new
+            lastAccessedAt: existingStats.lastAccessedAt ?? now,
+            accessCount: existingStats.accessCount
         )
 
         do {
@@ -105,7 +146,7 @@ class LibraryCacheManager: ObservableObject, LibraryCaching {
             let data = try Data(contentsOf: cacheFileURL)
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
-            let cache = try decoder.decode(LibraryCache.self, from: data)
+            var cache = try decoder.decode(LibraryCache.self, from: data)
 
             // Verify cache belongs to current user
             guard cache.userId == userId else {
@@ -113,11 +154,28 @@ class LibraryCacheManager: ObservableObject, LibraryCaching {
                 return nil
             }
 
-            DebugLogger.database("Library cache loaded: \(cache.books.count) books (synced: \(cache.lastSyncDate))")
+            // Update access stats and save back
+            cache.lastAccessedAt = Date()
+            cache.accessCount += 1
+            updateCacheStats(cache)
+
+            DebugLogger.database("Library cache HIT: \(cache.books.count) books (access #\(cache.accessCount))")
             return cache.books
         } catch {
             DebugLogger.error("Failed to load library cache", error: error)
             return nil
+        }
+    }
+
+    /// Update only the stats portion of the cache (access time and count)
+    private func updateCacheStats(_ cache: LibraryCache) {
+        do {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let data = try encoder.encode(cache)
+            try data.write(to: cacheFileURL, options: .atomic)
+        } catch {
+            DebugLogger.error("Failed to update cache stats", error: error)
         }
     }
 
@@ -166,6 +224,37 @@ class LibraryCacheManager: ObservableObject, LibraryCaching {
             return cache.lastSyncDate
         } catch {
             return nil
+        }
+    }
+
+    /// Get comprehensive cache statistics
+    /// - Returns: LibraryCacheStats with all cache information
+    func getCacheStats() -> LibraryCacheStats {
+        guard let userId = getCurrentUserId(),
+              FileManager.default.fileExists(atPath: cacheFileURL.path)
+        else {
+            return LibraryCacheStats(bookCount: 0, createdAt: nil, lastSyncDate: nil, lastAccessedAt: nil, accessCount: 0)
+        }
+
+        do {
+            let data = try Data(contentsOf: cacheFileURL)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let cache = try decoder.decode(LibraryCache.self, from: data)
+
+            guard cache.userId == userId else {
+                return LibraryCacheStats(bookCount: 0, createdAt: nil, lastSyncDate: nil, lastAccessedAt: nil, accessCount: 0)
+            }
+
+            return LibraryCacheStats(
+                bookCount: cache.books.count,
+                createdAt: cache.createdAt,
+                lastSyncDate: cache.lastSyncDate,
+                lastAccessedAt: cache.lastAccessedAt,
+                accessCount: cache.accessCount
+            )
+        } catch {
+            return LibraryCacheStats(bookCount: 0, createdAt: nil, lastSyncDate: nil, lastAccessedAt: nil, accessCount: 0)
         }
     }
 

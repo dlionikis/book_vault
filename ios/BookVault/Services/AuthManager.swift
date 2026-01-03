@@ -32,6 +32,7 @@ class AuthManager: ObservableObject, AuthManaging {
     var clearCachesOnLogout: () -> Void = {
         LibraryCacheManager.shared.clearCache()
         OfflineProgressStore.shared.clearCache()
+        ProgressManager.shared.clearCache()
     }
 
     // Public access to token for authenticated requests (e.g., audio streaming)

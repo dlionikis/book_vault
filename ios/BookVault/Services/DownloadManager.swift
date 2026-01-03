@@ -371,6 +371,12 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
         DebugLogger.download("Download deleted: \(bookId)")
     }
 
+    /// Get storage statistics for downloaded books
+    /// - Returns: Tuple of (count, size in bytes)
+    func getStorageStats() -> (count: Int, size: Int64) {
+        return (storageManager.downloads.count, storageManager.totalSize)
+    }
+
     // MARK: - API Calls
 
     private func checkEligibility(bookId: String) async throws -> Bool {

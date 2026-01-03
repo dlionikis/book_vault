@@ -22,6 +22,15 @@ class ProgressManager: ObservableObject, ProgressManaging {
     private let offlineProgressStore: any OfflineStoring
     private let networkMonitor: any NetworkMonitoring
 
+    // In-memory cache to avoid repeated API calls for progress
+    private var progressCache: [String: CachedProgress] = [:]
+    private let cacheTTL: TimeInterval = 60 // Cache for 60 seconds
+
+    private struct CachedProgress {
+        let progress: UserProgress
+        let cachedAt: Date
+    }
+
     /// Production singleton initializer
     private convenience init() {
         self.init(
@@ -50,22 +59,34 @@ class ProgressManager: ObservableObject, ProgressManaging {
     /// Fetch user's progress for a book
     /// When online, fetches from server and merges with local
     /// When offline, returns local progress only
+    /// Uses in-memory cache to avoid repeated API calls on tab switches
     /// - Parameter bookId: The book's UUID string
     /// - Returns: UserProgress with position and completion status
     @MainActor
     func fetchProgress(for bookId: String) async throws -> UserProgress {
+        // Check in-memory cache first (avoids API calls on tab switches)
+        if let cached = progressCache[bookId],
+           Date().timeIntervalSince(cached.cachedAt) < cacheTTL {
+            DebugLogger.verbose("Progress cache HIT for \(bookId)")
+            return cached.progress
+        }
+
         // If offline, return local progress only
         if !networkMonitor.isConnected {
             if let localProgress = offlineProgressStore.getProgress(bookId: bookId) {
                 DebugLogger.database("Using local progress (offline): \(localProgress.positionSeconds)s")
-                return UserProgress(
+                let progress = UserProgress(
                     positionSeconds: localProgress.positionSeconds,
                     completed: localProgress.completed,
                     lastPlayed: localProgress.lastPlayed
                 )
+                progressCache[bookId] = CachedProgress(progress: progress, cachedAt: Date())
+                return progress
             }
             // No local progress, return zero
-            return UserProgress(positionSeconds: 0, completed: false, lastPlayed: nil)
+            let zeroProgress = UserProgress(positionSeconds: 0, completed: false, lastPlayed: nil)
+            progressCache[bookId] = CachedProgress(progress: zeroProgress, cachedAt: Date())
+            return zeroProgress
         }
 
         // Online: fetch from server and merge with local
@@ -96,11 +117,13 @@ class ProgressManager: ObservableObject, ProgressManaging {
                     .database(
                         "Using local progress (newer): \(localProgress.positionSeconds)s vs server: \(serverProgress.positionSeconds)s"
                     )
-                return UserProgress(
+                let progress = UserProgress(
                     positionSeconds: localProgress.positionSeconds,
                     completed: localProgress.completed,
                     lastPlayed: localProgress.lastPlayed
                 )
+                progressCache[bookId] = CachedProgress(progress: progress, cachedAt: Date())
+                return progress
             }
         }
 
@@ -115,6 +138,9 @@ class ProgressManager: ObservableObject, ProgressManaging {
         }
 
         DebugLogger.database("Fetched progress: \(response.positionSeconds)s, completed: \(response.completed)")
+
+        // Cache the result
+        progressCache[bookId] = CachedProgress(progress: serverProgress, cachedAt: Date())
 
         return serverProgress
     }
@@ -133,6 +159,9 @@ class ProgressManager: ObservableObject, ProgressManaging {
         positionSeconds: Double,
         timestamp _: Date? = nil
     ) async throws -> SaveProgressResponse {
+        // Invalidate cache so next fetch gets fresh data
+        progressCache.removeValue(forKey: bookId)
+
         // Always save locally first (local-first approach)
         offlineProgressStore.saveProgress(bookId: bookId, position: positionSeconds, completed: false)
 
@@ -198,6 +227,9 @@ class ProgressManager: ObservableObject, ProgressManaging {
     /// - Parameter bookId: The book's UUID string
     @MainActor
     func markCompleted(bookId: String) async throws {
+        // Invalidate cache so next fetch gets fresh data
+        progressCache.removeValue(forKey: bookId)
+
         guard let uuid = UUID(uuidString: bookId) else {
             throw NSError(domain: "ProgressManager", code: 400, userInfo: [
                 NSLocalizedDescriptionKey: "Invalid book ID format"
@@ -213,6 +245,9 @@ class ProgressManager: ObservableObject, ProgressManaging {
     /// - Parameter bookId: The book's UUID string
     @MainActor
     func resetProgress(bookId: String) async throws {
+        // Invalidate cache so next fetch gets fresh data
+        progressCache.removeValue(forKey: bookId)
+
         guard let uuid = UUID(uuidString: bookId) else {
             throw NSError(domain: "ProgressManager", code: 400, userInfo: [
                 NSLocalizedDescriptionKey: "Invalid book ID format"
@@ -222,5 +257,11 @@ class ProgressManager: ObservableObject, ProgressManaging {
         DebugLogger.database("Resetting progress for book: \(bookId)")
 
         _ = try await apiClient.setProgressStatus(bookId: uuid, status: .notStarted)
+    }
+
+    /// Clear all cached progress (call on logout)
+    @MainActor
+    func clearCache() {
+        progressCache.removeAll()
     }
 }
