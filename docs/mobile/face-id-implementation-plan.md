@@ -111,7 +111,23 @@
 
 ## Implementation Steps
 
+> **Cross-Session Implementation Note**: Each phase includes "Session Start Instructions" to ensure a fresh Claude session has enough context to continue implementation without prior conversation history.
+
 ### Phase 1: BiometricAuthManager (Core Logic)
+
+#### Session Start Instructions
+
+1. Read this plan file (`docs/mobile/face-id-implementation-plan.md`)
+2. Read `ios/BookVault/Services/SystemKeychain.swift` to understand existing keychain patterns
+3. Verify `ios/BookVault/Services/` directory exists
+
+#### Decision: Keychain Approach
+
+This implementation creates a **self-contained** `BiometricAuthManager` with its own keychain methods rather than extending `SystemKeychain`. Rationale:
+
+- Biometric-protected items require different access control flags
+- Keeps biometric logic isolated and testable
+- `SystemKeychain` remains focused on token storage
 
 **Create**: `ios/BookVault/Services/BiometricAuthManager.swift`
 
@@ -342,6 +358,18 @@ enum BiometricError: LocalizedError {
 
 ### Phase 2: Update LoginView
 
+#### Session Start Instructions
+
+1. Read this plan file (`docs/mobile/face-id-implementation-plan.md`)
+2. Read `ios/BookVault/Views/LoginView.swift` - note the current structure:
+   - How `@StateObject` or `@EnvironmentObject` is used for `AuthManager`
+   - Where the login button and form fields are located
+   - The current `login()` or submit handler method
+3. Read `ios/BookVault/Services/AuthManager.swift` - note:
+   - The `login(email:password:)` method signature
+   - How success/failure is communicated (published properties, completion handlers, etc.)
+4. Verify Phase 1 is complete (`BiometricAuthManager.swift` exists)
+
 **Modify**: `ios/BookVault/Views/LoginView.swift`
 
 #### Changes Required
@@ -418,16 +446,47 @@ private func handleLoginSuccess(email: String, password: String) {
 
 **Estimated time**: 1.5 hours
 
+#### Wiring Note: LoginView ↔ AuthManager Communication
+
+The biometric enable prompt requires knowing when login succeeds AND having access to the password. Two approaches:
+
+**Option A (Recommended): Handle entirely in LoginView**
+
+- LoginView already has `email` and `password` in state
+- After calling `authManager.login()`, check `authManager.isAuthenticated`
+- If true, show biometric enable prompt using the local state values
+- No changes needed to AuthManager's public API
+
+**Option B: Callback from AuthManager**
+
+- Add `onLoginSuccess: ((String, String) -> Void)?` to AuthManager
+- AuthManager calls this after successful login
+- LoginView sets this callback in `.onAppear`
+- More complex but cleaner separation
+
+**This plan uses Option A** - Phase 2 handles the prompt logic entirely in LoginView by checking `authManager.isAuthenticated` after login completes.
+
 ---
 
-### Phase 3: Update AuthManager
+### Phase 3: Update AuthManager (Minimal - Logout Only)
+
+> **Note**: Since we're using Option A (LoginView handles biometric prompt), Phase 3 only needs to handle logout behavior. This phase is **optional** if you want biometrics to persist across logout.
+
+#### Session Start Instructions
+
+1. Read this plan file (`docs/mobile/face-id-implementation-plan.md`)
+2. Read `ios/BookVault/Services/AuthManager.swift` - focus on the `logout()` method
+3. Decide: Should logout clear biometric enrollment?
+   - **Keep enabled** (recommended): User stays enrolled, just logs out
+   - **Clear on logout**: More secure, user must re-enable after each logout
+4. Verify Phases 1-2 are complete
 
 **Modify**: `ios/BookVault/Services/AuthManager.swift`
 
 #### Changes Required
 
-1. Add callback for successful login (to trigger biometric prompt)
-2. Clear biometric data on logout (optional - depends on UX preference)
+1. ~~Add callback for successful login~~ (handled in LoginView via Option A)
+2. (Optional) Clear biometric data on logout - depends on UX preference
 
 ```swift
 // Add to AuthManager.swift
@@ -460,6 +519,15 @@ func logout() async {
 ---
 
 ### Phase 4: Settings Integration
+
+#### Session Start Instructions
+
+1. Read this plan file (`docs/mobile/face-id-implementation-plan.md`)
+2. Check if `ios/BookVault/Views/SettingsView.swift` exists:
+   - If yes: Read it and find where to add the biometric section
+   - If no: Check where settings are currently handled (might be in `ProfileView.swift` or similar)
+3. Read `ios/BookVault/Services/BiometricAuthManager.swift` to understand the public API
+4. Verify Phases 1-3 are complete
 
 **Modify**: `ios/BookVault/Views/SettingsView.swift` (or create if doesn't exist)
 
@@ -515,6 +583,12 @@ struct BiometricSettingsSection: View {
 
 ### Phase 5: Info.plist Configuration
 
+#### Session Start Instructions
+
+1. Read this plan file (`docs/mobile/face-id-implementation-plan.md`)
+2. Read `ios/BookVault/Info.plist` to see current structure
+3. This phase can be done in parallel with Phase 6
+
 **Modify**: `ios/BookVault/Info.plist`
 
 Add Face ID usage description (required by App Store):
@@ -529,6 +603,13 @@ Add Face ID usage description (required by App Store):
 ---
 
 ### Phase 6: XcodeGen Update
+
+#### Session Start Instructions
+
+1. Read this plan file (`docs/mobile/face-id-implementation-plan.md`)
+2. Read `ios/project.yml` to understand current structure and where dependencies are listed
+3. This phase can be done in parallel with Phase 5
+4. After modifying, run `cd ios && xcodegen generate` to regenerate the Xcode project
 
 **Modify**: `ios/project.yml`
 
