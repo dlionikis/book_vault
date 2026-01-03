@@ -29,6 +29,19 @@ CREATE TABLE "books" (
 );
 
 -- CreateTable
+CREATE TABLE "chapters" (
+    "id" TEXT NOT NULL,
+    "book_id" TEXT NOT NULL,
+    "chapter_number" INTEGER NOT NULL,
+    "title" TEXT NOT NULL,
+    "start_time" DOUBLE PRECISION NOT NULL,
+    "end_time" DOUBLE PRECISION NOT NULL,
+    "duration" DOUBLE PRECISION NOT NULL,
+
+    CONSTRAINT "chapters_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "authors" (
     "id" TEXT NOT NULL,
     "asin" TEXT,
@@ -89,7 +102,7 @@ CREATE TABLE "book_narrators" (
 CREATE TABLE "book_series" (
     "book_id" TEXT NOT NULL,
     "series_id" TEXT NOT NULL,
-    "sequence" TEXT,
+    "sequence" INTEGER,
 
     CONSTRAINT "book_series_pkey" PRIMARY KEY ("book_id","series_id")
 );
@@ -107,7 +120,7 @@ CREATE TABLE "user_progress" (
     "id" TEXT NOT NULL,
     "user_id" TEXT NOT NULL,
     "book_id" TEXT NOT NULL,
-    "position_seconds" INTEGER NOT NULL DEFAULT 0,
+    "position_seconds" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "completed" BOOLEAN NOT NULL DEFAULT false,
     "last_played" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -137,6 +150,28 @@ CREATE TABLE "user_list_books" (
     CONSTRAINT "user_list_books_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "refresh_tokens" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "refresh_tokens_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "user_downloads" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "book_id" TEXT NOT NULL,
+    "downloaded_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "device_id" TEXT,
+
+    CONSTRAINT "user_downloads_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
@@ -145,6 +180,12 @@ CREATE UNIQUE INDEX "books_asin_key" ON "books"("asin");
 
 -- CreateIndex
 CREATE INDEX "books_title_idx" ON "books"("title");
+
+-- CreateIndex
+CREATE INDEX "chapters_book_id_idx" ON "chapters"("book_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "chapters_book_id_chapter_number_key" ON "chapters"("book_id", "chapter_number");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "authors_asin_key" ON "authors"("asin");
@@ -166,6 +207,9 @@ CREATE INDEX "narrators_name_idx" ON "narrators"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "series_asin_key" ON "series"("asin");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "series_title_key" ON "series"("title");
 
 -- CreateIndex
 CREATE INDEX "series_title_idx" ON "series"("title");
@@ -196,6 +240,24 @@ CREATE INDEX "user_list_books_list_id_position_idx" ON "user_list_books"("list_i
 
 -- CreateIndex
 CREATE UNIQUE INDEX "user_list_books_list_id_book_id_key" ON "user_list_books"("list_id", "book_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "refresh_tokens_token_key" ON "refresh_tokens"("token");
+
+-- CreateIndex
+CREATE INDEX "refresh_tokens_user_id_idx" ON "refresh_tokens"("user_id");
+
+-- CreateIndex
+CREATE INDEX "refresh_tokens_token_idx" ON "refresh_tokens"("token");
+
+-- CreateIndex
+CREATE INDEX "user_downloads_user_id_downloaded_at_idx" ON "user_downloads"("user_id", "downloaded_at" DESC);
+
+-- CreateIndex
+CREATE INDEX "user_downloads_book_id_idx" ON "user_downloads"("book_id");
+
+-- AddForeignKey
+ALTER TABLE "chapters" ADD CONSTRAINT "chapters_book_id_fkey" FOREIGN KEY ("book_id") REFERENCES "books"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "categories" ADD CONSTRAINT "categories_parent_id_fkey" FOREIGN KEY ("parent_id") REFERENCES "categories"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -238,3 +300,13 @@ ALTER TABLE "user_list_books" ADD CONSTRAINT "user_list_books_list_id_fkey" FORE
 
 -- AddForeignKey
 ALTER TABLE "user_list_books" ADD CONSTRAINT "user_list_books_book_id_fkey" FOREIGN KEY ("book_id") REFERENCES "books"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_downloads" ADD CONSTRAINT "user_downloads_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_downloads" ADD CONSTRAINT "user_downloads_book_id_fkey" FOREIGN KEY ("book_id") REFERENCES "books"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
