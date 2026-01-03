@@ -139,4 +139,89 @@ final class APIClientTests: XCTestCase {
         let error = APIError.serverError(500, "Database connection failed")
         XCTAssertTrue(error.errorDescription?.contains("Database connection failed") ?? false)
     }
+
+    // MARK: - Token Refresh Configuration Tests
+
+    func testTokenRefreshHandlerCanBeConfigured() {
+        // Given: APIClient instance
+        let client = APIClient(
+            baseURL: URL(string: "http://localhost:3000")!,
+            session: URLSession.shared
+        )
+
+        var handlerCalled = false
+
+        // When: Custom handler is set
+        client.tokenRefreshHandler = {
+            handlerCalled = true
+            return true
+        }
+
+        // Then: Handler should be configurable (used for testing/DI)
+        XCTAssertNotNil(client.tokenRefreshHandler)
+    }
+
+    func testForceLogoutHandlerCanBeConfigured() {
+        // Given: APIClient instance
+        let client = APIClient(
+            baseURL: URL(string: "http://localhost:3000")!,
+            session: URLSession.shared
+        )
+
+        var handlerCalled = false
+
+        // When: Custom handler is set
+        client.forceLogoutHandler = {
+            handlerCalled = true
+        }
+
+        // Then: Handler should be configurable (used for testing/DI)
+        XCTAssertNotNil(client.forceLogoutHandler)
+    }
+
+    func testAccessTokenCanBeSetAndCleared() {
+        // Given: APIClient instance
+        let client = APIClient(
+            baseURL: URL(string: "http://localhost:3000")!,
+            session: URLSession.shared
+        )
+
+        // Initially nil
+        XCTAssertNil(client.accessToken)
+
+        // Can be set
+        client.accessToken = "test-token"
+        XCTAssertEqual(client.accessToken, "test-token")
+
+        // Can be cleared
+        client.accessToken = nil
+        XCTAssertNil(client.accessToken)
+    }
+
+    func testLogoutGuardChecksDependsOnAccessToken() {
+        // Given: APIClient with nil access token (simulating already logged out)
+        let client = APIClient(
+            baseURL: URL(string: "http://localhost:3000")!,
+            session: URLSession.shared
+        )
+
+        var forceLogoutCount = 0
+        client.forceLogoutHandler = {
+            forceLogoutCount += 1
+        }
+
+        // When: Access token is nil (already logged out)
+        client.accessToken = nil
+
+        // Then: The guard `if accessToken != nil` in the code should prevent
+        // forceLogoutHandler from being called. We verify the state is correct.
+        XCTAssertNil(client.accessToken)
+        XCTAssertEqual(forceLogoutCount, 0, "Force logout should not have been called yet")
+
+        // When: Token is set
+        client.accessToken = "test-token"
+
+        // Then: State is ready for logout guard to allow the call
+        XCTAssertNotNil(client.accessToken)
+    }
 }

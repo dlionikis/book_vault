@@ -69,9 +69,11 @@ class APIClient: APIClientProtocol {
         await AuthManager.shared.refreshAccessToken()
     }
 
-    // Token refresh state to prevent infinite loops
+    // Token refresh state to prevent infinite loops and handle concurrent 401s
     private var isRefreshingToken = false
     private let refreshLock = NSLock()
+    // Store continuations for requests waiting on an in-progress refresh
+    private var refreshWaiters: [CheckedContinuation<Bool, Never>] = []
 
     // Production singleton init - reads API URL from Info.plist (set via xcconfig)
     private convenience init() {
@@ -204,9 +206,11 @@ class APIClient: APIClientProtocol {
                 }
                 return try await executeWithoutRefresh(request: retryRequest)
             } else {
-                // Refresh failed - force logout
+                // Refresh failed - force logout (only if not already logged out)
                 DebugLogger.auth("Token refresh failed - forcing logout")
-                forceLogoutHandler()
+                if accessToken != nil {
+                    forceLogoutHandler()
+                }
                 throw APIError.unauthorized
             }
         case 404:
@@ -238,9 +242,11 @@ class APIClient: APIClientProtocol {
         case 200 ... 299:
             return try decodeResponse(data: data)
         case 401:
-            // Second 401 after refresh - definitely log out
+            // Second 401 after refresh - definitely log out (only if not already logged out)
             DebugLogger.auth("Second 401 after token refresh - forcing logout")
-            forceLogoutHandler()
+            if accessToken != nil {
+                forceLogoutHandler()
+            }
             throw APIError.unauthorized
         case 404:
             throw APIError.notFound
@@ -272,34 +278,49 @@ class APIClient: APIClientProtocol {
                     DebugLogger.error("Unknown decoding error")
                 }
             }
+     
             throw APIError.decodingError(error)
         }
     }
 
     /// Attempt to refresh the access token
     /// Returns true if refresh succeeded, false otherwise
+    /// If refresh is already in progress, waits for it to complete and returns the same result
     private func attemptTokenRefresh() async -> Bool {
-        // Use lock to prevent multiple concurrent refresh attempts
         refreshLock.lock()
 
-        // If already refreshing, don't start another refresh
+        // If already refreshing, wait for the in-progress refresh to complete
         if isRefreshingToken {
-            refreshLock.unlock()
-            DebugLogger.auth("Token refresh already in progress - skipping")
-            return false
+            DebugLogger.auth("Token refresh already in progress - waiting for result...")
+
+            // Create a continuation and add to waiters list
+            return await withCheckedContinuation { continuation in
+                refreshWaiters.append(continuation)
+                refreshLock.unlock()
+            }
         }
 
+        // We're the first - start the refresh
         isRefreshingToken = true
         refreshLock.unlock()
 
-        defer {
-            refreshLock.lock()
-            isRefreshingToken = false
-            refreshLock.unlock()
+        // Perform the actual refresh
+        let success = await tokenRefreshHandler()
+
+        // Resume all waiting continuations with the result
+        refreshLock.lock()
+        let waiters = refreshWaiters
+        refreshWaiters.removeAll()
+        isRefreshingToken = false
+        refreshLock.unlock()
+
+        DebugLogger.auth("Token refresh completed (success: \(success)) - resuming \(waiters.count) waiting requests")
+
+        for waiter in waiters {
+            waiter.resume(returning: success)
         }
 
-        // Call AuthManager to refresh the token
-        return await tokenRefreshHandler()
+        return success
     }
 
     // MARK: - Authentication
