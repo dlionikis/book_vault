@@ -160,23 +160,3 @@ final class BiometricAuthManagerTests: XCTestCase {
         }
     }
 }
-
-// MARK: - BiometricError Equatable Extension for Testing
-
-extension BiometricError: Equatable {
-    public static func == (lhs: BiometricError, rhs: BiometricError) -> Bool {
-        switch (lhs, rhs) {
-        case (.notAvailable, .notAvailable),
-             (.notEnabled, .notEnabled),
-             (.authenticationFailed, .authenticationFailed),
-             (.credentialsNotFound, .credentialsNotFound),
-             (.encodingFailed, .encodingFailed),
-             (.accessControlCreationFailed, .accessControlCreationFailed):
-            return true
-        case let (.keychainSaveFailed(lhsStatus), .keychainSaveFailed(rhsStatus)):
-            return lhsStatus == rhsStatus
-        default:
-            return false
-        }
-    }
-}

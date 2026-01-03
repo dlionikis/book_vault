@@ -200,7 +200,7 @@ final class BiometricAuthManager: ObservableObject {
 // MARK: - BiometricError
 
 /// Errors that can occur during biometric authentication
-enum BiometricError: LocalizedError {
+enum BiometricError: LocalizedError, Equatable {
     case notAvailable
     case notEnabled
     case authenticationFailed
