@@ -194,6 +194,9 @@ class AuthManager: ObservableObject, AuthManaging {
     }
 
     /// Clear all session data
+    /// Note: Biometric enrollment is intentionally NOT cleared on logout.
+    /// Users stay enrolled for faster re-login. If password is changed on web,
+    /// biometric login will fail and user will need to re-enable after password login.
     private func clearSession() {
         // Clear keychain
         keychain.delete(key: accessTokenKey)

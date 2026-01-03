@@ -631,18 +631,45 @@ Then regenerate: `cd ios && xcodegen generate`
 
 ---
 
+### Phase 7: Unit Tests
+
+#### Session Start Instructions
+
+1. Read this plan file (`docs/mobile/face-id-implementation-plan.md`)
+2. Read `ios/BookVault/Services/BiometricAuthManager.swift` to understand the public API
+3. Read existing test patterns in `ios/BookVaultTests/` directory
+4. Verify Phases 1-6 are complete
+
+**Create**: `ios/BookVaultTests/BiometricAuthManagerTests.swift`
+
+#### Test Strategy
+
+Since biometric authentication requires hardware (Face ID/Touch ID), tests focus on:
+
+1. **State management** - `isBiometricEnabled`, `canUseBiometrics` flags
+2. **Enable/Disable flow** - UserDefaults persistence, keychain cleanup
+3. **Email matching** - `isBiometricEnabledFor(email:)` case-insensitivity
+4. **Error types** - All `BiometricError` cases have descriptions
+
+Note: Actual biometric authentication cannot be unit tested without mocking `LAContext`. Consider adding a protocol wrapper for `LAContext` if more comprehensive testing is needed.
+
+**Estimated time**: 1 hour
+
+---
+
 ## File Changes Summary
 
-| File                                  | Action        | Lines Changed (est.) |
-| ------------------------------------- | ------------- | -------------------- |
-| `Services/BiometricAuthManager.swift` | **Create**    | ~200                 |
-| `Views/LoginView.swift`               | Modify        | ~60                  |
-| `Services/AuthManager.swift`          | Modify        | ~15                  |
-| `Views/SettingsView.swift`            | Modify/Create | ~50                  |
-| `Info.plist`                          | Modify        | ~3                   |
-| `project.yml`                         | Modify        | ~2                   |
+| File                                             | Action        | Lines Changed (est.) |
+| ------------------------------------------------ | ------------- | -------------------- |
+| `Services/BiometricAuthManager.swift`            | **Create**    | ~200                 |
+| `Views/Auth/LoginView.swift`                     | Modify        | ~60                  |
+| `Services/AuthManager.swift`                     | Modify        | ~15                  |
+| `Views/SettingsView.swift`                       | Modify/Create | ~50                  |
+| `Info.plist`                                     | Modify        | ~3                   |
+| `project.yml`                                    | Modify        | ~2                   |
+| `BookVaultTests/BiometricAuthManagerTests.swift` | **Create**    | ~80                  |
 
-**Total new/modified lines**: ~330
+**Total new/modified lines**: ~410
 
 ---
 

@@ -52,6 +52,7 @@ targets:
           - audio
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
+        NSFaceIDUsageDescription: Book Vault uses Face ID to securely log you in without entering your password.
 
     settings:
       base:

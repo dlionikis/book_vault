@@ -11,7 +11,9 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var themeManager = ThemeManager.shared
+    @StateObject private var biometricManager = BiometricAuthManager.shared
     @State private var showingLogoutConfirmation = false
+    @State private var showingDisableBiometricConfirmation = false
     @State private var isLoggingOut = false
 
     var body: some View {
@@ -29,6 +31,33 @@ struct SettingsView: View {
                     Text("Appearance")
                 } footer: {
                     Text("Choose your preferred color scheme")
+                }
+
+                // Security Section
+                if biometricManager.canUseBiometrics {
+                    Section {
+                        Toggle(
+                            "\(biometricManager.biometryName) Login",
+                            isOn: Binding(
+                                get: { biometricManager.isBiometricEnabled },
+                                set: { newValue in
+                                    if !newValue {
+                                        showingDisableBiometricConfirmation = true
+                                    }
+                                    // Enable is handled via login flow, not here
+                                }
+                            )
+                        )
+                        .disabled(!biometricManager.isBiometricEnabled)
+
+                        if !biometricManager.isBiometricEnabled {
+                            Text("Log in with your password to enable \(biometricManager.biometryName)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    } header: {
+                        Text("Security")
+                    }
                 }
 
                 // Account Section
@@ -87,6 +116,17 @@ struct SettingsView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Are you sure you want to log out?")
+            }
+            .confirmationDialog(
+                "Disable \(biometricManager.biometryName)?",
+                isPresented: $showingDisableBiometricConfirmation
+            ) {
+                Button("Disable", role: .destructive) {
+                    biometricManager.disableBiometric()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("You'll need to enter your password to log in")
             }
         }
     }
