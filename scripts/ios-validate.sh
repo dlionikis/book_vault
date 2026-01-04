@@ -72,18 +72,10 @@ for runtime, devices in data.get('devices', {}).items():
 print('platform=iOS Simulator,name=Any iOS Simulator Device')
 ")
   echo "   Using simulator: $SIMULATOR_DEST"
-  if command -v xcpretty &> /dev/null; then
-    xcodebuild build \
-      -scheme BookVault \
-      -destination "$SIMULATOR_DEST" \
-      CODE_SIGNING_ALLOWED=NO \
-      | xcpretty
-  else
-    xcodebuild build \
-      -scheme BookVault \
-      -destination "$SIMULATOR_DEST" \
-      CODE_SIGNING_ALLOWED=NO
-  fi
+  xcodebuild build \
+    -scheme BookVault \
+    -destination "$SIMULATOR_DEST" \
+    CODE_SIGNING_ALLOWED=NO
 }
 
 run_tests() {
@@ -101,20 +93,11 @@ for runtime, devices in data.get('devices', {}).items():
                 sys.exit(0)
 print('platform=iOS Simulator,name=Any iOS Simulator Device')
 ")
-  if command -v xcpretty &> /dev/null; then
-    xcodebuild test \
-      -scheme BookVault \
-      -destination "$SIMULATOR_DEST" \
-      -enableCodeCoverage YES \
-      CODE_SIGNING_ALLOWED=NO \
-      | xcpretty
-  else
-    xcodebuild test \
-      -scheme BookVault \
-      -destination "$SIMULATOR_DEST" \
-      -enableCodeCoverage YES \
-      CODE_SIGNING_ALLOWED=NO
-  fi
+  xcodebuild test \
+    -scheme BookVault \
+    -destination "$SIMULATOR_DEST" \
+    -enableCodeCoverage YES \
+    CODE_SIGNING_ALLOWED=NO
 }
 
 case "${1:-all}" in

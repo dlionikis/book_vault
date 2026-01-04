@@ -32,9 +32,6 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Install xcpretty
-        run: gem install xcpretty
-
       - name: Install SwiftLint
         run: brew install swiftlint
 
@@ -94,14 +91,14 @@ jobs:
           # Remove any existing result bundle
           rm -rf TestResults.xcresult
 
-          # Run tests without xcpretty piping to preserve coverage data
+          # Run tests directly without xcpretty (avoids encoding issues)
           xcodebuild test \
             -scheme BookVault \
             -destination '${{ steps.simulator.outputs.destination }}' \
             -enableCodeCoverage YES \
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
-            2>&1 | tee xcodebuild.log | xcpretty --report junit --output TestResults.xml || true
+            2>&1 | tee xcodebuild.log
 
           # Check if tests passed by examining the log
           if grep -qF "** TEST SUCCEEDED **" xcodebuild.log; then
@@ -118,7 +115,6 @@ jobs:
           name: test-results
           path: |
             ios/TestResults.xcresult
-            ios/TestResults.xml
             ios/xcodebuild.log
 
       - name: Generate coverage report
