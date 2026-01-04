@@ -54,7 +54,8 @@ class MockLibraryManager: LibraryManaging {
         return libraryBooks
     }
 
-    func addToLibrary(bookId: String) async throws {
+    @discardableResult
+    func addToLibrary(bookId: String) async throws -> String {
         addToLibraryCalls.append(bookId)
 
         if addShouldFail {
@@ -64,6 +65,7 @@ class MockLibraryManager: LibraryManaging {
         }
 
         libraryVersion += 1
+        return "Book added to library"
     }
 
     func removeFromLibrary(bookId: String) async throws {

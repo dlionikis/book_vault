@@ -219,17 +219,21 @@ class DebugLogger {
     }
 
     /// Log an API response with status code
+    /// - Note: The body parameter uses @autoclosure to defer evaluation until logging is actually needed.
+    ///         This means expensive body formatting (like JSON truncation) is skipped entirely in release builds.
     static func apiResponse(
         path: String,
         statusCode: Int,
-        body: String? = nil,
+        body: @autoclosure () -> String? = nil,
         file: String = #file,
         function: String = #function,
         line: Int = #line
     ) {
+        guard isEnabled else { return }
+
         var message = "API Response: \(path) | Status: \(statusCode)"
-        if let body {
-            message += " | Body: \(body)"
+        if let bodyValue = body() {
+            message += " | Body: \(bodyValue)"
         }
 
         // Use different categories based on status code

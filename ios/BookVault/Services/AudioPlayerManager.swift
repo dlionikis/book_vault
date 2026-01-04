@@ -217,10 +217,21 @@ class AudioPlayerManager: ObservableObject {
         // Change playback position (scrubbing on lock screen)
         commandCenter.changePlaybackPositionCommand.isEnabled = true
         commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
-            guard let event = event as? MPChangePlaybackPositionCommandEvent else {
+            guard let self,
+                  let event = event as? MPChangePlaybackPositionCommandEvent else {
                 return .commandFailed
             }
-            self?.seek(to: event.positionTime)
+
+            // If we're showing chapter-based progress, the position is relative to the chapter
+            // Convert it to absolute book position
+            let absolutePosition: TimeInterval
+            if let currentChapter = self.getCurrentChapter() {
+                absolutePosition = currentChapter.startTime + event.positionTime
+            } else {
+                absolutePosition = event.positionTime
+            }
+
+            self.seek(to: absolutePosition)
             return .success
         }
 
@@ -235,14 +246,31 @@ class AudioPlayerManager: ObservableObject {
 
         var nowPlayingInfo = [String: Any]()
 
-        // Basic metadata
-        nowPlayingInfo[MPMediaItemPropertyTitle] = book.title
-        nowPlayingInfo[MPMediaItemPropertyArtist] = book.authors.map(\.name).joined(separator: ", ")
-        nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = book.series?.first?.title ?? "Audiobook"
+        // Check if we have chapter info for chapter-based progress display
+        let currentChapter = getCurrentChapter()
 
-        // Playback information
-        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
-        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
+        // Basic metadata - show chapter title when available
+        if let chapter = currentChapter {
+            nowPlayingInfo[MPMediaItemPropertyTitle] = chapter.title
+            nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = book.title
+        } else {
+            nowPlayingInfo[MPMediaItemPropertyTitle] = book.title
+            nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = book.series?.first?.title ?? "Audiobook"
+        }
+        nowPlayingInfo[MPMediaItemPropertyArtist] = book.authors.map(\.name).joined(separator: ", ")
+
+        // Playback information - use chapter duration/position when available
+        if let chapter = currentChapter {
+            // Show progress within current chapter
+            let chapterDuration = chapter.endTime - chapter.startTime
+            let chapterElapsed = currentTime - chapter.startTime
+            nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = chapterDuration
+            nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = max(0, chapterElapsed)
+        } else {
+            // Fall back to full book duration
+            nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
+            nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
+        }
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? playbackRate : 0.0
 
         // Cover artwork from cache (single source of truth)
@@ -667,6 +695,8 @@ class AudioPlayerManager: ObservableObject {
                     if self.currentChapterId != currentChapter.id {
                         self.currentChapterId = currentChapter.id
                         DebugLogger.audio("Chapter changed: \(currentChapter.title)")
+                        // Update lock screen to show new chapter info
+                        self.updateNowPlayingInfo()
                     }
                 }
             }

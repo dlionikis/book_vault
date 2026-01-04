@@ -317,13 +317,40 @@ class LibraryViewModel: ObservableObject {
     }
 
     func refreshLibrary() async {
-        // Force refresh cache and reload
+        // Pull-to-refresh: Don't set ANY @Published properties before the network call
+        // because SwiftUI view re-evaluation during .refreshable can cancel the task.
+        // See: SwiftUI .refreshable + @Published bug
+
         do {
-            try await libraryManager.refreshCache()
-            await loadLibrary()
+            // Force refresh from API (bypasses cache)
+            let fetchedBooks = try await libraryManager.fetchLibraryBooks(forceRefresh: true)
+
+            // Only update @Published properties AFTER the network call succeeds
+            self.books = fetchedBooks
+            self.totalBooks = fetchedBooks.count
+            self.currentPage = 1
+
+            // Smart pagination: only paginate if >= 50 books
+            self.shouldPaginate = totalBooks >= paginationThreshold
+
+            if shouldPaginate {
+                self.books = Array(fetchedBooks.prefix(pageSize))
+                self.hasMorePages = totalBooks > pageSize
+            } else {
+                self.hasMorePages = false
+            }
+        } catch let error as LibraryError {
+            // Only show error if it wasn't a cancellation
+            let nsError = error as NSError
+            if nsError.domain != NSURLErrorDomain || nsError.code != NSURLErrorCancelled {
+                errorMessage = error.localizedDescription
+                isOfflineNoCache = (error == .offlineNoCache)
+            }
         } catch {
-            errorMessage = error.localizedDescription
-            DebugLogger.error("Failed to refresh library", error: error)
+            let nsError = error as NSError
+            if nsError.domain != NSURLErrorDomain || nsError.code != NSURLErrorCancelled {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

@@ -32,7 +32,9 @@ protocol LibraryManaging {
 
     /// Add book to user's library
     /// - Parameter bookId: The book's ID string
-    func addToLibrary(bookId: String) async throws
+    /// - Returns: The response message from the server
+    @discardableResult
+    func addToLibrary(bookId: String) async throws -> String
 
     /// Remove book from user's library
     /// - Parameter bookId: The book's ID string
