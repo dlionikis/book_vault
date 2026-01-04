@@ -311,8 +311,9 @@ class AudioPlayerManager: ObservableObject {
     /// Load and play a book
 
     func play(book: Book) {
-        // If same book, just resume
-        if currentBook?.id == book.id {
+        // If same book AND player exists with a loaded item, just resume
+        // (loadForMiniPlayer sets currentBook but doesn't create a player)
+        if currentBook?.id == book.id, player?.currentItem != nil {
             resume()
             return
         }
@@ -559,7 +560,12 @@ class AudioPlayerManager: ObservableObject {
         if isPlaying {
             pause()
         } else {
-            resume()
+            // If player isn't set up yet (e.g., loaded via loadForMiniPlayer), set it up
+            if let book = currentBook, player?.currentItem == nil {
+                play(book: book)
+            } else {
+                resume()
+            }
         }
     }
 
