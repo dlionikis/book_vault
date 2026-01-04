@@ -4,11 +4,12 @@
 
 ---
 
-## 📢 Recent Changes (December 29, 2025)
+## 📢 Recent Changes (January 4, 2026)
 
-- **iOS app complete** - All 8 phases implemented (offline mode included)
-- **Web app complete** - Ready for AWS deployment
-- **Next priority**: AWS Deployment → User Lists (post-launch)
+- **iOS Background Downloads** - PR #62: Downloads continue when app backgrounded
+- **iOS app complete** - All 8 phases + post-launch background downloads
+- **Production** - Live at bookvault.lionikis.com
+- **Next priority**: User Lists (post-launch)
 
 ---
 
@@ -173,6 +174,7 @@ Located in `archive/` folder:
 - `archive/completed-plans/ios-testing-real-services-plan.md` - Real service testing strategy
 - `archive/completed-plans/ios-testing-recommendations.md` - Testing recommendations
 - `archive/completed-plans/ios-backend-sync.md` - iOS-backend sync tracker (historical)
+- `archive/completed-plans/background-downloads.md` - Background downloads implementation (Jan 2026)
 - `archive/completed-plans/implement-backend-support-for-mobile.md` (71K, 9,512 words)
 - `archive/completed-plans/storybook-plan.md` (30K, 3,913 words)
 - `archive/completed-plans/fix-api-tests.md` (10K, 1,311 words)
@@ -272,7 +274,7 @@ Located in `archive/implementation-plans/` folder:
 
 ## 🔄 Maintenance
 
-**Last Updated**: January 2, 2026
+**Last Updated**: January 4, 2026
 
 **When to update this index**:
 

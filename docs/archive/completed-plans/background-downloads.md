@@ -1,10 +1,32 @@
 # Background Downloads Implementation Plan
 
 **Created**: January 4, 2026
-**Status**: Ready for Implementation
+**Completed**: January 4, 2026
+**Status**: ✅ COMPLETE (PR #62 merged)
 **Priority**: Post-launch enhancement
 
 > **TL;DR**: Convert DownloadManager from foreground-only URLSession to background URLSession, enabling downloads to continue when the app is backgrounded or terminated. Implementation split into 4 independent phases.
+
+---
+
+## Completion Summary
+
+All 4 phases implemented and merged in PR #62:
+
+- **Phase 1**: AppDelegate + background URLSession configuration ✅
+- **Phase 2**: Pending download persistence for app restart recovery ✅
+- **Phase 3**: Progress tracking + UI updates for foreground/background transitions ✅
+- **Phase 4**: Edge case handling (resume data, network changes) + 17 new tests ✅
+
+**Key files added/modified**:
+
+- `ios/BookVault/AppDelegate.swift` (new - 42 lines)
+- `ios/BookVault/Services/DownloadManager.swift` (+461 lines)
+- `ios/BookVault/Views/Books/BookDetailView.swift` (+28 lines)
+- `ios/BookVault/Views/Downloads/DownloadsView.swift` (+21 lines)
+- `ios/BookVaultTests/Services/BackgroundDownloadTests.swift` (new - 337 lines)
+
+**Important limitation**: Force-quit (swipe up) cancels all background URLSession tasks per iOS design. This is expected behavior - downloads survive backgrounding and system-initiated termination, but not explicit user force-quit.
 
 ---
 

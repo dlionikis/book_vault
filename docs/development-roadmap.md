@@ -1,6 +1,6 @@
 # Development Roadmap
 
-**Last Updated**: December 31, 2025
+**Last Updated**: January 4, 2026
 **Current Phase**: ✅ DEPLOYED TO PRODUCTION
 
 > **TL;DR**: Web app, iOS app, and AWS deployment complete. Live at https://bookvault.lionikis.com. Next priority: User Lists (post-launch).
@@ -55,6 +55,8 @@
 8. ✅ Offline Mode (library caching, offline progress queue)
 
 **Deferred**: User Lists (requires backend API development first)
+
+**Post-launch enhancement**: ✅ Background Downloads (Jan 2026) - Downloads continue when app backgrounded
 
 **See**: [mobile-ios-plan.md](mobile-ios-plan.md) for maintenance docs and common commands
 

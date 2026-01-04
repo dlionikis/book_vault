@@ -1,6 +1,6 @@
 # Project Status
 
-**Last Updated**: December 31, 2025
+**Last Updated**: January 4, 2026
 
 ## Current State
 
@@ -31,15 +31,16 @@ None currently blocking. All tests passing.
 
 ## Recent Merges
 
-| PR  | Description                                              | Date   |
-| --- | -------------------------------------------------------- | ------ |
-| #51 | Presigned URLs - S3 media access, IAM task role support  | Dec 31 |
-| #50 | AWS Deployment - ECS Fargate, RDS, S3, Domain/SSL        | Dec 31 |
-| #49 | Code Quality - lint-staged, SwiftLint, dead code removal | Dec 30 |
-| #48 | iOS Testing - 568 tests, real service coverage           | Dec 30 |
-| #47 | iOS Phase 8 - Offline Mode Support                       | Dec 29 |
-| #46 | iOS Phase 7 - Offline Downloads                          | Dec 29 |
-| #45 | iOS Library UX Alignment                                 | Dec 29 |
+| PR  | Description                                                         | Date   |
+| --- | ------------------------------------------------------------------- | ------ |
+| #62 | iOS Background Downloads - Downloads continue when app backgrounded | Jan 4  |
+| #61 | OpenAPI Contract Test Coverage - 100% endpoint coverage             | Jan 4  |
+| #51 | Presigned URLs - S3 media access, IAM task role support             | Dec 31 |
+| #50 | AWS Deployment - ECS Fargate, RDS, S3, Domain/SSL                   | Dec 31 |
+| #49 | Code Quality - lint-staged, SwiftLint, dead code removal            | Dec 30 |
+| #48 | iOS Testing - 568 tests, real service coverage                      | Dec 30 |
+| #47 | iOS Phase 8 - Offline Mode Support                                  | Dec 29 |
+| #46 | iOS Phase 7 - Offline Downloads                                     | Dec 29 |
 
 ---
 
@@ -66,6 +67,8 @@ All phases complete:
 6. ✅ Search & Browse
 7. ✅ Offline Downloads
 8. ✅ Offline Mode
+
+**Post-launch enhancement**: ✅ Background Downloads (PR #62) - Downloads continue when app is backgrounded or system-terminated
 
 **Deferred**: User Lists (requires backend API)
 
