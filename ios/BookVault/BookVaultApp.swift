@@ -9,6 +9,9 @@ import SwiftUI
 
 @main
 struct BookVaultApp: App {
+    // AppDelegate for handling background URLSession events
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     @StateObject private var authManager = AuthManager.shared
 
     init() {

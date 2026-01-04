@@ -652,6 +652,34 @@ struct DownloadButton: View {
                 .background(Color.gray.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
+            case let .backgroundDownloading(lastProgress):
+                // Show background download state
+                VStack(spacing: 8) {
+                    ProgressView(value: lastProgress)
+                        .tint(.blue)
+
+                    HStack {
+                        Image(systemName: "arrow.down.circle")
+                            .foregroundColor(.blue)
+                        Text("Downloading in background...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Text("\(Int(lastProgress * 100))% when last checked")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+
+                    Button("Cancel") {
+                        downloadManager.cancelDownload(bookId: bookId)
+                    }
+                    .font(.caption)
+                    .foregroundColor(.red)
+                }
+                .padding()
+                .background(Color.blue.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
             case let .paused(progress):
                 // Show paused state with resume option
                 VStack(spacing: 8) {

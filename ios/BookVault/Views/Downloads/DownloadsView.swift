@@ -231,6 +231,27 @@ struct ActiveDownloadRow: View {
                     }
                 }
 
+            case let .backgroundDownloading(lastProgress):
+                VStack(alignment: .leading, spacing: 4) {
+                    ProgressView(value: lastProgress)
+                        .tint(.blue)
+
+                    HStack {
+                        Image(systemName: "arrow.down.circle")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                        Text("Background download...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        Text("\(Int(lastProgress * 100))%")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
             case let .paused(progress):
                 VStack(alignment: .leading, spacing: 4) {
                     ProgressView(value: progress)
