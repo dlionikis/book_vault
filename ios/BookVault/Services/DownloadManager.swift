@@ -16,6 +16,7 @@ enum DownloadState: Equatable {
     case notDownloaded
     case waiting
     case downloading(progress: Double)
+    case backgroundDownloading(lastProgress: Double) // App was backgrounded during download
     case paused(progress: Double)
     case completed
     case failed(error: String)
@@ -165,6 +166,9 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
     // UserDefaults key for persisting pending downloads
     private let pendingDownloadsKey = "com.bookvault.pendingDownloads"
 
+    // UserDefaults key for persisting resume data
+    private let resumeDataKeyPrefix = "com.bookvault.resumeData."
+
     // UserDefaults instance (injectable for testing)
     private let userDefaults: UserDefaults
 
@@ -207,6 +211,101 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
 
         // Restore any pending downloads from previous app session
         restorePendingDownloads()
+
+        // Register for app lifecycle notifications
+        setupLifecycleNotifications()
+    }
+
+    /// Register for app lifecycle notifications to update UI when returning to foreground
+    private func setupLifecycleNotifications() {
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.applicationWillEnterForeground()
+            }
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.applicationDidEnterBackground()
+            }
+        }
+    }
+
+    /// Called when app is about to enter foreground - refresh download states
+    private func applicationWillEnterForeground() {
+        guard !activeDownloads.isEmpty else { return }
+
+        DebugLogger.download("App entering foreground, refreshing download states")
+
+        // Query background session for current task states
+        downloadSession.getAllTasks { [weak self] tasks in
+            Task { @MainActor in
+                self?.updateUIFromBackgroundTasks(tasks)
+            }
+        }
+    }
+
+    /// Called when app enters background - mark active downloads as background downloading
+    private func applicationDidEnterBackground() {
+        for (bookId, download) in activeDownloads {
+            if case let .downloading(progress) = download.state {
+                activeDownloads[bookId]?.state = .backgroundDownloading(lastProgress: progress)
+                DebugLogger.download("Marked \(bookId) as background downloading at \(Int(progress * 100))%")
+            }
+        }
+    }
+
+    /// Update UI state from actual background session tasks
+    private func updateUIFromBackgroundTasks(_ tasks: [URLSessionTask]) {
+        let downloadTasks = tasks.compactMap { $0 as? URLSessionDownloadTask }
+
+        DebugLogger.download("Updating UI from \(downloadTasks.count) background tasks")
+
+        for task in downloadTasks {
+            guard let bookId = task.taskDescription else { continue }
+
+            // Calculate current progress from task
+            let totalBytes = task.countOfBytesExpectedToReceive
+            let bytesReceived = task.countOfBytesReceived
+
+            if totalBytes > 0, var download = activeDownloads[bookId] {
+                let progress = Double(bytesReceived) / Double(totalBytes)
+                download.bytesDownloaded = bytesReceived
+                download.totalBytes = totalBytes
+                download.state = .downloading(progress: progress)
+                download.task = task
+                activeDownloads[bookId] = download
+
+                DebugLogger.download("Updated \(bookId): \(Int(progress * 100))%")
+            }
+        }
+
+        // Check for completed downloads that finished while backgrounded
+        let taskBookIds = Set(downloadTasks.compactMap { $0.taskDescription })
+        for (bookId, download) in activeDownloads {
+            if case .backgroundDownloading = download.state,
+               !taskBookIds.contains(bookId) {
+                // Task is gone - check if completed
+                if storageManager.isBookDownloaded(bookId: bookId) {
+                    activeDownloads[bookId]?.state = .completed
+                    removePendingDownloadInfo(bookId: bookId)
+                    DebugLogger.download("Download completed while backgrounded: \(bookId)")
+
+                    // Remove from active after delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                        self?.activeDownloads.removeValue(forKey: bookId)
+                    }
+                }
+            }
+        }
     }
 
     private func setupDownloadSession() {
@@ -399,9 +498,37 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
     }
 
     /// Resume a paused download
+    ///
+    /// If resume data is available from a previous interrupted download,
+    /// this will use it to continue from where it left off. Otherwise,
+    /// it restarts the download from the beginning.
     func resumeDownload(book: Book) async throws {
-        // For now, just restart the download
-        // In future, could use resume data
+        let bookId = book.id.uuidString
+
+        // Check if we have resume data
+        if let resumeData = loadResumeData(bookId: bookId) {
+            DebugLogger.download("Resuming download with saved resume data: \(book.title)")
+
+            // Create task from resume data
+            let task = downloadSession.downloadTask(withResumeData: resumeData)
+            task.taskDescription = bookId
+
+            // Update tracking
+            downloadTasks[bookId] = task
+            if var download = activeDownloads[bookId] {
+                download.task = task
+                download.state = .downloading(progress: download.progress)
+                activeDownloads[bookId] = download
+            }
+
+            // Clear resume data since we're using it
+            clearResumeData(bookId: bookId)
+
+            task.resume()
+            return
+        }
+
+        // No resume data - restart from beginning
         try await startDownload(book: book)
     }
 
@@ -829,6 +956,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         pendingBooks.removeValue(forKey: bookId)
         fileExtensionStorage.remove(for: bookId) // Clean up thread-safe storage
         removePendingDownloadInfo(bookId: bookId) // Clean up persisted pending info
+        clearResumeData(bookId: bookId) // Clean up any stale resume data
 
         // Remove from active downloads after short delay (to show completion)
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -868,6 +996,19 @@ extension DownloadManager: URLSessionDownloadDelegate {
         if nsError.code == NSURLErrorCancelled {
             activeDownloads.removeValue(forKey: bookId)
             removePendingDownloadInfo(bookId: bookId)
+            clearResumeData(bookId: bookId)
+            return
+        }
+
+        // Check for resumable network errors with resume data
+        if let resumeData = nsError.userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
+            saveResumeData(bookId: bookId, data: resumeData)
+
+            // Set to paused state since we can resume
+            let progress = activeDownloads[bookId]?.progress ?? 0
+            activeDownloads[bookId]?.state = .paused(progress: progress)
+
+            DebugLogger.download("Saved resume data for \(bookId), can retry later")
             return
         }
 
@@ -875,10 +1016,37 @@ extension DownloadManager: URLSessionDownloadDelegate {
         let errorMessage = error.localizedDescription
         activeDownloads[bookId]?.state = .failed(error: errorMessage)
 
-        // Remove pending info - user will need to retry
+        // Remove pending info - user will need to retry from scratch
         removePendingDownloadInfo(bookId: bookId)
+        clearResumeData(bookId: bookId)
 
         DebugLogger.error("Download failed: \(bookId)", error: error)
+    }
+
+    // MARK: - Resume Data Persistence
+
+    /// Save resume data for a failed download
+    private func saveResumeData(bookId: String, data: Data) {
+        let key = resumeDataKeyPrefix + bookId
+        userDefaults.set(data, forKey: key)
+        DebugLogger.download("Saved \(data.count) bytes of resume data for \(bookId)")
+    }
+
+    /// Load resume data for a download
+    private func loadResumeData(bookId: String) -> Data? {
+        let key = resumeDataKeyPrefix + bookId
+        return userDefaults.data(forKey: key)
+    }
+
+    /// Clear resume data after successful resume or cancellation
+    private func clearResumeData(bookId: String) {
+        let key = resumeDataKeyPrefix + bookId
+        userDefaults.removeObject(forKey: key)
+    }
+
+    /// Check if resume data exists for a download
+    func hasResumeData(bookId: String) -> Bool {
+        loadResumeData(bookId: bookId) != nil
     }
 }
 
