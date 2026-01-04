@@ -143,6 +143,37 @@ class APIClient: APIClientProtocol {
 
     // MARK: - Private Helpers
 
+    /// Truncates large API response bodies for debug logging
+    /// Only called via @autoclosure, so this is skipped entirely in release builds
+    private static func truncatedResponseBody(from data: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return String(data: data, encoding: .utf8)
+        }
+
+        // Check for common array fields (books, library, items, etc.)
+        let arrayKeys = ["books", "library", "items", "results", "data"]
+        var truncated = json
+        var truncationNote: String?
+
+        for key in arrayKeys {
+            if let array = json[key] as? [[String: Any]], array.count > 1 {
+                // Keep only first item
+                truncated[key] = [array[0]]
+                truncationNote = "[\(key): showing 1 of \(array.count) items, rest truncated]"
+                break
+            }
+        }
+
+        if let note = truncationNote,
+           let truncatedData = try? JSONSerialization.data(withJSONObject: truncated),
+           let truncatedString = String(data: truncatedData, encoding: .utf8)
+        {
+            return "\(note)\n\(truncatedString)"
+        }
+
+        return String(data: data, encoding: .utf8)
+    }
+
     /// Creates a URL request with common headers
     private func createRequest(
         path: String,
@@ -203,40 +234,11 @@ class APIClient: APIClientProtocol {
             throw APIError.invalidResponse
         }
 
-        // Debug logging (automatically disabled in release builds)
-        // Truncate large responses to avoid flooding logs
-        let truncatedBody: String?
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            // Check for common array fields (books, library, items, etc.)
-            let arrayKeys = ["books", "library", "items", "results", "data"]
-            var truncated = json
-            var truncationNote: String?
-
-            for key in arrayKeys {
-                if let array = json[key] as? [[String: Any]], array.count > 1 {
-                    // Keep only first item
-                    truncated[key] = [array[0]]
-                    truncationNote = "[\(key): showing 1 of \(array.count) items, rest truncated]"
-                    break
-                }
-            }
-
-            if let note = truncationNote,
-               let truncatedData = try? JSONSerialization.data(withJSONObject: truncated),
-               let truncatedString = String(data: truncatedData, encoding: .utf8)
-            {
-                truncatedBody = "\(note)\n\(truncatedString)"
-            } else {
-                truncatedBody = String(data: data, encoding: .utf8)
-            }
-        } else {
-            truncatedBody = String(data: data, encoding: .utf8)
-        }
-
+        // Debug logging - uses @autoclosure so truncation only runs in debug builds
         DebugLogger.apiResponse(
             path: request.url?.absoluteString ?? "unknown",
             statusCode: httpResponse.statusCode,
-            body: truncatedBody
+            body: Self.truncatedResponseBody(from: data)
         )
 
         // Handle HTTP error codes
