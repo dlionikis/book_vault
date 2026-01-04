@@ -166,8 +166,7 @@ class APIClient: APIClientProtocol {
 
         if let note = truncationNote,
            let truncatedData = try? JSONSerialization.data(withJSONObject: truncated),
-           let truncatedString = String(data: truncatedData, encoding: .utf8)
-        {
+           let truncatedString = String(data: truncatedData, encoding: .utf8) {
             return "\(note)\n\(truncatedString)"
         }
 
