@@ -1,71 +1,27 @@
-# Completed Implementation Plans
+# Archived Implementation Plans
 
-This directory contains completed implementation plans and refactoring documentation that have been successfully executed and merged.
+Historical planning documents from Book Vault development (December 2025 - January 2026).
 
-## Completed Plans
+**Status**: All plans completed. Preserved for historical reference only.
 
-### API & Backend
+## What Was Completed
 
-1. **openapi-implementation-plan.md**
-   - OpenAPI spec implementation
-   - Contract testing setup
-   - Completed: December 2025
+| Area               | Summary                                                         |
+| ------------------ | --------------------------------------------------------------- |
+| **iOS App**        | 8 phases (Auth → Offline Mode), 568 tests, background downloads |
+| **Backend API**    | OpenAPI spec, contract tests (100%), dual auth, S3 streaming    |
+| **Infrastructure** | AWS ECS/RDS/S3, 40% cost optimization                           |
+| **Quality**        | SwiftLint, lint-staged, Storybook                               |
 
-2. **openapi-dual-auth-implementation-plan.md**
-   - Dual authentication (session + JWT)
-   - Mobile bearer token support
-   - Completed: December 2025
+## When to Read These Files
 
-3. **openapi-drift-prevention.md**
-   - Automated drift detection
-   - Pre-commit hooks for type generation
-   - CI/CD integration
-   - Completed: December 2025
+Only if investigating historical decisions or debugging edge cases.
 
-4. **implement-backend-support-for-mobile.md**
-   - Mobile-ready API endpoints
-   - JWT token authentication
-   - Completed: December 2025
+For current development, use active docs in `docs/`.
 
-5. **entity-detail-endpoints-dry-plan.md**
-   - DRY refactor for entity detail endpoints
-   - Created `handleEntityDetailWithBooks` helper
-   - Reduced ~230 lines of duplication
-   - Completed: December 2025
+## Files in This Directory
 
-### Testing & Quality
-
-6. **fix-api-tests.md**
-   - Fixed API contract tests
-   - OpenAPI spec alignment
-   - Completed: December 2025
-
-7. **library-concurrency-tests.md**
-   - Concurrent library operations testing
-   - Race condition prevention
-   - Completed: December 2025
-
-### UI & Features
-
-8. **storybook-plan.md**
-   - Storybook integration
-   - Component documentation
-   - Visual regression testing setup
-   - Completed: December 2025
-
-## Purpose
-
-These plans document:
-
-- **What** was implemented
-- **Why** decisions were made
-- **How** implementation was approached
-- **Lessons learned** for future reference
-
-## Current Work
-
-For ongoing and planned work, see:
-
-- [../../development-roadmap.md](../../development-roadmap.md) - Current priorities
-- [../../STATUS.md](../../STATUS.md) - Latest status
-- [../../mobile-ios-plan.md](../../mobile-ios-plan.md) - iOS development
+- `ios-*.md` - iOS implementation plans
+- `openapi-*.md` - API contract and drift prevention
+- `storybook-plan.md` - Component documentation setup
+- `*-implementation-plan.md` - Feature implementations
