@@ -42,13 +42,18 @@ struct CachedCoverImage: View {
                     .fill(Color.gray.opacity(0.2))
             }
         }
-        .task {
+        .task(id: bookId) {
             await loadImage()
         }
     }
 
     @MainActor
     private func loadImage() async {
+        // Reset state for new book
+        image = nil
+        isLoading = false
+        loadFailed = false
+
         let cache = CoverCacheManager.shared
 
         // Check cache first
