@@ -7,6 +7,49 @@
 
 import Foundation
 
+// MARK: - TokenRefreshCoordinator
+
+/// Actor to coordinate token refresh across concurrent requests (Swift 6 async-safe)
+/// Ensures only one refresh happens at a time; other callers wait for the result
+private actor TokenRefreshCoordinator {
+    private var isRefreshing = false
+    private var waiters: [CheckedContinuation<Bool, Never>] = []
+
+    /// Attempt to start a refresh. Returns nil if we should proceed with refresh,
+    /// or a continuation to await if refresh is already in progress.
+    func beginRefresh() -> CheckedContinuation<Bool, Never>? {
+        if isRefreshing {
+            // Already refreshing - caller should wait
+            return nil // Signal that caller needs to create a continuation
+        }
+        isRefreshing = true
+        return nil
+    }
+
+    /// Check if refresh is in progress
+    func isRefreshInProgress() -> Bool {
+        isRefreshing
+    }
+
+    /// Add a waiter continuation to be resumed when refresh completes
+    func addWaiter(_ continuation: CheckedContinuation<Bool, Never>) {
+        waiters.append(continuation)
+    }
+
+    /// Complete the refresh and resume all waiting continuations
+    func completeRefresh(success: Bool) -> [CheckedContinuation<Bool, Never>] {
+        let currentWaiters = waiters
+        waiters.removeAll()
+        isRefreshing = false
+        return currentWaiters
+    }
+
+    /// Mark refresh as started (called after checking isRefreshInProgress)
+    func markRefreshStarted() {
+        isRefreshing = true
+    }
+}
+
 // MARK: - APIError
 
 /// Errors that can occur during API operations
@@ -69,11 +112,8 @@ class APIClient: APIClientProtocol {
         await AuthManager.shared.refreshAccessToken()
     }
 
-    // Token refresh state to prevent infinite loops and handle concurrent 401s
-    private var isRefreshingToken = false
-    private let refreshLock = NSLock()
-    // Store continuations for requests waiting on an in-progress refresh
-    private var refreshWaiters: [CheckedContinuation<Bool, Never>] = []
+    // Token refresh coordinator (actor-based for Swift 6 async safety)
+    private let refreshCoordinator = TokenRefreshCoordinator()
 
     // Production singleton init - reads API URL from Info.plist (set via xcconfig)
     private convenience init() {
@@ -339,32 +379,26 @@ class APIClient: APIClientProtocol {
     /// Returns true if refresh succeeded, false otherwise
     /// If refresh is already in progress, waits for it to complete and returns the same result
     private func attemptTokenRefresh() async -> Bool {
-        refreshLock.lock()
-
-        // If already refreshing, wait for the in-progress refresh to complete
-        if isRefreshingToken {
+        // Check if refresh is already in progress (actor-isolated, async-safe)
+        if await refreshCoordinator.isRefreshInProgress() {
             DebugLogger.auth("Token refresh already in progress - waiting for result...")
 
-            // Create a continuation and add to waiters list
+            // Create a continuation and register as a waiter
             return await withCheckedContinuation { continuation in
-                refreshWaiters.append(continuation)
-                refreshLock.unlock()
+                Task {
+                    await refreshCoordinator.addWaiter(continuation)
+                }
             }
         }
 
-        // We're the first - start the refresh
-        isRefreshingToken = true
-        refreshLock.unlock()
+        // We're the first - mark refresh as started
+        await refreshCoordinator.markRefreshStarted()
 
         // Perform the actual refresh
         let success = await tokenRefreshHandler()
 
-        // Resume all waiting continuations with the result
-        refreshLock.lock()
-        let waiters = refreshWaiters
-        refreshWaiters.removeAll()
-        isRefreshingToken = false
-        refreshLock.unlock()
+        // Complete refresh and get all waiting continuations
+        let waiters = await refreshCoordinator.completeRefresh(success: success)
 
         DebugLogger.auth("Token refresh completed (success: \(success)) - resuming \(waiters.count) waiting requests")
 

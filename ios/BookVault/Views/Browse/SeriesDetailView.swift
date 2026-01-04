@@ -256,7 +256,7 @@ struct SeriesDetailView: View {
         do {
             // Add each book in the series to the library
             for book in detail.books {
-                try await libraryManager.addToLibrary(bookId: book.id.uuidString)
+                _ = try await libraryManager.addToLibrary(bookId: book.id.uuidString)
             }
 
             // Update library status

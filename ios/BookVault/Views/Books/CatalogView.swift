@@ -19,7 +19,8 @@ struct CatalogView: View {
     ]
 
     var body: some View {
-        _ = DebugLogger.info("🎨 CatalogView.body EVALUATED - isLoading: \(viewModel.isLoading), booksCount: \(viewModel.books.count)")
+        // swiftlint:disable:next redundant_discardable_let
+        let _ = DebugLogger.info("🎨 CatalogView.body EVALUATED - isLoading: \(viewModel.isLoading), booksCount: \(viewModel.books.count)")
         NavigationView {
             ScrollView {
                 if viewModel.isLoading, viewModel.books.isEmpty {

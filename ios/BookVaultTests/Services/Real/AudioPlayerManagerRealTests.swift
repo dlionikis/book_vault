@@ -475,8 +475,8 @@ final class AudioPlayerManagerRealTests: XCTestCase {
 
     // MARK: - Play Same Book Tests
 
-    func testPlaySameBookJustResumes() {
-        // Given
+    func testPlaySameBookWithoutPlayerStartsNewPlayback() {
+        // Given - book is set (like after loadForMiniPlayer) but no player exists
         let book = TestFixtures.makeBook()
         sut.currentBook = book
         sut.isPlaying = false
@@ -484,7 +484,8 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         // When
         sut.play(book: book)
 
-        // Then - should just resume (isPlaying set to true)
-        XCTAssertTrue(sut.isPlaying)
+        // Then - should start new playback setup (isLoading becomes true)
+        // because there's no player item yet (loadForMiniPlayer scenario)
+        XCTAssertTrue(sut.isLoading)
     }
 }

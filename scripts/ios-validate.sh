@@ -58,16 +58,30 @@ run_lint() {
 run_build() {
   CURRENT_STEP="iOS build"
   echo "🔨 Building iOS app..."
+  # Use a specific simulator to avoid building for x86_64 (which has stricter Swift 6 warnings)
+  # This matches what CI does and avoids issues with generated OpenAPI code
+  SIMULATOR_DEST=$(xcrun simctl list devices available -j | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for runtime, devices in data.get('devices', {}).items():
+    if 'iOS' in runtime:
+        for d in devices:
+            if 'iPhone' in d['name'] and d['isAvailable']:
+                print(f\"platform=iOS Simulator,id={d['udid']}\")
+                sys.exit(0)
+print('platform=iOS Simulator,name=Any iOS Simulator Device')
+")
+  echo "   Using simulator: $SIMULATOR_DEST"
   if command -v xcpretty &> /dev/null; then
     xcodebuild build \
       -scheme BookVault \
-      -destination 'generic/platform=iOS Simulator' \
+      -destination "$SIMULATOR_DEST" \
       CODE_SIGNING_ALLOWED=NO \
       | xcpretty
   else
     xcodebuild build \
       -scheme BookVault \
-      -destination 'generic/platform=iOS Simulator' \
+      -destination "$SIMULATOR_DEST" \
       CODE_SIGNING_ALLOWED=NO
   fi
 }
