@@ -20,6 +20,7 @@ struct BookDetailView: View {
     @State private var isCheckingLibrary = false
     @State private var showingRemoveConfirmation = false
     @State private var showingSeriesDialog = false
+    @State private var noticeMessage: String?
 
     /// Check if book is downloaded for offline playback
     private var isBookDownloaded: Bool {
@@ -250,6 +251,7 @@ struct BookDetailView: View {
                         isCheckingLibrary: $isCheckingLibrary,
                         showingRemoveConfirmation: $showingRemoveConfirmation,
                         showingSeriesDialog: $showingSeriesDialog,
+                        noticeMessage: $noticeMessage,
                         onLibraryStatusChanged: {
                             // Refresh library status after add/remove
                             Task {
@@ -281,6 +283,21 @@ struct BookDetailView: View {
             // Check library status
             Task {
                 await checkLibraryStatus()
+            }
+        }
+        .overlay(alignment: .top) {
+            if let notice = noticeMessage {
+                Text(notice)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Capsule())
+                    .shadow(radius: 4)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.easeInOut(duration: 0.3), value: noticeMessage)
             }
         }
     }
@@ -373,6 +390,7 @@ struct LibraryButton: View {
     @Binding var isCheckingLibrary: Bool
     @Binding var showingRemoveConfirmation: Bool
     @Binding var showingSeriesDialog: Bool
+    @Binding var noticeMessage: String?
     let onLibraryStatusChanged: () -> Void
 
     @StateObject private var libraryManager = LibraryManager.shared
@@ -441,12 +459,24 @@ struct LibraryButton: View {
     private func addBookToLibrary() {
         Task {
             do {
-                try await libraryManager.addToLibrary(bookId: book.id.uuidString)
+                let message = try await libraryManager.addToLibrary(bookId: book.id.uuidString)
                 await MainActor.run {
                     isInLibrary = true
                     onLibraryStatusChanged()
+
+                    // Show notice if book was already in library
+                    if message.lowercased().contains("already") {
+                        noticeMessage = message
+                        // Auto-dismiss after 2 seconds
+                        Task {
+                            try? await Task.sleep(nanoseconds: 2_000_000_000)
+                            await MainActor.run {
+                                noticeMessage = nil
+                            }
+                        }
+                    }
                 }
-                DebugLogger.success("Added '\(book.title)' to library")
+                DebugLogger.success("Added '\(book.title)' to library: \(message)")
             } catch {
                 DebugLogger.error("Failed to add book to library", error: error)
             }

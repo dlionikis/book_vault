@@ -179,7 +179,24 @@ class APIClient: APIClientProtocol {
         let hasAuth = request.value(forHTTPHeaderField: "Authorization") != nil
         DebugLogger.auth("API request: \(request.httpMethod ?? "?") \(path) - hasAuthHeader: \(hasAuth)")
 
-        let (data, response) = try await session.data(for: request)
+        // Check if task is already cancelled before making request
+        if Task.isCancelled {
+            DebugLogger.error("🚫 Task already cancelled BEFORE request: \(path)")
+        }
+
+        DebugLogger.info("🌐 URLSession.data starting for: \(path)")
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+            DebugLogger.info("🌐 URLSession.data completed for: \(path)")
+        } catch {
+            let nsError = error as NSError
+            DebugLogger.error("🌐 URLSession.data FAILED for: \(path) - code: \(nsError.code), domain: \(nsError.domain)")
+            if Task.isCancelled {
+                DebugLogger.error("🚫 Task is cancelled AFTER request failed: \(path)")
+            }
+            throw error
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             DebugLogger.error("API request failed: Invalid response type")
@@ -187,11 +204,39 @@ class APIClient: APIClientProtocol {
         }
 
         // Debug logging (automatically disabled in release builds)
-        let responseBody = String(data: data, encoding: .utf8)
+        // Truncate large responses to avoid flooding logs
+        let truncatedBody: String?
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            // Check for common array fields (books, library, items, etc.)
+            let arrayKeys = ["books", "library", "items", "results", "data"]
+            var truncated = json
+            var truncationNote: String?
+
+            for key in arrayKeys {
+                if let array = json[key] as? [[String: Any]], array.count > 1 {
+                    // Keep only first item
+                    truncated[key] = [array[0]]
+                    truncationNote = "[\(key): showing 1 of \(array.count) items, rest truncated]"
+                    break
+                }
+            }
+
+            if let note = truncationNote,
+               let truncatedData = try? JSONSerialization.data(withJSONObject: truncated),
+               let truncatedString = String(data: truncatedData, encoding: .utf8)
+            {
+                truncatedBody = "\(note)\n\(truncatedString)"
+            } else {
+                truncatedBody = String(data: data, encoding: .utf8)
+            }
+        } else {
+            truncatedBody = String(data: data, encoding: .utf8)
+        }
+
         DebugLogger.apiResponse(
             path: request.url?.absoluteString ?? "unknown",
             statusCode: httpResponse.statusCode,
-            body: responseBody
+            body: truncatedBody
         )
 
         // Handle HTTP error codes

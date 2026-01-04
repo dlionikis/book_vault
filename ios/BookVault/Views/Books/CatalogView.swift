@@ -19,6 +19,7 @@ struct CatalogView: View {
     ]
 
     var body: some View {
+        let _ = DebugLogger.info("🎨 CatalogView.body EVALUATED - isLoading: \(viewModel.isLoading), booksCount: \(viewModel.books.count)")
         NavigationView {
             ScrollView {
                 if viewModel.isLoading, viewModel.books.isEmpty {
@@ -99,11 +100,21 @@ struct CatalogView: View {
             }
             .navigationTitle("Catalog")
             .refreshable {
+                DebugLogger.info("🔄 CatalogView .refreshable TRIGGERED - isLoading: \(viewModel.isLoading)")
+                if Task.isCancelled {
+                    DebugLogger.error("🔄 CatalogView .refreshable - Task ALREADY CANCELLED at start!")
+                }
                 await viewModel.refreshBooks()
+                DebugLogger.info("🔄 CatalogView .refreshable COMPLETED")
             }
         }
         .task {
+            DebugLogger.info("🚀 CatalogView .task TRIGGERED")
             await viewModel.loadBooks()
+            DebugLogger.info("🚀 CatalogView .task COMPLETED")
+        }
+        .onDisappear {
+            DebugLogger.info("👋 CatalogView onDisappear")
         }
     }
 }
@@ -210,12 +221,25 @@ class CatalogViewModel: ObservableObject {
     private var currentPage = 1
     private let pageSize = 20
     private var totalPages = 1
+    private let instanceId = UUID().uuidString.prefix(8)
 
     /// In-memory cache shared across all CatalogViewModel instances
     private static var cache = CatalogCache()
 
+    init() {
+        DebugLogger.info("🆕 CatalogViewModel INIT - instance: \(instanceId)")
+    }
+
+    deinit {
+        DebugLogger.info("💀 CatalogViewModel DEINIT - instance: \(instanceId)")
+    }
+
     func loadBooks() async {
-        guard !isLoading else { return }
+        DebugLogger.info("📚 [\(instanceId)] loadBooks() START - isLoading: \(isLoading)")
+        guard !isLoading else {
+            DebugLogger.info("📚 loadBooks() SKIPPED - already loading")
+            return
+        }
 
         // Check cache first
         if Self.cache.isValid, !Self.cache.pages.isEmpty {
@@ -224,15 +248,30 @@ class CatalogViewModel: ObservableObject {
             self.totalPages = Self.cache.totalPages
             self.currentPage = Self.cache.pages.keys.max() ?? 1
             self.hasMorePages = currentPage < totalPages
+            DebugLogger.info("📚 loadBooks() END - used cache")
             return
         }
 
+        DebugLogger.info("📚 [\(instanceId)] BEFORE setting isLoading=true, Task.isCancelled=\(Task.isCancelled)")
         isLoading = true
+        DebugLogger.info("📚 [\(instanceId)] AFTER setting isLoading=true, Task.isCancelled=\(Task.isCancelled)")
         errorMessage = nil
         currentPage = 1
 
+        DebugLogger.info("📚 [\(instanceId)] loadBooks() fetching from API...")
+
+        // DEBUG: Test if the issue is with Task cancellation during ANY async work
+        DebugLogger.info("📚 [\(instanceId)] DEBUG: sleeping 100ms to test cancellation...")
+        do {
+            try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+            DebugLogger.info("📚 [\(instanceId)] DEBUG: sleep completed successfully")
+        } catch {
+            DebugLogger.error("📚 [\(instanceId)] DEBUG: sleep was CANCELLED - \(error)")
+        }
+
         do {
             let response = try await apiClient.fetchBooks(page: currentPage, limit: pageSize)
+            DebugLogger.info("📚 loadBooks() API SUCCESS - got \(response.books.count) books")
             self.books = response.books
             self.totalPages = response.pagination.pages
             self.hasMorePages = currentPage < totalPages
@@ -243,8 +282,11 @@ class CatalogViewModel: ObservableObject {
             Self.cache.lastUpdate = Date()
 
             isLoading = false
+            DebugLogger.info("📚 loadBooks() END - success")
         } catch {
             isLoading = false
+            let isCancellation = (error as NSError).code == NSURLErrorCancelled
+            DebugLogger.info("📚 loadBooks() FAILED - isCancellation: \(isCancellation), error: \(error)")
             errorMessage = error.localizedDescription
         }
     }
@@ -285,9 +327,33 @@ class CatalogViewModel: ObservableObject {
     }
 
     func refreshBooks() async {
-        // Invalidate cache on pull-to-refresh
+        // Pull-to-refresh: Don't set ANY @Published properties before the network call
+        // because SwiftUI view re-evaluation during .refreshable can cancel the task.
+        // See: SwiftUI .refreshable + @Published bug
+
+        // Invalidate cache to force fresh data (this is not @Published, safe to call)
         Self.cache.invalidate()
-        await loadBooks()
+
+        do {
+            let response = try await apiClient.fetchBooks(page: 1, limit: pageSize)
+
+            // Only update @Published properties AFTER the network call succeeds
+            self.books = response.books
+            self.totalPages = response.pagination.pages
+            self.currentPage = 1
+            self.hasMorePages = currentPage < totalPages
+
+            // Update cache
+            Self.cache.pages = [1: response.books]
+            Self.cache.totalPages = response.pagination.pages
+            Self.cache.lastUpdate = Date()
+        } catch {
+            // Only show error if it wasn't a cancellation (user swiped away, etc.)
+            let nsError = error as NSError
+            if nsError.domain != NSURLErrorDomain || nsError.code != NSURLErrorCancelled {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 }
 

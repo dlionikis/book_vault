@@ -131,8 +131,17 @@ class LibraryManager: ObservableObject, LibraryManaging {
             return diskCached
         }
 
-        isLoading = true
-        defer { isLoading = false }
+        // Only set isLoading if NOT forceRefresh - when forceRefresh is true,
+        // we're likely being called from .refreshable which handles its own loading indicator.
+        // Setting @Published properties during .refreshable can cancel the task.
+        if !forceRefresh {
+            isLoading = true
+        }
+        defer {
+            if !forceRefresh {
+                isLoading = false
+            }
+        }
 
         DebugLogger.database("Fetching library books from API")
 
@@ -190,8 +199,9 @@ class LibraryManager: ObservableObject, LibraryManaging {
     /// Add book to user's library
     /// Invalidates cache to ensure fresh data on next fetch
     /// - Parameter bookId: The book's ID string
+    /// - Returns: The response message from the server (e.g., "Book added to library" or "Book already in library")
     @MainActor
-    func addToLibrary(bookId: String) async throws {
+    func addToLibrary(bookId: String) async throws -> String {
         guard let uuid = UUID(uuidString: bookId) else {
             throw NSError(domain: "LibraryManager", code: 400, userInfo: [
                 NSLocalizedDescriptionKey: "Invalid book ID format"
@@ -209,6 +219,8 @@ class LibraryManager: ObservableObject, LibraryManaging {
 
         // Invalidate cache
         invalidateCache()
+
+        return response.message
     }
 
     /// Remove book from user's library
@@ -326,6 +338,7 @@ class LibraryManager: ObservableObject, LibraryManaging {
     private func invalidateCache() {
         cachedBooks = nil
         lastCacheUpdate = nil
+        libraryCacheManager.clearCache() // Also clear disk cache to force API fetch
         libraryVersion += 1
         DebugLogger.database("Library cache invalidated (version: \(libraryVersion))")
     }
