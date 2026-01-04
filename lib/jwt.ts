@@ -16,6 +16,15 @@ function getSecretKey(): Uint8Array {
 }
 
 /**
+ * Get the access token expiry time in seconds
+ * Default: 1 hour (3600s)
+ * Can be overridden via JWT_ACCESS_TOKEN_EXPIRY environment variable
+ */
+export function getAccessTokenExpiry(): number {
+  return parseInt(process.env.JWT_ACCESS_TOKEN_EXPIRY || '3600');
+}
+
+/**
  * Generate an access token (JWT) for a user
  * @param userId - User ID
  * @param email - User email
@@ -23,7 +32,7 @@ function getSecretKey(): Uint8Array {
  */
 export async function generateAccessToken(userId: string, email: string): Promise<string> {
   const secret = getSecretKey();
-  const expiresIn = process.env.JWT_ACCESS_TOKEN_EXPIRY || '3600'; // Default 1 hour
+  const expiresIn = getAccessTokenExpiry();
 
   const token = await new SignJWT({ userId, email })
     .setProtectedHeader({ alg: 'HS256' })

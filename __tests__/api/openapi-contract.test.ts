@@ -288,6 +288,65 @@ describe('OpenAPI Contract Tests', () => {
       });
     });
 
+    describe('POST /api/auth/mobile/refresh', () => {
+      testFn('should satisfy OpenAPI spec for successful token refresh', async () => {
+        // First login to get a valid refresh token
+        const loginResponse = await axios.post(`${BASE_URL}/api/auth/mobile/login`, TEST_USER, {
+          headers: { 'Content-Type': 'application/json' },
+          validateStatus: () => true,
+        });
+
+        expect(loginResponse.status).toBe(200);
+        const { refreshToken } = loginResponse.data;
+
+        // Now test the refresh endpoint
+        const response = await axios.post(
+          `${BASE_URL}/api/auth/mobile/refresh`,
+          { refreshToken },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            validateStatus: () => true,
+          }
+        );
+
+        expect(response.status).toBe(200);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('accessToken');
+        expect(response.data).toHaveProperty('refreshToken');
+        expect(response.data).toHaveProperty('expiresIn');
+      });
+
+      testFn('should satisfy OpenAPI spec for missing refresh token', async () => {
+        const response = await axios.post(
+          `${BASE_URL}/api/auth/mobile/refresh`,
+          {},
+          {
+            headers: { 'Content-Type': 'application/json' },
+            validateStatus: () => true,
+          }
+        );
+
+        expect(response.status).toBe(400);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('error');
+      });
+
+      testFn('should satisfy OpenAPI spec for invalid refresh token', async () => {
+        const response = await axios.post(
+          `${BASE_URL}/api/auth/mobile/refresh`,
+          { refreshToken: '00000000-0000-0000-0000-000000000000' },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            validateStatus: () => true,
+          }
+        );
+
+        expect(response.status).toBe(401);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('error');
+      });
+    });
+
     describe('POST /api/auth/register', () => {
       testFn('should satisfy OpenAPI spec for missing required fields', async () => {
         const response = await axios.post(

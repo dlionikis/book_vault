@@ -33,6 +33,7 @@ class AuthManager: ObservableObject, AuthManaging {
         LibraryCacheManager.shared.clearCache()
         OfflineProgressStore.shared.clearCache()
         ProgressManager.shared.clearCache()
+        AudioPlayerManager.shared.stop()  // Stop audio playback on logout
     }
 
     // Public access to token for authenticated requests (e.g., audio streaming)
@@ -68,15 +69,18 @@ class AuthManager: ObservableObject, AuthManaging {
 
     /// Login with email and password
     func login(email: String, password: String) async {
+        DebugLogger.auth("Login attempt for email: \(email)")
         isLoading = true
         errorMessage = nil
 
         do {
             let response = try await apiClient.login(email: email, password: password)
+            DebugLogger.auth("Login API response received - expiresIn: \(response.expiresIn)s")
 
             // Store tokens securely
             try keychain.save(key: accessTokenKey, value: response.accessToken)
             try keychain.save(key: refreshTokenKey, value: response.refreshToken.uuidString)
+            DebugLogger.auth("Tokens saved to keychain - refreshToken: \(String(response.refreshToken.uuidString.prefix(8)))...")
 
             // Store user data
             let userData = try JSONEncoder().encode(response.user)
@@ -90,8 +94,10 @@ class AuthManager: ObservableObject, AuthManaging {
             self.refreshTokenValue = response.refreshToken
             self.isAuthenticated = true
 
+            DebugLogger.auth("Login successful - user: \(response.user.email), tokenExpiresIn: \(response.expiresIn)s")
             isLoading = false
         } catch {
+            DebugLogger.error("Login failed for \(email)", error: error)
             isLoading = false
             errorMessage = error.localizedDescription
         }
@@ -99,17 +105,22 @@ class AuthManager: ObservableObject, AuthManaging {
 
     /// Logout and clear all stored credentials
     func logout() async {
+        DebugLogger.auth("Logout initiated by user")
         isLoading = true
         errorMessage = nil
 
         // Try to logout on server
         if let refreshToken = refreshTokenValue {
             do {
+                DebugLogger.auth("Sending logout request to server")
                 try await apiClient.logout(refreshToken: refreshToken)
+                DebugLogger.auth("Server logout successful")
             } catch {
                 // Continue with local logout even if server request fails
-                print("Logout request failed: \(error)")
+                DebugLogger.warning("Server logout failed, continuing with local logout: \(error.localizedDescription)")
             }
+        } else {
+            DebugLogger.auth("No refresh token available for server logout")
         }
 
         // Clear all stored data
@@ -129,25 +140,51 @@ class AuthManager: ObservableObject, AuthManaging {
     /// Refresh the access token using the refresh token
     func refreshAccessToken() async -> Bool {
         guard let refreshToken = refreshTokenValue else {
-            DebugLogger.auth("No refresh token available for refresh")
+            DebugLogger.error("REFRESH FAILED: No refresh token in memory (refreshTokenValue is nil)")
             return false
         }
 
+        DebugLogger.auth("Refresh attempt starting - refreshToken: \(String(refreshToken.uuidString.prefix(8)))...")
+
         do {
-            DebugLogger.auth("Attempting token refresh...")
+            DebugLogger.auth("Sending refresh request to /api/auth/mobile/refresh")
             let response = try await apiClient.refreshToken(refreshToken: refreshToken)
+            DebugLogger.auth("Refresh API response received - new expiresIn: \(response.expiresIn)s")
 
             // Update stored access token in keychain
             try keychain.save(key: accessTokenKey, value: response.accessToken)
+            DebugLogger.auth("New access token saved to keychain")
+
+            // Store the rotated refresh token (token rotation for security)
+            try keychain.save(key: refreshTokenKey, value: response.refreshToken.uuidString)
+            self.refreshTokenValue = response.refreshToken
+            DebugLogger.auth("Rotated refresh token saved - new token: \(String(response.refreshToken.uuidString.prefix(8)))...")
 
             // Update APIClient's token so subsequent requests use the new token
             apiClient.accessToken = response.accessToken
 
-            DebugLogger.auth("Token refresh successful - new token stored")
+            DebugLogger.success("Token refresh successful - session extended for \(response.expiresIn)s")
             return true
+        } catch let error as APIError {
+            // Log specific API error details
+            switch error {
+            case .unauthorized:
+                DebugLogger.error("REFRESH FAILED: Server returned 401 Unauthorized - refresh token may be invalid/expired")
+            case .serverError(let code, let message):
+                DebugLogger.error("REFRESH FAILED: Server error \(code) - \(message ?? "no message")")
+            case .networkError(let underlying):
+                DebugLogger.error("REFRESH FAILED: Network error - \(underlying.localizedDescription)")
+            case .decodingError(let underlying):
+                DebugLogger.error("REFRESH FAILED: Decoding error - \(underlying.localizedDescription)")
+            default:
+                DebugLogger.error("REFRESH FAILED: API error - \(error.localizedDescription)")
+            }
+            DebugLogger.auth("Clearing session due to refresh failure")
+            clearSession()
+            return false
         } catch {
-            DebugLogger.auth("Token refresh failed: \(error.localizedDescription)")
-            // If refresh fails, clear session (refresh token may be revoked/expired)
+            DebugLogger.error("REFRESH FAILED: Unexpected error - \(error.localizedDescription)")
+            DebugLogger.auth("Clearing session due to refresh failure")
             clearSession()
             return false
         }
@@ -157,10 +194,18 @@ class AuthManager: ObservableObject, AuthManaging {
 
     /// Restore session from keychain
     private func restoreSession() async {
+        DebugLogger.auth("Session restoration starting...")
+
         defer {
             isRestoringSession = false
             DebugLogger.auth("Session restoration complete - isAuthenticated: \(isAuthenticated), hasRefreshToken: \(refreshTokenValue != nil)")
         }
+
+        // Check what's in keychain
+        let hasAccessToken = keychain.load(key: accessTokenKey) != nil
+        let hasRefreshToken = keychain.load(key: refreshTokenKey) != nil
+        let hasUserData = keychain.load(key: userDataKey) != nil
+        DebugLogger.auth("Keychain state - accessToken: \(hasAccessToken), refreshToken: \(hasRefreshToken), userData: \(hasUserData)")
 
         guard let accessToken = keychain.load(key: accessTokenKey),
               let refreshTokenString = keychain.load(key: refreshTokenKey),
@@ -168,9 +213,11 @@ class AuthManager: ObservableObject, AuthManaging {
               let userDataString = keychain.load(key: userDataKey),
               let userData = userDataString.data(using: .utf8)
         else {
-            DebugLogger.auth("Session restoration: No valid session data in keychain")
+            DebugLogger.auth("Session restoration: Missing or invalid session data in keychain")
             return
         }
+
+        DebugLogger.auth("Found refresh token in keychain: \(String(refreshTokenString.prefix(8)))...")
 
         do {
             let user = try JSONDecoder().decode(User.self, from: userData)
@@ -186,10 +233,10 @@ class AuthManager: ObservableObject, AuthManaging {
             self.currentUser = user
             self.isAuthenticated = true
 
-            DebugLogger.auth("Session restored for user: \(user.email)")
+            DebugLogger.auth("Session restored for user: \(user.email) - access token may be expired, refresh will happen on first 401")
         } catch {
             // If we can't decode user data, clear everything
-            DebugLogger.auth("Session restoration failed: \(error.localizedDescription)")
+            DebugLogger.error("Session restoration failed - could not decode user data", error: error)
             clearSession()
         }
     }
@@ -199,21 +246,26 @@ class AuthManager: ObservableObject, AuthManaging {
     /// Users stay enrolled for faster re-login. If password is changed on web,
     /// biometric login will fail and user will need to re-enable after password login.
     private func clearSession() {
+        DebugLogger.auth("Clearing session - removing all auth data")
+
         // Clear keychain
         keychain.delete(key: accessTokenKey)
         keychain.delete(key: refreshTokenKey)
         keychain.delete(key: userDataKey)
+        DebugLogger.auth("Keychain tokens deleted")
 
         // Clear API client token
         apiClient.accessToken = nil
 
-        // Clear offline caches (Phase 8: security - prevent cross-user data access)
+        // Clear offline caches and stop audio (Phase 8: security - prevent cross-user data access)
         clearCachesOnLogout()
-        DebugLogger.auth("Offline caches cleared on logout")
+        DebugLogger.auth("Offline caches cleared, audio stopped")
 
         // Clear state
         self.currentUser = nil
         self.refreshTokenValue = nil
         self.isAuthenticated = false
+
+        DebugLogger.auth("Session cleared - isAuthenticated: false")
     }
 }

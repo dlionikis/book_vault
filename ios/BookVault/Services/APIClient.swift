@@ -175,9 +175,14 @@ class APIClient: APIClientProtocol {
     /// Executes a request and decodes the response
     /// On 401, attempts token refresh before forcing logout
     private func execute<T: Decodable>(request: URLRequest) async throws -> T {
+        let path = request.url?.path ?? "unknown"
+        let hasAuth = request.value(forHTTPHeaderField: "Authorization") != nil
+        DebugLogger.auth("API request: \(request.httpMethod ?? "?") \(path) - hasAuthHeader: \(hasAuth)")
+
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
+            DebugLogger.error("API request failed: Invalid response type")
             throw APIError.invalidResponse
         }
 
@@ -196,10 +201,10 @@ class APIClient: APIClientProtocol {
             return try decodeResponse(data: data)
         case 401:
             // Attempt token refresh before forcing logout
-            DebugLogger.auth("Received 401 - attempting token refresh...")
+            DebugLogger.auth("Received 401 Unauthorized for \(path) - access token expired, attempting refresh...")
             if await attemptTokenRefresh() {
                 // Retry the original request with new token
-                DebugLogger.auth("Token refresh successful - retrying request")
+                DebugLogger.auth("Token refresh succeeded - retrying original request to \(path)")
                 var retryRequest = request
                 if let newToken = accessToken {
                     retryRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
@@ -207,7 +212,7 @@ class APIClient: APIClientProtocol {
                 return try await executeWithoutRefresh(request: retryRequest)
             } else {
                 // Refresh failed - force logout (only if not already logged out)
-                DebugLogger.auth("Token refresh failed - forcing logout")
+                DebugLogger.error("Token refresh failed - cannot recover, forcing logout")
                 if accessToken != nil {
                     forceLogoutHandler()
                 }
@@ -218,6 +223,7 @@ class APIClient: APIClientProtocol {
         default:
             // Try to decode error message
             let errorMessage = try? decoder.decode([String: String].self, from: data)
+            DebugLogger.error("API request failed: \(path) - status \(httpResponse.statusCode)")
             throw APIError.serverError(httpResponse.statusCode, errorMessage?["error"])
         }
     }
@@ -344,7 +350,10 @@ class APIClient: APIClientProtocol {
     }
 
     /// Refresh access token
+    /// NOTE: Uses executeWithoutRefresh to avoid deadlock if refresh endpoint returns 401
     func refreshToken(refreshToken: UUID) async throws -> RefreshToken200Response {
+        DebugLogger.auth("APIClient.refreshToken called with token: \(String(refreshToken.uuidString.prefix(8)))...")
+
         let requestBody = RefreshTokenRequest(refreshToken: refreshToken)
         let request = try createRequest(
             path: "/api/auth/mobile/refresh",
@@ -353,7 +362,14 @@ class APIClient: APIClientProtocol {
             requiresAuth: false
         )
 
-        let response: RefreshToken200Response = try await execute(request: request)
+        DebugLogger.auth("Sending refresh request to server...")
+
+        // IMPORTANT: Use executeWithoutRefresh to avoid deadlock
+        // If we used execute() and the refresh endpoint returned 401,
+        // it would try to refresh again, causing infinite recursion/deadlock
+        let response: RefreshToken200Response = try await executeWithoutRefresh(request: request)
+
+        DebugLogger.auth("Refresh response received - new token expiresIn: \(response.expiresIn)s")
 
         // Update the access token
         self.accessToken = response.accessToken

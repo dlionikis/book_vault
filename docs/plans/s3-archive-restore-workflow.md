@@ -10,7 +10,9 @@
 
 ## Overview
 
-When S3 Intelligent-Tiering moves audiobook files to Archive Access or Deep Archive tiers (after 90/180 days of no access), they become temporarily unavailable for streaming. Users will encounter `403 Forbidden` errors with `InvalidObjectState` if they try to play archived books.
+**Note**: Only audio files (> 5MB) are subject to archiving. Cover images, metadata JSON, and cue files remain in S3 Standard permanently, so browsing the library always works instantly.
+
+When S3 Intelligent-Tiering moves audiobook audio files to Archive Access tier (after 90 days of no access), they become temporarily unavailable for streaming. Users will encounter `403 Forbidden` errors with `InvalidObjectState` if they try to play archived books.
 
 This document outlines how to implement a graceful restore workflow that:
 

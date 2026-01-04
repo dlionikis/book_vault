@@ -252,13 +252,17 @@ S3 Intelligent-Tiering automatically moves objects between tiers:
 
 **Monitoring fee**: $0.0025 per 1,000 objects (~$0.07/month for 2,781 files)
 
-**Implementation Note**: We configured only Archive Access (90 days), not Deep Archive (180 days), to keep maximum restore time at 3-5 hours instead of 12 hours. See [s3-archive-restore-workflow.md](../s3-archive-restore-workflow.md) for handling archived files.
+**Implementation Notes**:
+
+- We configured only Archive Access (90 days), not Deep Archive (180 days), to keep maximum restore time at 3-5 hours instead of 12 hours
+- **Only files > 5MB are moved to Intelligent-Tiering** - this keeps cover images, metadata JSON, and cue files in S3 Standard so they're always instantly accessible when browsing the library
+- See [s3-archive-restore-workflow.md](../s3-archive-restore-workflow.md) for handling archived audio files
 
 For an audiobook library where you likely listen to 10-20% of books regularly and 80% sit untouched, this is ideal.
 
 ### Step 2.1: Enable Intelligent-Tiering Lifecycle Rule
 
-This rule transitions ALL existing and new objects to Intelligent-Tiering:
+This rule transitions objects > 5MB to Intelligent-Tiering (keeping small files like cover art in Standard):
 
 ```bash
 aws s3api put-bucket-lifecycle-configuration \
@@ -268,7 +272,9 @@ aws s3api put-bucket-lifecycle-configuration \
       {
         "ID": "MoveToIntelligentTiering",
         "Status": "Enabled",
-        "Filter": {},
+        "Filter": {
+          "ObjectSizeGreaterThan": 5242880
+        },
         "Transitions": [
           {
             "Days": 0,
@@ -343,7 +349,7 @@ aws s3api list-objects-v2 \
 
 ### Verification Checklist
 
-- [x] Lifecycle rule created (MoveToIntelligentTiering)
+- [x] Lifecycle rule created (MoveToIntelligentTiering) with 5MB size filter
 - [x] Archive tier configured (90-day only, no Deep Archive)
 - [x] Verified with get-bucket-lifecycle-configuration
 - [ ] Wait 24-48 hours, then check storage class distribution
@@ -353,7 +359,9 @@ aws s3api list-objects-v2 \
 - **No retrieval fees** for Frequent and Infrequent Access tiers
 - **Retrieval fees apply** for Archive tier ($0.03/GB to restore)
 - **Restore time**: 3-5 hours for Archive Access tier
-- Objects < 128KB stay in Frequent Access tier (not worth tiering)
+- **Only files > 5MB** are moved to Intelligent-Tiering (audio files)
+- **Files ≤ 5MB** stay in S3 Standard permanently (cover art, metadata, cue files)
+- Objects < 128KB within Intelligent-Tiering stay in Frequent Access tier
 - Transition happens automatically—no action needed after setup
 - **Configuration**: Only Archive Access tier enabled (90 days), no Deep Archive
 
