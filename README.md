@@ -149,9 +149,8 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
 ### Setup & Configuration
 
-- **[Project Setup](docs/project-setup.md)** - Initial setup steps and configuration
 - **[Media Configuration](docs/media-configuration.md)** - Configuring media data paths and file locations
-- **[Security](docs/security.md)** - Code quality tools, linting, and git hooks
+- **[Testing](docs/testing.md)** - All testing commands, code quality tools, and CI/CD
 
 ### Technical Details
 

@@ -1,114 +1,101 @@
-# Project Status
+# Project Status & Roadmap
 
 **Last Updated**: January 4, 2026
 
-## Current State
-
-Book Vault is a **production-ready** personal audiobook library application, now **live in production**.
-
-| Platform        | Status                                                               |
-| --------------- | -------------------------------------------------------------------- |
-| **Production**  | ✅ Live at https://bookvault.lionikis.com                            |
-| **Web App**     | ✅ Complete - Browse, search, playback, progress tracking, dark mode |
-| **iOS App**     | ✅ Complete - All 8 phases implemented (offline mode included)       |
-| **iOS Tests**   | ✅ Complete - 568 tests passing, real service coverage               |
-| **Backend API** | ✅ Complete - OpenAPI spec, contract tests, dual auth (web + mobile) |
-
-**AWS Infrastructure**:
-
-- ECS Fargate (container hosting)
-- RDS PostgreSQL (database)
-- S3 (media storage: 514 GB, 691 books)
-- Application Load Balancer + SSL
-
 ---
 
-## Known Issues
+## Current State
 
-None currently blocking. All tests passing.
+**Production**: https://bookvault.lionikis.com
+
+| Platform    | Status                                                        |
+| ----------- | ------------------------------------------------------------- |
+| Web App     | ✅ Complete - Browse, search, playback, progress, dark mode   |
+| iOS App     | ✅ Complete - All 8 phases + background downloads             |
+| Backend API | ✅ Complete - OpenAPI spec, contract tests, dual auth         |
+| AWS         | ✅ Live - ECS Fargate, RDS PostgreSQL, S3 (514 GB, 691 books) |
+
+**Known Issues**: None blocking. All tests passing.
 
 ---
 
 ## Recent Merges
 
-| PR  | Description                                                         | Date   |
-| --- | ------------------------------------------------------------------- | ------ |
-| #62 | iOS Background Downloads - Downloads continue when app backgrounded | Jan 4  |
-| #61 | OpenAPI Contract Test Coverage - 100% endpoint coverage             | Jan 4  |
-| #51 | Presigned URLs - S3 media access, IAM task role support             | Dec 31 |
-| #50 | AWS Deployment - ECS Fargate, RDS, S3, Domain/SSL                   | Dec 31 |
-| #49 | Code Quality - lint-staged, SwiftLint, dead code removal            | Dec 30 |
-| #48 | iOS Testing - 568 tests, real service coverage                      | Dec 30 |
-| #47 | iOS Phase 8 - Offline Mode Support                                  | Dec 29 |
-| #46 | iOS Phase 7 - Offline Downloads                                     | Dec 29 |
+| PR  | Description                           | Date   |
+| --- | ------------------------------------- | ------ |
+| #63 | iOS: Remove xcpretty dependency       | Jan 4  |
+| #62 | iOS Background Downloads              | Jan 4  |
+| #61 | OpenAPI Contract Test Coverage - 100% | Jan 4  |
+| #51 | Presigned URLs - S3 media access      | Dec 31 |
+| #50 | AWS Deployment - ECS, RDS, S3, SSL    | Dec 31 |
 
 ---
 
-## Quick Reference
+## Roadmap
 
-### Web App Features
+### Next Priority: User Lists
 
-- Browse books by title, author, narrator, series, category
-- Full-text search with pagination
-- Audio playback with seek, speed control, chapters
-- Progress tracking with auto-save
-- Dark mode with theme toggle
-- Storybook for component development
+Allow users to organize books into custom collections ("Favorites", "Want to Listen", etc.)
 
-### iOS App Features
+**API endpoints needed**:
 
-All phases complete:
+- `POST/GET /api/lists` - Create/list user lists
+- `POST/DELETE /api/lists/[id]/books` - Add/remove books
+- `PUT /api/lists/[id]/reorder` - Reorder books
 
-1. ✅ Auth & Browsing
-2. ✅ Audio Playback
-3. ✅ Background Audio & Lock Screen
-4. ✅ Progress Sync
-5. ✅ Chapter Navigation
-6. ✅ Search & Browse
-7. ✅ Offline Downloads
-8. ✅ Offline Mode
+**Status**: Deferred - nice to have, not essential
 
-**Post-launch enhancement**: ✅ Background Downloads (PR #62) - Downloads continue when app is backgrounded or system-terminated
+### Future Ideas
 
-**Deferred**: User Lists (requires backend API)
-
-### Technical Stack
-
-- Next.js 14 + TypeScript + Tailwind CSS
-- PostgreSQL + Prisma ORM
-- OpenAPI 3.0 spec with contract tests
-- Jest + React Testing Library (all tests passing)
-- GitHub Actions CI/CD
+- **Enhanced Search** - Filters, advanced syntax, saved searches
+- **Analytics** - Listening stats, most played, streaks
+- **Face ID** - Biometric login for iOS
 
 ---
 
-## Links
+## Completed Milestones
 
-| What                     | Where                                                  |
-| ------------------------ | ------------------------------------------------------ |
-| **AWS Deployment**       | [aws-deployment-plan.md](aws-deployment-plan.md)       |
-| **Priorities & Roadmap** | [development-roadmap.md](development-roadmap.md)       |
-| **iOS Maintenance**      | [mobile-ios-plan.md](mobile-ios-plan.md)               |
-| **API Reference**        | [api/openapi.yaml](api/openapi.yaml)                   |
-| **Architecture**         | [architecture.md](architecture.md)                     |
-| **Historical Details**   | [archive/status-history.md](archive/status-history.md) |
+### December 2025 - January 2026
+
+- ✅ AWS deployment (ECS, RDS, S3, SSL, custom domain)
+- ✅ iOS app (all 8 phases + background downloads)
+- ✅ OpenAPI contract tests (100% coverage)
+- ✅ Presigned S3 URLs
+- ✅ Code quality (SwiftLint, lint-staged)
+
+### Earlier (December 2025)
+
+- ✅ Web app (browse, search, playback, auth, dark mode)
+- ✅ Storybook integration
+- ✅ Mobile API backend (S3 streaming, range requests)
 
 ---
 
-## Development Commands
+## Quick Commands
 
 ```bash
-# Start development
+# Development
 docker-compose up -d && npm run dev
 
-# Run tests
+# Testing
 npm test                    # All tests
 npm run test:contract       # API contract tests
 npm run validate            # Full validation
 
-# iOS development
+# iOS
 npm run api:generate:swift  # Regenerate Swift models
 cd ios && xcodegen generate # Rebuild Xcode project
 ```
 
 **Default credentials**: test@example.com / password123
+
+---
+
+## Links
+
+| What            | Where                                                      |
+| --------------- | ---------------------------------------------------------- |
+| AWS Deployment  | [aws-deployment-reference.md](aws-deployment-reference.md) |
+| iOS Maintenance | [mobile-ios-plan.md](mobile-ios-plan.md)                   |
+| API Reference   | [api/openapi.yaml](api/openapi.yaml)                       |
+| Architecture    | [architecture.md](architecture.md)                         |

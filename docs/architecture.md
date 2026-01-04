@@ -14,19 +14,6 @@
 
 ---
 
-## 📋 Documentation Structure
-
-This overview links to detailed architecture documentation:
-
-| Document                                                  | Purpose                        | When to Read            |
-| --------------------------------------------------------- | ------------------------------ | ----------------------- |
-| **[tech-stack.md](architecture/tech-stack.md)**           | Technology choices & rationale | Starting new features   |
-| **[database-schema.md](architecture/database-schema.md)** | Prisma models & relationships  | Working with data       |
-| **[api-design.md](architecture/api-design.md)**           | API endpoints & patterns       | Building/consuming APIs |
-| **[deployment.md](architecture/deployment.md)**           | AWS infrastructure & strategy  | Deployment planning     |
-
----
-
 ## System Architecture
 
 ### High-Level Architecture
@@ -108,7 +95,7 @@ book_vault/
 - Easy to test and document
 - Mobile-ready from day one
 
-**Implementation**: See [api-design.md](architecture/api-design.md)
+**Implementation**: See [api-quick-ref.md](api-quick-ref.md) for endpoint reference
 
 ---
 
@@ -144,7 +131,7 @@ import { prisma } from '@/lib/db';
 - Enables efficient streaming without buffering entire files
 - Compatible with all modern players
 
-**Implementation**: See [api-design.md](architecture/api-design.md#audio-streaming)
+**Implementation**: Audio streaming uses S3 presigned URLs with range request support
 
 ---
 
@@ -240,29 +227,15 @@ Native Swift + SwiftUI app with all 8 phases implemented:
 
 ## Next Steps
 
-1. **AWS Deployment** - Production infrastructure
-2. **User Lists Feature** - Allow custom book collections (post-launch)
-
-**See**: [development-roadmap.md](development-roadmap.md) for detailed plans
+**See**: [STATUS.md](STATUS.md) for current roadmap
 
 ---
 
-## Further Reading
-
-### Detailed Architecture Docs
-
-- [Tech Stack & Rationale](architecture/tech-stack.md)
-- [Database Schema](architecture/database-schema.md)
-- [API Design Patterns](architecture/api-design.md)
-- [AWS Deployment Guide](architecture/deployment.md)
-
-### Related Docs
+## Related Docs
 
 - [API Quick Reference](api-quick-ref.md) - Endpoint reference
 - [Data Flows](data-flows.md) - How data moves through the app
+- [Data Validation Overview](data-validation-overview.md) - Type safety architecture
 - [Testing Guide](testing.md) - Test patterns
 - [Mobile iOS Plan](mobile-ios-plan.md) - iOS app implementation
-
----
-
-**Questions?** Check the detailed architecture docs linked above or see [INDEX.md](INDEX.md) for full documentation map.
+- [AWS Deployment](aws-deployment-reference.md) - Infrastructure & deploy guide

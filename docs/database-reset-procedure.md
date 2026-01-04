@@ -357,6 +357,6 @@ curl -s "https://<your-domain>/api/books" \
 
 ## Related Documentation
 
-- [aws-deployment-plan.md](aws-deployment-plan.md) - AWS infrastructure & deploy commands
+- [aws-deployment-reference.md](aws-deployment-reference.md) - AWS infrastructure & deploy commands
 - [database-migration-guide.md](database-migration-guide.md) - Secure database migrations
 - [testing.md](testing.md) - Complete testing guide

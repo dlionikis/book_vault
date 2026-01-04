@@ -1,83 +1,29 @@
 # iOS Mobile Documentation
 
-**Status**: ✅ **Complete** (All 8 phases implemented - December 2025)
-**Last Updated**: December 29, 2025
+> **Main documentation**: See [../mobile-ios-plan.md](../mobile-ios-plan.md) for complete iOS development guide.
 
 ---
 
-## Quick Reference
+## Quick Links
 
-| File                                                 | Purpose                            | When to Read                   |
-| ---------------------------------------------------- | ---------------------------------- | ------------------------------ |
-| [ios-development-setup.md](ios-development-setup.md) | Environment setup & daily workflow | Setting up or onboarding       |
-| [xcodegen-guide.md](xcodegen-guide.md)               | Adding/removing Swift files        | After creating new files       |
-| [vscode-ios-setup.md](vscode-ios-setup.md)           | VS Code iOS development            | Optional: unified IDE workflow |
+| File                                                 | Purpose                     |
+| ---------------------------------------------------- | --------------------------- |
+| [ios-development-setup.md](ios-development-setup.md) | Environment setup           |
+| [xcodegen-guide.md](xcodegen-guide.md)               | Adding/removing Swift files |
+| [vscode-ios-setup.md](vscode-ios-setup.md)           | VS Code iOS development     |
 
----
+## Implementation Reference
 
-## Implementation Reference (Completed)
-
-These docs contain patterns and examples from the implementation. Useful for debugging or understanding architecture:
-
-| File                                     | Purpose                                 | Tokens |
-| ---------------------------------------- | --------------------------------------- | ------ |
-| [architecture.md](architecture.md)       | SwiftUI + MVVM patterns, file structure | ~3,800 |
-| [api-integration.md](api-integration.md) | Swift API client examples, auth flow    | ~4,000 |
-| [ios-features.md](ios-features.md)       | Background audio, lock screen, CarPlay  | ~3,500 |
-
----
-
-## What Was Built
-
-**Phases 1-8 Complete:**
-
-1. ✅ Authentication & Browsing
-2. ✅ Audio Playback (Basic)
-3. ✅ Background Audio & Lock Screen
-4. ✅ Progress Sync
-5. ✅ Chapter Navigation
-6. ✅ Search & Browse
-7. ✅ Offline Downloads
-8. ✅ Offline Mode Support
-
-**Deferred to Post-Launch:** User Lists (requires backend API development)
-
-**Archived Plans:** See [archive/completed-plans/ios-implementation-phases.md](../archive/completed-plans/ios-implementation-phases.md)
-
----
+| File                                     | Purpose                       |
+| ---------------------------------------- | ----------------------------- |
+| [architecture.md](architecture.md)       | SwiftUI + MVVM patterns       |
+| [api-integration.md](api-integration.md) | Swift API client examples     |
+| [ios-features.md](ios-features.md)       | Background audio, lock screen |
 
 ## Common Commands
 
 ```bash
-# Generate Swift models from OpenAPI
-npm run api:generate:swift
-
-# Regenerate Xcode project (after adding/removing files)
-cd ios && xcodegen generate
-
-# Start backend for iOS development
-npm run dev
-
-# Watch for OpenAPI changes
-npm run api:watch
+npm run api:generate:swift    # Generate Swift models
+cd ios && xcodegen generate   # Regenerate Xcode project
+npm run dev                   # Start backend
 ```
-
-### Testing Commands
-
-```bash
-# Run all iOS tests
-cd ios && xcodebuild test -scheme BookVault -destination 'platform=iOS Simulator,name=iPhone 17'
-
-# Run specific test file
-cd ios && xcodebuild test -scheme BookVault -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:BookVaultTests/AuthManagerTests
-
-# Generate coverage report
-cd ios && xcodebuild test -scheme BookVault -destination 'platform=iOS Simulator,name=iPhone 17' -enableCodeCoverage YES -resultBundlePath TestResults.xcresult && xcrun xccov view --report TestResults.xcresult
-```
-
----
-
-## Parent Documentation
-
-- [../mobile-ios-plan.md](../mobile-ios-plan.md) - Overview & development workflow
-- [../../CLAUDE.md](../../CLAUDE.md) - Project quick reference

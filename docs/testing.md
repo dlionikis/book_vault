@@ -430,3 +430,31 @@ git commit -m "chore: regenerate Swift models"
 5. **Write descriptive test names** - Make failures easy to understand
 6. **Run `npm run validate` before committing** - Catch issues early
 7. **Run `npm run deploy --dry-run` before actual deploy** - Verify full pipeline
+
+---
+
+## Security & Code Quality
+
+### Security Auditing
+
+```bash
+# Check for known vulnerabilities in dependencies
+npm run security:audit
+
+# Attempt automatic fixes
+npm run security:fix
+```
+
+### ESLint Security Plugin
+
+Detects common security issues in code. Runs automatically with `npm run lint`.
+
+### Configuration Files
+
+| File                 | Purpose                                        |
+| -------------------- | ---------------------------------------------- |
+| `.eslintrc.json`     | ESLint configuration (includes security rules) |
+| `.prettierrc.json`   | Prettier formatting                            |
+| `.prettierignore`    | Files excluded from formatting                 |
+| `.lintstagedrc.json` | Pre-commit hook configuration                  |
+| `.husky/pre-commit`  | Git pre-commit hook                            |
