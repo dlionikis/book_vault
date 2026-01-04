@@ -266,7 +266,7 @@ func cancelDownload(bookId: String) {
 - [ ] Start download, background app, wait 30+ seconds
 - [ ] Return to app - download should have progressed or completed
 - [ ] Start download, force-quit app (swipe up)
-- [ ] Relaunch app - download should complete and file should be saved
+- [ ] Relaunch app - UI should cleanly show no active downloads (force-quit cancels all tasks per iOS design)
 - [ ] Check DownloadsView shows correct state after relaunch
 
 **Estimated Changes**: ~120 lines added/modified
@@ -490,7 +490,9 @@ let manager = DownloadManager(
 
 - [ ] All existing tests pass
 - [ ] New background-specific tests pass
-- [ ] Download survives app termination (force quit)
+- [ ] Download survives app backgrounding (home button, switch apps)
+- [ ] Download survives system-initiated termination (memory pressure)
+- [ ] Force-quit cancels downloads and UI cleans up on relaunch (expected iOS behavior)
 - [ ] Download survives network change (WiFi → cellular)
 - [ ] Multiple concurrent downloads complete correctly
 - [ ] Resume data works after network failure
