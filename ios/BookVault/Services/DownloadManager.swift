@@ -110,6 +110,20 @@ final class FileExtensionStorage: @unchecked Sendable {
     }
 }
 
+// MARK: - PendingDownloadInfo
+
+/// Persisted info about downloads in progress
+/// Used to restore UI state after app termination and relaunch
+struct PendingDownloadInfo: Codable {
+    let bookId: String
+    let bookTitle: String
+    let bookAuthor: String
+    let fileExtension: String
+    var totalBytes: Int64
+    var bytesDownloaded: Int64
+    let startedAt: Date
+}
+
 // MARK: - DownloadManager
 
 /// Manages audiobook downloads with background support
@@ -142,8 +156,17 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
     // Thread-safe storage for file extensions (accessed from URLSession delegate callbacks)
     private let fileExtensionStorage = FileExtensionStorage()
 
-    // Session identifier (kept for potential future background session support)
+    // Background session completion handler (called by AppDelegate)
+    private var backgroundCompletionHandler: (() -> Void)?
+
+    // Session identifier for background URLSession
     private let sessionIdentifier: String
+
+    // UserDefaults key for persisting pending downloads
+    private let pendingDownloadsKey = "com.bookvault.pendingDownloads"
+
+    // UserDefaults instance (injectable for testing)
+    private let userDefaults: UserDefaults
 
     // MARK: - Initialization
 
@@ -153,7 +176,8 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
             apiClient: APIClient.shared,
             storageManager: StorageManager.shared,
             networkMonitor: NetworkMonitor.shared,
-            sessionIdentifier: "com.bookvault.downloads"
+            sessionIdentifier: "com.bookvault.downloads",
+            userDefaults: .standard
         )
     }
 
@@ -163,34 +187,41 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
         storageManager: any StorageManaging,
         networkMonitor: any NetworkMonitoring,
         sessionIdentifier: String = "com.bookvault.downloads.test",
+        userDefaults: UserDefaults = .standard,
         session: URLSession? = nil
     ) {
         self.apiClient = apiClient
         self.storageManager = storageManager
         self.networkMonitor = networkMonitor
         self.sessionIdentifier = sessionIdentifier
+        self.userDefaults = userDefaults
         super.init()
 
         if let session {
             // Use injected session (for testing)
             self.downloadSession = session
         } else {
-            // Create foreground session for reliable progress reporting
+            // Create background session for downloads that survive app termination
             setupDownloadSession()
         }
+
+        // Restore any pending downloads from previous app session
+        restorePendingDownloads()
     }
 
     private func setupDownloadSession() {
-        // Use default configuration for foreground downloads with reliable progress updates
-        // Background sessions don't reliably fire didWriteData callbacks while app is active
-        let config = URLSessionConfiguration.default
-        config.allowsCellularAccess = true // WiFi-only is checked separately
+        // Use background configuration so downloads continue when app is backgrounded/terminated
+        // The system daemon (nsurlsessiond) handles the actual transfer
+        let config = URLSessionConfiguration.background(withIdentifier: sessionIdentifier)
+        config.isDiscretionary = false // Start immediately, don't defer to optimal conditions
+        config.sessionSendsLaunchEvents = true // Relaunch app when downloads complete
+        config.allowsCellularAccess = true // WiFi-only is checked separately via NetworkMonitor
         config.timeoutIntervalForResource = 3600 // 1 hour timeout for large files
         config.waitsForConnectivity = true // Wait for network if unavailable
 
         downloadSession = URLSession(configuration: config, delegate: self, delegateQueue: nil)
 
-        DebugLogger.download("Download session initialized (foreground mode)")
+        DebugLogger.download("Download session initialized (background mode, id: \(sessionIdentifier))")
     }
 
     // MARK: - Public API
@@ -259,20 +290,25 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
 
         // Extract file extension from audioUrl (e.g., ".mp3" or ".m4a")
         // This must use thread-safe method since delegate callbacks access it
+        let fileExt: String
         if let audioUrl = book.audioUrl, let url = URL(string: audioUrl) {
             let ext = url.pathExtension.lowercased()
-            let fileExt = ext.isEmpty ? "mp3" : ext
-            fileExtensionStorage.set(fileExt, for: bookId)
+            fileExt = ext.isEmpty ? "mp3" : ext
             DebugLogger.download("File extension for \(book.title): \(fileExt)")
         } else {
-            fileExtensionStorage.set("mp3", for: bookId) // Default to mp3
+            fileExt = "mp3" // Default to mp3
         }
+        fileExtensionStorage.set(fileExt, for: bookId)
+
+        // Persist pending download info for app restart recovery
+        savePendingDownloadInfo(bookId: bookId, book: book, fileExtension: fileExt)
 
         do {
             // Check eligibility with backend
             let eligible = try await checkEligibility(bookId: bookId)
             guard eligible else {
                 activeDownloads.removeValue(forKey: bookId)
+                removePendingDownloadInfo(bookId: bookId)
                 throw DownloadError.notEligible
             }
 
@@ -282,6 +318,7 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
             // Check storage space
             guard storageManager.canDownload(fileSize: Int64(downloadInfo.fileSize)) else {
                 activeDownloads.removeValue(forKey: bookId)
+                removePendingDownloadInfo(bookId: bookId)
                 throw DownloadError.insufficientStorage
             }
 
@@ -292,6 +329,7 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
             // Start the download
             guard let url = URL(string: downloadInfo.downloadUrl) else {
                 activeDownloads.removeValue(forKey: bookId)
+                removePendingDownloadInfo(bookId: bookId)
                 throw DownloadError.networkError("Invalid download URL")
             }
 
@@ -324,6 +362,7 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
         } catch {
             activeDownloads.removeValue(forKey: bookId)
             pendingBooks.removeValue(forKey: bookId)
+            removePendingDownloadInfo(bookId: bookId)
 
             if let downloadError = error as? DownloadError {
                 throw downloadError
@@ -341,6 +380,7 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
         activeDownloads.removeValue(forKey: bookId)
         pendingBooks.removeValue(forKey: bookId)
         fileExtensionStorage.remove(for: bookId)
+        removePendingDownloadInfo(bookId: bookId)
 
         DebugLogger.download("Download cancelled: \(bookId)")
     }
@@ -469,13 +509,198 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
         return request
     }
 
+    // MARK: - Pending Downloads Persistence
+
+    /// Load pending download info from UserDefaults
+    private func loadPendingDownloadsInfo() -> [String: PendingDownloadInfo] {
+        guard let data = userDefaults.data(forKey: pendingDownloadsKey) else {
+            return [:]
+        }
+
+        do {
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode([String: PendingDownloadInfo].self, from: data)
+        } catch {
+            DebugLogger.error("Failed to decode pending downloads", error: error)
+            return [:]
+        }
+    }
+
+    /// Save pending download info to UserDefaults
+    private func savePendingDownloadsInfo(_ info: [String: PendingDownloadInfo]) {
+        do {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let data = try encoder.encode(info)
+            userDefaults.set(data, forKey: pendingDownloadsKey)
+            DebugLogger.download("Saved \(info.count) pending downloads to UserDefaults")
+        } catch {
+            DebugLogger.error("Failed to encode pending downloads", error: error)
+        }
+    }
+
+    /// Save info for a new pending download
+    private func savePendingDownloadInfo(bookId: String, book: Book, fileExtension: String) {
+        var pending = loadPendingDownloadsInfo()
+        // Extract first author name for display
+        let authorName = book.authors.first?.name ?? "Unknown Author"
+        pending[bookId] = PendingDownloadInfo(
+            bookId: bookId,
+            bookTitle: book.title,
+            bookAuthor: authorName,
+            fileExtension: fileExtension,
+            totalBytes: 0,
+            bytesDownloaded: 0,
+            startedAt: Date()
+        )
+        savePendingDownloadsInfo(pending)
+    }
+
+    /// Update progress for a pending download
+    private func updatePendingDownloadProgress(bookId: String, bytesDownloaded: Int64, totalBytes: Int64) {
+        var pending = loadPendingDownloadsInfo()
+        if var info = pending[bookId] {
+            info.bytesDownloaded = bytesDownloaded
+            info.totalBytes = totalBytes
+            pending[bookId] = info
+            savePendingDownloadsInfo(pending)
+        }
+    }
+
+    /// Remove a pending download (completed, cancelled, or failed)
+    private func removePendingDownloadInfo(bookId: String) {
+        var pending = loadPendingDownloadsInfo()
+        pending.removeValue(forKey: bookId)
+        savePendingDownloadsInfo(pending)
+        DebugLogger.download("Removed pending download: \(bookId)")
+    }
+
+    /// Restore pending downloads on app launch
+    ///
+    /// Creates placeholder ActiveDownload entries from persisted info,
+    /// then queries the background session to reconcile with actual task state.
+    private func restorePendingDownloads() {
+        let pending = loadPendingDownloadsInfo()
+
+        guard !pending.isEmpty else {
+            DebugLogger.download("No pending downloads to restore")
+            return
+        }
+
+        DebugLogger.download("Restoring \(pending.count) pending downloads")
+
+        // Create placeholder ActiveDownload entries for UI
+        for (bookId, info) in pending {
+            // Restore file extension to thread-safe storage
+            fileExtensionStorage.set(info.fileExtension, for: bookId)
+
+            // Create a placeholder Book for UI display
+            let placeholderAuthor = Author(id: UUID(), name: info.bookAuthor)
+            let placeholderBook = Book(
+                id: UUID(uuidString: bookId) ?? UUID(),
+                asin: "", // Placeholder - not needed for UI
+                title: info.bookTitle,
+                authors: [placeholderAuthor]
+            )
+
+            activeDownloads[bookId] = ActiveDownload(
+                id: bookId,
+                book: placeholderBook,
+                bytesDownloaded: info.bytesDownloaded,
+                totalBytes: info.totalBytes,
+                state: .downloading(progress: info.totalBytes > 0
+                    ? Double(info.bytesDownloaded) / Double(info.totalBytes)
+                    : 0),
+                task: nil
+            )
+
+            // Store placeholder book for completion handler
+            pendingBooks[bookId] = placeholderBook
+        }
+
+        // Query background session for actual task state
+        downloadSession.getAllTasks { [weak self] tasks in
+            Task { @MainActor in
+                self?.reconcileWithBackgroundTasks(tasks)
+            }
+        }
+    }
+
+    /// Reconcile restored state with actual background session tasks
+    private func reconcileWithBackgroundTasks(_ tasks: [URLSessionTask]) {
+        let downloadTasks = tasks.compactMap { $0 as? URLSessionDownloadTask }
+        let taskBookIds = Set(downloadTasks.compactMap { $0.taskDescription })
+        let pendingBookIds = Set(activeDownloads.keys)
+
+        DebugLogger.download("Reconciling: \(downloadTasks.count) tasks, \(pendingBookIds.count) pending")
+
+        // Update active downloads with actual task references
+        for task in downloadTasks {
+            guard let bookId = task.taskDescription else { continue }
+
+            self.downloadTasks[bookId] = task
+
+            if var download = activeDownloads[bookId] {
+                download.task = task
+                activeDownloads[bookId] = download
+                DebugLogger.download("Linked task for: \(bookId)")
+            }
+        }
+
+        // Remove pending downloads that don't have corresponding tasks
+        // (they either completed while app was terminated, or were cancelled)
+        for bookId in pendingBookIds where !taskBookIds.contains(bookId) {
+            // Check if it completed while we were away
+            if storageManager.isBookDownloaded(bookId: bookId) {
+                DebugLogger.download("Download completed while app was terminated: \(bookId)")
+                activeDownloads[bookId]?.state = .completed
+
+                // Remove from active after short delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                    self?.activeDownloads.removeValue(forKey: bookId)
+                }
+            } else {
+                // No task and not downloaded - was cancelled or failed
+                DebugLogger.download("Download task not found, removing: \(bookId)")
+                activeDownloads.removeValue(forKey: bookId)
+                pendingBooks.removeValue(forKey: bookId)
+                fileExtensionStorage.remove(for: bookId)
+            }
+
+            removePendingDownloadInfo(bookId: bookId)
+        }
+    }
+
     // MARK: - Session Handling
 
-    /// Handle background session events (call from AppDelegate/SceneDelegate)
-    /// Note: Currently using foreground session, but kept for future background download support
-    func handleBackgroundSessionEvents(completionHandler: @escaping () -> Void) {
-        DebugLogger.download("handleBackgroundSessionEvents called (foreground session - no-op)")
-        completionHandler()
+    /// Handle background session events (called from AppDelegate)
+    ///
+    /// When a background download completes while the app is suspended or terminated,
+    /// iOS relaunches the app and calls AppDelegate's handleEventsForBackgroundURLSession.
+    /// This method stores the completion handler and reconnects to the background session.
+    ///
+    /// - Parameters:
+    ///   - identifier: The session identifier from iOS
+    ///   - completionHandler: Must be called after all events are processed
+    func handleBackgroundSessionEvents(
+        identifier: String,
+        completionHandler: @escaping () -> Void
+    ) {
+        guard identifier == sessionIdentifier else {
+            DebugLogger.download("Unknown session identifier: \(identifier), expected: \(sessionIdentifier)")
+            completionHandler()
+            return
+        }
+
+        DebugLogger.download("Handling background session events for: \(identifier)")
+
+        // Store completion handler - will be called in urlSessionDidFinishEvents
+        backgroundCompletionHandler = completionHandler
+
+        // Accessing downloadSession triggers reconnection to the background session
+        // This causes the delegate methods to be called for any completed downloads
+        _ = downloadSession
     }
 }
 
@@ -564,6 +789,22 @@ extension DownloadManager: URLSessionDownloadDelegate {
         }
     }
 
+    /// Called when all background session events have been delivered
+    ///
+    /// This is called after all downloads complete (success or failure) when the app
+    /// was relaunched to handle background session events. We must call the completion
+    /// handler stored in handleBackgroundSessionEvents to tell iOS we're done.
+    nonisolated func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        DebugLogger.download("All background session events delivered")
+
+        Task { @MainActor in
+            // Call the completion handler to tell iOS we're done updating UI
+            self.backgroundCompletionHandler?()
+            self.backgroundCompletionHandler = nil
+            DebugLogger.download("Background completion handler called")
+        }
+    }
+
     // MARK: - Private Handlers
 
     /// Called after file has been successfully moved to permanent location
@@ -587,6 +828,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
         downloadTasks.removeValue(forKey: bookId)
         pendingBooks.removeValue(forKey: bookId)
         fileExtensionStorage.remove(for: bookId) // Clean up thread-safe storage
+        removePendingDownloadInfo(bookId: bookId) // Clean up persisted pending info
 
         // Remove from active downloads after short delay (to show completion)
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
@@ -599,6 +841,7 @@ extension DownloadManager: URLSessionDownloadDelegate {
     private func updateProgress(bookId: String, bytesWritten: Int64, totalBytes: Int64) {
         guard var download = activeDownloads[bookId] else { return }
 
+        let previousProgress = download.progress
         download.bytesDownloaded = bytesWritten
         if totalBytes > 0 {
             download.totalBytes = totalBytes
@@ -608,20 +851,32 @@ extension DownloadManager: URLSessionDownloadDelegate {
         download.state = .downloading(progress: progress)
 
         activeDownloads[bookId] = download
+
+        // Persist progress periodically (every 5%) for app restart recovery
+        // This avoids excessive writes while ensuring reasonable progress preservation
+        let previousPercent = Int(previousProgress * 20) // 5% increments
+        let currentPercent = Int(progress * 20)
+        if currentPercent > previousPercent {
+            updatePendingDownloadProgress(bookId: bookId, bytesDownloaded: bytesWritten, totalBytes: totalBytes)
+        }
     }
 
     private func handleDownloadError(bookId: String, error: Error) {
         let nsError = error as NSError
 
-        // Check if cancelled
+        // Check if cancelled (already handled by cancelDownload)
         if nsError.code == NSURLErrorCancelled {
             activeDownloads.removeValue(forKey: bookId)
+            removePendingDownloadInfo(bookId: bookId)
             return
         }
 
         // Update state with error
         let errorMessage = error.localizedDescription
         activeDownloads[bookId]?.state = .failed(error: errorMessage)
+
+        // Remove pending info - user will need to retry
+        removePendingDownloadInfo(bookId: bookId)
 
         DebugLogger.error("Download failed: \(bookId)", error: error)
     }
