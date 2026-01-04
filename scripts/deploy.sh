@@ -138,18 +138,10 @@ run_ios_validation() {
   swiftlint lint --config .swiftlint.yml --strict
 
   CURRENT_STEP="iOS build"
-  if command -v xcpretty &> /dev/null; then
-    xcodebuild build \
-      -scheme BookVault \
-      -destination 'generic/platform=iOS Simulator' \
-      CODE_SIGNING_ALLOWED=NO \
-      | xcpretty
-  else
-    xcodebuild build \
-      -scheme BookVault \
-      -destination 'generic/platform=iOS Simulator' \
-      CODE_SIGNING_ALLOWED=NO
-  fi
+  xcodebuild build \
+    -scheme BookVault \
+    -destination 'generic/platform=iOS Simulator' \
+    CODE_SIGNING_ALLOWED=NO
 
   CURRENT_STEP="iOS tests"
   # Tests need a specific simulator - find the first available iPhone simulator
@@ -164,20 +156,11 @@ for runtime, devices in data.get('devices', {}).items():
                 sys.exit(0)
 print('platform=iOS Simulator,name=Any iOS Simulator Device')
 ")
-  if command -v xcpretty &> /dev/null; then
-    xcodebuild test \
-      -scheme BookVault \
-      -destination "$SIMULATOR_DEST" \
-      -enableCodeCoverage YES \
-      CODE_SIGNING_ALLOWED=NO \
-      | xcpretty
-  else
-    xcodebuild test \
-      -scheme BookVault \
-      -destination "$SIMULATOR_DEST" \
-      -enableCodeCoverage YES \
-      CODE_SIGNING_ALLOWED=NO
-  fi
+  xcodebuild test \
+    -scheme BookVault \
+    -destination "$SIMULATOR_DEST" \
+    -enableCodeCoverage YES \
+    CODE_SIGNING_ALLOWED=NO
 
   cd "$PROJECT_ROOT"
 }
