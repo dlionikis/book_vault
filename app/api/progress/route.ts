@@ -6,7 +6,22 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { normalizeUuid } from '@/lib/api-utils';
 import { logger, withLogging } from '@/lib/logger';
 
-// GET /api/progress?bookId=xxx - Get user's progress for a book
+/**
+ * GET /api/progress
+ *
+ * Get user's listening progress for a specific book or all books. Returns current position
+ * in seconds, completion status, and last played timestamp.
+ *
+ * Auth: Required
+ * Query Parameters:
+ *   - bookId: Book UUID (required) - Single book progress
+ *
+ * Returns: { positionSeconds: number, completed: boolean, lastPlayed: string | null }
+ * Errors: 400 if bookId missing or invalid, 401 if not authenticated, 500 on server error
+ *
+ * @example
+ * fetch('/api/progress?bookId=abc-123')
+ */
 export const GET = withLogging(async (request: NextRequest) => {
   // Check both auth methods
   const session = await getServerSession(authOptions);
@@ -53,7 +68,26 @@ export const GET = withLogging(async (request: NextRequest) => {
   }
 });
 
-// POST /api/progress - Update user's progress (save position)
+/**
+ * POST /api/progress
+ *
+ * Save user's current playback position for a book. Automatically marks book as completed
+ * if position is > 95% of total runtime. Updates lastPlayed timestamp. Rate limited to
+ * 100 requests per minute per user to handle frequent auto-save calls.
+ *
+ * Auth: Required
+ * Request Body: { bookId: string, positionSeconds: number }
+ *
+ * Returns: { positionSeconds: number, completed: boolean, progressPercentage: number }
+ * Errors: 400 if invalid data, 401 if not authenticated, 429 if rate limited, 500 on error
+ *
+ * @example
+ * fetch('/api/progress', {
+ *   method: 'POST',
+ *   headers: { 'Content-Type': 'application/json' },
+ *   body: JSON.stringify({ bookId: 'abc-123', positionSeconds: 1234 })
+ * })
+ */
 export const POST = withLogging(async (request: NextRequest) => {
   // Support both session-based (web) and Bearer token (mobile) auth
   const session = await getServerSession(authOptions);

@@ -13,6 +13,34 @@ interface AudioPlayerProps {
   onAudioRef?: (ref: HTMLAudioElement | null) => void;
 }
 
+/**
+ * Full-featured audio player for streaming audiobooks with playback controls and automatic progress saving.
+ *
+ * Provides complete audio playback interface including play/pause, seek bar, skip buttons,
+ * speed controls (0.75x-2x), volume control with mute, and time display. Automatically
+ * saves listening position to the server every 10 seconds and on pause/unmount. Resumes
+ * from last saved position on load.
+ *
+ * @param audioUrl - Direct URL to the audio file to stream
+ * @param title - Book title displayed in the player
+ * @param author - Author name displayed in the player
+ * @param bookId - Unique book identifier for saving progress
+ * @param coverUrl - Optional book cover image URL for display
+ * @param initialPosition - Starting position in seconds (from saved progress)
+ * @param onTimeUpdate - Optional callback fired on time updates
+ * @param onAudioRef - Optional callback to receive audio element reference
+ * @returns Fully interactive audio player component
+ *
+ * @example
+ * <AudioPlayer
+ *   audioUrl="/api/audio/book123.m4b"
+ *   title="The Hobbit"
+ *   author="J.R.R. Tolkien"
+ *   bookId="abc-123"
+ *   coverUrl="/covers/hobbit.jpg"
+ *   initialPosition={1234}
+ * />
+ */
 export default function AudioPlayer({
   audioUrl,
   title,

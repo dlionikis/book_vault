@@ -6,6 +6,29 @@ import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
 import { normalizeUuid } from '@/lib/api-utils';
 import { withLogging } from '@/lib/logger';
 
+/**
+ * GET /api/books/[id]
+ *
+ * Get detailed information for a single audiobook including full metadata, nested relations
+ * (authors, narrators, series, categories), and user-specific progress/library status if
+ * authenticated. Optionally includes chapters with `?include=chapters` query parameter.
+ *
+ * Auth: Required
+ * Path Parameters:
+ *   - id: Book UUID or ASIN
+ * Query Parameters:
+ *   - include: Optional "chapters" to include chapter list
+ *
+ * Returns: Complete Book object with nested relations
+ * Errors: 400 if invalid ID format, 401 if not authenticated, 404 if book not found
+ *
+ * @example
+ * // Get book details
+ * fetch('/api/books/abc-123-def')
+ *
+ * // Get book with chapters
+ * fetch('/api/books/abc-123-def?include=chapters')
+ */
 export const GET = withLogging(async (request: NextRequest, context) => {
   const { id } = await context!.params;
   // Check both auth methods

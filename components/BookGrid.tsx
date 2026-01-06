@@ -6,6 +6,20 @@ interface BookGridProps {
   loading?: boolean;
 }
 
+/**
+ * Responsive grid layout for displaying multiple audiobooks with loading and empty states.
+ *
+ * Renders books in a responsive grid (1-4 columns based on screen size). Shows skeleton
+ * loading placeholders when data is loading. Displays a helpful empty state with icon
+ * when no books are found. Uses BookCard component for individual book rendering.
+ *
+ * @param books - Array of book objects to display in the grid
+ * @param loading - Optional loading state to show skeleton placeholders
+ * @returns Grid of book cards with loading/empty state handling
+ *
+ * @example
+ * <BookGrid books={searchResults} loading={isSearching} />
+ */
 export default function BookGrid({ books, loading }: BookGridProps) {
   if (loading) {
     return (

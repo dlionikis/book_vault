@@ -6,7 +6,22 @@ import { normalizeUuid } from '@/lib/api-utils';
 import { BOOK_INCLUDE, transformLibraryBook } from '@/lib/book-transformer';
 import { withLogging } from '@/lib/logger';
 
-// GET /api/library - Get user's library books
+/**
+ * GET /api/library
+ *
+ * Get all books in user's personal library with full metadata and progress. Returns books
+ * with addedAt timestamp from when they were added to library. Creates "My Library" list
+ * if it doesn't exist.
+ *
+ * Auth: Required
+ * Query Parameters: None
+ *
+ * Returns: { books: LibraryBook[], total: number }
+ * Errors: 401 if not authenticated, 500 on server error
+ *
+ * @example
+ * fetch('/api/library')
+ */
 export const GET = withLogging(async (request: NextRequest) => {
   try {
     // Check both auth methods
@@ -56,7 +71,9 @@ export const GET = withLogging(async (request: NextRequest) => {
   }
 });
 
-// POST /api/library - Add book to library
+/**
+ * POST /api/library
+ * \n * Add a book to user's personal library. Creates \"My Library\" list if it doesn't exist.\n * Prevents duplicate additions. Records timestamp of when book was added.\n * \n * Auth: Required\n * Request Body: { bookId: string }\n * \n * Returns: { success: true, addedAt: string }\n * Errors: 400 if bookId missing/invalid or book already in library, 401 if not authenticated, 404 if book not found, 500 on error\n * \n * @example\n * fetch('/api/library', {\n *   method: 'POST',\n *   headers: { 'Content-Type': 'application/json' },\n *   body: JSON.stringify({ bookId: 'abc-123' })\n * })\n */
 export const POST = withLogging(async (request: NextRequest) => {
   try {
     // Check both auth methods
