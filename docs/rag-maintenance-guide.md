@@ -318,6 +318,7 @@ Before marking documentation updates complete, verify:
    ```
 
 3. Updated `docs/code-map.md`:
+
    ```markdown
    ## Feature: Book Display
 
@@ -343,6 +344,7 @@ Before marking documentation updates complete, verify:
 2. Updated route JSDoc in new files
 
 3. Added decision to `docs/decisions.md`:
+
    ```markdown
    ## ADR-012: Split API Routes by HTTP Method
 
