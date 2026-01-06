@@ -14,6 +14,22 @@ interface InProgressBook {
   lastPlayed: Date;
 }
 
+/**
+ * Server component that displays a carousel of audiobooks currently in progress.
+ *
+ * Fetches the user's recent listening activity from the database and displays up to
+ * 10 books with progress bars, showing percentage complete and last played time.
+ * Books are ordered by most recently played. Only shows books with progress > 0% and
+ * < 100%. Includes "Continue" button to resume playback at saved position. Renders
+ * nothing if user has no books in progress.
+ *
+ * @returns Carousel of in-progress books or null if none exist
+ *
+ * @example
+ * // In a server component or page
+ * <ContinueListening />
+ */
+
 async function getInProgressBooks(userId: string): Promise<InProgressBook[]> {
   try {
     const progressRecords = await prisma.userProgress.findMany({

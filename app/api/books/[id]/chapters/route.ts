@@ -8,6 +8,23 @@ import { isS3Enabled, generatePresignedUrl } from '@/lib/s3';
 import { normalizeUuid } from '@/lib/api-utils';
 import path from 'path';
 
+/**
+ * GET /api/books/[id]/chapters
+ *
+ * Get chapter list for an audiobook with titles and timestamps. Returns chapters from database
+ * if they exist, otherwise extracts them from audio file metadata (.metadata.json or FFProbe)
+ * on-the-fly. Supports both local filesystem and S3 storage.
+ *
+ * Auth: Required
+ * Path Parameters:
+ *   - id: Book UUID or ASIN
+ *
+ * Returns: { chapters: [{ chapterNumber, title, startTimeSeconds, endTimeSeconds }], source: 'database'|'metadata'|'ffprobe' }
+ * Errors: 400 if invalid ID, 401 if not authenticated, 404 if book or audio not found
+ *
+ * @example
+ * fetch('/api/books/abc-123/chapters')
+ */
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   // Check both auth methods
   const session = await getServerSession(authOptions);

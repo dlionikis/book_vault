@@ -4,6 +4,26 @@ import bcrypt from 'bcryptjs';
 import { generateAccessToken, generateRefreshToken, getAccessTokenExpiry } from '@/lib/jwt';
 import { withLogging } from '@/lib/logger';
 
+/**
+ * POST /api/auth/mobile/login
+ *
+ * Mobile JWT-based authentication endpoint. Validates email and password, returns access
+ * and refresh tokens for mobile app authentication. Access token valid for 15 minutes,
+ * refresh token valid for 7 days.
+ *
+ * Auth: Public
+ * Request Body: { email: string, password: string }
+ *
+ * Returns: { accessToken: string, refreshToken: string, expiresAt: string, user: { id, email, name } }
+ * Errors: 400 if missing credentials, 401 if invalid credentials, 500 on server error
+ *
+ * @example
+ * fetch('/api/auth/mobile/login', {
+ *   method: 'POST',
+ *   headers: { 'Content-Type': 'application/json' },
+ *   body: JSON.stringify({ email: 'user@example.com', password: 'secret' })
+ * })
+ */
 export const POST = withLogging(async (request: NextRequest) => {
   try {
     const body = await request.json();

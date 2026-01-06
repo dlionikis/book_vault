@@ -48,7 +48,13 @@ export function getLocalMediaUrl(relativePath: string | null): string | null {
 }
 
 /**
- * Get local audio URL (sync, for development)
+ * Generate local API URL for audio files served via /api/audio endpoint.
+ *
+ * Used in development when S3 is not enabled. Encodes path segments to handle
+ * special characters. Supports range requests for audio streaming.
+ *
+ * @param audioPath - Path relative to media directory (e.g., "books/book1.m4b")
+ * @returns Local API URL (e.g., "http://localhost:3000/api/audio/books/book1.m4b")
  */
 export function getLocalAudioUrl(audioPath: string | null): string | null {
   if (!audioPath) return null;
@@ -65,9 +71,16 @@ export function getLocalAudioUrl(audioPath: string | null): string | null {
 const PRESIGNED_URL_EXPIRY = 3600;
 
 /**
- * Get cover image URL - async version that generates presigned S3 URLs in production
- * @param coverPath - Relative path to cover image
- * @returns Presigned S3 URL in production, local API URL in development
+ * Get cover image URL with environment-aware handling.
+ *
+ * In production (S3 enabled): Generates time-limited presigned S3 URL (1 hour expiry)
+ * In development: Returns local API route URL
+ *
+ * This is async because S3 presigned URL generation requires API calls. Used by
+ * book transformers to ensure cover images are accessible in API responses.
+ *
+ * @param coverPath - Relative path to cover image from MEDIA_DATA_PATH
+ * @returns Promise resolving to presigned S3 URL or local API URL, null if no path
  */
 export async function getCoverUrl(coverPath: string | null): Promise<string | null> {
   if (!coverPath) return null;

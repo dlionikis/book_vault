@@ -6,6 +6,20 @@ interface BookCardProps {
   book: Book;
 }
 
+/**
+ * Displays a single audiobook as a clickable card with cover image and metadata.
+ *
+ * Renders a responsive card showing book cover, title, series information, authors,
+ * narrators, and runtime. Card links to the book detail page and includes hover
+ * effects. Handles missing cover images gracefully with a placeholder icon.
+ * Automatically formats runtime and displays primary series with sequence number.
+ *
+ * @param book - Complete book object from API including nested authors, narrators, and series
+ * @returns Interactive book card component that links to /books/[id]
+ *
+ * @example
+ * <BookCard book={myBook} />
+ */
 export default function BookCard({ book }: BookCardProps) {
   // Format runtime as hours and minutes
   const formatRuntime = (minutes?: number | null) => {

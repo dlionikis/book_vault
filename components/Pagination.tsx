@@ -9,6 +9,28 @@ interface PaginationProps {
   itemName?: string;
 }
 
+/**
+ * Pagination controls for navigating through paginated lists with URL state management.
+ *
+ * Displays current page, total pages, item count, and page navigation buttons. Uses URL
+ * query parameters to maintain pagination state. Shows smart ellipsis when there are many
+ * pages (shows first, last, current, and nearby pages). Automatically hides when only one
+ * page exists. Previous/Next buttons are disabled at boundaries.
+ *
+ * @param currentPage - Current active page number (1-indexed)
+ * @param totalPages - Total number of available pages
+ * @param total - Total number of items across all pages
+ * @param itemName - Optional plural name for items (e.g., "books", "results"). Defaults to "items".
+ * @returns Pagination controls or null if only one page
+ *
+ * @example
+ * <Pagination
+ *   currentPage={3}
+ *   totalPages={10}
+ *   total={197}
+ *   itemName="books"
+ * />
+ */
 export default function Pagination({
   currentPage,
   totalPages,

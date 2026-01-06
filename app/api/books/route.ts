@@ -9,6 +9,33 @@ import type { components } from '@/lib/api-types';
 
 type Book = components['schemas']['Book'];
 
+/**
+ * GET /api/books
+ *
+ * List all audiobooks with pagination, filtering, and sorting. Returns books with full metadata
+ * including authors, narrators, series, categories, and user-specific data (library status,
+ * progress) if authenticated.
+ *
+ * Auth: Required
+ * Query Parameters:
+ *   - page: Page number (default: 1)
+ *   - limit: Items per page (default: 20, max: 100)
+ *   - sort: Sort order - "title" (default)
+ *   - authorId: Filter by author UUID
+ *   - narratorId: Filter by narrator UUID
+ *   - categoryId: Filter by category UUID
+ *   - seriesId: Filter by series UUID
+ *
+ * Returns: { data: Book[], pagination: { currentPage, totalPages, totalItems, itemsPerPage } }
+ * Errors: 401 if not authenticated, 500 on server error
+ *
+ * @example
+ * // Fetch page 2 with 10 books per page
+ * fetch('/api/books?page=2&limit=10')
+ *
+ * // Filter by author
+ * fetch('/api/books?authorId=abc-123')
+ */
 export const GET = withLogging(async (request: NextRequest) => {
   // Check both auth methods
   const session = await getServerSession(authOptions);

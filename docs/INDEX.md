@@ -15,6 +15,16 @@
 
 ---
 
+## Quick Reference (New!)
+
+| File                                               | Purpose              | When to Use                     |
+| -------------------------------------------------- | -------------------- | ------------------------------- |
+| [../components/README.md](../components/README.md) | Component inventory  | "Which component should I use?" |
+| [../app/api/README.md](../app/api/README.md)       | All API endpoints    | "What's the endpoint path?"     |
+| [../lib/README.md](../lib/README.md)               | Utility module index | "Where's the helper function?"  |
+
+---
+
 ## Core References
 
 | File                                     | Purpose             | When to Use                    |
