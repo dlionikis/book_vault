@@ -53,6 +53,11 @@ class AudioPlayerManager: ObservableObject {
         AuthManager.shared.token
     }
 
+    // Token refresh handler for resource loader (enables DI for testing)
+    var tokenRefreshHandler: () async -> Bool = {
+        await AuthManager.shared.refreshAccessToken()
+    }
+
     // MARK: - Private Properties
 
     private var player: AVPlayer?
@@ -444,7 +449,7 @@ class AudioPlayerManager: ObservableObject {
             playerItem = AVPlayerItem(asset: asset)
         } else {
             // Backend API URL - needs auth header via resource loader
-            guard let token = authTokenProvider() else {
+            guard authTokenProvider() != nil else {
                 DebugLogger.error("AudioPlayerManager: No authentication token")
                 self.error = NSError(
                     domain: "AudioPlayerManager",
@@ -476,8 +481,12 @@ class AudioPlayerManager: ObservableObject {
 
             DebugLogger.verbose("Custom scheme URL: \(customSchemeURL.absoluteString)")
 
-            // Create resource loader delegate
-            self.resourceLoaderDelegate = AuthenticatedAVAssetResourceLoaderDelegate(authToken: token)
+            // Create resource loader delegate with live token provider and refresh capability
+            // This allows the delegate to get fresh tokens after refresh and handle 401s
+            self.resourceLoaderDelegate = AuthenticatedAVAssetResourceLoaderDelegate(
+                tokenProvider: authTokenProvider,
+                tokenRefreshHandler: tokenRefreshHandler
+            )
 
             // Create AVAsset with resource loader
             let asset = AVURLAsset(url: customSchemeURL)
