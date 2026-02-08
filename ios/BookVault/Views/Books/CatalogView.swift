@@ -127,7 +127,7 @@ struct BookGridItem: View {
     @State private var userProgress: UserProgress?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             // Cover image with progress overlay
             ZStack(alignment: .bottom) {
                 CachedCoverImage(bookId: book.id, coverUrl: book.coverUrl)
