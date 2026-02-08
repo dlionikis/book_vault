@@ -271,7 +271,23 @@ This is an **AI-first development project**, meaning:
    - Email: `test@example.com`
    - Password: `password123`
 
-7. **Import audiobooks**
+7. **Upload media files to S3 (production only)**
+
+   If deploying to AWS, copy your audiobook files to S3 before importing:
+
+   ```bash
+   aws s3 sync <AUDIO_BOOK_SOURCE_PATH> s3://book-vault-media/ \
+     --exclude "*.cue" \
+     --exclude "Icon*" \
+     --exclude "Icon?" \
+     --exclude ".DS_Store" \
+     --profile book_vault \
+     --region us-east-1
+   ```
+
+   The `sync` command preserves folder structure and is resumable — safe to interrupt and re-run.
+
+8. **Import audiobooks**
 
    ```bash
    npm run import
@@ -279,14 +295,14 @@ This is an **AI-first development project**, meaning:
 
    Note: The import script automatically creates the test user if it doesn't exist.
 
-8. **Start development server**
+9. **Start development server**
 
    ```bash
    npm run dev
    ```
 
-9. **Open application**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+10. **Open application**
+    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ### Available Commands
 
