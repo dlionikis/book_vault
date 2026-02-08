@@ -11,6 +11,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var themeManager = ThemeManager.shared
+    @StateObject private var appIconManager = AppIconManager.shared
     @StateObject private var biometricManager = BiometricAuthManager.shared
     @StateObject private var playbackSettings = PlaybackSettings.shared
     @State private var showingLogoutConfirmation = false
@@ -36,10 +37,45 @@ struct SettingsView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+
+                    if appIconManager.supportsAlternateIcons {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("App Icon")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+
+                            HStack(spacing: 0) {
+                                ForEach(AppIconColor.allCases) { iconColor in
+                                    Button {
+                                        appIconManager.selectedIcon = iconColor
+                                    } label: {
+                                        ZStack {
+                                            Circle()
+                                                .fill(iconColor.displayColor)
+                                                .frame(width: 32, height: 32)
+
+                                            if appIconManager.selectedIcon == iconColor {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 13, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("\(iconColor.rawValue) icon")
+                                    .accessibilityAddTraits(
+                                        appIconManager.selectedIcon == iconColor ? .isSelected : []
+                                    )
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
                 } header: {
                     Text("Appearance")
                 } footer: {
-                    Text("Choose your preferred color scheme")
+                    Text("Choose your preferred color scheme and app icon")
                 }
 
                 // Playback Section

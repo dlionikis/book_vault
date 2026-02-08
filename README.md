@@ -271,22 +271,76 @@ This is an **AI-first development project**, meaning:
    - Email: `test@example.com`
    - Password: `password123`
 
-7. **Import audiobooks**
+7. **Upload media files to S3 (production only)**
+
+   If deploying to AWS, copy your audiobook files to S3 before importing:
+
+   ```bash
+   aws s3 sync <AUDIO_BOOK_SOURCE_PATH> s3://book-vault-media/ \
+     --exclude "*.cue" \
+     --exclude "Icon*" \
+     --exclude "Icon?" \
+     --exclude ".DS_Store" \
+     --profile book_vault \
+     --region us-east-1
+   ```
+
+   The `sync` command preserves folder structure and is resumable — safe to interrupt and re-run.
+
+8. **Import audiobooks**
+
+   **Local development:**
 
    ```bash
    npm run import
    ```
 
+   **Production (against RDS):**
+
+   The production database is in a private VPC and not publicly accessible. To import:
+   1. Temporarily open the RDS security group for your IP:
+
+      ```bash
+      # Get your public IP
+      curl -s https://checkip.amazonaws.com
+
+      # Open port 5432 for your IP (replace <YOUR_IP>)
+      aws ec2 authorize-security-group-ingress \
+        --group-id <RDS_SECURITY_GROUP_ID> \
+        --protocol tcp --port 5432 \
+        --cidr <YOUR_IP>/32 \
+        --profile book_vault --region us-east-1
+      ```
+
+   2. Run the import with the production DATABASE_URL:
+
+      ```bash
+      DATABASE_URL="<PRODUCTION_DATABASE_URL>" \
+        MEDIA_DATA_PATH=<AUDIO_BOOK_SOURCE_PATH> \
+        npm run import
+      ```
+
+      Get the production DATABASE_URL from AWS Secrets Manager (`book-vault/database`).
+
+   3. **Close the security group immediately after:**
+
+      ```bash
+      aws ec2 revoke-security-group-ingress \
+        --group-id <RDS_SECURITY_GROUP_ID> \
+        --security-group-rule-ids <RULE_ID_FROM_STEP_1> \
+        --profile book_vault --region us-east-1
+      ```
+
    Note: The import script automatically creates the test user if it doesn't exist.
 
-8. **Start development server**
+9. **Start development server**
 
    ```bash
    npm run dev
    ```
 
-9. **Open application**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+10. **Open application**
+    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ### Available Commands
 
