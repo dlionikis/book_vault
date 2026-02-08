@@ -543,32 +543,6 @@ struct MetadataRow: View {
     }
 }
 
-// MARK: - Previews
-
-#Preview("Standard Book") {
-    NavigationView {
-        BookDetailView(book: .mockStandard)
-    }
-}
-
-#Preview("Long Title with Series") {
-    NavigationView {
-        BookDetailView(book: .mockLongTitle)
-    }
-}
-
-#Preview("Minimal Book") {
-    NavigationView {
-        BookDetailView(book: .mockMinimal)
-    }
-}
-
-#Preview("Multiple Authors") {
-    NavigationView {
-        BookDetailView(book: .mockMultipleAuthors)
-    }
-}
-
 // MARK: - DownloadButton
 
 /// Download management button component
@@ -798,6 +772,32 @@ struct DownloadButton: View {
             downloadError = error.localizedDescription
             showingError = true
         }
+    }
+}
+
+// MARK: - Previews
+
+#Preview("Standard Book") {
+    NavigationView {
+        BookDetailView(book: .mockStandard)
+    }
+}
+
+#Preview("Long Title with Series") {
+    NavigationView {
+        BookDetailView(book: .mockLongTitle)
+    }
+}
+
+#Preview("Minimal Book") {
+    NavigationView {
+        BookDetailView(book: .mockMinimal)
+    }
+}
+
+#Preview("Multiple Authors") {
+    NavigationView {
+        BookDetailView(book: .mockMultipleAuthors)
     }
 }
 

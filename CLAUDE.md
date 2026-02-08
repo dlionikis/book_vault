@@ -21,7 +21,7 @@
 | **Styling**   | Tailwind CSS                 |
 | **Auth**      | NextAuth.js (JWT)            |
 | **Testing**   | Jest + React Testing Library |
-| **iOS**       | Swift + SwiftUI              |
+| **iOS**       | Swift + SwiftUI Z            |
 
 ### Architecture
 
