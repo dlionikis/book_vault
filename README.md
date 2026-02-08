@@ -289,9 +289,47 @@ This is an **AI-first development project**, meaning:
 
 8. **Import audiobooks**
 
+   **Local development:**
+
    ```bash
    npm run import
    ```
+
+   **Production (against RDS):**
+
+   The production database is in a private VPC and not publicly accessible. To import:
+   1. Temporarily open the RDS security group for your IP:
+
+      ```bash
+      # Get your public IP
+      curl -s https://checkip.amazonaws.com
+
+      # Open port 5432 for your IP (replace <YOUR_IP>)
+      aws ec2 authorize-security-group-ingress \
+        --group-id <RDS_SECURITY_GROUP_ID> \
+        --protocol tcp --port 5432 \
+        --cidr <YOUR_IP>/32 \
+        --profile book_vault --region us-east-1
+      ```
+
+   2. Run the import with the production DATABASE_URL:
+
+      ```bash
+      DATABASE_URL="<PRODUCTION_DATABASE_URL>" \
+        MEDIA_DATA_PATH=<AUDIO_BOOK_SOURCE_PATH> \
+        npm run import
+      ```
+
+      Get the production DATABASE_URL from AWS Secrets Manager (`book-vault/database`).
+
+   3. **Close the security group immediately after:**
+
+      ```bash
+      aws ec2 revoke-security-group-ingress \
+        --group-id <RDS_SECURITY_GROUP_ID> \
+        --security-group-rule-ids <RULE_ID_FROM_STEP_1> \
+        --profile book_vault --region us-east-1
+      ```
 
    Note: The import script automatically creates the test user if it doesn't exist.
 
