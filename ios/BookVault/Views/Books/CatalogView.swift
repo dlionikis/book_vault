@@ -76,9 +76,9 @@ struct CatalogView: View {
 
                             LazyVGrid(columns: columns, spacing: 20) {
                                 ForEach(viewModel.books, id: \.id) { book in
-                                    NavigationLink(
-                                        destination: BookDetailView(book: book)
-                                    ) { BookGridItem(book: book) }
+                                    NavigationLink(destination: BookDetailView(book: book)) {
+                                        BookGridItem(book: book)
+                                    }
                                     .buttonStyle(.plain)
                                 }
 
