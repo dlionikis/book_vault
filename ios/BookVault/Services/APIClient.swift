@@ -411,9 +411,9 @@ class APIClient: APIClientProtocol {
 
     // MARK: - Authentication
 
-    /// Login with email and password
-    func login(email: String, password: String) async throws -> LoginMobile200Response {
-        let requestBody = LoginMobileRequest(email: email, password: password)
+    /// Login with username and password
+    func login(username: String, password: String) async throws -> LoginMobile200Response {
+        let requestBody = LoginMobileRequest(username: username, password: password)
         let request = try createRequest(
             path: "/api/auth/mobile/login",
             method: "POST",

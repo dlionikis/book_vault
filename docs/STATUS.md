@@ -33,20 +33,17 @@
 
 ## Roadmap
 
-### Next Priority: User Lists
+### Next Up
 
-Allow users to organize books into custom collections ("Favorites", "Want to Listen", etc.)
-
-**API endpoints needed**:
-
-- `POST/GET /api/lists` - Create/list user lists
-- `POST/DELETE /api/lists/[id]/books` - Add/remove books
-- `PUT /api/lists/[id]/reorder` - Reorder books
-
-**Status**: Deferred - nice to have, not essential
+- [ ] **Remove volume slider (iOS)** - Remove the volume slider from the iOS audio playback view
+- [ ] **Duration remaining (iOS)** - Add remaining time display to the audio playback view
+- [ ] **Dismiss mini-player** - Add ability to close the recent playback mini-player
+- [ ] **Add sleep functionality** - Add ability to select a duration for listening where the app will fade-out and pause the audio.
+- [ ] **Cold storage retrieval warning** - Warn users when audiobooks are in S3 cold storage and will take time to become available (docs/s3-archive-restore-workflow.md)
 
 ### Future Ideas
 
+- **User Lists** - Custom collections ("Favorites", "Want to Listen", etc.)
 - **Enhanced Search** - Filters, advanced syntax, saved searches
 - **Analytics** - Listening stats, most played, streaks
 - **Face ID** - Biometric login for iOS

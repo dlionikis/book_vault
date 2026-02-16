@@ -31,7 +31,7 @@ export const GET = withLogging(async (request: NextRequest) => {
       valid: true,
       user: {
         id: payload.userId,
-        email: payload.email,
+        username: payload.username,
       },
     });
   } catch (error) {

@@ -17,7 +17,7 @@ jest.mock('@/lib/db', () => ({
 describe('POST /api/auth/mobile/refresh', () => {
   const mockUser = {
     id: 'test-user-id',
-    email: 'test@example.com',
+    username: 'testuser',
   };
 
   const mockRefreshToken = {

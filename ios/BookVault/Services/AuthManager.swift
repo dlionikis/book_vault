@@ -41,9 +41,9 @@ class AuthManager: ObservableObject, AuthManaging {
         keychain.load(key: accessTokenKey)
     }
 
-    // Public access to user email
-    var userEmail: String? {
-        currentUser?.email
+    // Public access to username
+    var username: String? {
+        currentUser?.username
     }
 
     // Production singleton init
@@ -67,14 +67,14 @@ class AuthManager: ObservableObject, AuthManaging {
 
     // MARK: - Public Methods
 
-    /// Login with email and password
-    func login(email: String, password: String) async {
-        DebugLogger.auth("Login attempt for email: \(email)")
+    /// Login with username and password
+    func login(username: String, password: String) async {
+        DebugLogger.auth("Login attempt for username: \(username)")
         isLoading = true
         errorMessage = nil
 
         do {
-            let response = try await apiClient.login(email: email, password: password)
+            let response = try await apiClient.login(username: username, password: password)
             DebugLogger.auth("Login API response received - expiresIn: \(response.expiresIn)s")
 
             // Store tokens securely
@@ -94,10 +94,10 @@ class AuthManager: ObservableObject, AuthManaging {
             self.refreshTokenValue = response.refreshToken
             self.isAuthenticated = true
 
-            DebugLogger.auth("Login successful - user: \(response.user.email), tokenExpiresIn: \(response.expiresIn)s")
+            DebugLogger.auth("Login successful - user: \(response.user.username), tokenExpiresIn: \(response.expiresIn)s")
             isLoading = false
         } catch {
-            DebugLogger.error("Login failed for \(email)", error: error)
+            DebugLogger.error("Login failed for \(username)", error: error)
             isLoading = false
             errorMessage = error.localizedDescription
         }
@@ -233,7 +233,7 @@ class AuthManager: ObservableObject, AuthManaging {
             self.currentUser = user
             self.isAuthenticated = true
 
-            DebugLogger.auth("Session restored for user: \(user.email) - access token may be expired, refresh will happen on first 401")
+            DebugLogger.auth("Session restored for user: \(user.username) - access token may be expired, refresh will happen on first 401")
         } catch {
             // If we can't decode user data, clear everything
             DebugLogger.error("Session restoration failed - could not decode user data", error: error)

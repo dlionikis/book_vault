@@ -13,7 +13,7 @@ protocol APIClientProtocol {
     var baseURL: URL { get }
 
     // Authentication
-    func login(email: String, password: String) async throws -> LoginMobile200Response
+    func login(username: String, password: String) async throws -> LoginMobile200Response
     func refreshToken(refreshToken: UUID) async throws -> RefreshToken200Response
     func logout(refreshToken: UUID) async throws
 

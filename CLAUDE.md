@@ -127,7 +127,7 @@ Book {
 }
 
 User {
-  id, email, passwordHash
+  id, username, passwordHash
   progress[] → UserProgress
   lists[] → UserList
 }
@@ -151,7 +151,7 @@ AWS_S3_BUCKET="book-vault-media"
 AWS_REGION="us-east-1"
 ```
 
-**Default dev credentials**: test@example.com / password123
+**Default dev credentials**: testuser / password123
 
 ---
 

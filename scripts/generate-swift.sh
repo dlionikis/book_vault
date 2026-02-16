@@ -79,8 +79,9 @@ elif [ -f /tmp/Models.swift.backup ]; then
   echo "⚠️  Restoring custom Models.swift (no Validation.swift generated)"
   mv /tmp/Models.swift.backup "$OUTPUT_DIR/Models.swift"
 fi
-# Remove documentation and generator metadata
+# Remove documentation, generator metadata, and boilerplate non-Swift files
 rm -rf "$OUTPUT_DIR/docs" "$OUTPUT_DIR/.openapi-generator"
+rm -f "$OUTPUT_DIR/git_push.sh" "$OUTPUT_DIR/BookVault.podspec" "$OUTPUT_DIR/Cartfile" "$OUTPUT_DIR/README.md" "$OUTPUT_DIR/.openapi-generator-ignore" "$OUTPUT_DIR/.swiftformat"
 
 # Format generated code (if swiftformat is available)
 if command -v swiftformat &> /dev/null; then

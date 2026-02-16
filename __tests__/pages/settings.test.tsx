@@ -22,7 +22,7 @@ describe('Settings Page', () => {
   const mockSession = {
     user: {
       id: 'user-1',
-      email: 'test@example.com',
+      username: 'testuser',
     },
   };
 
@@ -34,12 +34,12 @@ describe('Settings Page', () => {
     jest.clearAllMocks();
   });
 
-  it('renders settings page with user email', () => {
+  it('renders settings page with username', () => {
     render(<SettingsPage />);
 
     expect(screen.getByText('Settings')).toBeInTheDocument();
     expect(screen.getByText('Account Information')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('test@example.com')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('testuser')).toBeInTheDocument();
   });
 
   it('displays password change form', () => {
@@ -205,12 +205,12 @@ describe('Settings Page', () => {
     expect(submitButton).toBeDisabled();
   });
 
-  it('displays email as disabled field', () => {
+  it('displays username as disabled field', () => {
     render(<SettingsPage />);
 
-    const emailInput = screen.getByDisplayValue('test@example.com') as HTMLInputElement;
-    expect(emailInput).toBeDisabled();
-    expect(screen.getByText('Email cannot be changed')).toBeInTheDocument();
+    const usernameInput = screen.getByDisplayValue('testuser') as HTMLInputElement;
+    expect(usernameInput).toBeDisabled();
+    expect(screen.getByText('Username cannot be changed')).toBeInTheDocument();
   });
 
   it('has navigation sections for account and security', () => {

@@ -28,7 +28,7 @@ const mockGetAuthUserFromRequest = getAuthUserFromRequest as jest.MockedFunction
 describe('/api/progress', () => {
   const mockUser = {
     id: 'user-123',
-    email: 'test@example.com',
+    username: 'testuser',
   };
 
   const mockBookId = 'book-123';

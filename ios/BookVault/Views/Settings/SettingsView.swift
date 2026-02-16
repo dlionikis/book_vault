@@ -129,12 +129,12 @@ struct SettingsView: View {
 
                 // Account Section
                 Section {
-                    if let email = authManager.userEmail {
+                    if let username = authManager.username {
                         HStack {
-                            Text("Email")
+                            Text("Username")
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text(email)
+                            Text(username)
                         }
                     }
 

@@ -11,13 +11,13 @@ struct LoginView: View {
     @StateObject private var authManager = AuthManager.shared
     @StateObject private var biometricManager = BiometricAuthManager.shared
 
-    @State private var email = ""
+    @State private var username = ""
     @State private var password = ""
     @State private var enableBiometricOnLogin = false
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case email
+        case username
         case password
     }
 
@@ -42,7 +42,7 @@ struct LoginView: View {
                 }
                 .padding(.bottom, 40)
 
-                // Face ID button (shown if enabled for this email or no email entered yet)
+                // Face ID button (shown if enabled for this username or no username entered yet)
                 if biometricManager.canUseBiometrics && biometricManager.isBiometricEnabled {
                     VStack(spacing: 12) {
                         Button {
@@ -70,13 +70,12 @@ struct LoginView: View {
 
                 // Login form
                 VStack(spacing: 16) {
-                    // Email field
-                    TextField("Email", text: $email)
+                    // Username field
+                    TextField("Username", text: $username)
                         .textFieldStyle(.roundedBorder)
-                        .textContentType(.emailAddress)
+                        .textContentType(.username)
                         .autocapitalization(.none)
-                        .keyboardType(.emailAddress)
-                        .focused($focusedField, equals: .email)
+                        .focused($focusedField, equals: .username)
                         .submitLabel(.next)
                         .onSubmit {
                             focusedField = .password
@@ -127,7 +126,7 @@ struct LoginView: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(email.isEmpty || password.isEmpty || authManager.isLoading)
+                    .disabled(username.isEmpty || password.isEmpty || authManager.isLoading)
                     .padding(.top, 8)
                 }
                 .padding(.horizontal, 32)
@@ -158,18 +157,18 @@ struct LoginView: View {
         focusedField = nil
 
         // Capture values before async call
-        let loginEmail = email
+        let loginUsername = username
         let loginPassword = password
         let shouldEnableBiometric = enableBiometricOnLogin
 
         // Perform login
         Task {
-            await authManager.login(email: loginEmail, password: loginPassword)
+            await authManager.login(username: loginUsername, password: loginPassword)
 
             // If login succeeded and user opted to enable biometrics, do it now
             if authManager.isAuthenticated && shouldEnableBiometric {
                 do {
-                    try biometricManager.enableBiometric(email: loginEmail, password: loginPassword)
+                    try biometricManager.enableBiometric(username: loginUsername, password: loginPassword)
                 } catch {
                     // Silently fail - user can enable later in settings
                 }
@@ -180,7 +179,7 @@ struct LoginView: View {
     private func authenticateWithBiometric() async {
         do {
             let credentials = try await biometricManager.authenticateAndGetCredentials()
-            await authManager.login(email: credentials.email, password: credentials.password)
+            await authManager.login(username: credentials.username, password: credentials.password)
         } catch {
             // Show error - user can fall back to password
             authManager.errorMessage = error.localizedDescription

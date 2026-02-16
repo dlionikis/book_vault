@@ -55,7 +55,7 @@ describe('ContinueListeningButton', () => {
 
   it('returns null when user has no in-progress books', async () => {
     getServerSession.mockResolvedValue({
-      user: { id: 'user-1', email: 'test@example.com' },
+      user: { id: 'user-1', username: 'testuser' },
     });
 
     (prisma.userProgress.findFirst as jest.Mock).mockResolvedValue(null);
@@ -68,7 +68,7 @@ describe('ContinueListeningButton', () => {
 
   it('renders continue listening button with book details', async () => {
     getServerSession.mockResolvedValue({
-      user: { id: 'user-1', email: 'test@example.com' },
+      user: { id: 'user-1', username: 'testuser' },
     });
 
     const mockProgress = {
@@ -125,7 +125,7 @@ describe('ContinueListeningButton', () => {
 
   it('handles books with no cover image', async () => {
     getServerSession.mockResolvedValue({
-      user: { id: 'user-1', email: 'test@example.com' },
+      user: { id: 'user-1', username: 'testuser' },
     });
 
     const mockProgress = {
@@ -163,7 +163,7 @@ describe('ContinueListeningButton', () => {
 
   it('handles books with no authors', async () => {
     getServerSession.mockResolvedValue({
-      user: { id: 'user-1', email: 'test@example.com' },
+      user: { id: 'user-1', username: 'testuser' },
     });
 
     const mockProgress = {
@@ -193,7 +193,7 @@ describe('ContinueListeningButton', () => {
 
   it('calculates progress percentage correctly for edge cases', async () => {
     getServerSession.mockResolvedValue({
-      user: { id: 'user-1', email: 'test@example.com' },
+      user: { id: 'user-1', username: 'testuser' },
     });
 
     // Test: 0% progress
@@ -249,7 +249,7 @@ describe('ContinueListeningButton', () => {
 
   it('queries for most recent in-progress book', async () => {
     getServerSession.mockResolvedValue({
-      user: { id: 'user-1', email: 'test@example.com' },
+      user: { id: 'user-1', username: 'testuser' },
     });
 
     (prisma.userProgress.findFirst as jest.Mock).mockResolvedValue(null);
@@ -283,7 +283,7 @@ describe('ContinueListeningButton', () => {
 
   it('handles database errors gracefully', async () => {
     getServerSession.mockResolvedValue({
-      user: { id: 'user-1', email: 'test@example.com' },
+      user: { id: 'user-1', username: 'testuser' },
     });
 
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();

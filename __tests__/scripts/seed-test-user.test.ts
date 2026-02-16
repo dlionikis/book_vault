@@ -27,12 +27,12 @@ let mockSeedTestUser: () => Promise<void>;
 jest.mock('../../scripts/seed-test-user', () => {
   return {
     seedTestUser: jest.fn(async () => {
-      const email = process.env.TEST_USER_EMAIL || 'test@example.com';
+      const username = process.env.TEST_USER_USERNAME || 'testuser';
       const password = process.env.TEST_USER_PASSWORD || 'password123';
 
       try {
         const existingUser = await prisma.user.findUnique({
-          where: { email },
+          where: { username },
         });
 
         if (existingUser) {
@@ -43,7 +43,7 @@ jest.mock('../../scripts/seed-test-user', () => {
 
         await prisma.user.create({
           data: {
-            email,
+            username,
             passwordHash,
           },
         });
@@ -86,22 +86,22 @@ describe('Test User Seeding Script', () => {
   });
 
   it('creates test user when user does not exist', async () => {
-    const testEmail = 'newuser@example.com';
+    const testUsername = 'newuser';
 
-    process.env.TEST_USER_EMAIL = testEmail;
+    process.env.TEST_USER_USERNAME = testUsername;
     process.env.TEST_USER_PASSWORD = 'testpass123';
 
     (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
     (prisma.user.create as jest.Mock).mockResolvedValue({
       id: '1',
-      email: testEmail,
+      username: testUsername,
       createdAt: new Date(),
     });
 
     await mockSeedTestUser();
 
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
-      where: { email: testEmail },
+      where: { username: testUsername },
     });
 
     expect(prisma.user.create).toHaveBeenCalled();
@@ -109,19 +109,19 @@ describe('Test User Seeding Script', () => {
   });
 
   it('skips creation when user already exists', async () => {
-    const testEmail = 'existing@example.com';
-    process.env.TEST_USER_EMAIL = testEmail;
+    const testUsername = 'existinguser';
+    process.env.TEST_USER_USERNAME = testUsername;
 
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({
       id: '1',
-      email: testEmail,
+      username: testUsername,
       passwordHash: 'existing_hash',
     });
 
     await mockSeedTestUser();
 
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
-      where: { email: testEmail },
+      where: { username: testUsername },
     });
 
     expect(prisma.user.create).not.toHaveBeenCalled();
@@ -129,24 +129,24 @@ describe('Test User Seeding Script', () => {
   });
 
   it('uses default credentials when environment variables are not set', async () => {
-    delete process.env.TEST_USER_EMAIL;
+    delete process.env.TEST_USER_USERNAME;
     delete process.env.TEST_USER_PASSWORD;
 
     (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
     (prisma.user.create as jest.Mock).mockResolvedValue({
       id: '1',
-      email: 'test@example.com',
+      username: 'testuser',
     });
 
     await mockSeedTestUser();
 
     expect(prisma.user.findUnique).toHaveBeenCalledWith({
-      where: { email: 'test@example.com' },
+      where: { username: 'testuser' },
     });
   });
 
   it('handles database errors gracefully', async () => {
-    process.env.TEST_USER_EMAIL = 'test@example.com';
+    process.env.TEST_USER_USERNAME = 'testuser';
 
     (prisma.user.findUnique as jest.Mock).mockRejectedValue(
       new Error('Database connection failed')

@@ -41,7 +41,7 @@ const mockGetAuthUserFromRequest = getAuthUserFromRequest as jest.MockedFunction
 const mockTransformBook = transformBook as jest.MockedFunction<typeof transformBook>;
 
 describe('handleEntityDetailWithBooks', () => {
-  const mockUser = { id: 'user-123', email: 'test@example.com' };
+  const mockUser = { id: 'user-123', username: 'testuser' };
   const mockAuthor = {
     id: 'author-123',
     name: 'Test Author',

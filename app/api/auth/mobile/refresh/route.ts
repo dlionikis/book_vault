@@ -40,7 +40,7 @@ export const POST = withLogging(async (request: NextRequest) => {
     }
 
     // Generate new access token
-    const accessToken = await generateAccessToken(tokenRecord.user.id, tokenRecord.user.email);
+    const accessToken = await generateAccessToken(tokenRecord.user.id, tokenRecord.user.username);
 
     // Rotate refresh token for security (invalidate old, create new)
     const newRefreshToken = generateRefreshToken();

@@ -10,9 +10,7 @@ import SwiftUI
 // MARK: - BrowseListView
 
 /// A paginated, searchable, alphabetically-grouped list view driven by a configuration.
-struct BrowseListView<Item: BrowseListItem, Response: BrowseListResponse>: View
-    where Response.Item == Item
-{
+struct BrowseListView<Item: BrowseListItem, Response: BrowseListResponse>: View where Response.Item == Item {
     let configuration: BrowseListConfiguration<Item, Response>
 
     @StateObject private var searchManager = SearchManager.shared

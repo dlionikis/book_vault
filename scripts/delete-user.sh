@@ -2,11 +2,11 @@
 #
 # Delete a user from the database (local or production)
 #
-# Usage: ./scripts/delete-user.sh <local|prod> <email>
+# Usage: ./scripts/delete-user.sh <local|prod> <username>
 #
 # Examples:
-#   ./scripts/delete-user.sh local user@example.com
-#   ./scripts/delete-user.sh prod user@example.com
+#   ./scripts/delete-user.sh local myuser
+#   ./scripts/delete-user.sh prod myuser
 #
 # Prerequisites:
 #   - Node.js with Prisma available (npm install)
@@ -37,18 +37,18 @@ cd "$SCRIPT_DIR/.."
 
 # Validate arguments
 if [ $# -ne 2 ]; then
-    echo -e "${RED}Error: Environment and email required${NC}"
+    echo -e "${RED}Error: Environment and username required${NC}"
     echo ""
-    echo "Usage: $0 <local|prod> <email>"
+    echo "Usage: $0 <local|prod> <username>"
     echo ""
     echo "Examples:"
-    echo "  $0 local user@example.com"
-    echo "  $0 prod user@example.com"
+    echo "  $0 local myuser"
+    echo "  $0 prod myuser"
     exit 1
 fi
 
 ENV="$1"
-EMAIL="$2"
+USERNAME="$2"
 
 # Validate environment
 if [ "$ENV" != "local" ] && [ "$ENV" != "prod" ]; then
@@ -56,17 +56,11 @@ if [ "$ENV" != "local" ] && [ "$ENV" != "prod" ]; then
     exit 1
 fi
 
-# Validate email format (basic check)
-if [[ ! "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-    echo -e "${RED}Error: Invalid email format${NC}"
-    exit 1
-fi
-
 ENV_UPPER=$(echo "$ENV" | tr '[:lower:]' '[:upper:]')
 
 echo ""
 echo -e "${CYAN}Deleting user in ${ENV_UPPER} environment${NC}"
-echo -e "${CYAN}Email: $EMAIL${NC}"
+echo -e "${CYAN}Username: $USERNAME${NC}"
 echo ""
 
 # Confirmation prompt
@@ -92,7 +86,7 @@ const { PrismaClient } = require('@prisma/client');
     const prisma = new PrismaClient();
     try {
         const user = await prisma.user.delete({
-            where: { email: '$EMAIL' }
+            where: { username: '$USERNAME' }
         });
         console.log('SUCCESS:' + user.id);
     } catch (e) {
@@ -131,7 +125,7 @@ else
     echo -e "${YELLOW}[INFO]${NC} Deleting user from production database..."
 
     # Build the Node.js command (minified for shell safety)
-    DELETE_CMD="const{PrismaClient}=require('@prisma/client');(async()=>{const p=new PrismaClient();try{const u=await p.user.delete({where:{email:'$EMAIL'}});console.log('SUCCESS:'+u.id)}catch(e){if(e.code==='P2025'){console.log('ERROR:User not found')}else{console.log('ERROR:'+e.message)}}finally{await p.\$disconnect()}})();"
+    DELETE_CMD="const{PrismaClient}=require('@prisma/client');(async()=>{const p=new PrismaClient();try{const u=await p.user.delete({where:{username:'$USERNAME'}});console.log('SUCCESS:'+u.id)}catch(e){if(e.code==='P2025'){console.log('ERROR:User not found')}else{console.log('ERROR:'+e.message)}}finally{await p.\$disconnect()}})();"
 
     # Execute via ECS Exec
     RESULT=$(aws ecs execute-command \
@@ -154,11 +148,11 @@ if echo "$RESULT" | grep -q "SUCCESS:"; then
     echo -e "${GREEN}════════════════════════════════════════${NC}"
     echo ""
     echo "  Environment: ${ENV_UPPER}"
-    echo "  Email:       $EMAIL"
+    echo "  Username:    $USERNAME"
     echo "  User ID:     $USER_ID"
     echo ""
 elif echo "$RESULT" | grep -q "ERROR:User not found"; then
-    echo -e "${RED}Error: User with email '$EMAIL' not found${NC}"
+    echo -e "${RED}Error: User with username '$USERNAME' not found${NC}"
     exit 1
 elif echo "$RESULT" | grep -q "ERROR:"; then
     ERROR_MSG=$(echo "$RESULT" | grep -o 'ERROR:.*' | cut -d: -f2-)

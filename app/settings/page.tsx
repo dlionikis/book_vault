@@ -117,16 +117,16 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Email
+                    Username
                   </label>
                   <input
-                    type="email"
-                    value={session?.user?.email || ''}
+                    type="text"
+                    value={(session?.user as any)?.username || ''}
                     disabled
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white cursor-not-allowed"
                   />
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Email cannot be changed
+                    Username cannot be changed
                   </p>
                 </div>
               </div>

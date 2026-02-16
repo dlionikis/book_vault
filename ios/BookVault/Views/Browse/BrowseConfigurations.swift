@@ -10,9 +10,7 @@ import SwiftUI
 // MARK: - BrowseListConfiguration
 
 /// Configuration for a generic browse list view.
-struct BrowseListConfiguration<Item: BrowseListItem, Response: BrowseListResponse>
-    where Response.Item == Item
-{
+struct BrowseListConfiguration<Item: BrowseListItem, Response: BrowseListResponse> where Response.Item == Item {
     let navigationTitle: String
     let loadingMessage: String
     let errorTitle: String
@@ -40,9 +38,7 @@ struct BrowseDetailConfiguration<Detail: BrowseDetailResponse> {
 
 // MARK: - List Configuration Factories
 
-extension BrowseListConfiguration
-    where Item == AuthorWithBookCount, Response == ListAuthors200Response
-{
+extension BrowseListConfiguration where Item == AuthorWithBookCount, Response == ListAuthors200Response {
     static func authors() -> Self {
         BrowseListConfiguration(
             navigationTitle: "Authors",
@@ -62,9 +58,7 @@ extension BrowseListConfiguration
     }
 }
 
-extension BrowseListConfiguration
-    where Item == NarratorWithBookCount, Response == ListNarrators200Response
-{
+extension BrowseListConfiguration where Item == NarratorWithBookCount, Response == ListNarrators200Response {
     static func narrators() -> Self {
         BrowseListConfiguration(
             navigationTitle: "Narrators",
@@ -84,9 +78,7 @@ extension BrowseListConfiguration
     }
 }
 
-extension BrowseListConfiguration
-    where Item == SeriesWithBookCount, Response == ListSeries200Response
-{
+extension BrowseListConfiguration where Item == SeriesWithBookCount, Response == ListSeries200Response {
     static func series() -> Self {
         BrowseListConfiguration(
             navigationTitle: "Series",
@@ -106,9 +98,7 @@ extension BrowseListConfiguration
     }
 }
 
-extension BrowseListConfiguration
-    where Item == CategoryWithBookCount, Response == ListCategories200Response
-{
+extension BrowseListConfiguration where Item == CategoryWithBookCount, Response == ListCategories200Response {
     static func categories() -> Self {
         BrowseListConfiguration(
             navigationTitle: "Categories",

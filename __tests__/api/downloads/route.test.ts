@@ -34,7 +34,7 @@ const mockCheckDownloadLimit = rateLimit.checkDownloadLimit as jest.MockedFuncti
 describe('Download Endpoints', () => {
   const mockUser = {
     id: 'user-123',
-    email: 'test@example.com',
+    username: 'testuser',
   };
 
   // Clean up leftover test data once before all tests
@@ -42,14 +42,14 @@ describe('Download Endpoints', () => {
     await prisma.userDownload.deleteMany({
       where: {
         user: {
-          email: {
+          username: {
             in: [
-              'test-downloads@example.com',
-              'test-limit@example.com',
-              'test-download@example.com',
-              'test-ratelimit@example.com',
-              'test-under-limit@example.com',
-              'test-reset@example.com',
+              'test-downloads',
+              'test-limit',
+              'test-download',
+              'test-ratelimit',
+              'test-under-limit',
+              'test-reset',
             ],
           },
         },
@@ -58,14 +58,14 @@ describe('Download Endpoints', () => {
 
     await prisma.user.deleteMany({
       where: {
-        email: {
+        username: {
           in: [
-            'test-downloads@example.com',
-            'test-limit@example.com',
-            'test-download@example.com',
-            'test-ratelimit@example.com',
-            'test-under-limit@example.com',
-            'test-reset@example.com',
+            'test-downloads',
+            'test-limit',
+            'test-download',
+            'test-ratelimit',
+            'test-under-limit',
+            'test-reset',
           ],
         },
       },
@@ -110,7 +110,7 @@ describe('Download Endpoints', () => {
 
       const user = await prisma.user.create({
         data: {
-          email: 'test-downloads@example.com',
+          username: 'test-downloads',
           passwordHash: 'hash',
         },
       });
@@ -124,7 +124,7 @@ describe('Download Endpoints', () => {
       });
 
       const request = new NextRequest('http://localhost:3000/api/downloads');
-      mockGetAuthUserFromRequest.mockResolvedValue({ id: user.id, email: user.email });
+      mockGetAuthUserFromRequest.mockResolvedValue({ id: user.id, username: user.username });
 
       const response = await getDownloadHistory(request);
       const data = await response.json();
@@ -153,7 +153,7 @@ describe('Download Endpoints', () => {
     it('should limit history to 50 downloads', async () => {
       const user = await prisma.user.create({
         data: {
-          email: 'test-limit@example.com',
+          username: 'test-limit',
           passwordHash: 'hash',
         },
       });
@@ -177,7 +177,7 @@ describe('Download Endpoints', () => {
       }
 
       const request = new NextRequest('http://localhost:3000/api/downloads');
-      mockGetAuthUserFromRequest.mockResolvedValue({ id: user.id, email: user.email });
+      mockGetAuthUserFromRequest.mockResolvedValue({ id: user.id, username: user.username });
 
       const response = await getDownloadHistory(request);
       const data = await response.json();
@@ -259,7 +259,7 @@ describe('Download Endpoints', () => {
 
       const user = await prisma.user.create({
         data: {
-          email: 'test-download@example.com',
+          username: 'test-download',
           passwordHash: 'hash',
         },
       });
@@ -269,7 +269,7 @@ describe('Download Endpoints', () => {
         body: JSON.stringify({ deviceId: 'device-123' }),
       });
 
-      mockGetAuthUserFromRequest.mockResolvedValue({ id: user.id, email: user.email });
+      mockGetAuthUserFromRequest.mockResolvedValue({ id: user.id, username: user.username });
 
       const response = await generateDownloadUrl(request, { params: { bookId: book.id } });
       const data = await response.json();
@@ -390,7 +390,7 @@ describe('Download Endpoints', () => {
 
       const user = await prisma.user.create({
         data: {
-          email: 'test-ratelimit@example.com',
+          username: 'test-ratelimit',
           passwordHash: 'hash',
         },
       });
@@ -432,7 +432,7 @@ describe('Download Endpoints', () => {
 
       const user = await prisma.user.create({
         data: {
-          email: 'test-under-limit@example.com',
+          username: 'test-under-limit',
           passwordHash: 'hash',
         },
       });
@@ -473,7 +473,7 @@ describe('Download Endpoints', () => {
 
       const user = await prisma.user.create({
         data: {
-          email: 'test-reset@example.com',
+          username: 'test-reset',
           passwordHash: 'hash',
         },
       });

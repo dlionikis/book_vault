@@ -361,11 +361,8 @@ export interface components {
     User: {
       /** Format: uuid */
       id: string;
-      /**
-       * Format: email
-       * @example user@example.com
-       */
-      email: string;
+      /** @example testuser */
+      username: string;
     };
     AuthorWithBookCount: {
       /** Format: uuid */
@@ -432,11 +429,8 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": {
-          /**
-           * Format: email
-           * @example test@example.com
-           */
-          email: string;
+          /** @example testuser */
+          username: string;
           /**
            * Format: password
            * @example password123
@@ -470,7 +464,7 @@ export interface operations {
           };
         };
       };
-      /** @description Missing email or password */
+      /** @description Missing username or password */
       400: {
         content: {
           "application/json": components["schemas"]["Error"];
@@ -587,11 +581,8 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": {
-          /**
-           * Format: email
-           * @example newuser@example.com
-           */
-          email: string;
+          /** @example newuser */
+          username: string;
           /**
            * Format: password
            * @example securepassword123
@@ -611,7 +602,7 @@ export interface operations {
           };
         };
       };
-      /** @description Invalid input (bad email format or weak password) */
+      /** @description Invalid input (weak password) */
       400: {
         content: {
           "application/json": components["schemas"]["Error"];

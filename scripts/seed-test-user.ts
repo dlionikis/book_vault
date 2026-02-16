@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
-const TEST_USER_EMAIL = process.env.TEST_USER_EMAIL || 'test@example.com';
+const TEST_USER_USERNAME = process.env.TEST_USER_USERNAME || 'testuser';
 const TEST_USER_PASSWORD = process.env.TEST_USER_PASSWORD || 'password123';
 
 async function seedTestUser() {
@@ -11,12 +11,12 @@ async function seedTestUser() {
   try {
     // Check if test user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email: TEST_USER_EMAIL },
+      where: { username: TEST_USER_USERNAME },
     });
 
     if (existingUser) {
-      console.log(`✅ Test user already exists: ${TEST_USER_EMAIL}`);
-      console.log('   (Use this email to login)\n');
+      console.log(`✅ Test user already exists: ${TEST_USER_USERNAME}`);
+      console.log('   (Use this username to login)\n');
       return;
     }
 
@@ -26,13 +26,13 @@ async function seedTestUser() {
     // Create test user
     const user = await prisma.user.create({
       data: {
-        email: TEST_USER_EMAIL,
+        username: TEST_USER_USERNAME,
         passwordHash,
       },
     });
 
     console.log(`✅ Test user created successfully!`);
-    console.log(`   Email: ${TEST_USER_EMAIL}`);
+    console.log(`   Username: ${TEST_USER_USERNAME}`);
     console.log(`   Password: ${TEST_USER_PASSWORD}`);
     console.log(`   (Use these credentials to login)\n`);
   } catch (error) {

@@ -59,7 +59,7 @@ describe('GET /api/auth/mobile/verify', () => {
   it('should return valid with user data if token is valid', async () => {
     const mockPayload = {
       userId: 'test-user-id',
-      email: 'test@example.com',
+      username: 'testuser',
     };
 
     (verifyAccessToken as jest.Mock).mockResolvedValue(mockPayload);
@@ -77,7 +77,7 @@ describe('GET /api/auth/mobile/verify', () => {
     expect(data.valid).toBe(true);
     expect(data.user).toEqual({
       id: mockPayload.userId,
-      email: mockPayload.email,
+      username: mockPayload.username,
     });
   });
 });

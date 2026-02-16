@@ -2,13 +2,13 @@
 #
 # Create a new user in the database (local or production)
 #
-# Usage: ./scripts/create-user.sh <local|prod> <email> [password]
+# Usage: ./scripts/create-user.sh <local|prod> <username> [password]
 #
 # Examples:
-#   ./scripts/create-user.sh local user@example.com              # Auto-generates password
-#   ./scripts/create-user.sh local user@example.com MyPassword   # Uses provided password
-#   ./scripts/create-user.sh prod user@example.com               # Auto-generates password
-#   ./scripts/create-user.sh prod user@example.com MyPassword    # Uses provided password
+#   ./scripts/create-user.sh local myuser                    # Auto-generates password
+#   ./scripts/create-user.sh local myuser MyPassword         # Uses provided password
+#   ./scripts/create-user.sh prod myuser                     # Auto-generates password
+#   ./scripts/create-user.sh prod myuser MyPassword          # Uses provided password
 #
 # Prerequisites:
 #   - Node.js with bcryptjs available (npm install)
@@ -37,30 +37,24 @@ cd "$SCRIPT_DIR/.."
 
 # Validate arguments
 if [ $# -lt 2 ]; then
-    echo -e "${RED}Error: Environment and email required${NC}"
+    echo -e "${RED}Error: Environment and username required${NC}"
     echo ""
-    echo "Usage: $0 <local|prod> <email> [password]"
+    echo "Usage: $0 <local|prod> <username> [password]"
     echo ""
     echo "Examples:"
-    echo "  $0 local user@example.com              # Auto-generates password"
-    echo "  $0 local user@example.com MyPassword   # Uses provided password"
-    echo "  $0 prod user@example.com MyPassword    # Production (password required)"
+    echo "  $0 local myuser                    # Auto-generates password"
+    echo "  $0 local myuser MyPassword         # Uses provided password"
+    echo "  $0 prod myuser MyPassword          # Production (password required)"
     exit 1
 fi
 
 ENV="$1"
-EMAIL="$2"
+USERNAME="$2"
 PASSWORD="$3"
 
 # Validate environment
 if [ "$ENV" != "local" ] && [ "$ENV" != "prod" ]; then
     echo -e "${RED}Error: Environment must be 'local' or 'prod'${NC}"
-    exit 1
-fi
-
-# Validate email format (basic check)
-if [[ ! "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-    echo -e "${RED}Error: Invalid email format${NC}"
     exit 1
 fi
 
@@ -80,7 +74,7 @@ ENV_UPPER=$(echo "$ENV" | tr '[:lower:]' '[:upper:]')
 
 echo ""
 echo -e "${CYAN}Creating user in ${ENV_UPPER} environment${NC}"
-echo -e "${CYAN}Email: $EMAIL${NC}"
+echo -e "${CYAN}Username: $USERNAME${NC}"
 echo ""
 
 # Generate bcrypt hash locally
@@ -110,7 +104,7 @@ const { PrismaClient } = require('@prisma/client');
     try {
         const user = await prisma.user.create({
             data: {
-                email: '$EMAIL',
+                username: '$USERNAME',
                 passwordHash: '$HASH'
             }
         });
@@ -154,7 +148,7 @@ else
     ESCAPED_HASH=$(printf '%s' "$HASH" | sed 's/\$/\\$/g')
 
     # Build the Node.js command (minified for shell safety)
-    CREATE_CMD="const{PrismaClient}=require('@prisma/client');(async()=>{const p=new PrismaClient();try{const u=await p.user.create({data:{email:'$EMAIL',passwordHash:'$ESCAPED_HASH'}});console.log('SUCCESS:'+u.id)}catch(e){if(e.code==='P2002'){console.log('ERROR:User already exists')}else{console.log('ERROR:'+e.message)}}finally{await p.\$disconnect()}})();"
+    CREATE_CMD="const{PrismaClient}=require('@prisma/client');(async()=>{const p=new PrismaClient();try{const u=await p.user.create({data:{username:'$USERNAME',passwordHash:'$ESCAPED_HASH'}});console.log('SUCCESS:'+u.id)}catch(e){if(e.code==='P2002'){console.log('ERROR:User already exists')}else{console.log('ERROR:'+e.message)}}finally{await p.\$disconnect()}})();"
 
     # Execute via ECS Exec
     RESULT=$(aws ecs execute-command \
@@ -177,18 +171,18 @@ if echo "$RESULT" | grep -q "SUCCESS:"; then
     echo -e "${GREEN}════════════════════════════════════════${NC}"
     echo ""
     echo "  Environment: ${ENV_UPPER}"
-    echo "  Email:       $EMAIL"
+    echo "  Username:    $USERNAME"
     echo "  Password:    $PASSWORD"
     echo "  User ID:     $USER_ID"
     echo ""
     if [ "$ENV" == "local" ]; then
-        echo -e "${YELLOW}[TIP]${NC} Test login: curl -X POST http://localhost:3000/api/auth/mobile/login -H 'Content-Type: application/json' -d '{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}'"
+        echo -e "${YELLOW}[TIP]${NC} Test login: curl -X POST http://localhost:3000/api/auth/mobile/login -H 'Content-Type: application/json' -d '{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}'"
     else
-        echo -e "${YELLOW}[TIP]${NC} Test login: curl -X POST https://bookvault.lionikis.com/api/auth/mobile/login -H 'Content-Type: application/json' -d '{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}'"
+        echo -e "${YELLOW}[TIP]${NC} Test login: curl -X POST https://bookvault.lionikis.com/api/auth/mobile/login -H 'Content-Type: application/json' -d '{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}'"
     fi
     echo ""
 elif echo "$RESULT" | grep -q "ERROR:User already exists"; then
-    echo -e "${RED}Error: User with email '$EMAIL' already exists${NC}"
+    echo -e "${RED}Error: User with username '$USERNAME' already exists${NC}"
     exit 1
 elif echo "$RESULT" | grep -q "ERROR:"; then
     ERROR_MSG=$(echo "$RESULT" | grep -o 'ERROR:.*' | cut -d: -f2-)
