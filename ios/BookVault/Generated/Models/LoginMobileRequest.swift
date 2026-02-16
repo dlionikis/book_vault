@@ -12,16 +12,16 @@ import AnyCodable
 
 public struct LoginMobileRequest: Codable, JSONEncodable, Hashable {
 
-    public var email: String
+    public var username: String
     public var password: String
 
-    public init(email: String, password: String) {
-        self.email = email
+    public init(username: String, password: String) {
+        self.username = username
         self.password = password
     }
 
     public enum CodingKeys: String, CodingKey, CaseIterable {
-        case email
+        case username
         case password
     }
 
@@ -29,7 +29,7 @@ public struct LoginMobileRequest: Codable, JSONEncodable, Hashable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(email, forKey: .email)
+        try container.encode(username, forKey: .username)
         try container.encode(password, forKey: .password)
     }
 }

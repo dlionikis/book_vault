@@ -10,16 +10,16 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        username: { label: 'Username', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.username || !credentials?.password) {
           return null;
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { username: credentials.username },
         });
 
         if (!user) {
@@ -34,7 +34,7 @@ export const authOptions: NextAuthOptions = {
 
         return {
           id: user.id,
-          email: user.email,
+          email: user.username,
         };
       },
     }),
@@ -49,7 +49,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.email = user.email;
+        token.username = user.email; // NextAuth uses 'email' field internally
       }
 
       // Verify user still exists in database on each token refresh
@@ -63,7 +63,7 @@ export const authOptions: NextAuthOptions = {
         if (!dbUser) {
           // User was deleted - clear user info from token
           token.id = undefined;
-          token.email = undefined;
+          token.username = undefined;
         }
       }
 
@@ -77,7 +77,7 @@ export const authOptions: NextAuthOptions = {
 
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.email = token.email as string;
+        (session.user as any).username = token.username as string;
       }
       return session;
     },
@@ -92,7 +92,7 @@ export const authOptions: NextAuthOptions = {
  */
 export async function getAuthUserFromRequest(
   request: NextRequest
-): Promise<{ id: string; email: string } | null> {
+): Promise<{ id: string; username: string } | null> {
   try {
     // Check for Authorization header with Bearer token
     const authHeader = request.headers.get('authorization');
@@ -112,7 +112,7 @@ export async function getAuthUserFromRequest(
 
     return {
       id: payload.userId,
-      email: payload.email,
+      username: payload.username,
     };
   } catch (error) {
     console.error('Failed to get auth user from request:', error);

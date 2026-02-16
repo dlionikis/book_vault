@@ -57,7 +57,7 @@ final class MockAPIClientForAuth: APIClientProtocol {
     var refreshCallCount = 0
     var logoutCallCount = 0
 
-    func login(email _: String, password _: String) async throws -> LoginMobile200Response {
+    func login(username _: String, password _: String) async throws -> LoginMobile200Response {
         loginCallCount += 1
         switch loginResult {
         case let .success(response):
@@ -160,7 +160,7 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testSuccessfulLogin() async {
         // Given
-        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let testUser = TestFixtures.makeUser(username: "testuser")
         let response = TestFixtures.makeLoginResponse(
             accessToken: "test-access-token",
             user: testUser
@@ -168,11 +168,11 @@ final class AuthManagerRealTests: XCTestCase {
         mockAPIClient.loginResult = .success(response)
 
         // When
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         // Then
         XCTAssertTrue(sut.isAuthenticated)
-        XCTAssertEqual(sut.currentUser?.email, "test@example.com")
+        XCTAssertEqual(sut.currentUser?.username, "testuser")
         XCTAssertNil(sut.errorMessage)
         XCTAssertFalse(sut.isLoading)
         XCTAssertEqual(mockAPIClient.loginCallCount, 1)
@@ -185,7 +185,7 @@ final class AuthManagerRealTests: XCTestCase {
     /// CRITICAL: Test that APIClient.accessToken is set after login
     func testLoginUpdatesAPIClientAccessToken() async {
         // Given
-        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let testUser = TestFixtures.makeUser(username: "testuser")
         let response = TestFixtures.makeLoginResponse(
             accessToken: "test-access-token",
             user: testUser
@@ -196,7 +196,7 @@ final class AuthManagerRealTests: XCTestCase {
         XCTAssertNil(mockAPIClient.accessToken)
 
         // When
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         // Then - CRITICAL: APIClient must have the token for subsequent API calls
         XCTAssertEqual(mockAPIClient.accessToken, "test-access-token", "APIClient.accessToken must be set after login")
@@ -208,7 +208,7 @@ final class AuthManagerRealTests: XCTestCase {
         mockAPIClient.loginResult = .failure(APIError.unauthorized)
 
         // When
-        await sut.login(email: "test@example.com", password: "wrong-password")
+        await sut.login(username: "testuser", password: "wrong-password")
 
         // Then
         XCTAssertFalse(sut.isAuthenticated)
@@ -227,7 +227,7 @@ final class AuthManagerRealTests: XCTestCase {
         mockAPIClient.loginResult = .failure(APIError.networkError(networkError))
 
         // When
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         // Then
         XCTAssertFalse(sut.isAuthenticated)
@@ -252,13 +252,13 @@ final class AuthManagerRealTests: XCTestCase {
     /// Note: We test this by doing a login and verifying token persists across a new instance
     func testSessionRestorationUpdatesAPIClientAccessToken() async {
         // Given - first login to establish a session
-        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let testUser = TestFixtures.makeUser(username: "testuser")
         let loginResponse = TestFixtures.makeLoginResponse(
             accessToken: "restored-token",
             user: testUser
         )
         mockAPIClient.loginResult = .success(loginResponse)
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         // Verify token is stored
         XCTAssertEqual(mockKeychain.storage["com.bookvault.accessToken"], "restored-token")
@@ -272,7 +272,7 @@ final class AuthManagerRealTests: XCTestCase {
         // Then - CRITICAL: Token must be restorable from keychain
         XCTAssertEqual(restoredToken, "restored-token", "Token must be stored in keychain for session restoration")
         XCTAssertTrue(sut.isAuthenticated)
-        XCTAssertEqual(sut.currentUser?.email, "test@example.com")
+        XCTAssertEqual(sut.currentUser?.username, "testuser")
     }
 
     func testTokenIsNilWhenNotStored() {
@@ -287,13 +287,13 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testSuccessfulLogout() async {
         // Given - first login
-        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let testUser = TestFixtures.makeUser(username: "testuser")
         let response = TestFixtures.makeLoginResponse(
             accessToken: "test-token",
             user: testUser
         )
         mockAPIClient.loginResult = .success(response)
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         // When
         await sut.logout()
@@ -307,13 +307,13 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testLogoutClearsKeychainEvenIfServerFails() async {
         // Given - first login
-        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let testUser = TestFixtures.makeUser(username: "testuser")
         let response = TestFixtures.makeLoginResponse(
             accessToken: "test-token",
             user: testUser
         )
         mockAPIClient.loginResult = .success(response)
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         mockAPIClient.logoutResult = .failure(APIError.networkError(NSError(domain: "", code: -1)))
 
@@ -329,13 +329,13 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testForceLogout() async {
         // Given - first login
-        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let testUser = TestFixtures.makeUser(username: "testuser")
         let response = TestFixtures.makeLoginResponse(
             accessToken: "test-token",
             user: testUser
         )
         mockAPIClient.loginResult = .success(response)
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         // When
         sut.forceLogout()
@@ -351,13 +351,13 @@ final class AuthManagerRealTests: XCTestCase {
     /// CRITICAL: Test that logout clears APIClient.accessToken
     func testLogoutClearsAPIClientAccessToken() async {
         // Given - first login
-        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let testUser = TestFixtures.makeUser(username: "testuser")
         let response = TestFixtures.makeLoginResponse(
             accessToken: "test-token",
             user: testUser
         )
         mockAPIClient.loginResult = .success(response)
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         // Verify token is set after login
         XCTAssertEqual(mockAPIClient.accessToken, "test-token")
@@ -373,13 +373,13 @@ final class AuthManagerRealTests: XCTestCase {
     /// CRITICAL: Test that force logout clears APIClient.accessToken
     func testForceLogoutClearsAPIClientAccessToken() async {
         // Given - first login
-        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let testUser = TestFixtures.makeUser(username: "testuser")
         let response = TestFixtures.makeLoginResponse(
             accessToken: "test-token",
             user: testUser
         )
         mockAPIClient.loginResult = .success(response)
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         // Verify token is set after login
         XCTAssertEqual(mockAPIClient.accessToken, "test-token")
@@ -396,13 +396,13 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testSuccessfulTokenRefresh() async {
         // Given - first login to get refresh token
-        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let testUser = TestFixtures.makeUser(username: "testuser")
         let loginResponse = TestFixtures.makeLoginResponse(
             accessToken: "old-token",
             user: testUser
         )
         mockAPIClient.loginResult = .success(loginResponse)
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         let refreshResponse = TestFixtures.makeRefreshTokenResponse(accessToken: "new-token")
         mockAPIClient.refreshResult = .success(refreshResponse)
@@ -419,13 +419,13 @@ final class AuthManagerRealTests: XCTestCase {
     /// CRITICAL: This test would have caught the bug where APIClient.accessToken wasn't being updated
     func testTokenRefreshUpdatesAPIClientAccessToken() async {
         // Given - first login to get refresh token
-        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let testUser = TestFixtures.makeUser(username: "testuser")
         let loginResponse = TestFixtures.makeLoginResponse(
             accessToken: "old-token",
             user: testUser
         )
         mockAPIClient.loginResult = .success(loginResponse)
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         // Verify old token is set
         XCTAssertEqual(mockAPIClient.accessToken, "old-token")
@@ -444,13 +444,13 @@ final class AuthManagerRealTests: XCTestCase {
 
     func testFailedTokenRefreshClearsSession() async {
         // Given - first login
-        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let testUser = TestFixtures.makeUser(username: "testuser")
         let loginResponse = TestFixtures.makeLoginResponse(
             accessToken: "old-token",
             user: testUser
         )
         mockAPIClient.loginResult = .success(loginResponse)
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         mockAPIClient.refreshResult = .failure(APIError.unauthorized)
 
@@ -473,11 +473,11 @@ final class AuthManagerRealTests: XCTestCase {
         XCTAssertEqual(mockAPIClient.refreshCallCount, 0)
     }
 
-    // MARK: - User Email Tests
+    // MARK: - Username Tests
 
-    func testUserEmailAfterLogin() async {
+    func testUsernameAfterLogin() async {
         // Given
-        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let testUser = TestFixtures.makeUser(username: "testuser")
         let response = TestFixtures.makeLoginResponse(
             accessToken: "test-token",
             user: testUser
@@ -485,14 +485,14 @@ final class AuthManagerRealTests: XCTestCase {
         mockAPIClient.loginResult = .success(response)
 
         // When
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         // Then
-        XCTAssertEqual(sut.userEmail, "test@example.com")
+        XCTAssertEqual(sut.username, "testuser")
     }
 
-    func testUserEmailIsNilBeforeLogin() {
-        XCTAssertNil(sut.userEmail)
+    func testUsernameIsNilBeforeLogin() {
+        XCTAssertNil(sut.username)
     }
 
     // MARK: - Keychain Error Handling
@@ -500,7 +500,7 @@ final class AuthManagerRealTests: XCTestCase {
     func testKeychainSaveErrorDuringLogin() async {
         // Given
         mockKeychain.shouldThrowOnSave = true
-        let testUser = TestFixtures.makeUser(email: "test@example.com")
+        let testUser = TestFixtures.makeUser(username: "testuser")
         let response = TestFixtures.makeLoginResponse(
             accessToken: "test-token",
             user: testUser
@@ -508,7 +508,7 @@ final class AuthManagerRealTests: XCTestCase {
         mockAPIClient.loginResult = .success(response)
 
         // When
-        await sut.login(email: "test@example.com", password: "password123")
+        await sut.login(username: "testuser", password: "password123")
 
         // Then - login should fail due to keychain error
         XCTAssertFalse(sut.isAuthenticated)

@@ -22,7 +22,7 @@ jest.mock('bcryptjs', () => ({
 describe('POST /api/auth/mobile/login', () => {
   const mockUser = {
     id: 'test-user-id',
-    email: 'test@example.com',
+    username: 'testuser',
     passwordHash: 'hashed-password',
   };
 
@@ -30,7 +30,7 @@ describe('POST /api/auth/mobile/login', () => {
     jest.clearAllMocks();
   });
 
-  it('should return 400 if email is missing', async () => {
+  it('should return 400 if username is missing', async () => {
     const request = new NextRequest('http://localhost:3000/api/auth/mobile/login', {
       method: 'POST',
       body: JSON.stringify({ password: 'password123' }),
@@ -40,20 +40,20 @@ describe('POST /api/auth/mobile/login', () => {
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe('Email and password required');
+    expect(data.error).toBe('Username and password required');
   });
 
   it('should return 400 if password is missing', async () => {
     const request = new NextRequest('http://localhost:3000/api/auth/mobile/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'test@example.com' }),
+      body: JSON.stringify({ username: 'testuser' }),
     });
 
     const response = await POST(request);
     const data = await response.json();
 
     expect(response.status).toBe(400);
-    expect(data.error).toBe('Email and password required');
+    expect(data.error).toBe('Username and password required');
   });
 
   it('should return 401 if user not found', async () => {
@@ -61,7 +61,7 @@ describe('POST /api/auth/mobile/login', () => {
 
     const request = new NextRequest('http://localhost:3000/api/auth/mobile/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'nonexistent@example.com', password: 'password123' }),
+      body: JSON.stringify({ username: 'nonexistent', password: 'password123' }),
     });
 
     const response = await POST(request);
@@ -77,7 +77,7 @@ describe('POST /api/auth/mobile/login', () => {
 
     const request = new NextRequest('http://localhost:3000/api/auth/mobile/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'test@example.com', password: 'wrongpassword' }),
+      body: JSON.stringify({ username: 'testuser', password: 'wrongpassword' }),
     });
 
     const response = await POST(request);
@@ -99,7 +99,7 @@ describe('POST /api/auth/mobile/login', () => {
 
     const request = new NextRequest('http://localhost:3000/api/auth/mobile/login', {
       method: 'POST',
-      body: JSON.stringify({ email: 'test@example.com', password: 'password123' }),
+      body: JSON.stringify({ username: 'testuser', password: 'password123' }),
     });
 
     const response = await POST(request);
@@ -110,7 +110,7 @@ describe('POST /api/auth/mobile/login', () => {
     expect(data.refreshToken).toBeDefined();
     expect(data.user).toEqual({
       id: mockUser.id,
-      email: mockUser.email,
+      username: mockUser.username,
     });
     expect(data.expiresIn).toBeDefined();
   });

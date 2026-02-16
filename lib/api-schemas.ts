@@ -196,14 +196,13 @@ export const UserProgressSchema = z.object({
 /**
  * User account schema.
  * Contains minimal user information exposed to API.
- * Email validated for proper format.
  */
 export const UserSchema = z.object({
   /** UUID v4 format enforced */
   id: z.string().uuid(),
 
-  /** User's email address - validated format */
-  email: z.string().email(),
+  /** Username */
+  username: z.string(),
 });
 
 /**

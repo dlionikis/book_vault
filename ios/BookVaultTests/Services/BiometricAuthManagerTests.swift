@@ -15,13 +15,13 @@ final class BiometricAuthManagerTests: XCTestCase {
 
     // Test keys to avoid polluting production UserDefaults
     private let testBiometricEnabledKey = "biometricEnabled"
-    private let testBiometricEmailKey = "biometricEmail"
+    private let testBiometricUsernameKey = "biometricUsername"
 
     override func setUp() {
         super.setUp()
         // Clear any existing biometric state before each test
         UserDefaults.standard.removeObject(forKey: testBiometricEnabledKey)
-        UserDefaults.standard.removeObject(forKey: testBiometricEmailKey)
+        UserDefaults.standard.removeObject(forKey: testBiometricUsernameKey)
     }
 
     override func tearDown() {
@@ -84,18 +84,18 @@ final class BiometricAuthManagerTests: XCTestCase {
 
         // Then
         XCTAssertFalse(manager.isBiometricEnabled)
-        XCTAssertNil(UserDefaults.standard.string(forKey: testBiometricEmailKey))
+        XCTAssertNil(UserDefaults.standard.string(forKey: testBiometricUsernameKey))
     }
 
-    // MARK: - Email Matching Tests
+    // MARK: - Username Matching Tests
 
-    func testIsBiometricEnabledForEmailReturnsFalseWhenDisabled() {
+    func testIsBiometricEnabledForUsernameReturnsFalseWhenDisabled() {
         // Given biometric is disabled
         let manager = BiometricAuthManager.shared
         manager.disableBiometric()
 
         // Then
-        XCTAssertFalse(manager.isBiometricEnabledFor(email: "test@example.com"))
+        XCTAssertFalse(manager.isBiometricEnabledFor(username: "testuser"))
     }
 
     // MARK: - Error Description Tests

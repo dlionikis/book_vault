@@ -134,7 +134,7 @@ final class APIClientRealTests: XCTestCase {
         let responseJSON: [String: Any] = [
             "user": [
                 "id": userId.uuidString,
-                "email": "test@example.com"
+                "username": "testuser"
             ],
             "accessToken": "test-access-token",
             "refreshToken": refreshToken.uuidString,
@@ -148,10 +148,10 @@ final class APIClientRealTests: XCTestCase {
         }
 
         // When
-        let response = try await sut.login(email: "test@example.com", password: "password123")
+        let response = try await sut.login(username: "testuser", password: "password123")
 
         // Then
-        XCTAssertEqual(response.user.email, "test@example.com")
+        XCTAssertEqual(response.user.username, "testuser")
         XCTAssertEqual(response.accessToken, "test-access-token")
         XCTAssertEqual(sut.accessToken, "test-access-token") // Should be stored
     }
@@ -163,7 +163,7 @@ final class APIClientRealTests: XCTestCase {
         let responseJSON: [String: Any] = [
             "user": [
                 "id": userId.uuidString,
-                "email": "test@example.com"
+                "username": "testuser"
             ],
             "accessToken": "token",
             "refreshToken": refreshToken.uuidString,
@@ -195,10 +195,10 @@ final class APIClientRealTests: XCTestCase {
         }
 
         // When
-        _ = try await sut.login(email: "user@test.com", password: "secret123")
+        _ = try await sut.login(username: "testuser2", password: "secret123")
 
         // Then
-        XCTAssertEqual(capturedBody?["email"], "user@test.com")
+        XCTAssertEqual(capturedBody?["username"], "testuser2")
         XCTAssertEqual(capturedBody?["password"], "secret123")
     }
 
@@ -210,7 +210,7 @@ final class APIClientRealTests: XCTestCase {
 
         // When/Then
         do {
-            _ = try await sut.login(email: "test@example.com", password: "wrong")
+            _ = try await sut.login(username: "testuser", password: "wrong")
             XCTFail("Expected unauthorized error")
         } catch let error as APIError {
             if case .unauthorized = error {
@@ -481,7 +481,7 @@ final class APIClientRealTests: XCTestCase {
         let userId = UUID()
         let refreshToken = UUID()
         let responseJSON: [String: Any] = [
-            "user": ["id": userId.uuidString, "email": "test@example.com"],
+            "user": ["id": userId.uuidString, "username": "testuser"],
             "accessToken": "token",
             "refreshToken": refreshToken.uuidString,
             "expiresIn": 3600
@@ -495,7 +495,7 @@ final class APIClientRealTests: XCTestCase {
         }
 
         // When
-        _ = try await sut.login(email: "test@example.com", password: "password")
+        _ = try await sut.login(username: "testuser", password: "password")
 
         // Then
         XCTAssertEqual(capturedContentType, "application/json")

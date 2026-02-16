@@ -16,9 +16,9 @@ protocol AuthManaging: ObservableObject {
     var isLoading: Bool { get }
     var errorMessage: String? { get set }
     var token: String? { get }
-    var userEmail: String? { get }
+    var username: String? { get }
 
-    func login(email: String, password: String) async
+    func login(username: String, password: String) async
     func logout() async
     func forceLogout()
     func refreshAccessToken() async -> Bool

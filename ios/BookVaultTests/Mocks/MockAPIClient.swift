@@ -15,7 +15,7 @@ class MockAPIClient: APIClientProtocol {
 
     // MARK: - Call Tracking
 
-    var loginCalls: [(email: String, password: String)] = []
+    var loginCalls: [(username: String, password: String)] = []
     var refreshTokenCalls: [UUID] = []
     var logoutCalls: [UUID] = []
     var fetchBooksCalls: [(page: Int, limit: Int, sortBy: String?)] = []
@@ -87,8 +87,8 @@ class MockAPIClient: APIClientProtocol {
 
     // MARK: - APIClientProtocol Implementation
 
-    func login(email: String, password: String) async throws -> LoginMobile200Response {
-        loginCalls.append((email, password))
+    func login(username: String, password: String) async throws -> LoginMobile200Response {
+        loginCalls.append((username, password))
         return try loginResult.get()
     }
 

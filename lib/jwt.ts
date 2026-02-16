@@ -3,7 +3,7 @@ import { SignJWT, jwtVerify } from 'jose';
 // JWT payload interface
 export interface JWTPayload {
   userId: string;
-  email: string;
+  username: string;
 }
 
 // Get the secret key as Uint8Array
@@ -27,14 +27,14 @@ export function getAccessTokenExpiry(): number {
 /**
  * Generate an access token (JWT) for a user
  * @param userId - User ID
- * @param email - User email
+ * @param username - Username
  * @returns Signed JWT token
  */
-export async function generateAccessToken(userId: string, email: string): Promise<string> {
+export async function generateAccessToken(userId: string, username: string): Promise<string> {
   const secret = getSecretKey();
   const expiresIn = getAccessTokenExpiry();
 
-  const token = await new SignJWT({ userId, email })
+  const token = await new SignJWT({ userId, username })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${expiresIn}s`)
@@ -54,10 +54,10 @@ export async function verifyAccessToken(token: string): Promise<JWTPayload | nul
     const { payload } = await jwtVerify(token, secret);
 
     // Validate payload structure
-    if (typeof payload.userId === 'string' && typeof payload.email === 'string') {
+    if (typeof payload.userId === 'string' && typeof payload.username === 'string') {
       return {
         userId: payload.userId,
-        email: payload.email,
+        username: payload.username,
       };
     }
 

@@ -2,13 +2,13 @@
 #
 # Reset a user's password in the database (local or production)
 #
-# Usage: ./scripts/reset-password.sh <local|prod> <email> [password]
+# Usage: ./scripts/reset-password.sh <local|prod> <username> [password]
 #
 # Examples:
-#   ./scripts/reset-password.sh local user@example.com              # Auto-generates password
-#   ./scripts/reset-password.sh local user@example.com NewPassword  # Uses provided password
-#   ./scripts/reset-password.sh prod user@example.com               # Auto-generates password
-#   ./scripts/reset-password.sh prod user@example.com NewPassword   # Uses provided password
+#   ./scripts/reset-password.sh local myuser              # Auto-generates password
+#   ./scripts/reset-password.sh local myuser NewPassword  # Uses provided password
+#   ./scripts/reset-password.sh prod myuser               # Auto-generates password
+#   ./scripts/reset-password.sh prod myuser NewPassword   # Uses provided password
 #
 # Prerequisites:
 #   - Node.js with bcryptjs available (npm install)
@@ -37,31 +37,25 @@ cd "$SCRIPT_DIR/.."
 
 # Validate arguments
 if [ $# -lt 2 ]; then
-    echo -e "${RED}Error: Environment and email required${NC}"
+    echo -e "${RED}Error: Environment and username required${NC}"
     echo ""
-    echo "Usage: $0 <local|prod> <email> [password]"
+    echo "Usage: $0 <local|prod> <username> [password]"
     echo ""
     echo "Examples:"
-    echo "  $0 local user@example.com              # Auto-generates password"
-    echo "  $0 local user@example.com NewPassword  # Uses provided password"
-    echo "  $0 prod user@example.com               # Auto-generates password"
-    echo "  $0 prod user@example.com NewPassword   # Uses provided password"
+    echo "  $0 local myuser              # Auto-generates password"
+    echo "  $0 local myuser NewPassword  # Uses provided password"
+    echo "  $0 prod myuser               # Auto-generates password"
+    echo "  $0 prod myuser NewPassword   # Uses provided password"
     exit 1
 fi
 
 ENV="$1"
-EMAIL="$2"
+USERNAME="$2"
 PASSWORD="$3"
 
 # Validate environment
 if [ "$ENV" != "local" ] && [ "$ENV" != "prod" ]; then
     echo -e "${RED}Error: Environment must be 'local' or 'prod'${NC}"
-    exit 1
-fi
-
-# Validate email format (basic check)
-if [[ ! "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-    echo -e "${RED}Error: Invalid email format${NC}"
     exit 1
 fi
 
@@ -81,7 +75,7 @@ ENV_UPPER=$(echo "$ENV" | tr '[:lower:]' '[:upper:]')
 
 echo ""
 echo -e "${CYAN}Resetting password in ${ENV_UPPER} environment${NC}"
-echo -e "${CYAN}Email: $EMAIL${NC}"
+echo -e "${CYAN}Username: $USERNAME${NC}"
 echo ""
 
 # Generate bcrypt hash locally
@@ -110,7 +104,7 @@ const { PrismaClient } = require('@prisma/client');
     const prisma = new PrismaClient();
     try {
         const user = await prisma.user.update({
-            where: { email: '$EMAIL' },
+            where: { username: '$USERNAME' },
             data: { passwordHash: '$HASH' }
         });
         console.log('SUCCESS:' + user.id);
@@ -153,7 +147,7 @@ else
     ESCAPED_HASH=$(printf '%s' "$HASH" | sed 's/\$/\\$/g')
 
     # Build the Node.js command (minified for shell safety)
-    UPDATE_CMD="const{PrismaClient}=require('@prisma/client');(async()=>{const p=new PrismaClient();try{const u=await p.user.update({where:{email:'$EMAIL'},data:{passwordHash:'$ESCAPED_HASH'}});console.log('SUCCESS:'+u.id)}catch(e){if(e.code==='P2025'){console.log('ERROR:User not found')}else{console.log('ERROR:'+e.message)}}finally{await p.\$disconnect()}})();"
+    UPDATE_CMD="const{PrismaClient}=require('@prisma/client');(async()=>{const p=new PrismaClient();try{const u=await p.user.update({where:{username:'$USERNAME'},data:{passwordHash:'$ESCAPED_HASH'}});console.log('SUCCESS:'+u.id)}catch(e){if(e.code==='P2025'){console.log('ERROR:User not found')}else{console.log('ERROR:'+e.message)}}finally{await p.\$disconnect()}})();"
 
     # Execute via ECS Exec
     RESULT=$(aws ecs execute-command \
@@ -176,12 +170,12 @@ if echo "$RESULT" | grep -q "SUCCESS:"; then
     echo -e "${GREEN}════════════════════════════════════════${NC}"
     echo ""
     echo "  Environment: ${ENV_UPPER}"
-    echo "  Email:       $EMAIL"
+    echo "  Username:    $USERNAME"
     echo "  Password:    $PASSWORD"
     echo "  User ID:     $USER_ID"
     echo ""
 elif echo "$RESULT" | grep -q "ERROR:User not found"; then
-    echo -e "${RED}Error: User with email '$EMAIL' not found${NC}"
+    echo -e "${RED}Error: User with username '$USERNAME' not found${NC}"
     exit 1
 elif echo "$RESULT" | grep -q "ERROR:"; then
     ERROR_MSG=$(echo "$RESULT" | grep -o 'ERROR:.*' | cut -d: -f2-)

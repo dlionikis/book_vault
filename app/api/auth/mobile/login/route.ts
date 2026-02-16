@@ -7,36 +7,36 @@ import { withLogging } from '@/lib/logger';
 /**
  * POST /api/auth/mobile/login
  *
- * Mobile JWT-based authentication endpoint. Validates email and password, returns access
+ * Mobile JWT-based authentication endpoint. Validates username and password, returns access
  * and refresh tokens for mobile app authentication. Access token valid for 15 minutes,
  * refresh token valid for 7 days.
  *
  * Auth: Public
- * Request Body: { email: string, password: string }
+ * Request Body: { username: string, password: string }
  *
- * Returns: { accessToken: string, refreshToken: string, expiresAt: string, user: { id, email, name } }
+ * Returns: { accessToken: string, refreshToken: string, expiresAt: string, user: { id, username } }
  * Errors: 400 if missing credentials, 401 if invalid credentials, 500 on server error
  *
  * @example
  * fetch('/api/auth/mobile/login', {
  *   method: 'POST',
  *   headers: { 'Content-Type': 'application/json' },
- *   body: JSON.stringify({ email: 'user@example.com', password: 'secret' })
+ *   body: JSON.stringify({ username: 'testuser', password: 'secret' })
  * })
  */
 export const POST = withLogging(async (request: NextRequest) => {
   try {
     const body = await request.json();
-    const { email, password } = body;
+    const { username, password } = body;
 
     // Validate input
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
+    if (!username || !password) {
+      return NextResponse.json({ error: 'Username and password required' }, { status: 400 });
     }
 
     // Find user
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { username },
     });
 
     if (!user) {
@@ -51,7 +51,7 @@ export const POST = withLogging(async (request: NextRequest) => {
     }
 
     // Generate tokens
-    const accessToken = await generateAccessToken(user.id, user.email);
+    const accessToken = await generateAccessToken(user.id, user.username);
     const refreshToken = generateRefreshToken();
 
     // Calculate expiry (30 days from now)
@@ -73,7 +73,7 @@ export const POST = withLogging(async (request: NextRequest) => {
       refreshToken,
       user: {
         id: user.id,
-        email: user.email,
+        username: user.username,
       },
       expiresIn: getAccessTokenExpiry(),
     });

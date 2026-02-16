@@ -29,9 +29,9 @@ enum TestFixtures {
 
     static func makeUser(
         id: UUID = testUserId,
-        email: String = "test@example.com"
+        username: String = "testuser"
     ) -> BookVault.User {
-        BookVault.User(id: id, email: email)
+        BookVault.User(id: id, username: username)
     }
 
     // MARK: - Authentication Responses
@@ -307,7 +307,7 @@ enum TestFixtures {
         "refreshToken": "66666666-6666-6666-6666-666666666666",
         "user": {
             "id": "11111111-1111-1111-1111-111111111111",
-            "email": "test@example.com"
+            "username": "testuser"
         },
         "expiresIn": 3600
     }

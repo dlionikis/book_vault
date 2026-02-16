@@ -7,7 +7,7 @@
  * IMPORTANT: These are integration tests that require:
  * 1. Dev server running (npm run dev)
  * 2. Test database seeded (npm run db:seed)
- * 3. Valid test user (test@example.com / password123)
+ * 3. Valid test user (testuser / password123)
  */
 
 import jestOpenAPI from 'jest-openapi';
@@ -28,7 +28,7 @@ jestOpenAPI(openApiPath);
 // Test configuration
 const BASE_URL = process.env.TEST_API_URL || 'http://localhost:3000';
 const TEST_USER = {
-  email: process.env.TEST_USER_EMAIL || 'test@example.com',
+  username: process.env.TEST_USER_USERNAME || 'testuser',
   password: process.env.TEST_USER_PASSWORD || 'password123',
 };
 
@@ -304,13 +304,13 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('user');
         expect(response.data).toHaveProperty('expiresIn');
         expect(response.data.user).toHaveProperty('id');
-        expect(response.data.user).toHaveProperty('email');
+        expect(response.data.user).toHaveProperty('username');
       });
 
       testFn('should satisfy OpenAPI spec for invalid credentials', async () => {
         const response = await axios.post(
           `${BASE_URL}/api/auth/mobile/login`,
-          { email: TEST_USER.email, password: 'wrong-password' },
+          { username: TEST_USER.username, password: 'wrong-password' },
           {
             headers: { 'Content-Type': 'application/json' },
             validateStatus: () => true,
@@ -386,7 +386,7 @@ describe('OpenAPI Contract Tests', () => {
       testFn('should satisfy OpenAPI spec for missing required fields', async () => {
         const response = await axios.post(
           `${BASE_URL}/api/auth/register`,
-          { email: 'newuser@test.com' },
+          { username: 'newuser' },
           {
             headers: { 'Content-Type': 'application/json' },
             validateStatus: () => true,
@@ -398,10 +398,10 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('error');
       });
 
-      testFn('should satisfy OpenAPI spec for invalid email format', async () => {
+      testFn('should satisfy OpenAPI spec for invalid username format', async () => {
         const response = await axios.post(
           `${BASE_URL}/api/auth/register`,
-          { email: 'not-an-email', password: 'validpassword123' },
+          { username: '', password: 'validpassword123' },
           {
             headers: { 'Content-Type': 'application/json' },
             validateStatus: () => true,
@@ -416,7 +416,7 @@ describe('OpenAPI Contract Tests', () => {
       testFn('should satisfy OpenAPI spec for weak password (< 8 chars)', async () => {
         const response = await axios.post(
           `${BASE_URL}/api/auth/register`,
-          { email: 'newuser@test.com', password: 'short' },
+          { username: 'newuser', password: 'short' },
           {
             headers: { 'Content-Type': 'application/json' },
             validateStatus: () => true,
@@ -428,10 +428,10 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('error');
       });
 
-      testFn('should satisfy OpenAPI spec for duplicate email', async () => {
+      testFn('should satisfy OpenAPI spec for duplicate username', async () => {
         const response = await axios.post(
           `${BASE_URL}/api/auth/register`,
-          { email: TEST_USER.email, password: 'validpassword123' },
+          { username: TEST_USER.username, password: 'validpassword123' },
           {
             headers: { 'Content-Type': 'application/json' },
             validateStatus: () => true,
@@ -459,7 +459,7 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('valid', true);
         expect(response.data).toHaveProperty('user');
         expect(response.data.user).toHaveProperty('id');
-        expect(response.data.user).toHaveProperty('email');
+        expect(response.data.user).toHaveProperty('username');
       });
 
       testFn('should satisfy OpenAPI spec for invalid token', async () => {

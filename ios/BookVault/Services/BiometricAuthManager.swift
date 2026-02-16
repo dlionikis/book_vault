@@ -25,7 +25,7 @@ final class BiometricAuthManager: ObservableObject {
 
     private enum Keys {
         static let biometricEnabled = "biometricEnabled"
-        static let biometricEmail = "biometricEmail"
+        static let biometricUsername = "biometricUsername"
         static let biometricPassword = "com.bookvault.biometricPassword"
     }
 
@@ -64,7 +64,7 @@ final class BiometricAuthManager: ObservableObject {
     }
 
     /// Authenticate user with biometrics and retrieve stored password
-    func authenticateAndGetCredentials() async throws -> (email: String, password: String) {
+    func authenticateAndGetCredentials() async throws -> (username: String, password: String) {
         guard isBiometricEnabled else {
             throw BiometricError.notEnabled
         }
@@ -87,21 +87,21 @@ final class BiometricAuthManager: ObservableObject {
         }
 
         // Retrieve stored credentials
-        guard let email = UserDefaults.standard.string(forKey: Keys.biometricEmail),
+        guard let username = UserDefaults.standard.string(forKey: Keys.biometricUsername),
               let password = try retrievePassword() else {
             throw BiometricError.credentialsNotFound
         }
 
-        return (email, password)
+        return (username, password)
     }
 
     /// Enable biometric login for a user
-    func enableBiometric(email: String, password: String) throws {
+    func enableBiometric(username: String, password: String) throws {
         // Store password with biometric protection
         try storePassword(password)
 
-        // Store email and enable flag
-        UserDefaults.standard.set(email, forKey: Keys.biometricEmail)
+        // Store username and enable flag
+        UserDefaults.standard.set(username, forKey: Keys.biometricUsername)
         UserDefaults.standard.set(true, forKey: Keys.biometricEnabled)
 
         isBiometricEnabled = true
@@ -113,17 +113,17 @@ final class BiometricAuthManager: ObservableObject {
         deletePassword()
 
         // Clear preferences
-        UserDefaults.standard.removeObject(forKey: Keys.biometricEmail)
+        UserDefaults.standard.removeObject(forKey: Keys.biometricUsername)
         UserDefaults.standard.removeObject(forKey: Keys.biometricEnabled)
 
         isBiometricEnabled = false
     }
 
-    /// Check if biometric is enabled for a specific email
-    func isBiometricEnabledFor(email: String) -> Bool {
+    /// Check if biometric is enabled for a specific username
+    func isBiometricEnabledFor(username: String) -> Bool {
         guard isBiometricEnabled else { return false }
-        let storedEmail = UserDefaults.standard.string(forKey: Keys.biometricEmail)
-        return storedEmail?.lowercased() == email.lowercased()
+        let storedUsername = UserDefaults.standard.string(forKey: Keys.biometricUsername)
+        return storedUsername?.lowercased() == username.lowercased()
     }
 
     // MARK: - Private Methods

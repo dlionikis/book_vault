@@ -44,11 +44,11 @@ final class AuthManagerTests: XCTestCase {
 
         // When
         // Note: With DI refactoring, we'd test:
-        // await authManager.login(email: "test@example.com", password: "password")
+        // await authManager.login(username: "testuser", password: "password")
 
         // Then
         // XCTAssertTrue(authManager.isAuthenticated)
-        // XCTAssertEqual(authManager.currentUser?.email, "test@example.com")
+        // XCTAssertEqual(authManager.currentUser?.username, "testuser")
         XCTAssertTrue(true) // Placeholder until DI is complete
     }
 

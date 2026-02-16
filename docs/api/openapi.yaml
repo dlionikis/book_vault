@@ -301,15 +301,14 @@ components:
 
     User:
       type: object
-      required: [id, email]
+      required: [id, username]
       properties:
         id:
           type: string
           format: uuid
-        email:
+        username:
           type: string
-          format: email
-          example: 'user@example.com'
+          example: 'testuser'
 
     # Additional browse/list entity schemas
     AuthorWithBookCount:
@@ -420,12 +419,11 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, password]
+              required: [username, password]
               properties:
-                email:
+                username:
                   type: string
-                  format: email
-                  example: 'test@example.com'
+                  example: 'testuser'
                 password:
                   type: string
                   format: password
@@ -455,7 +453,7 @@ paths:
                     description: Access token lifetime in seconds
                     example: 3600
         '400':
-          description: Missing email or password
+          description: Missing username or password
           content:
             application/json:
               schema:
@@ -595,12 +593,11 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, password]
+              required: [username, password]
               properties:
-                email:
+                username:
                   type: string
-                  format: email
-                  example: 'newuser@example.com'
+                  example: 'newuser'
                 password:
                   type: string
                   format: password
@@ -621,7 +618,7 @@ paths:
                   user:
                     $ref: '#/components/schemas/User'
         '400':
-          description: Invalid input (bad email format or weak password)
+          description: Invalid input (weak password)
           content:
             application/json:
               schema:

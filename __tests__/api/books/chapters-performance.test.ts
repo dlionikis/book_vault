@@ -24,7 +24,7 @@ describe('Chapter Performance Tests', () => {
   const mockSession = {
     user: {
       id: 'test-user-id',
-      email: 'test@example.com',
+      username: 'testuser',
     },
     expires: '2025-12-31',
   };

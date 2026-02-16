@@ -10,7 +10,7 @@
  * IMPORTANT: These are integration tests that require:
  * 1. Dev server running (npm run dev)
  * 2. Test database seeded (npm run db:seed)
- * 3. Valid test user (test@example.com / password123)
+ * 3. Valid test user (testuser / password123)
  */
 
 import axios from 'axios';
@@ -44,7 +44,7 @@ axios.defaults.validateStatus = () => true; // Don't throw on any status code
 
 const API_BASE = process.env.TEST_API_URL || 'http://localhost:3000';
 const TEST_USER = {
-  email: process.env.TEST_USER_EMAIL || 'test@example.com',
+  username: process.env.TEST_USER_USERNAME || 'testuser',
   password: process.env.TEST_USER_PASSWORD || 'password123',
 };
 
@@ -412,7 +412,7 @@ describeFn('API Response Type Validation', () => {
 
       expect(parsed.accessToken).toBeDefined();
       expect(parsed.refreshToken).toBeDefined();
-      expect(parsed.user.email).toBeDefined();
+      expect(parsed.user.username).toBeDefined();
     });
   });
 

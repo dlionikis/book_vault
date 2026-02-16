@@ -101,7 +101,7 @@ final class ModelDecodingTests: XCTestCase {
         XCTAssertEqual(response.accessToken, "test-access-token")
         XCTAssertEqual(response.refreshToken, TestFixtures.testRefreshToken)
         XCTAssertEqual(response.user.id, TestFixtures.testUserId)
-        XCTAssertEqual(response.user.email, "test@example.com")
+        XCTAssertEqual(response.user.username, "testuser")
         XCTAssertEqual(response.expiresIn, 3600)
     }
 
@@ -197,7 +197,7 @@ final class ModelDecodingTests: XCTestCase {
         let json = """
         {
             "id": "11111111-1111-1111-1111-111111111111",
-            "email": "user@example.com"
+            "username": "testuser"
         }
         """
         let data = json.data(using: .utf8)!
@@ -205,7 +205,7 @@ final class ModelDecodingTests: XCTestCase {
         let user = try decoder.decode(User.self, from: data)
 
         XCTAssertEqual(user.id, TestFixtures.testUserId)
-        XCTAssertEqual(user.email, "user@example.com")
+        XCTAssertEqual(user.username, "testuser")
     }
 
     // MARK: - List Response Decoding Tests
