@@ -192,22 +192,25 @@ EOF
   DOCKER_CONFIG=/tmp/docker-config docker push "${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/book-vault:latest"
 
   CURRENT_STEP="ECS deployment"
-  log_step "Deploying to ECS..."
-  aws ecs update-service \
-    --cluster book-vault \
-    --service book-vault-service \
-    --force-new-deployment \
-    --profile book_vault \
-    --region us-east-1 \
-    --query 'service.{status:status,runningCount:runningCount,desiredCount:desiredCount}' \
-    --output json
+  log_step "Deploying to ECS (spot + fallback)..."
+  for SERVICE in book-vault-spot book-vault-fallback; do
+    log_step "  Updating $SERVICE..."
+    aws ecs update-service \
+      --cluster book-vault \
+      --service "$SERVICE" \
+      --force-new-deployment \
+      --profile book_vault \
+      --region us-east-1 \
+      --query 'service.{status:status,runningCount:runningCount,desiredCount:desiredCount}' \
+      --output json
+  done
 
   CURRENT_STEP="ECS service stabilization"
   log_step "Monitoring deployment..."
-  echo "Waiting for service to stabilize..."
+  echo "Waiting for spot service to stabilize..."
   aws ecs wait services-stable \
     --cluster book-vault \
-    --services book-vault-service \
+    --services book-vault-spot \
     --profile book_vault \
     --region us-east-1
 

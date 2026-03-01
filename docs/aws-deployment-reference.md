@@ -15,12 +15,15 @@ Browser/iOS → ALB (HTTPS) → ECS Fargate → RDS PostgreSQL
                                S3 (media files)
 ```
 
-| Component    | Details                                   |
-| ------------ | ----------------------------------------- |
-| **Hosting**  | ECS Fargate (1 vCPU, 2GB RAM)             |
-| **Database** | RDS PostgreSQL (db.t3.micro)              |
-| **Storage**  | S3 `book-vault-media` (514 GB, 691 books) |
-| **Domain**   | bookvault.lionikis.com with ACM SSL       |
+| Component      | Details                                            |
+| -------------- | -------------------------------------------------- |
+| **Hosting**    | ECS Fargate (1 vCPU, 2GB RAM)                      |
+| **Services**   | `book-vault-spot` (2x FARGATE_SPOT, primary)       |
+|                | `book-vault-fallback` (FARGATE on-demand, dormant) |
+| **Automation** | Lambda + EventBridge auto-failover on Spot loss    |
+| **Database**   | RDS PostgreSQL (db.t3.micro)                       |
+| **Storage**    | S3 `book-vault-media` (514 GB, 691 books)          |
+| **Domain**     | bookvault.lionikis.com with ACM SSL                |
 
 ---
 
@@ -52,13 +55,15 @@ AWS_PROFILE=book_vault aws ecr get-login-password --region us-east-1 | \
 docker tag book-vault:amd64 ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/book-vault:latest
 docker push ${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/book-vault:latest
 
-# 4. Deploy to ECS
-aws ecs update-service \
-  --cluster book-vault \
-  --service book-vault-service \
-  --force-new-deployment \
-  --profile book_vault \
-  --region us-east-1
+# 4. Deploy to ECS (both services)
+for SERVICE in book-vault-spot book-vault-fallback; do
+  aws ecs update-service \
+    --cluster book-vault \
+    --service "$SERVICE" \
+    --force-new-deployment \
+    --profile book_vault \
+    --region us-east-1
+done
 ```
 
 **Deployment time**: ~6-10 minutes (build → push → ECS rolling update)
@@ -103,7 +108,7 @@ npm run db:migrate
 # Check service status
 aws ecs describe-services \
   --cluster book-vault \
-  --services book-vault-service \
+  --services book-vault-spot \
   --profile book_vault \
   --region us-east-1 \
   --query 'services[0].deployments'
@@ -150,7 +155,7 @@ aws secretsmanager update-secret \
 # Deploy previous task definition revision
 aws ecs update-service \
   --cluster book-vault \
-  --service book-vault-service \
+  --service book-vault-spot \
   --task-definition book-vault:PREVIOUS_REVISION \
   --profile book_vault \
   --region us-east-1
@@ -160,12 +165,13 @@ aws ecs update-service \
 
 ## Cost
 
-~$65-70/month for personal use:
+~$50-55/month for personal use:
 
-- ECS Fargate: ~$30
+- ECS Fargate Spot (2x): ~$20
 - ALB: ~$16-20
 - RDS: ~$15
 - S3: ~$12
+- Lambda + EventBridge: ~$0 (free tier)
 
 ---
 

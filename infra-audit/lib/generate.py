@@ -35,6 +35,7 @@ class DocumentationGenerator:
             self._entry_points(),
             self._networking_section(),
             self._compute_section(),
+            self._automation_section(),
             self._data_section(),
             self._security_section(),
             self._observability_section(),
@@ -277,6 +278,76 @@ class DocumentationGenerator:
             lines.append("")
             for fn in lambdas:
                 lines.append(f"- **{fn.get('name')}** ({fn.get('runtime')}, {fn.get('memory')}MB)")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    def _automation_section(self) -> str:
+        """Generate automation section showing Lambda + EventBridge relationships."""
+        lambdas = self.compute.get("lambda_functions", [])
+        rules = self.observability.get("event_rules", [])
+
+        if not lambdas and not rules:
+            return ""
+
+        lines = ["## Automation", ""]
+
+        # Lambda Functions
+        if lambdas:
+            lines.append("### Lambda Functions")
+            lines.append("")
+            for fn in lambdas:
+                lines.append(f"#### {fn.get('name')}")
+                if fn.get('description'):
+                    lines.append(f"> {fn.get('description')}")
+                arch = fn.get('architecture', 'x86_64')
+                lines.append(f"- **Runtime**: {fn.get('runtime')} ({arch})")
+                lines.append(f"- **Memory**: {fn.get('memory')}MB, Timeout: {fn.get('timeout')}s")
+                if fn.get('role'):
+                    lines.append(f"- **IAM Role**: `{fn.get('role')}`")
+
+                if fn.get('triggers'):
+                    lines.append("- **Triggered by**:")
+                    for t in fn['triggers']:
+                        source = t.get('source', '').replace('.amazonaws.com', '')
+                        lines.append(f"  - {source}: `{t.get('statement_id')}`")
+                lines.append("")
+
+        # EventBridge Rules with targets
+        if rules:
+            book_vault_rules = [r for r in rules if 'book-vault' in r.get('name', '').lower()]
+            if book_vault_rules:
+                lines.append("### EventBridge Rules")
+                lines.append("")
+                for rule in book_vault_rules:
+                    lines.append(f"#### {rule.get('name')}")
+                    lines.append(f"- **State**: {rule.get('state')}")
+                    if rule.get('schedule'):
+                        lines.append(f"- **Schedule**: `{rule.get('schedule')}`")
+                    if rule.get('event_pattern'):
+                        lines.append(f"- **Event Pattern**: ECS task state change")
+                    if rule.get('targets'):
+                        lines.append("- **Targets**:")
+                        for t in rule['targets']:
+                            lines.append(f"  - {t.get('type')}: `{t.get('name')}`")
+                    lines.append("")
+
+        # Automation flow diagram (text)
+        spot_rules = [r for r in rules if 'spot' in r.get('name', '').lower()]
+        if spot_rules:
+            lines.append("### Spot Fallback Automation Flow")
+            lines.append("")
+            lines.append("```")
+            lines.append("Spot task stops -> EventBridge -> Lambda (spot-fallback)")
+            lines.append("  -> checks Spot running count")
+            lines.append("  -> if 0: activates fallback on-demand service")
+            lines.append("  -> sends SNS alert")
+            lines.append("")
+            lines.append("Hourly schedule -> EventBridge -> Lambda (spot-fallback)")
+            lines.append("  -> checks if Spot is back")
+            lines.append("  -> if yes: deactivates fallback service")
+            lines.append("  -> sends SNS alert")
+            lines.append("```")
             lines.append("")
 
         return "\n".join(lines)
