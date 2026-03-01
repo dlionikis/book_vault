@@ -72,12 +72,13 @@ describe('GET /api/admin/s3-storage', () => {
 
     expect(response.status).toBe(200);
 
-    expect(data.current.standardGB).toBe(10);
+    // latestVal picks the most recent timestamp (ts2), so standardGB = 11811160064 / 1073741824 = 11
+    expect(data.current.standardGB).toBe(11);
     expect(data.current.itFrequentGB).toBe(5);
     expect(data.current.itInfrequentGB).toBe(2);
     expect(data.current.itArchiveGB).toBe(1);
-    expect(data.current.totalSizeGB).toBe(18);
-    expect(data.current.objectCount).toBe(1500);
+    expect(data.current.totalSizeGB).toBe(19);
+    expect(data.current.objectCount).toBe(1520);
 
     expect(data.trends.totalSize.timestamps).toHaveLength(2);
     expect(data.trends.totalSize.values).toHaveLength(2);
@@ -112,11 +113,27 @@ describe('GET /api/admin/s3-storage', () => {
     expect(data.current.objectCount).toBe(0);
   });
 
-  it('returns 500 when CloudWatch call fails', async () => {
+  it('returns 500 with safe error message when CloudWatch call fails', async () => {
     mockRequireAdmin.mockResolvedValue({ user: adminUser, error: null });
-    mockSend.mockRejectedValue(new Error('CloudWatch error'));
+    mockSend.mockRejectedValue(new Error('CloudWatch error with secret key'));
 
     const response = await GET(makeRequest());
     expect(response.status).toBe(500);
+    const data = await response.json();
+    expect(data.error).toBe('Failed to fetch S3 storage data');
+    expect(JSON.stringify(data)).not.toContain('secret');
+  });
+
+  it('handles null MetricDataResults', async () => {
+    mockRequireAdmin.mockResolvedValue({ user: adminUser, error: null });
+    mockSend.mockResolvedValue({});
+
+    const response = await GET(makeRequest());
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.current.totalSizeGB).toBe(0);
+    expect(data.current.objectCount).toBe(0);
+    expect(data.trends.totalSize.timestamps).toHaveLength(0);
   });
 });

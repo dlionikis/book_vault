@@ -8,10 +8,10 @@ const client = new CloudWatchClient({ region: process.env.AWS_REGION || 'us-east
 const BUCKET = process.env.AWS_S3_BUCKET || 'book-vault-media';
 
 const STORAGE_TYPES = [
-  { id: 'standard', type: 'StandardStorage', label: 'Standard' },
-  { id: 'it_fa', type: 'IntelligentTieringFAStorage', label: 'IT Frequent Access' },
-  { id: 'it_ia', type: 'IntelligentTieringIAStorage', label: 'IT Infrequent Access' },
-  { id: 'it_aa', type: 'IntelligentTieringAAStorage', label: 'IT Archive Access' },
+  { id: 'standard', type: 'StandardStorage', label: 'S3 Standard' },
+  { id: 'it_fa', type: 'IntelligentTieringFAStorage', label: 'Intelligent-Tiering (Frequent)' },
+  { id: 'it_ia', type: 'IntelligentTieringIAStorage', label: 'Intelligent-Tiering (Infrequent)' },
+  { id: 'it_aa', type: 'IntelligentTieringAAStorage', label: 'Intelligent-Tiering (Archive)' },
 ] as const;
 
 interface StorageTrend {
@@ -36,7 +36,7 @@ interface S3StorageResponse {
 }
 
 export const GET = withLogging(async (request: NextRequest) => {
-  const { user, error } = await requireAdmin(request);
+  const { error } = await requireAdmin(request);
   if (error) return error;
 
   const cacheKey = 'admin:s3-storage';
@@ -110,7 +110,15 @@ export const GET = withLogging(async (request: NextRequest) => {
     const itAaData = getMetric('it_aa');
     const objectsData = getMetric('objects');
 
-    const latestVal = (data: typeof standardData) => (data?.Values?.length ? data.Values[0] : 0);
+    // Find the most recent value by timestamp (CloudWatch doesn't guarantee order)
+    const latestVal = (data: typeof standardData) => {
+      if (!data?.Values?.length || !data?.Timestamps?.length) return 0;
+      let latestIdx = 0;
+      for (let i = 1; i < data.Timestamps.length; i++) {
+        if (data.Timestamps[i] > data.Timestamps[latestIdx]) latestIdx = i;
+      }
+      return data.Values[latestIdx];
+    };
 
     const standardGB = bytesToGB(latestVal(standardData));
     const itFrequentGB = bytesToGB(latestVal(itFaData));
@@ -123,19 +131,38 @@ export const GET = withLogging(async (request: NextRequest) => {
       values: data?.Values || [],
     });
 
-    // Compute total size trend by summing all storage types at each timestamp
-    const totalTimestamps = standardData?.Timestamps || [];
-    const totalValues = totalTimestamps.map((_, i) => {
+    // Build timestamp-aligned maps for trend computation
+    const buildTsMap = (data: typeof standardData) => {
+      const map = new Map<string, number>();
+      if (data?.Timestamps && data?.Values) {
+        data.Timestamps.forEach((ts, i) => map.set(ts.toISOString(), data.Values![i]));
+      }
+      return map;
+    };
+
+    const standardMap = buildTsMap(standardData);
+    const itFaMap = buildTsMap(itFaData);
+    const itIaMap = buildTsMap(itIaData);
+    const itAaMap = buildTsMap(itAaData);
+
+    // Collect all unique timestamps across metrics, sorted chronologically
+    const allTimestampSet = new Set<string>();
+    [standardMap, itFaMap, itIaMap, itAaMap].forEach((m) =>
+      m.forEach((_, key) => allTimestampSet.add(key))
+    );
+    const totalTimestamps = [...allTimestampSet].sort();
+
+    const totalValues = totalTimestamps.map((ts) => {
       const sum =
-        (standardData?.Values?.[i] || 0) +
-        (itFaData?.Values?.[i] || 0) +
-        (itIaData?.Values?.[i] || 0) +
-        (itAaData?.Values?.[i] || 0);
+        (standardMap.get(ts) || 0) +
+        (itFaMap.get(ts) || 0) +
+        (itIaMap.get(ts) || 0) +
+        (itAaMap.get(ts) || 0);
       return bytesToGB(sum);
     });
 
-    const archiveValues = totalTimestamps.map((_, i) => {
-      const sum = (itIaData?.Values?.[i] || 0) + (itAaData?.Values?.[i] || 0);
+    const archiveValues = totalTimestamps.map((ts) => {
+      const sum = (itIaMap.get(ts) || 0) + (itAaMap.get(ts) || 0);
       return bytesToGB(sum);
     });
 
@@ -150,11 +177,11 @@ export const GET = withLogging(async (request: NextRequest) => {
       },
       trends: {
         totalSize: {
-          timestamps: totalTimestamps.map((t) => t.toISOString()),
+          timestamps: totalTimestamps,
           values: totalValues,
         },
         archiveSize: {
-          timestamps: totalTimestamps.map((t) => t.toISOString()),
+          timestamps: totalTimestamps,
           values: archiveValues,
         },
         objectCount: buildTrend(objectsData),

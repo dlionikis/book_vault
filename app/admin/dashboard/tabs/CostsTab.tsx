@@ -65,16 +65,31 @@ export default function CostsTab() {
     total: m.total,
   }));
 
-  // Build service comparison between this month and last month
-  const thisMonth = data.months[data.months.length - 1];
-  const lastMonth = data.months.length >= 2 ? data.months[data.months.length - 2] : null;
+  // Show the last 4 months, reversed so current month is first (left)
+  const displayMonths = data.months.slice(-4).reverse();
 
-  const lastMonthMap = new Map(lastMonth?.services.map((s) => [s.service, s.cost]) || []);
+  // Build cost maps for each display month
+  const monthCostMaps = displayMonths.map(
+    (m) => new Map(m.services.map((s) => [s.service, s.cost]))
+  );
 
-  const serviceRows = thisMonth.services.map((s) => {
-    const prev = lastMonthMap.get(s.service) || 0;
-    const change = prev > 0 ? ((s.cost - prev) / prev) * 100 : null;
-    return { service: s.service, current: s.cost, previous: prev, change };
+  // Collect all unique services across display months
+  const allServices = new Set<string>();
+  displayMonths.forEach((m) => m.services.forEach((s) => allServices.add(s.service)));
+
+  const serviceRows = [...allServices]
+    .map((service) => {
+      const costs = monthCostMaps.map((m) => m.get(service) || 0);
+      const current = costs[0]; // current month is first after reverse
+      const prev = costs.length >= 2 ? costs[1] : 0;
+      const change = prev > 0 ? ((current - prev) / prev) * 100 : null;
+      return { service, costs, change };
+    })
+    .sort((a, b) => b.costs[0] - a.costs[0]);
+
+  const monthLabels = displayMonths.map((m) => {
+    const d = new Date(m.month + 'T00:00:00');
+    return d.toLocaleDateString([], { month: 'short', year: '2-digit' });
   });
 
   return (
@@ -103,55 +118,69 @@ export default function CostsTab() {
 
       {/* Service Breakdown Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 dark:bg-gray-750">
-              <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-400 font-medium">
-                Service
-              </th>
-              <th className="text-right px-4 py-3 text-gray-600 dark:text-gray-400 font-medium">
-                This Month
-              </th>
-              <th className="text-right px-4 py-3 text-gray-600 dark:text-gray-400 font-medium">
-                Last Month
-              </th>
-              <th className="text-right px-4 py-3 text-gray-600 dark:text-gray-400 font-medium">
-                Change
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {serviceRows.map((row) => (
-              <tr key={row.service} className="border-t border-gray-100 dark:border-gray-700">
-                <td className="px-4 py-3 text-gray-800 dark:text-gray-200">{row.service}</td>
-                <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">
-                  ${row.current.toFixed(2)}
-                </td>
-                <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">
-                  ${row.previous.toFixed(2)}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {row.change !== null ? (
-                    <span
-                      className={
-                        row.change > 0
-                          ? 'text-red-600 dark:text-red-400'
-                          : row.change < 0
-                            ? 'text-green-600 dark:text-green-400'
-                            : 'text-gray-500 dark:text-gray-400'
-                      }
-                    >
-                      {row.change > 0 ? '+' : ''}
-                      {row.change.toFixed(1)}%
-                    </span>
-                  ) : (
-                    <span className="text-gray-400">—</span>
-                  )}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-700">
+                <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-400 font-medium">
+                  Service
+                </th>
+                {monthLabels.map((label, i) => (
+                  <th
+                    key={label}
+                    className={`text-right px-4 py-3 font-medium ${
+                      i === 0
+                        ? 'text-gray-800 dark:text-gray-200'
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}
+                  >
+                    {label}
+                  </th>
+                ))}
+                <th className="text-right px-4 py-3 text-gray-600 dark:text-gray-400 font-medium">
+                  MoM
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {serviceRows.map((row) => (
+                <tr key={row.service} className="border-t border-gray-100 dark:border-gray-700">
+                  <td className="px-4 py-3 text-gray-800 dark:text-gray-200">{row.service}</td>
+                  {row.costs.map((cost, i) => (
+                    <td
+                      key={i}
+                      className={`px-4 py-3 text-right ${
+                        i === 0
+                          ? 'text-gray-800 dark:text-gray-200'
+                          : 'text-gray-500 dark:text-gray-400'
+                      }`}
+                    >
+                      ${cost.toFixed(2)}
+                    </td>
+                  ))}
+                  <td className="px-4 py-3 text-right">
+                    {row.change !== null ? (
+                      <span
+                        className={
+                          row.change > 0
+                            ? 'text-red-600 dark:text-red-400'
+                            : row.change < 0
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-gray-500 dark:text-gray-400'
+                        }
+                      >
+                        {row.change > 0 ? '+' : ''}
+                        {row.change.toFixed(1)}%
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

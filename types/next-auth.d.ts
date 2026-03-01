@@ -29,8 +29,11 @@ declare module 'next-auth' {
       /** User's email address */
       email: string;
 
+      /** User's display name */
+      username: string;
+
       /** Whether the user has admin privileges */
-      isAdmin?: boolean;
+      isAdmin: boolean;
     };
   }
 

@@ -28,7 +28,7 @@ export async function requireAdmin(request: NextRequest): Promise<AdminAuthResul
     return {
       user: {
         id: session.user.id,
-        username: (session.user as any).username ?? session.user.email,
+        username: session.user.username ?? session.user.email,
         isAdmin: true,
       },
       error: null,

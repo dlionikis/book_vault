@@ -82,7 +82,7 @@ export const authOptions: NextAuthOptions = {
 
       if (session.user) {
         session.user.id = token.id as string;
-        (session.user as any).username = token.username as string;
+        session.user.username = token.username as string;
         session.user.isAdmin = token.isAdmin ?? false;
       }
       return session;

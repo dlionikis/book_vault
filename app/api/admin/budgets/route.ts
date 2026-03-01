@@ -19,7 +19,7 @@ interface BudgetsResponse {
 }
 
 export const GET = withLogging(async (request: NextRequest) => {
-  const { user, error } = await requireAdmin(request);
+  const { error } = await requireAdmin(request);
   if (error) return error;
 
   const cacheKey = 'admin:budgets';
@@ -30,7 +30,8 @@ export const GET = withLogging(async (request: NextRequest) => {
 
   const accountId = process.env.AWS_ACCOUNT_ID;
   if (!accountId) {
-    return NextResponse.json({ error: 'AWS_ACCOUNT_ID not configured' }, { status: 500 });
+    console.error('AWS_ACCOUNT_ID environment variable is not configured');
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
   }
 
   try {

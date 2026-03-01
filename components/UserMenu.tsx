@@ -50,9 +50,9 @@ export default function UserMenu() {
         className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
       >
         <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
-          {(session.user as any)?.username?.charAt(0).toUpperCase()}
+          {session.user.username?.charAt(0).toUpperCase()}
         </div>
-        <span className="hidden sm:inline">{(session.user as any)?.username}</span>
+        <span className="hidden sm:inline">{session.user.username}</span>
         <svg
           className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
@@ -80,7 +80,7 @@ export default function UserMenu() {
             >
               My Library
             </Link>
-            {(session.user as any)?.isAdmin && (
+            {session.user.isAdmin && (
               <Link
                 href="/admin/dashboard"
                 className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"

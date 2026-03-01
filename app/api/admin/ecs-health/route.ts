@@ -14,19 +14,32 @@ const region = process.env.AWS_REGION || 'us-east-1';
 const ecsClient = new ECSClient({ region });
 const cwClient = new CloudWatchClient({ region });
 
-const CLUSTER = 'book-vault';
-const SERVICE = 'book-vault-service';
+const CLUSTER = process.env.ECS_CLUSTER_NAME || 'book-vault';
+const SERVICES = (process.env.ECS_SERVICE_NAMES || 'book-vault-spot,book-vault-fallback')
+  .split(',')
+  .map((s) => s.trim());
+
+const ALLOWED_HOURS = [24, 48, 168];
 
 interface TaskInfo {
   taskId: string;
+  service: string;
   stoppedAt: string | null;
   durationMinutes: number | null;
   stopCode: string | null;
   stoppedReason: string | null;
 }
 
+interface ServiceStatus {
+  name: string;
+  running: number;
+  desired: number;
+  pending: number;
+}
+
 interface EcsHealthResponse {
-  service: string;
+  cluster: string;
+  services: ServiceStatus[];
   tasks: {
     running: number;
     desired: number;
@@ -46,10 +59,11 @@ interface EcsHealthResponse {
 }
 
 export const GET = withLogging(async (request: NextRequest) => {
-  const { user, error } = await requireAdmin(request);
+  const { error } = await requireAdmin(request);
   if (error) return error;
 
-  const hours = parseInt(request.nextUrl.searchParams.get('hours') || '24');
+  const rawHours = parseInt(request.nextUrl.searchParams.get('hours') || '24');
+  const hours = ALLOWED_HOURS.includes(rawHours) ? rawHours : 24;
   const cacheKey = `admin:ecs-health:${hours}`;
 
   const cached = getCached<EcsHealthResponse>(cacheKey);
@@ -58,23 +72,35 @@ export const GET = withLogging(async (request: NextRequest) => {
   }
 
   try {
-    // Fetch service info and stopped tasks in parallel
-    const [serviceResult, stoppedTaskArns] = await Promise.all([
-      ecsClient.send(new DescribeServicesCommand({ cluster: CLUSTER, services: [SERVICE] })),
-      ecsClient.send(
-        new ListTasksCommand({
-          cluster: CLUSTER,
-          serviceName: SERVICE,
-          desiredStatus: 'STOPPED',
-          maxResults: 20,
-        })
+    // Fetch all services info + stopped tasks for each service in parallel
+    const [serviceResult, ...stoppedTaskResults] = await Promise.all([
+      ecsClient.send(new DescribeServicesCommand({ cluster: CLUSTER, services: SERVICES })),
+      ...SERVICES.map((svc) =>
+        ecsClient.send(
+          new ListTasksCommand({
+            cluster: CLUSTER,
+            serviceName: svc,
+            desiredStatus: 'STOPPED',
+            maxResults: 10,
+          })
+        )
       ),
     ]);
 
-    const svc = serviceResult.services?.[0];
-    const running = svc?.runningCount ?? 0;
-    const desired = svc?.desiredCount ?? 0;
-    const pending = svc?.pendingCount ?? 0;
+    // Aggregate service counts
+    const serviceStatuses: ServiceStatus[] = (serviceResult.services || []).map((svc) => ({
+      name: svc.serviceName || 'unknown',
+      running: svc.runningCount ?? 0,
+      desired: svc.desiredCount ?? 0,
+      pending: svc.pendingCount ?? 0,
+    }));
+
+    const totalRunning = serviceStatuses.reduce((sum, s) => sum + s.running, 0);
+    const totalDesired = serviceStatuses.reduce((sum, s) => sum + s.desired, 0);
+    const totalPending = serviceStatuses.reduce((sum, s) => sum + s.pending, 0);
+
+    // Collect all stopped task ARNs
+    const allStoppedArns = stoppedTaskResults.flatMap((r) => r.taskArns || []);
 
     // Describe stopped tasks if any
     let stoppedTasks: TaskInfo[] = [];
@@ -82,11 +108,11 @@ export const GET = withLogging(async (request: NextRequest) => {
     let crashes = 0;
     let deploymentStops = 0;
 
-    if (stoppedTaskArns.taskArns?.length) {
+    if (allStoppedArns.length) {
       const described = await ecsClient.send(
         new DescribeTasksCommand({
           cluster: CLUSTER,
-          tasks: stoppedTaskArns.taskArns,
+          tasks: allStoppedArns,
         })
       );
 
@@ -99,13 +125,20 @@ export const GET = withLogging(async (request: NextRequest) => {
         const stopCode = task.stopCode || null;
         const reason = task.stoppedReason || null;
 
-        if (reason?.includes('spot') || reason?.includes('Spot')) spotInterruptions++;
-        else if (stopCode === 'ServiceSchedulerInitiated') deploymentStops++;
-        else if (stopCode === 'TaskFailedToStart' || stopCode === 'EssentialContainerExited')
+        if (stopCode === 'SpotInterruption' || reason?.toLowerCase().includes('spot')) {
+          spotInterruptions++;
+        } else if (stopCode === 'ServiceSchedulerInitiated') {
+          deploymentStops++;
+        } else if (stopCode === 'TaskFailedToStart' || stopCode === 'EssentialContainerExited') {
           crashes++;
+        }
+
+        // Extract service name from task group (e.g., "service:book-vault-spot")
+        const serviceName = task.group?.replace('service:', '') || '';
 
         return {
           taskId: task.taskArn?.split('/').pop() || '',
+          service: serviceName,
           stoppedAt: task.stoppedAt?.toISOString() || null,
           durationMinutes,
           stopCode,
@@ -114,7 +147,8 @@ export const GET = withLogging(async (request: NextRequest) => {
       });
     }
 
-    // Fetch CloudWatch metrics
+    // Fetch CloudWatch metrics for the primary service (book-vault-spot)
+    const primaryService = SERVICES[0];
     const now = new Date();
     const startTime = new Date(now.getTime() - hours * 60 * 60 * 1000);
 
@@ -131,7 +165,7 @@ export const GET = withLogging(async (request: NextRequest) => {
                 MetricName: 'CPUUtilization',
                 Dimensions: [
                   { Name: 'ClusterName', Value: CLUSTER },
-                  { Name: 'ServiceName', Value: SERVICE },
+                  { Name: 'ServiceName', Value: primaryService },
                 ],
               },
               Period: 300,
@@ -146,7 +180,7 @@ export const GET = withLogging(async (request: NextRequest) => {
                 MetricName: 'MemoryUtilization',
                 Dimensions: [
                   { Name: 'ClusterName', Value: CLUSTER },
-                  { Name: 'ServiceName', Value: SERVICE },
+                  { Name: 'ServiceName', Value: primaryService },
                 ],
               },
               Period: 300,
@@ -161,11 +195,12 @@ export const GET = withLogging(async (request: NextRequest) => {
     const memData = metricsResult.MetricDataResults?.find((m) => m.Id === 'memory');
 
     const response: EcsHealthResponse = {
-      service: SERVICE,
+      cluster: CLUSTER,
+      services: serviceStatuses,
       tasks: {
-        running,
-        desired,
-        pending,
+        running: totalRunning,
+        desired: totalDesired,
+        pending: totalPending,
         recentlyStopped: stoppedTasks,
       },
       metrics: {

@@ -22,11 +22,14 @@ interface CostsResponse {
   currency: string;
 }
 
+const ALLOWED_MONTHS = [1, 2, 3, 6, 12, 24];
+
 export const GET = withLogging(async (request: NextRequest) => {
-  const { user, error } = await requireAdmin(request);
+  const { error } = await requireAdmin(request);
   if (error) return error;
 
-  const months = parseInt(request.nextUrl.searchParams.get('months') || '6');
+  const rawMonths = parseInt(request.nextUrl.searchParams.get('months') || '6');
+  const months = ALLOWED_MONTHS.includes(rawMonths) ? rawMonths : 6;
   const cacheKey = `admin:costs:${months}`;
 
   const cached = getCached<CostsResponse>(cacheKey);
@@ -37,6 +40,7 @@ export const GET = withLogging(async (request: NextRequest) => {
   try {
     const end = new Date();
     const start = new Date();
+    start.setDate(1); // Avoid month rollover (e.g., Mar 31 - 1 month = Mar 3)
     start.setMonth(start.getMonth() - months);
 
     const command = new GetCostAndUsageCommand({

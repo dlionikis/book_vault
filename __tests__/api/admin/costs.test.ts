@@ -7,6 +7,7 @@ jest.mock('@/lib/admin-auth', () => ({
 jest.mock('@/lib/admin-cache', () => ({
   getCached: jest.fn().mockReturnValue(null),
   setCache: jest.fn(),
+  clearCache: jest.fn(),
   CACHE_24H: 86400000,
 }));
 
@@ -129,15 +130,18 @@ describe('GET /api/admin/costs', () => {
     expect(setCache).toHaveBeenCalledWith('admin:costs:2', data, 86400000);
   });
 
-  it('returns 500 when AWS call fails', async () => {
+  it('returns 500 with safe error message when AWS call fails', async () => {
     mockRequireAdmin.mockResolvedValue({
       user: { id: 'u1', username: 'admin', isAdmin: true },
       error: null,
     });
-    mockSend.mockRejectedValue(new Error('AWS error'));
+    mockSend.mockRejectedValue(new Error('AWS error with secret credentials'));
 
     const response = await GET(makeRequest());
     expect(response.status).toBe(500);
+    const data = await response.json();
+    expect(data.error).toBe('Failed to fetch cost data');
+    expect(JSON.stringify(data)).not.toContain('credentials');
   });
 
   it('defaults to 6 months when no query param', async () => {
@@ -150,5 +154,40 @@ describe('GET /api/admin/costs', () => {
     await GET(makeRequest());
 
     expect(getCached).toHaveBeenCalledWith('admin:costs:6');
+  });
+
+  it('clamps invalid months param to default', async () => {
+    mockRequireAdmin.mockResolvedValue({
+      user: { id: 'u1', username: 'admin', isAdmin: true },
+      error: null,
+    });
+    mockSend.mockResolvedValue({ ResultsByTime: [] });
+
+    await GET(makeRequest(999));
+
+    expect(getCached).toHaveBeenCalledWith('admin:costs:6');
+  });
+
+  it('handles empty Groups array', async () => {
+    mockRequireAdmin.mockResolvedValue({
+      user: { id: 'u1', username: 'admin', isAdmin: true },
+      error: null,
+    });
+
+    mockSend.mockResolvedValue({
+      ResultsByTime: [
+        {
+          TimePeriod: { Start: '2026-01-01' },
+          Groups: [],
+        },
+      ],
+    });
+
+    const response = await GET(makeRequest());
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.months[0].total).toBe(0);
+    expect(data.months[0].services).toHaveLength(0);
   });
 });

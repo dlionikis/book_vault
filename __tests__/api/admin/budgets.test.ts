@@ -39,7 +39,7 @@ describe('GET /api/admin/budgets', () => {
     process.env = { ...originalEnv, AWS_ACCOUNT_ID: '123456789012' };
   });
 
-  afterAll(() => {
+  afterEach(() => {
     process.env = originalEnv;
   });
 
@@ -65,7 +65,8 @@ describe('GET /api/admin/budgets', () => {
     const response = await GET(makeRequest());
     expect(response.status).toBe(500);
     const data = await response.json();
-    expect(data.error).toContain('AWS_ACCOUNT_ID');
+    expect(data.error).toBe('Server configuration error');
+    expect(JSON.stringify(data)).not.toContain('AWS_ACCOUNT_ID');
   });
 
   it('returns budget data from AWS', async () => {
@@ -123,12 +124,37 @@ describe('GET /api/admin/budgets', () => {
     expect(mockSend).not.toHaveBeenCalled();
   });
 
-  it('returns 500 when AWS call fails', async () => {
+  it('returns 500 with safe error message when AWS call fails', async () => {
     mockRequireAdmin.mockResolvedValue({ user: adminUser, error: null });
     mockSend.mockRejectedValue(new Error('Budgets API error'));
 
     const response = await GET(makeRequest());
     expect(response.status).toBe(500);
+    const data = await response.json();
+    expect(data.error).toBe('Failed to fetch budget data');
+    expect(JSON.stringify(data)).not.toContain('Budgets API error');
+  });
+
+  it('handles empty Budgets array', async () => {
+    mockRequireAdmin.mockResolvedValue({ user: adminUser, error: null });
+    mockSend.mockResolvedValue({ Budgets: [] });
+
+    const response = await GET(makeRequest());
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.budgets).toHaveLength(0);
+  });
+
+  it('handles null Budgets', async () => {
+    mockRequireAdmin.mockResolvedValue({ user: adminUser, error: null });
+    mockSend.mockResolvedValue({});
+
+    const response = await GET(makeRequest());
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.budgets).toHaveLength(0);
   });
 
   it('handles zero budget limit without division by zero', async () => {

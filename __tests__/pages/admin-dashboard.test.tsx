@@ -4,8 +4,11 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 
 jest.mock('next-auth');
+const REDIRECT_ERROR = new Error('NEXT_REDIRECT');
 jest.mock('next/navigation', () => ({
-  redirect: jest.fn(),
+  redirect: jest.fn(() => {
+    throw REDIRECT_ERROR;
+  }),
 }));
 jest.mock('@/lib/db', () => ({
   prisma: {
@@ -40,12 +43,7 @@ describe('AdminDashboardPage', () => {
   it('redirects to signin when not authenticated', async () => {
     mockGetServerSession.mockResolvedValue(null);
 
-    try {
-      await AdminDashboardPage();
-    } catch {
-      // redirect throws in Next.js
-    }
-
+    await expect(AdminDashboardPage()).rejects.toThrow(REDIRECT_ERROR);
     expect(mockRedirect).toHaveBeenCalledWith('/auth/signin');
   });
 
@@ -56,12 +54,7 @@ describe('AdminDashboardPage', () => {
 
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({ isAdmin: false });
 
-    try {
-      await AdminDashboardPage();
-    } catch {
-      // redirect throws in Next.js
-    }
-
+    await expect(AdminDashboardPage()).rejects.toThrow(REDIRECT_ERROR);
     expect(mockRedirect).toHaveBeenCalledWith('/');
   });
 
@@ -72,12 +65,7 @@ describe('AdminDashboardPage', () => {
 
     (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-    try {
-      await AdminDashboardPage();
-    } catch {
-      // redirect throws in Next.js
-    }
-
+    await expect(AdminDashboardPage()).rejects.toThrow(REDIRECT_ERROR);
     expect(mockRedirect).toHaveBeenCalledWith('/');
   });
 

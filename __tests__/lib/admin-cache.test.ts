@@ -1,8 +1,8 @@
-import { getCached, setCache, CACHE_5M, CACHE_1H, CACHE_24H } from '@/lib/admin-cache';
+import { getCached, setCache, clearCache, CACHE_5M, CACHE_1H, CACHE_24H } from '@/lib/admin-cache';
 
 describe('admin-cache', () => {
   beforeEach(() => {
-    // Clear cache between tests by setting expired entries
+    clearCache();
     jest.useFakeTimers();
   });
 
@@ -39,5 +39,25 @@ describe('admin-cache', () => {
     expect(CACHE_5M).toBe(5 * 60 * 1000);
     expect(CACHE_1H).toBe(60 * 60 * 1000);
     expect(CACHE_24H).toBe(24 * 60 * 60 * 1000);
+  });
+
+  it('evicts oldest entry when cache exceeds max size', () => {
+    // Fill cache to max (50 entries)
+    for (let i = 0; i < 50; i++) {
+      setCache(`key-${i}`, i, CACHE_1H);
+    }
+
+    // Adding one more should evict the first entry
+    setCache('key-50', 50, CACHE_1H);
+    expect(getCached('key-0')).toBeNull();
+    expect(getCached('key-50')).toBe(50);
+  });
+
+  it('clears all entries with clearCache', () => {
+    setCache('a', 1, CACHE_1H);
+    setCache('b', 2, CACHE_1H);
+    clearCache();
+    expect(getCached('a')).toBeNull();
+    expect(getCached('b')).toBeNull();
   });
 });

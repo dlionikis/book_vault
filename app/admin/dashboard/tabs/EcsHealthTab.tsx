@@ -14,14 +14,23 @@ import {
 
 interface TaskInfo {
   taskId: string;
+  service: string;
   stoppedAt: string | null;
   durationMinutes: number | null;
   stopCode: string | null;
   stoppedReason: string | null;
 }
 
+interface ServiceStatus {
+  name: string;
+  running: number;
+  desired: number;
+  pending: number;
+}
+
 interface EcsHealthData {
-  service: string;
+  cluster: string;
+  services: ServiceStatus[];
   tasks: {
     running: number;
     desired: number;
@@ -120,11 +129,56 @@ export default function EcsHealthTab() {
         </button>
       </div>
 
-      {/* Status Cards */}
+      {/* Per-Service Status */}
+      {data.services.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Services</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {data.services.map((svc) => (
+              <div
+                key={svc.name}
+                className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    {svc.name}
+                  </span>
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      svc.running > 0
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                        : svc.desired === 0
+                          ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                          : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                    }`}
+                  >
+                    {svc.running > 0 ? 'Running' : svc.desired === 0 ? 'Dormant' : 'Down'}
+                  </span>
+                </div>
+                <div className="flex gap-4 text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Running: <span className="text-gray-800 dark:text-gray-200">{svc.running}</span>
+                  </span>
+                  <span className="text-gray-500 dark:text-gray-400">
+                    Desired: <span className="text-gray-800 dark:text-gray-200">{svc.desired}</span>
+                  </span>
+                  {svc.pending > 0 && (
+                    <span className="text-yellow-600 dark:text-yellow-400">
+                      Pending: {svc.pending}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Aggregate Status + Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatusCard label="Running" value={data.tasks.running} color="green" />
-        <StatusCard label="Desired" value={data.tasks.desired} color="blue" />
-        <StatusCard label="Pending" value={data.tasks.pending} color="yellow" />
+        <StatusCard label="Total Running" value={data.tasks.running} color="green" />
+        <StatusCard label="Total Desired" value={data.tasks.desired} color="blue" />
+        <StatusCard label="Total Pending" value={data.tasks.pending} color="yellow" />
         <StatusCard label="Spot Interruptions" value={data.summary.spotInterruptions} color="red" />
         <StatusCard label="Crashes" value={data.summary.crashes} color="red" />
         <StatusCard label="Deployment Stops" value={data.summary.deploymentStops} color="gray" />
@@ -159,9 +213,12 @@ export default function EcsHealthTab() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 dark:bg-gray-750">
+                <tr className="bg-gray-50 dark:bg-gray-700">
                   <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">
                     Task ID
+                  </th>
+                  <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">
+                    Service
                   </th>
                   <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">
                     Stopped At
@@ -182,6 +239,9 @@ export default function EcsHealthTab() {
                   <tr key={task.taskId} className="border-t border-gray-100 dark:border-gray-700">
                     <td className="px-4 py-2 text-gray-800 dark:text-gray-200 font-mono text-xs">
                       {task.taskId.slice(0, 8)}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400 text-xs">
+                      {task.service}
                     </td>
                     <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
                       {task.stoppedAt ? new Date(task.stoppedAt).toLocaleString() : '—'}

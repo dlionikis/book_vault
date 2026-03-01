@@ -74,10 +74,10 @@ export default function S3StorageTab() {
   const { current, trends } = data;
 
   const pieData = [
-    { name: 'Standard', value: current.standardGB },
-    { name: 'IT Frequent', value: current.itFrequentGB },
-    { name: 'IT Infrequent', value: current.itInfrequentGB },
-    { name: 'IT Archive', value: current.itArchiveGB },
+    { name: 'S3 Standard', value: current.standardGB },
+    { name: 'Intelligent-Tiering (Frequent)', value: current.itFrequentGB },
+    { name: 'Intelligent-Tiering (Infrequent)', value: current.itInfrequentGB },
+    { name: 'Intelligent-Tiering (Archive)', value: current.itArchiveGB },
   ].filter((d) => d.value > 0);
 
   const archivePercent =
@@ -95,10 +95,10 @@ export default function S3StorageTab() {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <SummaryCard label="Total Size" value={`${current.totalSizeGB.toFixed(2)} GB`} />
-        <SummaryCard label="Objects" value={current.objectCount.toLocaleString()} />
-        <SummaryCard label="Archive %" value={`${archivePercent}%`} />
-        <SummaryCard label="Standard" value={`${current.standardGB.toFixed(2)} GB`} />
+        <SummaryCard label="Total S3 Storage" value={`${current.totalSizeGB.toFixed(2)} GB`} />
+        <SummaryCard label="Total Objects" value={current.objectCount.toLocaleString()} />
+        <SummaryCard label="Cold Storage %" value={`${archivePercent}%`} />
+        <SummaryCard label="S3 Standard" value={`${current.standardGB.toFixed(2)} GB`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -137,7 +137,7 @@ export default function S3StorageTab() {
         {/* Size Trend */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">
-            Size Trend (90 Days)
+            Total S3 Storage Over Time (90 Days)
           </h3>
           {trendData.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
@@ -150,7 +150,7 @@ export default function S3StorageTab() {
                 <Area
                   type="monotone"
                   dataKey="total"
-                  name="Total"
+                  name="Total Storage"
                   stroke="#3b82f6"
                   fill="#3b82f6"
                   fillOpacity={0.1}
@@ -158,7 +158,7 @@ export default function S3StorageTab() {
                 <Area
                   type="monotone"
                   dataKey="archive"
-                  name="Archive"
+                  name="Cold Storage (Infrequent + Archive)"
                   stroke="#8b5cf6"
                   fill="#8b5cf6"
                   fillOpacity={0.1}
