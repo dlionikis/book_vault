@@ -357,11 +357,11 @@ struct PlaybackControlsView: View {
     let isPlaying: Bool
     let chapters: [Chapter]
     let currentChapterId: UUID?
-    let onPlayPause: () -> Void
-    let onSkipBackward: () -> Void
-    let onSkipForward: () -> Void
-    let onPreviousChapter: () -> Void
-    let onNextChapter: () -> Void
+    let onPlayPause: @MainActor () -> Void
+    let onSkipBackward: @MainActor () -> Void
+    let onSkipForward: @MainActor () -> Void
+    let onPreviousChapter: @MainActor () -> Void
+    let onNextChapter: @MainActor () -> Void
 
     var canGoPreviousChapter: Bool {
         guard let currentChapterId,
@@ -432,6 +432,16 @@ struct PlaybackControlsView: View {
 }
 
 // MARK: - Previews
+
+#Preview("Screenshot") {
+    NowPlayingView()
+        .onAppear {
+            let manager = AudioPlayerManager.shared
+            manager.play(book: .mockScreenshot)
+            manager.updateChapters(Chapter.mockChapters)
+            manager.currentTime = 2000
+        }
+}
 
 #Preview("Playing - With Chapters") {
     NowPlayingView()

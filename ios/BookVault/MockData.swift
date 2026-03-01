@@ -11,6 +11,34 @@ import Foundation
 // MARK: - Book Mock Data
 
 extension Book {
+    /// Fictional book for App Store screenshots (no copyright issues)
+    static let mockScreenshot = Book(
+        id: UUID(),
+        asin: "B000SCREENSHOT",
+        title: "The Last Cartographer",
+        publisherSummary: """
+        When the world's maps begin to rewrite themselves, retired cartographer Elena Vasquez discovers that the changes mirror an ancient atlas hidden in her grandmother's attic. Racing across continents with a crew of unlikely allies, she must decode the shifting borders before reality itself is redrawn. A sweeping adventure about memory, place, and the stories we tell ourselves about where we belong.
+        """,
+        runtimeMinutes: 845,
+        releaseDate: Date(timeIntervalSince1970: 1_704_067_200), // Jan 2024
+        publisher: "Hearthstone Audio",
+        coverUrl: nil,
+        audioUrl: "https://example.com/audio/last-cartographer.mp3",
+        authors: [
+            Author(id: UUID(), name: "Marina Solano", asin: nil)
+        ],
+        narrators: [
+            Narrator(id: UUID(), name: "James Calloway", asin: nil)
+        ],
+        series: [
+            SeriesInfo(id: UUID(), title: "The Atlas Chronicles", sequence: 1, asin: nil)
+        ],
+        categories: [
+            Category(id: UUID(), name: "Adventure"),
+            Category(id: UUID(), name: "Mystery")
+        ]
+    )
+
     /// Standard audiobook example
     static let mockStandard = Book(
         id: UUID(),

@@ -777,6 +777,12 @@ struct DownloadButton: View {
 
 // MARK: - Previews
 
+#Preview("Screenshot") {
+    NavigationView {
+        BookDetailView(book: .mockScreenshot)
+    }
+}
+
 #Preview("Standard Book") {
     NavigationView {
         BookDetailView(book: .mockStandard)
