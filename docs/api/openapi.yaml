@@ -62,6 +62,8 @@ tags:
     description: API health and monitoring
   - name: Media
     description: Media file streaming (audio and images)
+  - name: Admin
+    description: Admin-only monitoring and management endpoints
 
 components:
   securitySchemes:
@@ -2608,3 +2610,298 @@ paths:
                   status:
                     type: string
                     example: 'ok'
+
+  # Admin endpoints
+  /api/admin/costs:
+    get:
+      operationId: getAdminCosts
+      tags: [Admin]
+      summary: Get AWS cost breakdown by service
+      description: Returns monthly AWS costs grouped by service. Requires admin privileges.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: months
+          in: query
+          schema:
+            type: integer
+            default: 6
+          description: Number of months to look back
+      responses:
+        '200':
+          description: Cost data
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [months, currency]
+                properties:
+                  months:
+                    type: array
+                    items:
+                      type: object
+                      required: [month, services, total]
+                      properties:
+                        month:
+                          type: string
+                        services:
+                          type: array
+                          items:
+                            type: object
+                            required: [service, cost]
+                            properties:
+                              service:
+                                type: string
+                              cost:
+                                type: number
+                        total:
+                          type: number
+                  currency:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/admin/budgets:
+    get:
+      operationId: getAdminBudgets
+      tags: [Admin]
+      summary: Get AWS budget status
+      description: Returns budget limits, actual and forecasted spend. Requires admin privileges.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Budget data
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [budgets]
+                properties:
+                  budgets:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, limit, actualSpend, forecastedSpend, percentUsed]
+                      properties:
+                        name:
+                          type: string
+                        limit:
+                          type: number
+                        actualSpend:
+                          type: number
+                        forecastedSpend:
+                          type: number
+                        percentUsed:
+                          type: number
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/admin/ecs-health:
+    get:
+      operationId: getAdminEcsHealth
+      tags: [Admin]
+      summary: Get ECS service health and metrics
+      description: Returns task counts, CPU/memory metrics, and stopped task info. Requires admin privileges.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: hours
+          in: query
+          schema:
+            type: integer
+            default: 24
+          description: Hours of metric data to return
+      responses:
+        '200':
+          description: ECS health data
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [service, tasks, metrics, summary]
+                properties:
+                  service:
+                    type: string
+                  tasks:
+                    type: object
+                    required: [running, desired, pending, recentlyStopped]
+                    properties:
+                      running:
+                        type: integer
+                      desired:
+                        type: integer
+                      pending:
+                        type: integer
+                      recentlyStopped:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            taskId:
+                              type: string
+                            stoppedAt:
+                              type: string
+                              nullable: true
+                            durationMinutes:
+                              type: integer
+                              nullable: true
+                            stopCode:
+                              type: string
+                              nullable: true
+                            stoppedReason:
+                              type: string
+                              nullable: true
+                  metrics:
+                    type: object
+                    required: [cpu, memory, timestamps]
+                    properties:
+                      cpu:
+                        type: array
+                        items:
+                          type: number
+                      memory:
+                        type: array
+                        items:
+                          type: number
+                      timestamps:
+                        type: array
+                        items:
+                          type: string
+                  summary:
+                    type: object
+                    required: [spotInterruptions, crashes, deploymentStops]
+                    properties:
+                      spotInterruptions:
+                        type: integer
+                      crashes:
+                        type: integer
+                      deploymentStops:
+                        type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/admin/s3-storage:
+    get:
+      operationId: getAdminS3Storage
+      tags: [Admin]
+      summary: Get S3 storage metrics and trends
+      description: Returns current storage breakdown by class and 90-day trends. Requires admin privileges.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: S3 storage data
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [current, trends]
+                properties:
+                  current:
+                    type: object
+                    required:
+                      [
+                        totalSizeGB,
+                        standardGB,
+                        itFrequentGB,
+                        itInfrequentGB,
+                        itArchiveGB,
+                        objectCount,
+                      ]
+                    properties:
+                      totalSizeGB:
+                        type: number
+                      standardGB:
+                        type: number
+                      itFrequentGB:
+                        type: number
+                      itInfrequentGB:
+                        type: number
+                      itArchiveGB:
+                        type: number
+                      objectCount:
+                        type: integer
+                  trends:
+                    type: object
+                    required: [totalSize, archiveSize, objectCount]
+                    properties:
+                      totalSize:
+                        type: object
+                        properties:
+                          timestamps:
+                            type: array
+                            items:
+                              type: string
+                          values:
+                            type: array
+                            items:
+                              type: number
+                      archiveSize:
+                        type: object
+                        properties:
+                          timestamps:
+                            type: array
+                            items:
+                              type: string
+                          values:
+                            type: array
+                            items:
+                              type: number
+                      objectCount:
+                        type: object
+                        properties:
+                          timestamps:
+                            type: array
+                            items:
+                              type: string
+                          values:
+                            type: array
+                            items:
+                              type: number
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

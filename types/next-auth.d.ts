@@ -28,6 +28,9 @@ declare module 'next-auth' {
 
       /** User's email address */
       email: string;
+
+      /** Whether the user has admin privileges */
+      isAdmin?: boolean;
     };
   }
 
@@ -57,5 +60,8 @@ declare module 'next-auth/jwt' {
 
     /** User's email, set by jwt() callback */
     email?: string;
+
+    /** Whether the user has admin privileges */
+    isAdmin?: boolean;
   }
 }

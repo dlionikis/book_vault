@@ -80,6 +80,15 @@ export default function UserMenu() {
             >
               My Library
             </Link>
+            {(session.user as any)?.isAdmin && (
+              <Link
+                href="/admin/dashboard"
+                className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => setIsOpen(false)}
+              >
+                Admin Dashboard
+              </Link>
+            )}
             <button
               onClick={() => {
                 setIsOpen(false);

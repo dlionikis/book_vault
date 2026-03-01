@@ -1,0 +1,376 @@
+{
+  "widgets": [
+    {
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "# Book Vault Infrastructure Dashboard"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 1,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "ECS CPU Utilization",
+        "metrics": [
+          [
+            "AWS/ECS",
+            "CPUUtilization",
+            "ClusterName",
+            "book-vault",
+            "ServiceName",
+            "book-vault-service",
+            { "stat": "Average" }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 1,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "ECS Memory Utilization",
+        "metrics": [
+          [
+            "AWS/ECS",
+            "MemoryUtilization",
+            "ClusterName",
+            "book-vault",
+            "ServiceName",
+            "book-vault-service",
+            { "stat": "Average" }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 7,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "ECS Task Count",
+        "metrics": [
+          [
+            "ECS/ContainerInsights",
+            "RunningTaskCount",
+            "ClusterName",
+            "book-vault",
+            "ServiceName",
+            "book-vault-service",
+            { "stat": "Average" }
+          ],
+          [
+            "ECS/ContainerInsights",
+            "DesiredTaskCount",
+            "ClusterName",
+            "book-vault",
+            "ServiceName",
+            "book-vault-service",
+            { "stat": "Average" }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 7,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "ALB Request Count",
+        "metrics": [
+          [
+            "AWS/ApplicationELB",
+            "RequestCount",
+            "LoadBalancer",
+            "app/book-vault-alb/",
+            { "stat": "Sum" }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 7,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "ALB Response Time",
+        "metrics": [
+          [
+            "AWS/ApplicationELB",
+            "TargetResponseTime",
+            "LoadBalancer",
+            "app/book-vault-alb/",
+            { "stat": "p50", "label": "p50" }
+          ],
+          [
+            "AWS/ApplicationELB",
+            "TargetResponseTime",
+            "LoadBalancer",
+            "app/book-vault-alb/",
+            { "stat": "p95", "label": "p95" }
+          ],
+          [
+            "AWS/ApplicationELB",
+            "TargetResponseTime",
+            "LoadBalancer",
+            "app/book-vault-alb/",
+            { "stat": "p99", "label": "p99" }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 13,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "ALB HTTP 5xx Errors",
+        "metrics": [
+          [
+            "AWS/ApplicationELB",
+            "HTTPCode_ELB_5XX_Count",
+            "LoadBalancer",
+            "app/book-vault-alb/",
+            { "stat": "Sum" }
+          ],
+          [
+            "AWS/ApplicationELB",
+            "HTTPCode_Target_5XX_Count",
+            "LoadBalancer",
+            "app/book-vault-alb/",
+            { "stat": "Sum" }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 13,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "ALB HTTP 4xx Errors",
+        "metrics": [
+          [
+            "AWS/ApplicationELB",
+            "HTTPCode_ELB_4XX_Count",
+            "LoadBalancer",
+            "app/book-vault-alb/",
+            { "stat": "Sum" }
+          ],
+          [
+            "AWS/ApplicationELB",
+            "HTTPCode_Target_4XX_Count",
+            "LoadBalancer",
+            "app/book-vault-alb/",
+            { "stat": "Sum" }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 13,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "ALB Healthy Host Count",
+        "metrics": [
+          [
+            "AWS/ApplicationELB",
+            "HealthyHostCount",
+            "LoadBalancer",
+            "app/book-vault-alb/",
+            "TargetGroup",
+            "targetgroup/book-vault-tg/",
+            { "stat": "Average" }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 19,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "RDS CPU Utilization",
+        "metrics": [
+          [
+            "AWS/RDS",
+            "CPUUtilization",
+            "DBInstanceIdentifier",
+            "book-vault-db",
+            { "stat": "Average" }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 19,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "RDS Database Connections",
+        "metrics": [
+          [
+            "AWS/RDS",
+            "DatabaseConnections",
+            "DBInstanceIdentifier",
+            "book-vault-db",
+            { "stat": "Average" }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 19,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "RDS Free Storage Space",
+        "metrics": [
+          [
+            "AWS/RDS",
+            "FreeStorageSpace",
+            "DBInstanceIdentifier",
+            "book-vault-db",
+            { "stat": "Average" }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 25,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "S3 Bucket Size",
+        "metrics": [
+          [
+            "AWS/S3",
+            "BucketSizeBytes",
+            "BucketName",
+            "book-vault-media",
+            "StorageType",
+            "StandardStorage",
+            { "stat": "Average", "label": "Standard" }
+          ],
+          [
+            "AWS/S3",
+            "BucketSizeBytes",
+            "BucketName",
+            "book-vault-media",
+            "StorageType",
+            "IntelligentTieringFAStorage",
+            { "stat": "Average", "label": "IT Frequent" }
+          ],
+          [
+            "AWS/S3",
+            "BucketSizeBytes",
+            "BucketName",
+            "book-vault-media",
+            "StorageType",
+            "IntelligentTieringIAStorage",
+            { "stat": "Average", "label": "IT Infrequent" }
+          ],
+          [
+            "AWS/S3",
+            "BucketSizeBytes",
+            "BucketName",
+            "book-vault-media",
+            "StorageType",
+            "IntelligentTieringAAStorage",
+            { "stat": "Average", "label": "IT Archive" }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 86400
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 25,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "S3 Object Count",
+        "metrics": [
+          [
+            "AWS/S3",
+            "NumberOfObjects",
+            "BucketName",
+            "book-vault-media",
+            "StorageType",
+            "AllStorageTypes",
+            { "stat": "Average" }
+          ]
+        ],
+        "view": "timeSeries",
+        "region": "us-east-1",
+        "period": 86400
+      }
+    }
+  ]
+}
