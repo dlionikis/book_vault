@@ -27,7 +27,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 CLUSTER="book-vault"
-SERVICE="book-vault-service"
+SERVICE="book-vault-spot"
 CONTAINER="book-vault"
 REGION="us-east-1"
 

@@ -16,7 +16,7 @@
 set -euo pipefail
 
 CLUSTER="book-vault"
-SERVICE="book-vault-service"
+SERVICE="book-vault-spot"
 CONTAINER="book-vault"
 
 # Colors

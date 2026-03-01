@@ -548,29 +548,55 @@ class AWSNormalizer:
         ]
 
     def _normalize_lambda(self) -> List[Dict]:
-        """Normalize Lambda function data."""
+        """Normalize Lambda function data with triggers."""
         data = load_json_file(self.raw_dir / "lambda-functions.json")
         if not data:
             return []
 
-        return [
-            {
+        functions = []
+        for fn in data.get("Functions", []):
+            func_name = fn.get("FunctionName", "")
+
+            # Parse resource-based policy to find triggers
+            triggers = []
+            policy_data = load_json_file(self.raw_dir / f"lambda-policy-{func_name}.json")
+            if policy_data and policy_data.get("Policy"):
+                try:
+                    import json as json_mod
+                    pol = json_mod.loads(policy_data["Policy"])
+                    for stmt in pol.get("Statement", []):
+                        source_arn = stmt.get("Condition", {}).get(
+                            "ArnLike", {}
+                        ).get("AWS:SourceArn", "")
+                        if source_arn:
+                            triggers.append({
+                                "source": stmt.get("Principal", {}).get("Service", ""),
+                                "source_arn": source_arn,
+                                "statement_id": stmt.get("Sid", ""),
+                            })
+                except Exception:
+                    pass
+
+            functions.append({
                 "arn": fn.get("FunctionArn"),
-                "name": fn.get("FunctionName"),
+                "name": func_name,
                 "runtime": fn.get("Runtime"),
                 "memory": fn.get("MemorySize"),
                 "timeout": fn.get("Timeout"),
                 "handler": fn.get("Handler"),
-                "role": fn.get("Role"),
+                "architecture": fn.get("Architectures", ["x86_64"])[0],
+                "role": fn.get("Role", "").split("/")[-1] if fn.get("Role") else None,
+                "description": fn.get("Description"),
                 "vpc_config": {
                     "vpc_id": fn.get("VpcConfig", {}).get("VpcId"),
                     "subnets": fn.get("VpcConfig", {}).get("SubnetIds", []),
                     "security_groups": fn.get("VpcConfig", {}).get("SecurityGroupIds", [])
                 } if fn.get("VpcConfig") else None,
-                "last_modified": fn.get("LastModified")
-            }
-            for fn in data.get("Functions", [])
-        ]
+                "last_modified": fn.get("LastModified"),
+                "triggers": triggers,
+            })
+
+        return functions
 
     def _normalize_data(self) -> Dict:
         """Normalize data store resources."""
@@ -894,22 +920,52 @@ class AWSNormalizer:
         ]
 
     def _normalize_event_rules(self) -> List[Dict]:
-        """Normalize EventBridge rule data."""
+        """Normalize EventBridge rule data with targets."""
         data = load_json_file(self.raw_dir / "event-rules.json")
         if not data:
             return []
 
-        return [
-            {
+        rules = []
+        for rule in data.get("Rules", []):
+            rule_name = rule.get("Name", "")
+
+            # Load targets for this rule
+            targets_data = load_json_file(
+                self.raw_dir / f"event-targets-{rule_name}.json"
+            ) or {}
+            targets = [
+                {
+                    "id": t.get("Id"),
+                    "arn": t.get("Arn"),
+                    "type": self._infer_target_type(t.get("Arn", "")),
+                    "name": t.get("Arn", "").split(":")[-1] if t.get("Arn") else None,
+                }
+                for t in targets_data.get("Targets", [])
+            ]
+
+            rules.append({
                 "arn": rule.get("Arn"),
-                "name": rule.get("Name"),
+                "name": rule_name,
                 "description": rule.get("Description"),
                 "state": rule.get("State"),
                 "schedule": rule.get("ScheduleExpression"),
-                "event_pattern": rule.get("EventPattern")
-            }
-            for rule in data.get("Rules", [])
-        ]
+                "event_pattern": rule.get("EventPattern"),
+                "targets": targets,
+            })
+
+        return rules
+
+    def _infer_target_type(self, arn: str) -> str:
+        """Infer the target type from its ARN."""
+        if ":function:" in arn:
+            return "lambda"
+        elif ":topic" in arn:
+            return "sns"
+        elif ":queue" in arn:
+            return "sqs"
+        elif ":stateMachine:" in arn:
+            return "step_functions"
+        return "unknown"
 
     def _normalize_sqs(self) -> List[Dict]:
         """Normalize SQS queue data."""
@@ -923,15 +979,38 @@ class AWSNormalizer:
         ]
 
     def _normalize_sns(self) -> List[Dict]:
-        """Normalize SNS topic data."""
+        """Normalize SNS topic data with subscriptions."""
         data = load_json_file(self.raw_dir / "sns-topics.json")
         if not data:
             return []
 
-        return [
-            {"arn": topic.get("TopicArn"), "name": topic.get("TopicArn", "").split(":")[-1]}
-            for topic in data.get("Topics", [])
-        ]
+        topics = []
+        for topic in data.get("Topics", []):
+            topic_arn = topic.get("TopicArn", "")
+            topic_name = topic_arn.split(":")[-1]
+
+            # Load subscriptions
+            subs_data = load_json_file(
+                self.raw_dir / f"sns-subscriptions-{topic_name}.json"
+            ) or {}
+            subscriptions = [
+                {
+                    "protocol": s.get("Protocol"),
+                    "endpoint": s.get("Endpoint", "").split(":")[-1]
+                        if s.get("Protocol") == "lambda"
+                        else "(redacted)" if s.get("Protocol") == "email"
+                        else s.get("Endpoint"),
+                }
+                for s in subs_data.get("Subscriptions", [])
+            ]
+
+            topics.append({
+                "arn": topic_arn,
+                "name": topic_name,
+                "subscriptions": subscriptions,
+            })
+
+        return topics
 
     def _infer_relationships(self) -> Dict:
         """Infer relationships between resources."""

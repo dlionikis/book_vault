@@ -319,6 +319,16 @@ discover_compute() {
 
     # Lambda
     aws_query "lambda-functions.json" lambda list-functions || true
+
+    # Lambda function details (environment, role, policy)
+    if [[ -f "${RAW_DIR}/lambda-functions.json" ]] && \
+       jq -e '.Functions | length > 0' "${RAW_DIR}/lambda-functions.json" > /dev/null 2>&1; then
+        local func_names=$(jq -r '.Functions[].FunctionName' "${RAW_DIR}/lambda-functions.json" 2>/dev/null || echo "")
+        for func in $func_names; do
+            aws_query "lambda-detail-${func}.json" lambda get-function --function-name "$func" || true
+            aws_query "lambda-policy-${func}.json" lambda get-policy --function-name "$func" || true
+        done
+    fi
 }
 
 # Discover data stores
@@ -440,11 +450,30 @@ discover_observability() {
     # EventBridge Rules
     aws_query "event-rules.json" events list-rules || true
 
+    # EventBridge rule targets
+    if [[ -f "${RAW_DIR}/event-rules.json" ]] && \
+       jq -e '.Rules | length > 0' "${RAW_DIR}/event-rules.json" > /dev/null 2>&1; then
+        local rule_names=$(jq -r '.Rules[].Name' "${RAW_DIR}/event-rules.json" 2>/dev/null || echo "")
+        for rule in $rule_names; do
+            aws_query "event-targets-${rule}.json" events list-targets-by-rule --rule "$rule" || true
+        done
+    fi
+
     # SQS Queues
     aws_query "sqs-queues.json" sqs list-queues || true
 
     # SNS Topics
     aws_query "sns-topics.json" sns list-topics || true
+
+    # SNS topic subscriptions
+    if [[ -f "${RAW_DIR}/sns-topics.json" ]] && \
+       jq -e '.Topics | length > 0' "${RAW_DIR}/sns-topics.json" > /dev/null 2>&1; then
+        local topic_arns=$(jq -r '.Topics[].TopicArn' "${RAW_DIR}/sns-topics.json" 2>/dev/null || echo "")
+        for arn in $topic_arns; do
+            local topic_name=$(echo "$arn" | grep -oE '[^:]+$')
+            aws_query "sns-subscriptions-${topic_name}.json" sns list-subscriptions-by-topic --topic-arn "$arn" || true
+        done
+    fi
 }
 
 # =============================================================================
