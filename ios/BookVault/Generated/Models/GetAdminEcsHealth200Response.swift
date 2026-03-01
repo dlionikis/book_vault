@@ -12,20 +12,23 @@ import AnyCodable
 
 public struct GetAdminEcsHealth200Response: Codable, JSONEncodable, Hashable {
 
-    public var service: String
+    public var cluster: String
+    public var services: [GetAdminEcsHealth200ResponseServicesInner]
     public var tasks: GetAdminEcsHealth200ResponseTasks
     public var metrics: GetAdminEcsHealth200ResponseMetrics
     public var summary: GetAdminEcsHealth200ResponseSummary
 
-    public init(service: String, tasks: GetAdminEcsHealth200ResponseTasks, metrics: GetAdminEcsHealth200ResponseMetrics, summary: GetAdminEcsHealth200ResponseSummary) {
-        self.service = service
+    public init(cluster: String, services: [GetAdminEcsHealth200ResponseServicesInner], tasks: GetAdminEcsHealth200ResponseTasks, metrics: GetAdminEcsHealth200ResponseMetrics, summary: GetAdminEcsHealth200ResponseSummary) {
+        self.cluster = cluster
+        self.services = services
         self.tasks = tasks
         self.metrics = metrics
         self.summary = summary
     }
 
     public enum CodingKeys: String, CodingKey, CaseIterable {
-        case service
+        case cluster
+        case services
         case tasks
         case metrics
         case summary
@@ -35,7 +38,8 @@ public struct GetAdminEcsHealth200Response: Codable, JSONEncodable, Hashable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(service, forKey: .service)
+        try container.encode(cluster, forKey: .cluster)
+        try container.encode(services, forKey: .services)
         try container.encode(tasks, forKey: .tasks)
         try container.encode(metrics, forKey: .metrics)
         try container.encode(summary, forKey: .summary)

@@ -2742,10 +2742,24 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [service, tasks, metrics, summary]
+                required: [cluster, services, tasks, metrics, summary]
                 properties:
-                  service:
+                  cluster:
                     type: string
+                  services:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, running, desired, pending]
+                      properties:
+                        name:
+                          type: string
+                        running:
+                          type: integer
+                        desired:
+                          type: integer
+                        pending:
+                          type: integer
                   tasks:
                     type: object
                     required: [running, desired, pending, recentlyStopped]

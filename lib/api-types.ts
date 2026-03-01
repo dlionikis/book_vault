@@ -2174,7 +2174,13 @@ export interface operations {
       200: {
         content: {
           "application/json": {
-            service: string;
+            cluster: string;
+            services: {
+                name: string;
+                running: number;
+                desired: number;
+                pending: number;
+              }[];
             tasks: {
               running: number;
               desired: number;
