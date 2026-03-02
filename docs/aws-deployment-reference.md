@@ -72,17 +72,25 @@ done
 
 ## Database Operations
 
-RDS is locked down - only accessible via ECS Exec.
+RDS is locked down by default — only accessible from ECS tasks via security group.
 
-### Prerequisites
+### Direct Access (Firewall)
+
+Temporarily whitelist your IP for direct `psql` access:
 
 ```bash
-brew install --cask session-manager-plugin
+npm run db:firewall:open    # Allow your current public IP
+npm run db:firewall:close   # Revoke your current public IP
+npm run db:firewall:list    # Show all whitelisted IPs
 ```
 
-### Connect to Database
+### Connect via ECS Exec
+
+For access without opening the firewall:
 
 ```bash
+brew install --cask session-manager-plugin  # One-time prerequisite
+
 # Interactive shell in ECS container
 npm run db:connect
 
