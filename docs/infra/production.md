@@ -2,7 +2,7 @@
 
 > Auto-generated infrastructure documentation from AWS API queries.
 >
-> **Generated**: 2026-01-02T09:32:13Z
+> **Generated**: 2026-03-01T21:33:57Z
 > **Account ID**: 212477431339
 > **Region**: us-east-1
 > **Audit Version**: 1.0.0
@@ -17,7 +17,7 @@
 | Subnets        | 6     |
 | Load Balancers | 1     |
 | ECS Clusters   | 1     |
-| ECS Services   | 1     |
+| ECS Services   | 2     |
 | RDS Instances  | 1     |
 | S3 Buckets     | 1     |
 
@@ -123,12 +123,12 @@
 - **ARN**: `arn:aws:ecs:us-east-1:212477431339:cluster/book-vault`
 - **Status**: ACTIVE
 - **Running Tasks**: 2
-- **Active Services**: 1
+- **Active Services**: 2
 - **Capacity Providers**: FARGATE, FARGATE_SPOT
 
 ### ECS Services
 
-#### book-vault-service
+#### book-vault-spot
 
 - **Status**: ACTIVE
 - **Desired/Running/Pending**: 2/2/0
@@ -138,9 +138,66 @@
 - **Load Balancers**:
   - Container `book-vault:8080`
 
+#### book-vault-fallback
+
+- **Status**: ACTIVE
+- **Desired/Running/Pending**: 0/0/0
+- **Launch Type**: Capacity Provider
+  - FARGATE: weight=1, base=0
+- **Task Definition**: `arn:aws:ecs:us-east-1:212477431339:task-definition/book-vault:3`
+- **Load Balancers**:
+  - Container `book-vault:8080`
+
 ### ECR Repositories
 
 - **book-vault**: `212477431339.dkr.ecr.us-east-1.amazonaws.com/book-vault`
+
+### Lambda Functions
+
+- **book-vault-spot-fallback** (python3.12, 128MB)
+
+## Automation
+
+### Lambda Functions
+
+#### book-vault-spot-fallback
+
+- **Runtime**: python3.12 (arm64)
+- **Memory**: 128MB, Timeout: 30s
+- **IAM Role**: `book-vault-spot-fallback-lambda`
+- **Triggered by**:
+  - events: `spot-task-stopped-trigger`
+  - events: `hourly-recovery-check-trigger`
+
+### EventBridge Rules
+
+#### book-vault-spot-recovery-check
+
+- **State**: ENABLED
+- **Schedule**: `rate(1 hour)`
+- **Targets**:
+  - lambda: `book-vault-spot-fallback`
+
+#### book-vault-spot-task-stopped
+
+- **State**: ENABLED
+- **Event Pattern**: ECS task state change
+- **Targets**:
+  - lambda: `book-vault-spot-fallback`
+
+### Spot Fallback Automation Flow
+
+```
+Spot task stops -> EventBridge -> Lambda (spot-fallback)
+  -> checks Spot running count
+  -> if 0: activates fallback on-demand service
+  -> sends SNS alert
+
+Hourly schedule -> EventBridge -> Lambda (spot-fallback)
+  -> checks if Spot is back
+  -> if yes: deactivates fallback service
+  -> sends SNS alert
+```
 
 ## Data Stores
 
@@ -172,13 +229,15 @@
   - Policy to enable Amazon ECS to manage your EC2 instances and related resources.
 - **book-vault-ecs-execution**
 - **book-vault-ecs-task**
+- **book-vault-spot-fallback-lambda**
 
 ### Secrets Manager
 
-| Secret Name           | Description                           |
-| --------------------- | ------------------------------------- |
-| `book-vault/database` | Book Vault RDS PostgreSQL credentials |
-| `book-vault/auth`     | Book Vault NextAuth configuration     |
+| Secret Name                 | Description                                                 |
+| --------------------------- | ----------------------------------------------------------- |
+| `book-vault/database`       | Book Vault RDS PostgreSQL credentials                       |
+| `book-vault/auth`           | Book Vault NextAuth configuration                           |
+| `book-vault/prod/test-user` | Production test user credentials for Claude Code validation |
 
 ### SSL/TLS Certificates
 
@@ -198,6 +257,7 @@
 
 ### CloudWatch Log Groups
 
+- `/aws/lambda/book-vault-spot-fallback` (Retention: Never expire)
 - `/ecs/book-vault` (Retention: Never expire)
 
 ## Known Gaps / Permissions Issues

@@ -211,6 +211,34 @@ export interface paths {
      */
     get: operations["healthCheck"];
   };
+  "/api/admin/costs": {
+    /**
+     * Get AWS cost breakdown by service
+     * @description Returns monthly AWS costs grouped by service. Requires admin privileges.
+     */
+    get: operations["getAdminCosts"];
+  };
+  "/api/admin/budgets": {
+    /**
+     * Get AWS budget status
+     * @description Returns budget limits, actual and forecasted spend. Requires admin privileges.
+     */
+    get: operations["getAdminBudgets"];
+  };
+  "/api/admin/ecs-health": {
+    /**
+     * Get ECS service health and metrics
+     * @description Returns task counts, CPU/memory metrics, and stopped task info. Requires admin privileges.
+     */
+    get: operations["getAdminEcsHealth"];
+  };
+  "/api/admin/s3-storage": {
+    /**
+     * Get S3 storage metrics and trends
+     * @description Returns current storage breakdown by class and 90-day trends. Requires admin privileges.
+     */
+    get: operations["getAdminS3Storage"];
+  };
 }
 
 export type webhooks = Record<string, never>;
@@ -2050,6 +2078,193 @@ export interface operations {
             /** @example ok */
             status: string;
           };
+        };
+      };
+    };
+  };
+  /**
+   * Get AWS cost breakdown by service
+   * @description Returns monthly AWS costs grouped by service. Requires admin privileges.
+   */
+  getAdminCosts: {
+    parameters: {
+      query?: {
+        /** @description Number of months to look back */
+        months?: number;
+      };
+    };
+    responses: {
+      /** @description Cost data */
+      200: {
+        content: {
+          "application/json": {
+            months: {
+                month: string;
+                services: {
+                    service: string;
+                    cost: number;
+                  }[];
+                total: number;
+              }[];
+            currency: string;
+          };
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Forbidden - admin access required */
+      403: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /**
+   * Get AWS budget status
+   * @description Returns budget limits, actual and forecasted spend. Requires admin privileges.
+   */
+  getAdminBudgets: {
+    responses: {
+      /** @description Budget data */
+      200: {
+        content: {
+          "application/json": {
+            budgets: {
+                name: string;
+                limit: number;
+                actualSpend: number;
+                forecastedSpend: number;
+                percentUsed: number;
+              }[];
+          };
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Forbidden - admin access required */
+      403: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /**
+   * Get ECS service health and metrics
+   * @description Returns task counts, CPU/memory metrics, and stopped task info. Requires admin privileges.
+   */
+  getAdminEcsHealth: {
+    parameters: {
+      query?: {
+        /** @description Hours of metric data to return */
+        hours?: number;
+      };
+    };
+    responses: {
+      /** @description ECS health data */
+      200: {
+        content: {
+          "application/json": {
+            cluster: string;
+            services: {
+                name: string;
+                running: number;
+                desired: number;
+                pending: number;
+              }[];
+            tasks: {
+              running: number;
+              desired: number;
+              pending: number;
+              recentlyStopped: ({
+                  taskId?: string;
+                  stoppedAt?: string | null;
+                  durationMinutes?: number | null;
+                  stopCode?: string | null;
+                  stoppedReason?: string | null;
+                })[];
+            };
+            metrics: {
+              cpu: number[];
+              memory: number[];
+              timestamps: string[];
+            };
+            summary: {
+              spotInterruptions: number;
+              crashes: number;
+              deploymentStops: number;
+            };
+          };
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Forbidden - admin access required */
+      403: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /**
+   * Get S3 storage metrics and trends
+   * @description Returns current storage breakdown by class and 90-day trends. Requires admin privileges.
+   */
+  getAdminS3Storage: {
+    responses: {
+      /** @description S3 storage data */
+      200: {
+        content: {
+          "application/json": {
+            current: {
+              totalSizeGB: number;
+              standardGB: number;
+              itFrequentGB: number;
+              itInfrequentGB: number;
+              itArchiveGB: number;
+              objectCount: number;
+            };
+            trends: {
+              totalSize: {
+                timestamps?: string[];
+                values?: number[];
+              };
+              archiveSize: {
+                timestamps?: string[];
+                values?: number[];
+              };
+              objectCount: {
+                timestamps?: string[];
+                values?: number[];
+              };
+            };
+          };
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Forbidden - admin access required */
+      403: {
+        content: {
+          "application/json": components["schemas"]["Error"];
         };
       };
     };

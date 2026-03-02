@@ -6,7 +6,7 @@ digraph BookVaultInfra {
     node [fontname="Helvetica", shape=box, style="filled,rounded"];
     edge [fontname="Helvetica", fontsize=10];
     bgcolor="white";
-    label=<<B>Book Vault AWS Infrastructure</B><BR/>    <FONT POINT-SIZE="10">Account: 212477431339 | Region: us-east-1 | Generated: 2026-01-02T09:32:13Z</FONT>>;
+    label=<<B>Book Vault AWS Infrastructure</B><BR/>    <FONT POINT-SIZE="10">Account: 212477431339 | Region: us-east-1 | Generated: 2026-03-01T21:33:57Z</FONT>>;
     labelloc=t;
     fontsize=16;
 
@@ -42,7 +42,8 @@ digraph BookVaultInfra {
             fillcolor="#FCF3CF";
             color="#F39C12";
 
-            ecs_book_vault_service [label="ECS Service\nbook-vault-service\n(2 tasks)", fillcolor="#FF9900", shape=box];
+            ecs_book_vault_spot [label="ECS Service\nbook-vault-spot\n(2 tasks)", fillcolor="#FF9900", shape=box];
+            ecs_book_vault_fallback [label="ECS Service\nbook-vault-fallback\n(0 tasks)", fillcolor="#FF9900", shape=box];
         }
 
     }
@@ -55,8 +56,11 @@ digraph BookVaultInfra {
 
     // Connections
     internet -> lb_book_vault_alb [label="HTTPS"];
-    lb_book_vault_alb -> ecs_book_vault_service [label=":8080"];
-    ecs_book_vault_service -> rds_book_vault_db [label=":5432", style=dashed];
-    ecs_book_vault_service -> s3_book_vault_media [label="S3 API", style=dashed];
+    lb_book_vault_alb -> ecs_book_vault_spot [label=":8080"];
+    lb_book_vault_alb -> ecs_book_vault_fallback [label=":8080"];
+    ecs_book_vault_spot -> rds_book_vault_db [label=":5432", style=dashed];
+    ecs_book_vault_fallback -> rds_book_vault_db [label=":5432", style=dashed];
+    ecs_book_vault_spot -> s3_book_vault_media [label="S3 API", style=dashed];
+    ecs_book_vault_fallback -> s3_book_vault_media [label="S3 API", style=dashed];
 
 }
