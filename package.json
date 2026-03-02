@@ -53,7 +53,10 @@
     "deploy": "./scripts/deploy.sh",
     "deploy:dry-run": "./scripts/deploy.sh --dry-run",
     "deploy:web": "./scripts/deploy.sh --web",
-    "deploy:only": "./scripts/deploy.sh --deploy-only"
+    "deploy:only": "./scripts/deploy.sh --deploy-only",
+    "db:firewall:open": "./scripts/db-firewall.sh open",
+    "db:firewall:close": "./scripts/db-firewall.sh close",
+    "db:firewall:list": "./scripts/db-firewall.sh list"
   },
   "dependencies": {
     "@aws-sdk/client-budgets": "^3.1000.0",
