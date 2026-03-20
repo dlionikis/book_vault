@@ -20,6 +20,7 @@ interface MonthCost {
   month: string;
   services: ServiceCost[];
   total: number;
+  creditRefund: number;
 }
 
 interface CostsData {
@@ -92,6 +93,25 @@ export default function CostsTab() {
     return d.toLocaleDateString([], { month: 'short', year: '2-digit' });
   });
 
+  const totalAccrued = displayMonths.map((m) => m.total);
+  const totalCredits = displayMonths.map((m) => Math.abs(m.creditRefund || 0));
+  const totalBilled = totalAccrued.map((accrued, i) => accrued - totalCredits[i]);
+
+  const calculateMoM = (values: number[]) => {
+    const current = values[0] ?? 0;
+    const previous = values[1] ?? 0;
+    return previous > 0 ? ((current - previous) / previous) * 100 : null;
+  };
+
+  const summaryRows = [
+    { label: 'Total accrued', values: totalAccrued },
+    { label: 'Total credits', values: totalCredits },
+    { label: 'Total billed', values: totalBilled },
+  ].map((row) => ({
+    ...row,
+    change: calculateMoM(row.values),
+  }));
+
   return (
     <div className="space-y-6">
       {/* Cost Trend Chart */}
@@ -122,13 +142,13 @@ export default function CostsTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-700">
-                <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-400 font-medium">
+                <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">
                   Service
                 </th>
                 {monthLabels.map((label, i) => (
                   <th
                     key={label}
-                    className={`text-right px-4 py-3 font-medium ${
+                    className={`text-right px-4 py-2 font-medium ${
                       i === 0
                         ? 'text-gray-800 dark:text-gray-200'
                         : 'text-gray-500 dark:text-gray-400'
@@ -137,19 +157,60 @@ export default function CostsTab() {
                     {label}
                   </th>
                 ))}
-                <th className="text-right px-4 py-3 text-gray-600 dark:text-gray-400 font-medium">
+                <th className="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">
                   MoM
                 </th>
               </tr>
             </thead>
             <tbody>
+              {summaryRows.map((row) => (
+                <tr
+                  key={row.label}
+                  className="border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/30"
+                >
+                  <td className="px-4 py-2 font-semibold text-gray-800 dark:text-gray-200">
+                    {row.label}
+                  </td>
+                  {row.values.map((value, i) => (
+                    <td
+                      key={i}
+                      className={`px-4 py-2 text-right font-semibold ${
+                        i === 0
+                          ? 'text-gray-800 dark:text-gray-200'
+                          : 'text-gray-600 dark:text-gray-300'
+                      }`}
+                    >
+                      ${value.toFixed(2)}
+                    </td>
+                  ))}
+                  <td className="px-4 py-2 text-right">
+                    {row.change !== null ? (
+                      <span
+                        className={
+                          row.change > 0
+                            ? 'text-red-600 dark:text-red-400'
+                            : row.change < 0
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-gray-500 dark:text-gray-400'
+                        }
+                      >
+                        {row.change > 0 ? '+' : ''}
+                        {row.change.toFixed(1)}%
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+
               {serviceRows.map((row) => (
                 <tr key={row.service} className="border-t border-gray-100 dark:border-gray-700">
-                  <td className="px-4 py-3 text-gray-800 dark:text-gray-200">{row.service}</td>
+                  <td className="px-4 py-2 text-gray-800 dark:text-gray-200">{row.service}</td>
                   {row.costs.map((cost, i) => (
                     <td
                       key={i}
-                      className={`px-4 py-3 text-right ${
+                      className={`px-4 py-2 text-right ${
                         i === 0
                           ? 'text-gray-800 dark:text-gray-200'
                           : 'text-gray-500 dark:text-gray-400'
@@ -158,7 +219,7 @@ export default function CostsTab() {
                       ${cost.toFixed(2)}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-2 text-right">
                     {row.change !== null ? (
                       <span
                         className={
