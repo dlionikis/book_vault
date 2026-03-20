@@ -114,6 +114,50 @@ describe('GET /api/admin/costs', () => {
       ],
     });
 
+    mockSend.mockResolvedValueOnce({
+      ResultsByTime: [
+        {
+          TimePeriod: { Start: '2026-01-01' },
+          Groups: [
+            {
+              Keys: ['Amazon S3'],
+              Metrics: { UnblendedCost: { Amount: '12.50', Unit: 'USD' } },
+            },
+            {
+              Keys: ['Amazon ECS'],
+              Metrics: { UnblendedCost: { Amount: '8.25', Unit: 'USD' } },
+            },
+          ],
+        },
+        {
+          TimePeriod: { Start: '2026-02-01' },
+          Groups: [
+            {
+              Keys: ['Amazon S3'],
+              Metrics: { UnblendedCost: { Amount: '14.00', Unit: 'USD' } },
+            },
+          ],
+        },
+      ],
+    });
+    mockSend.mockResolvedValueOnce({
+      ResultsByTime: [
+        {
+          TimePeriod: { Start: '2026-01-01' },
+          Groups: [
+            {
+              Keys: ['Credit'],
+              Metrics: { UnblendedCost: { Amount: '-1.50', Unit: 'USD' } },
+            },
+          ],
+        },
+        {
+          TimePeriod: { Start: '2026-02-01' },
+          Groups: [],
+        },
+      ],
+    });
+
     const response = await GET(makeRequest(2));
     const data = await response.json();
 
@@ -122,12 +166,39 @@ describe('GET /api/admin/costs', () => {
     expect(data.months).toHaveLength(2);
     expect(data.months[0].month).toBe('2026-01-01');
     expect(data.months[0].total).toBe(20.75);
+    expect(data.months[0].creditRefund).toBe(-1.5);
     expect(data.months[0].services).toHaveLength(2);
     // Services sorted by cost descending
     expect(data.months[0].services[0].service).toBe('Amazon S3');
     expect(data.months[0].services[0].cost).toBe(12.5);
 
-    expect(setCache).toHaveBeenCalledWith('admin:costs:2', data, 86400000);
+    expect(mockSend).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        Filter: {
+          Not: {
+            Dimensions: {
+              Key: 'RECORD_TYPE',
+              Values: ['Credit', 'Refund'],
+            },
+          },
+        },
+      })
+    );
+    expect(mockSend).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        GroupBy: [{ Type: 'DIMENSION', Key: 'RECORD_TYPE' }],
+        Filter: {
+          Dimensions: {
+            Key: 'RECORD_TYPE',
+            Values: ['Credit', 'Refund'],
+          },
+        },
+      })
+    );
+
+    expect(setCache).toHaveBeenCalledWith('admin:costs:v3:2', data, 86400000);
   });
 
   it('returns 500 with safe error message when AWS call fails', async () => {
@@ -153,7 +224,7 @@ describe('GET /api/admin/costs', () => {
 
     await GET(makeRequest());
 
-    expect(getCached).toHaveBeenCalledWith('admin:costs:6');
+    expect(getCached).toHaveBeenCalledWith('admin:costs:v3:6');
   });
 
   it('clamps invalid months param to default', async () => {
@@ -165,7 +236,7 @@ describe('GET /api/admin/costs', () => {
 
     await GET(makeRequest(999));
 
-    expect(getCached).toHaveBeenCalledWith('admin:costs:6');
+    expect(getCached).toHaveBeenCalledWith('admin:costs:v3:6');
   });
 
   it('handles empty Groups array', async () => {
@@ -174,7 +245,7 @@ describe('GET /api/admin/costs', () => {
       error: null,
     });
 
-    mockSend.mockResolvedValue({
+    mockSend.mockResolvedValueOnce({
       ResultsByTime: [
         {
           TimePeriod: { Start: '2026-01-01' },
@@ -182,6 +253,7 @@ describe('GET /api/admin/costs', () => {
         },
       ],
     });
+    mockSend.mockResolvedValueOnce({ ResultsByTime: [] });
 
     const response = await GET(makeRequest());
     const data = await response.json();

@@ -15,6 +15,7 @@ interface MonthCost {
   month: string;
   services: ServiceCost[];
   total: number;
+  creditRefund: number;
 }
 
 interface CostsResponse {
@@ -30,7 +31,7 @@ export const GET = withLogging(async (request: NextRequest) => {
 
   const rawMonths = parseInt(request.nextUrl.searchParams.get('months') || '6');
   const months = ALLOWED_MONTHS.includes(rawMonths) ? rawMonths : 6;
-  const cacheKey = `admin:costs:${months}`;
+  const cacheKey = `admin:costs:v3:${months}`;
 
   const cached = getCached<CostsResponse>(cacheKey);
   if (cached) {
@@ -51,9 +52,46 @@ export const GET = withLogging(async (request: NextRequest) => {
       Granularity: 'MONTHLY',
       Metrics: ['UnblendedCost'],
       GroupBy: [{ Type: 'DIMENSION', Key: 'SERVICE' }],
+      Filter: {
+        Not: {
+          Dimensions: {
+            Key: 'RECORD_TYPE',
+            Values: ['Credit', 'Refund'],
+          },
+        },
+      },
     });
 
-    const result = await client.send(command);
+    const adjustmentCommand = new GetCostAndUsageCommand({
+      TimePeriod: {
+        Start: start.toISOString().slice(0, 10),
+        End: end.toISOString().slice(0, 10),
+      },
+      Granularity: 'MONTHLY',
+      Metrics: ['UnblendedCost'],
+      GroupBy: [{ Type: 'DIMENSION', Key: 'RECORD_TYPE' }],
+      Filter: {
+        Dimensions: {
+          Key: 'RECORD_TYPE',
+          Values: ['Credit', 'Refund'],
+        },
+      },
+    });
+
+    const [result, adjustmentResult] = await Promise.all([
+      client.send(command),
+      client.send(adjustmentCommand),
+    ]);
+
+    const adjustmentsByMonth = new Map<string, number>(
+      (adjustmentResult.ResultsByTime || []).map((period) => {
+        const adjustment = (period.Groups || []).reduce(
+          (sum, group) => sum + parseFloat(group.Metrics?.UnblendedCost?.Amount || '0'),
+          0
+        );
+        return [period.TimePeriod?.Start || '', adjustment];
+      })
+    );
 
     const monthsData: MonthCost[] = (result.ResultsByTime || []).map((period) => {
       const services: ServiceCost[] = (period.Groups || []).map((group) => ({
@@ -67,6 +105,8 @@ export const GET = withLogging(async (request: NextRequest) => {
         month: period.TimePeriod?.Start || '',
         services: services.sort((a, b) => b.cost - a.cost),
         total: Math.round(total * 100) / 100,
+        creditRefund:
+          Math.round((adjustmentsByMonth.get(period.TimePeriod?.Start || '') || 0) * 100) / 100,
       };
     });
 
