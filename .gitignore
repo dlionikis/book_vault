@@ -168,3 +168,5 @@ ios/build/
 ios/DerivedData/
 *.xcuserstate
 *.xcuserdatad/
+
+docs/infra
