@@ -368,7 +368,7 @@ try {
 1. **Check existing patterns** in similar features
 2. **Update JSDoc comments** when changing behavior
 3. **Update related tests** in `__tests__`
-4. **Follow RAG maintenance guide** to update documentation
+4. **Update related documentation** - Update comments, README files, and relevant docs in `docs/`
 
 ### Utility Functions
 
@@ -518,7 +518,6 @@ describe('GET /api/endpoint', () => {
 
 ## Related Documentation
 
-- [RAG Maintenance Guide](rag-maintenance-guide.md) - Keeping docs updated
 - [Code Map](code-map.md) - Feature relationships
 - [Architecture](architecture.md) - System design
 - [Testing](testing.md) - Test commands and patterns

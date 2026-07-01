@@ -34,8 +34,8 @@ servers:
     description: Development server
     # Note: localhost is intentional for local development
     # Production URL will be configured via environment variable
-  - url: https://api.bookvault.com
-    description: Production server (TBD)
+  - url: https://bookvault.lionikis.com
+    description: Production server
 
 tags:
   - name: Authentication

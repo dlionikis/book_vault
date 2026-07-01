@@ -108,7 +108,7 @@ final class MockAPIClientForAuth: APIClientProtocol {
     func setProgressStatus(
         bookId _: UUID,
         status _: SetProgressStatusRequest.Status
-    ) async throws -> SetProgressStatus200Response {
+    ) async throws -> GetProgress200Response {
         fatalError("Not implemented for auth tests")
     }
 
@@ -116,7 +116,7 @@ final class MockAPIClientForAuth: APIClientProtocol {
         fatalError("Not implemented for auth tests")
     }
 
-    func addToLibrary(bookId _: UUID) async throws -> AddToLibrary201Response {
+    func addToLibrary(bookId _: UUID) async throws -> LogoutMobile200Response {
         fatalError("Not implemented for auth tests")
     }
 

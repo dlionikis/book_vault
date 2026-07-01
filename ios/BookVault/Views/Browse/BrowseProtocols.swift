@@ -29,7 +29,7 @@ protocol BrowseDetailResponse {
 // MARK: - BrowseListResponse
 
 /// Normalizes paginated list responses, bridging the two different pagination types
-/// (`Pagination` vs `SearchAll200ResponsePagination`) behind a single interface.
+/// (`Pagination` vs `ListBooks200ResponsePagination`) behind a single interface.
 protocol BrowseListResponse {
     associatedtype Item: BrowseListItem
     var results: [Item] { get }
@@ -61,10 +61,7 @@ extension GetAuthor200Response: BrowseDetailResponse {
     var displayName: String { name }
 }
 
-extension GetNarrator200Response: BrowseDetailResponse {
-    var displayName: String { name }
-}
-
+// Note: Narrator detail uses GetAuthor200Response (same shape: id, name, asin, books, pagination)
 extension GetSeries200Response: BrowseDetailResponse {
     var displayName: String { title }
 }

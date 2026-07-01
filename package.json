@@ -32,6 +32,7 @@
     "user:reset-password": "./scripts/reset-password.sh",
     "user:delete": "./scripts/delete-user.sh",
     "import": "tsx scripts/import-libation.ts",
+    "import:prod": "./scripts/import-prod.sh",
     "api:validate": "redocly lint docs/api/openapi.yaml",
     "api:docs": "redocly build-docs docs/api/openapi.yaml -o docs/api/api-reference.html",
     "api:generate": "npm run api:generate:ts && npm run api:generate:swift",

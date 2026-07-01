@@ -37,7 +37,7 @@ Before starting:
 Remove existing test audiobooks:
 
 ```bash
-rm -rf /Users/demetri/projects/book_vault/test-data/*
+rm -rf ./test-data/*
 ```
 
 ### Step 1.2: Copy Fresh Audiobooks
@@ -116,7 +116,7 @@ npx prisma migrate reset --force
 npm run db:seed
 ```
 
-Default credentials: `test@example.com` / `password123`
+Default credentials: `testuser` / `password123`
 
 ---
 
@@ -242,15 +242,17 @@ echo "Generated hash for production user"
 **Inside ECS container**, create the user with the hash:
 
 ```bash
+# Note: new PrismaClient() is acceptable here only because this is a one-off
+# emergency admin script run inside the container, not application code.
 node -e "
 const { PrismaClient } = require('@prisma/client');
 (async () => {
   const p = new PrismaClient();
   await p.user.upsert({
-    where: { email: 'test@example.com' },
+    where: { username: 'testuser' },
     update: { passwordHash: '<paste-hash-here>' },
     create: {
-      email: 'test@example.com',
+      username: 'testuser',
       passwordHash: '<paste-hash-here>'
     }
   });

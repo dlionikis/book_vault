@@ -85,7 +85,24 @@ const books = await prisma.book.findMany({
   where: {
     OR: [
       { title: { contains: query, mode: 'insensitive' } },
-      { description: { contains: quer - components/AddToLibraryButton.tsx
+      { description: { contains: query, mode: 'insensitive' } },
+      { publisherSummary: { contains: query, mode: 'insensitive' } },
+      { authors: { some: { author: { name: { contains: query, mode: 'insensitive' } } } } },
+      { narrators: { some: { narrator: { name: { contains: query, mode: 'insensitive' } } } } },
+      { series: { some: { series: { title: { contains: query, mode: 'insensitive' } } } } },
+    ],
+  },
+  include: BOOK_INCLUDE,
+  take: limit,
+  skip: (page - 1) * limit,
+});
+```
+
+## Flow 3: Adding a Book to Library
+
+```
+AddToLibraryButton (Client Component) - components/AddToLibraryButton.tsx
+  → On mount: GET /api/library/check?bookIds=[bookId] to check status
   → If showSeriesOption && seriesId: Show dialog (entire series or just book?)
   → POST /api/library { bookId }
   → API route: app/api/library/route.ts POST handler
@@ -97,8 +114,8 @@ app/api/library/route.ts POST
   → If not exists: prisma.userList.create({ data: { userId, name: 'My Library' } })
   → Check if book already in library
   → DB query: prisma.userListBook.findFirst({ where: { listId, bookId } })
-  → If not exists: prisma.userListBook.create({ data: { listId, bookId, addedAt: new Date() } })
-  → Returns 201 Created with { success: true, addedAt }
+  → If not exists: prisma.userListBook.create({ data: { listId, bookId } })
+  → Returns 201 Created with { message: 'Book added to library' }
   ↓
 Component updates state, shows "In Library" badge
 ```
@@ -131,34 +148,8 @@ await prisma.userListBook.create({
 **Library features**:
 
 - Auto-creates "My Library" list on first add
-- Checks library status on component mount via GET /api/library/check?bookIds=x,y,z
+- Checks library status on component mount via GET /api/library/check?bookId=[id] (single book)
 - Series option: Can add entire series at once via POST /api/library/series/[seriesId]
-  ↓
-  AddToLibraryButton (Client Component)
-  → If showSeriesOption && seriesId: Show dialog (entire series or just book?)
-  → POST /api/library { bookId }
-  → On success: setInLibrary(true) + onSuccess?.()
-  ↓
-  app/api/library/route.ts
-  → Get or create "My Library" UserList
-  → Check if book already in library (UserListBook)
-  → Create UserListBook record
-  → Returns 201 Created
-  ↓
-  Component updates state, shows "In Library"
-
-```
-
-**Files involved**:
-
-- [components/AddToLibraryButton.tsx](../components/AddToLibraryButton.tsx) (trigger)
-- [app/api/library/route.ts](../app/api/library/route.ts) (persistence)
-
-**Library features**:
-
-- Auto-creates "My Library" list on first add
-- Checks library status on component mount via GET /api/library/check
-- Series option: Can add entire series at once
 - Remove option: DELETE /api/library/[bookId]
 
 ## Flow 4: Checking Library Status
@@ -168,7 +159,7 @@ await prisma.userListBook.create({
 Component mounts (e.g., AddToLibraryButton, BookCard)
 ↓
 useEffect(() => {
-fetch(`/api/library/check?bookIds=${bookId1},${bookId2}`)
+fetch(`/api/library/check?bookId=${bookId}`)
 }, [bookIds])
 ↓
 app/api/library/check/route.ts GET handler
@@ -181,14 +172,16 @@ Component updates UI:
 - If inLibrary: Show "In Library" badge or checkmark
 - If !inLibrary: Show "Add to Library" button
 
-````
+```
 
 **Files involved**:
+
 - [components/AddToLibraryButton.tsx](../components/AddToLibraryButton.tsx) - Checks status on mount
 - [app/api/library/check/route.ts](../app/api/library/check/route.ts) - Batch status check
 - [app/books/[id]/page.tsx](../app/books/[id]/page.tsx) - Book detail page checks library status
 
 **Database Query**:
+
 ```typescript
 // Get user's library
 const library = await prisma.userList.findFirst({
@@ -203,10 +196,10 @@ const libraryBooks = await prisma.userListBook.findMany({
 
 // Return mapping { bookId: true/false }
 const statusMap = bookIds.reduce((acc, id) => {
-  acc[id] = libraryBooks.some(lb => lb.bookId === id);
+  acc[id] = libraryBooks.some((lb) => lb.bookId === id);
   return acc;
 }, {});
-````
+```
 
 **Pattern**: Components check library status independently to avoid prop drilling
 

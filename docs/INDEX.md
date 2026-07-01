@@ -15,7 +15,7 @@
 
 ---
 
-## Quick Reference (New!)
+## Quick Reference
 
 | File                                               | Purpose              | When to Use                     |
 | -------------------------------------------------- | -------------------- | ------------------------------- |
@@ -45,7 +45,7 @@
 
 **iOS development**:
 
-- [mobile-ios-plan.md](mobile-ios-plan.md) - Overview & commands
+- [mobile/architecture.md](mobile/architecture.md) - SwiftUI + MVVM patterns & maintenance
 - [mobile/xcodegen-guide.md](mobile/xcodegen-guide.md) - Adding files to Xcode
 
 **Deploying**:
@@ -86,7 +86,6 @@
 
 | File                                                   | Purpose                       |
 | ------------------------------------------------------ | ----------------------------- |
-| [mobile-ios-plan.md](mobile-ios-plan.md)               | Overview & maintenance        |
 | [mobile/architecture.md](mobile/architecture.md)       | SwiftUI + MVVM patterns       |
 | [mobile/api-integration.md](mobile/api-integration.md) | API client examples           |
 | [mobile/ios-features.md](mobile/ios-features.md)       | Background audio, lock screen |
@@ -96,11 +95,22 @@
 
 ## Setup & Deployment
 
-| File                                                       | Purpose                            |
-| ---------------------------------------------------------- | ---------------------------------- |
-| [aws-deployment-reference.md](aws-deployment-reference.md) | AWS deploy commands & architecture |
-| [database-migration-guide.md](database-migration-guide.md) | Production DB migrations           |
-| [database-reset-procedure.md](database-reset-procedure.md) | Full database reset                |
+| File                                                       | Purpose                                                       |
+| ---------------------------------------------------------- | ------------------------------------------------------------- |
+| [aws-deployment-reference.md](aws-deployment-reference.md) | AWS deploy commands & architecture                            |
+| [infra/production.md](infra/production.md)                 | Auto-generated AWS infrastructure inventory (ARNs, endpoints) |
+| [database-migration-guide.md](database-migration-guide.md) | Production DB migrations                                      |
+| [database-reset-procedure.md](database-reset-procedure.md) | Full database reset                                           |
+
+---
+
+## Plans (In Progress)
+
+| File                                                                                     | Purpose                              |
+| ---------------------------------------------------------------------------------------- | ------------------------------------ |
+| [plans/s3-archive-restore-workflow-v2.md](plans/s3-archive-restore-workflow-v2.md)       | S3 cold storage restore feature plan |
+| [plans/audible-download-plan.md](plans/audible-download-plan.md)                         | Audible download integration plan    |
+| [plans/app-store-submission-review-guide.md](plans/app-store-submission-review-guide.md) | App Store submission guide           |
 
 ---
 
@@ -110,20 +120,3 @@ Historical plans in `archive/` - read only for investigating past decisions:
 
 - `archive/completed-plans/` - Completed implementation plans
 - `archive/ios-phases/` - iOS phase completion summaries
-- `archive/s3-archive-restore-workflow.md` - Future S3 plan (deferred)
-
----
-
-## Quick Commands
-
-```bash
-# Development
-docker-compose up -d && npm run dev
-
-# Validation
-npm run validate          # Quick check
-npm run validate:full     # Full + API contracts
-
-# iOS
-npm run api:generate:swift && cd ios && xcodegen generate
-```

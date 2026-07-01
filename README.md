@@ -276,7 +276,7 @@ This is an **AI-first development project**, meaning:
    If deploying to AWS, copy your audiobook files to S3 before importing:
 
    ```bash
-   aws s3 sync <AUDIO_BOOK_SOURCE_PATH> s3://book-vault-media/ \
+   aws s3 sync /Volumes/BeeDrive/Libation/ s3://book-vault-media/ \
      --exclude "*.cue" \
      --exclude "Icon*" \
      --exclude "Icon?" \

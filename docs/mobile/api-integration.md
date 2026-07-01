@@ -13,7 +13,7 @@
 
 ### Login
 
-**Endpoint**: `POST /api/auth/login`
+**Endpoint**: `POST /api/auth/mobile/login`
 
 **Request**:
 
@@ -42,7 +42,7 @@ struct User: Codable {
 
 ```swift
 func login(email: String, password: String) async throws -> LoginResponse {
-    let url = URL(string: "\(baseURL)/api/auth/login")!
+    let url = URL(string: "\(baseURL)/api/auth/mobile/login")!
     var request = URLRequest(url: url)
     request.httpMethod = "POST"
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -508,7 +508,7 @@ func getLibrary() async throws -> [Book] {
 
 ### Add Book to Library
 
-**Endpoint**: `POST /api/library/add`
+**Endpoint**: `POST /api/library`
 
 **Request**:
 
@@ -522,7 +522,7 @@ struct AddToLibraryRequest: Codable {
 
 ```swift
 func addToLibrary(bookId: String) async throws {
-    let url = URL(string: "\(baseURL)/api/library/add")!
+    let url = URL(string: "\(baseURL)/api/library")!
     let request = AddToLibraryRequest(bookId: bookId)
 
     let _: SuccessResponse = try await authenticatedRequest(
@@ -535,15 +535,9 @@ func addToLibrary(bookId: String) async throws {
 
 ### Remove Book from Library
 
-**Endpoint**: `POST /api/library/remove`
+**Endpoint**: `DELETE /api/library/{bookId}`
 
-**Request**:
-
-```swift
-struct RemoveFromLibraryRequest: Codable {
-    let bookId: String
-}
-```
+**Request**: No body — bookId is in the URL path.
 
 ---
 
@@ -551,7 +545,7 @@ struct RemoveFromLibraryRequest: Codable {
 
 ### Get User Lists
 
-**Endpoint**: `GET /api/lists`
+**Endpoint**: `GET /api/library/lists`
 
 **Response**:
 
@@ -571,7 +565,7 @@ struct UserList: Codable, Identifiable {
 
 ### Get List Books
 
-**Endpoint**: `GET /api/lists/{id}/books`
+**Endpoint**: `GET /api/library/lists/{id}/books`
 
 **Response**:
 
@@ -584,7 +578,7 @@ struct ListBooksResponse: Codable {
 
 ### Create List
 
-**Endpoint**: `POST /api/lists`
+**Endpoint**: `POST /api/library/lists`
 
 **Request**:
 

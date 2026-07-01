@@ -187,8 +187,8 @@ enum TestFixtures {
         positionSeconds: Double = 0.0,
         completed: Bool = true,
         lastPlayed: Date? = Date()
-    ) -> BookVault.SetProgressStatus200Response {
-        BookVault.SetProgressStatus200Response(
+    ) -> BookVault.GetProgress200Response {
+        BookVault.GetProgress200Response(
             positionSeconds: positionSeconds,
             completed: completed,
             lastPlayed: lastPlayed
@@ -272,8 +272,8 @@ enum TestFixtures {
 
     static func makeAddToLibraryResponse(
         message: String = "Book added to library"
-    ) -> BookVault.AddToLibrary201Response {
-        BookVault.AddToLibrary201Response(message: message)
+    ) -> BookVault.LogoutMobile200Response {
+        BookVault.LogoutMobile200Response(message: message)
     }
 
     // MARK: - JSON Samples (for decoding tests)

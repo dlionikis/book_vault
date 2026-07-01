@@ -13,9 +13,9 @@ import AnyCodable
 public struct ListSeries200Response: Codable, JSONEncodable, Hashable {
 
     public var results: [SeriesWithBookCount]
-    public var pagination: SearchAll200ResponsePagination
+    public var pagination: ListBooks200ResponsePagination
 
-    public init(results: [SeriesWithBookCount], pagination: SearchAll200ResponsePagination) {
+    public init(results: [SeriesWithBookCount], pagination: ListBooks200ResponsePagination) {
         self.results = results
         self.pagination = pagination
     }

@@ -459,7 +459,8 @@ class APIClient: APIClientProtocol {
 
     /// Logout
     func logout(refreshToken: UUID) async throws {
-        let requestBody = LogoutMobileRequest(refreshToken: refreshToken)
+        struct LogoutBody: Encodable { let refreshToken: UUID }
+        let requestBody = LogoutBody(refreshToken: refreshToken)
         let request = try createRequest(
             path: "/api/auth/mobile/logout",
             method: "POST",
@@ -554,7 +555,7 @@ class APIClient: APIClientProtocol {
     func setProgressStatus(
         bookId: UUID,
         status: SetProgressStatusRequest.Status
-    ) async throws -> SetProgressStatus200Response {
+    ) async throws -> GetProgress200Response {
         let requestBody = SetProgressStatusRequest(bookId: bookId, status: status)
         let request = try createRequest(
             path: "/api/progress",
@@ -580,7 +581,7 @@ class APIClient: APIClientProtocol {
     }
 
     /// Add book to user's library
-    func addToLibrary(bookId: UUID) async throws -> AddToLibrary201Response {
+    func addToLibrary(bookId: UUID) async throws -> LogoutMobile200Response {
         let requestBody = AddToLibraryRequest(bookId: bookId)
         let request = try createRequest(
             path: "/api/library",
@@ -600,6 +601,6 @@ class APIClient: APIClientProtocol {
             requiresAuth: true
         )
 
-        let _: RemoveFromLibrary200Response = try await execute(request: request)
+        let _: LogoutMobile200Response = try await execute(request: request)
     }
 }

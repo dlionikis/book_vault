@@ -109,7 +109,7 @@ lib/
 ### By Task
 
 - **Implementing features**: component-guide.md → data-flows.md → api-quick-ref.md
-- **iOS development**: [docs/mobile-ios-plan.md](docs/mobile-ios-plan.md)
+- **iOS development**: [docs/mobile/architecture.md](docs/mobile/architecture.md)
 - **Deploying**: [docs/aws-deployment-reference.md](docs/aws-deployment-reference.md)
 - **Database changes**: [docs/database-migration-guide.md](docs/database-migration-guide.md)
 
@@ -145,6 +145,7 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5433/book_vault"
 NEXTAUTH_SECRET="your-secret"
 NEXTAUTH_URL="http://localhost:3000"
 MEDIA_DATA_PATH="/Volumes/BeeDrive/Libation"  # or "test-data"
+LIBATION_PATH="/Volumes/BeeDrive/Libation"    # source for import (overrides MEDIA_DATA_PATH)
 
 # AWS (production)
 AWS_S3_BUCKET="book-vault-media"

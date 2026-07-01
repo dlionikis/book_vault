@@ -1,6 +1,6 @@
 # Project Status & Roadmap
 
-**Last Updated**: January 4, 2026
+**Last Updated**: January 4, 2026 _(Recent Merges table reflects PRs through #63; update when new PRs land)_
 
 ---
 
@@ -39,7 +39,7 @@
 - [ ] **Duration remaining (iOS)** - Add remaining time display to the audio playback view
 - [ ] **Dismiss mini-player** - Add ability to close the recent playback mini-player
 - [ ] **Add sleep functionality** - Add ability to select a duration for listening where the app will fade-out and pause the audio.
-- [ ] **Cold storage retrieval warning** - Warn users when audiobooks are in S3 cold storage and will take time to become available (docs/s3-archive-restore-workflow.md)
+- [ ] **Cold storage retrieval warning** - Warn users when audiobooks are in S3 cold storage and will take time to become available ([docs/plans/s3-archive-restore-workflow-v2.md](plans/s3-archive-restore-workflow-v2.md))
 
 ### Future Ideas
 
@@ -84,7 +84,7 @@ npm run api:generate:swift  # Regenerate Swift models
 cd ios && xcodegen generate # Rebuild Xcode project
 ```
 
-**Default credentials**: test@example.com / password123
+**Default credentials**: testuser / password123
 
 ---
 
@@ -93,6 +93,6 @@ cd ios && xcodegen generate # Rebuild Xcode project
 | What            | Where                                                      |
 | --------------- | ---------------------------------------------------------- |
 | AWS Deployment  | [aws-deployment-reference.md](aws-deployment-reference.md) |
-| iOS Maintenance | [mobile-ios-plan.md](mobile-ios-plan.md)                   |
+| iOS Maintenance | [mobile/architecture.md](mobile/architecture.md)           |
 | API Reference   | [api/openapi.yaml](api/openapi.yaml)                       |
 | Architecture    | [architecture.md](architecture.md)                         |

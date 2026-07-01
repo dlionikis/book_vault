@@ -403,7 +403,7 @@ class SearchManager: ObservableObject {
     /// Fetches narrator details with all their books
     /// - Parameter id: Narrator ID (UUID)
     /// - Returns: Narrator details with list of books
-    func fetchNarratorDetail(id: String) async throws -> GetNarrator200Response {
+    func fetchNarratorDetail(id: String) async throws -> GetAuthor200Response {
         try await fetchDetail(
             path: "/api/narrators/\(id)",
             cachePrefix: "narrator"
