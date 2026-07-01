@@ -135,7 +135,7 @@ extension BrowseDetailConfiguration where Detail == GetAuthor200Response {
     }
 }
 
-extension BrowseDetailConfiguration where Detail == GetNarrator200Response {
+extension BrowseDetailConfiguration where Detail == GetAuthor200Response {
     static func narrator() -> Self {
         BrowseDetailConfiguration(
             navigationTitle: "Narrator",

@@ -53,7 +53,7 @@ class MockAPIClient: APIClientProtocol {
         domain: "Test",
         code: -1
     )))
-    var setProgressStatusResult: Result<SetProgressStatus200Response, Error> = .failure(APIError.networkError(NSError(
+    var setProgressStatusResult: Result<GetProgress200Response, Error> = .failure(APIError.networkError(NSError(
         domain: "Test",
         code: -1
     )))
@@ -61,7 +61,7 @@ class MockAPIClient: APIClientProtocol {
         domain: "Test",
         code: -1
     )))
-    var addToLibraryResult: Result<AddToLibrary201Response, Error> = .failure(APIError.networkError(NSError(
+    var addToLibraryResult: Result<LogoutMobile200Response, Error> = .failure(APIError.networkError(NSError(
         domain: "Test",
         code: -1
     )))
@@ -130,7 +130,7 @@ class MockAPIClient: APIClientProtocol {
     func setProgressStatus(
         bookId: UUID,
         status: SetProgressStatusRequest.Status
-    ) async throws -> SetProgressStatus200Response {
+    ) async throws -> GetProgress200Response {
         setProgressStatusCalls.append((bookId, status))
         return try setProgressStatusResult.get()
     }
@@ -140,7 +140,7 @@ class MockAPIClient: APIClientProtocol {
         return try fetchLibraryResult.get()
     }
 
-    func addToLibrary(bookId: UUID) async throws -> AddToLibrary201Response {
+    func addToLibrary(bookId: UUID) async throws -> LogoutMobile200Response {
         addToLibraryCalls.append(bookId)
         return try addToLibraryResult.get()
     }

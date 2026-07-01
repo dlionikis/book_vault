@@ -194,7 +194,7 @@ final class LibraryManagerRealTests: XCTestCase {
     func testAddToLibrary_Success_CallsAPI() async throws {
         // Given: Valid book ID
         let bookId = UUID()
-        mockAPIClient.addToLibraryResult = .success(AddToLibrary201Response(
+        mockAPIClient.addToLibraryResult = .success(LogoutMobile200Response(
             message: "Book added to library"
         ))
 
@@ -211,7 +211,7 @@ final class LibraryManagerRealTests: XCTestCase {
         // Given: Initial library version
         let initialVersion = libraryManager.libraryVersion
         let bookId = UUID()
-        mockAPIClient.addToLibraryResult = .success(AddToLibrary201Response(
+        mockAPIClient.addToLibraryResult = .success(LogoutMobile200Response(
             message: "Book added to library"
         ))
 
@@ -405,7 +405,7 @@ final class LibraryManagerRealTests: XCTestCase {
     func testAddToLibrary_SetsLoadingState() async throws {
         // Given: Valid operation
         let bookId = UUID()
-        mockAPIClient.addToLibraryResult = .success(AddToLibrary201Response(message: "Added"))
+        mockAPIClient.addToLibraryResult = .success(LogoutMobile200Response(message: "Added"))
 
         // When: Adding to library
         try await libraryManager.addToLibrary(bookId: bookId.uuidString)
