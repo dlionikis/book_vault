@@ -206,7 +206,7 @@ Native Swift + SwiftUI app with all 8 phases implemented:
 7. ✅ Offline Downloads
 8. ✅ Offline Mode
 
-**See**: [mobile-ios-plan.md](mobile-ios-plan.md) for maintenance docs
+**See**: [mobile/architecture.md](mobile/architecture.md) for iOS maintenance docs
 
 ---
 
@@ -237,5 +237,5 @@ Native Swift + SwiftUI app with all 8 phases implemented:
 - [Data Flows](data-flows.md) - How data moves through the app
 - [Data Validation Overview](data-validation-overview.md) - Type safety architecture
 - [Testing Guide](testing.md) - Test patterns
-- [Mobile iOS Plan](mobile-ios-plan.md) - iOS app implementation
+- [Mobile iOS](mobile/architecture.md) - iOS app architecture & patterns
 - [AWS Deployment](aws-deployment-reference.md) - Infrastructure & deploy guide

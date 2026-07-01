@@ -234,7 +234,7 @@ Use Tailwind CSS utility-first framework.
 **Date**: Component library expansion (Q4 2024)
 
 **Context**:
-Building reusable components for both web and future React Native app. Need way to develop and test components in isolation.
+Building reusable components for web. Need way to develop and test components in isolation.
 
 **Decision**:
 Use Storybook for component development and documentation.

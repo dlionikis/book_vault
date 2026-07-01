@@ -124,17 +124,17 @@ Book Vault implements a **private library model** where users must log in to acc
 
 ## Attack Vectors Mitigated
 
-| Threat                      | Mitigation              | Status             |
-| --------------------------- | ----------------------- | ------------------ |
-| Unauthorized catalog access | Authentication required | ✅ Protected       |
-| Unauthorized audio access   | Authentication required | ✅ Protected       |
-| SQL Injection               | Prisma ORM              | ✅ Protected       |
-| Directory traversal         | Path validation         | ✅ Protected       |
-| CSRF attacks                | NextAuth.js             | ✅ Protected       |
-| Password exposure           | bcrypt + JWT            | ✅ Protected       |
-| Session hijacking           | HttpOnly cookies        | ✅ Protected       |
-| Brute force login           | Account lockout         | ⚠️ Consider adding |
-| API abuse/DDoS              | Rate limiting           | ⚠️ Consider adding |
+| Threat                      | Mitigation              | Status                                                    |
+| --------------------------- | ----------------------- | --------------------------------------------------------- |
+| Unauthorized catalog access | Authentication required | ✅ Protected                                              |
+| Unauthorized audio access   | Authentication required | ✅ Protected                                              |
+| SQL Injection               | Prisma ORM              | ✅ Protected                                              |
+| Directory traversal         | Path validation         | ✅ Protected                                              |
+| CSRF attacks                | NextAuth.js             | ✅ Protected                                              |
+| Password exposure           | bcrypt + JWT            | ✅ Protected                                              |
+| Session hijacking           | HttpOnly cookies        | ✅ Protected                                              |
+| Brute force login           | Account lockout         | ⚠️ Consider adding                                        |
+| API abuse/DDoS              | Rate limiting           | ✅ Implemented (100/min per user via `lib/rate-limit.ts`) |
 
 ---
 
@@ -183,15 +183,7 @@ Book Vault implements a **private library model** where users must log in to acc
 
 Consider implementing the following optional improvements:
 
-### 1. Rate Limiting
-
-Prevent API abuse and brute force attacks:
-
-- API requests: 100-200 requests/minute per user
-- Login attempts: 5 attempts per 15 minutes
-- Implement using middleware or API gateway
-
-### 2. Account Lockout
+### 1. Account Lockout
 
 Protect against credential stuffing:
 
@@ -199,7 +191,7 @@ Protect against credential stuffing:
 - Require email verification or time-based unlock
 - Log suspicious login patterns
 
-### 3. Audit Logging
+### 2. Audit Logging
 
 Track security-relevant events:
 
@@ -208,7 +200,7 @@ Track security-relevant events:
 - Media access without valid session
 - Administrative actions (user creation, password changes)
 
-### 4. Content Delivery Network (CDN)
+### 3. Content Delivery Network (CDN)
 
 Optimize image delivery:
 
@@ -216,7 +208,7 @@ Optimize image delivery:
 - Reduce S3 costs and improve latency
 - Enable edge caching for cover art
 
-### 5. Two-Factor Authentication (2FA)
+### 4. Two-Factor Authentication (2FA)
 
 Additional security layer:
 
