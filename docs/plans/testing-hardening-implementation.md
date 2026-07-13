@@ -118,7 +118,9 @@ All 11 have Real equivalents in `AuthManagerRealTests.swift` (login success/fail
 
 ---
 
-## Phase 3 — `SystemKeychain` tests
+## Phase 3 — `SystemKeychain` tests ✅ DONE (July 13, 2026)
+
+> **Outcome**: Added `SystemKeychainTests.swift` (7 tests) against the real Security framework on the simulator — no production code change. All pass; full suite green. Per-test unique key prefix + `tearDown` sweep prevents cross-run pollution. Mutation-verified the overwrite test: removing the delete-before-add in `save` makes it fail with `errSecDuplicateItem` (-25299), the classic keychain bug it guards.
 
 **SUT**: `ios/BookVault/Services/SystemKeychain.swift` (conforms to `KeychainStoring`). Simulator fully supports `kSecClassGenericPassword` — test the **real** implementation, no mock (the mock is for consumers, not the SUT).
 
