@@ -4,8 +4,15 @@
  * Security-critical: this route must require authentication and must only
  * serve image content (without the extension allowlist it could stream any
  * object in the media store, including audio files).
+ *
+ * Fixtures are self-contained: test-data/ is gitignored so CI has none of the
+ * local media files. The route reads raw bytes and derives the content type
+ * from the extension, so a minimal JPEG header written to a temp dir suffices.
  */
 
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { GET } from '@/app/api/images/[...path]/route';
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
@@ -26,11 +33,9 @@ const mockGetAuthUserFromRequest = getAuthUserFromRequest as jest.MockedFunction
 
 const mockUser = { id: 'user-123', username: 'testuser' };
 
-// Real fixture in test-data (local filesystem branch)
-const FIXTURE_PATH = [
-  'A Deadly Education [059328741X]',
-  'A Deadly Education: A Novel (The Scholomance, Book 1) [059328741X].jpg',
-];
+const JPEG_BYTES = Buffer.from('ffd8ffe000104a46494600010100000100010000ffd9', 'hex');
+const BOOK_DIR = 'Test Book [FIXTURE]';
+const FIXTURE_PATH = [BOOK_DIR, 'cover.jpg'];
 
 function makeRequest(): NextRequest {
   return new NextRequest('http://localhost:3000/api/images/test');
@@ -38,9 +43,13 @@ function makeRequest(): NextRequest {
 
 describe('GET /api/images/[...path]', () => {
   const originalMediaPath = process.env.MEDIA_DATA_PATH;
+  let mediaDir: string;
 
   beforeAll(() => {
-    process.env.MEDIA_DATA_PATH = 'test-data';
+    mediaDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bv-images-test-'));
+    fs.mkdirSync(path.join(mediaDir, BOOK_DIR));
+    fs.writeFileSync(path.join(mediaDir, BOOK_DIR, 'cover.jpg'), JPEG_BYTES);
+    process.env.MEDIA_DATA_PATH = mediaDir;
   });
 
   afterAll(() => {
@@ -49,6 +58,7 @@ describe('GET /api/images/[...path]', () => {
     } else {
       process.env.MEDIA_DATA_PATH = originalMediaPath;
     }
+    fs.rmSync(mediaDir, { recursive: true, force: true });
   });
 
   beforeEach(() => {
@@ -95,7 +105,7 @@ describe('GET /api/images/[...path]', () => {
     mockGetAuthUserFromRequest.mockResolvedValue(mockUser);
 
     const response = await GET(makeRequest(), {
-      params: { path: ['Some Book [ASIN]', 'Some Book [ASIN].m4b'] },
+      params: { path: [BOOK_DIR, 'audiobook.m4b'] },
     });
 
     expect(response.status).toBe(404);
