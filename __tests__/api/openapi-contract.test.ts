@@ -1839,14 +1839,39 @@ describe('OpenAPI Contract Tests', () => {
         expect(['re-extracted', 'none', 'error']).toContain(response.data.source);
       });
 
-      testFn('should return 404 for non-existent book', async () => {
+      testFn('should return 403 for non-admin users', async () => {
+        // Chapter re-extraction is admin-only (it rewrites shared chapter
+        // data). Register a fresh user for this test — guaranteed non-admin
+        // in every environment, unlike the seeded test user whose admin flag
+        // differs between CI and local databases.
+        const username = `contract-nonadmin-${Date.now()}`;
+        const password = 'validpassword123';
+        await axios.post(
+          `${BASE_URL}/api/auth/register`,
+          { username, password },
+          { headers: { 'Content-Type': 'application/json' }, validateStatus: () => true }
+        );
+        const login = await axios.post(
+          `${BASE_URL}/api/auth/mobile/login`,
+          { username, password },
+          { headers: { 'Content-Type': 'application/json' }, validateStatus: () => true }
+        );
+        expect(login.status).toBe(200);
+
+        // The admin gate runs before any book lookup, so this is 403 even for
+        // a non-existent book id. (The 404-for-admins path isn't testable
+        // deterministically without a guaranteed admin account.)
         const nonExistentId = '00000000-0000-0000-0000-000000000000';
-        const response = await authenticatedRequest(
+        const response = await axios.post(
           `${BASE_URL}/api/books/${nonExistentId}/chapters`,
-          { method: 'POST' }
+          undefined,
+          {
+            headers: { Authorization: `Bearer ${login.data.accessToken}` },
+            validateStatus: () => true,
+          }
         );
 
-        expect(response.status).toBe(404);
+        expect(response.status).toBe(403);
         expect(response).toSatisfyApiSpec();
         expect(response.data).toHaveProperty('error');
       });
