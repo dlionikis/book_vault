@@ -6,7 +6,9 @@
 
 ---
 
-## Phase 0 — Land #79, re-measure, ratchet (BLOCKING — do first)
+## Phase 0 — Land #79, re-measure, ratchet (BLOCKING — do first) ✅ DONE (July 13, 2026)
+
+> **Outcome**: #79 merged (`f30646f`). Measured floor on the post-#79 unit tree: 37.21% stmts / 36.52% branch / 38.0% funcs / 37.55% lines. `coverageThreshold` ratcheted 34/32/35/34 → **37/36/38/37**; `npm run validate` green.
 
 Everything below assumes #79's tree: the three-project Jest config, real-jose tests, and the iOS `DownloadManager`→`APIClient` seam.
 
