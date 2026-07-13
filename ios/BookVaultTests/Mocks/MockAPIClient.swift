@@ -27,6 +27,8 @@ class MockAPIClient: APIClientProtocol {
     var fetchLibraryCalls: Int = 0
     var addToLibraryCalls: [UUID] = []
     var removeFromLibraryCalls: [UUID] = []
+    var checkDownloadEligibilityCalls: [UUID] = []
+    var generateDownloadUrlCalls: [(bookId: UUID, deviceId: String?)] = []
 
     // MARK: - Configurable Results
 
@@ -66,6 +68,12 @@ class MockAPIClient: APIClientProtocol {
         code: -1
     )))
     var removeFromLibraryResult: Result<Void, Error> = .success(())
+    var checkDownloadEligibilityResult: Result<CheckDownloadEligibility200Response, Error> = .failure(
+        APIError.networkError(NSError(domain: "Test", code: -1))
+    )
+    var generateDownloadUrlResult: Result<GenerateDownloadUrl200Response, Error> = .failure(
+        APIError.networkError(NSError(domain: "Test", code: -1))
+    )
 
     // MARK: - Reset
 
@@ -82,6 +90,8 @@ class MockAPIClient: APIClientProtocol {
         fetchLibraryCalls = 0
         addToLibraryCalls = []
         removeFromLibraryCalls = []
+        checkDownloadEligibilityCalls = []
+        generateDownloadUrlCalls = []
         accessToken = nil
     }
 
@@ -148,5 +158,15 @@ class MockAPIClient: APIClientProtocol {
     func removeFromLibrary(bookId: UUID) async throws {
         removeFromLibraryCalls.append(bookId)
         try removeFromLibraryResult.get()
+    }
+
+    func checkDownloadEligibility(bookId: UUID) async throws -> CheckDownloadEligibility200Response {
+        checkDownloadEligibilityCalls.append(bookId)
+        return try checkDownloadEligibilityResult.get()
+    }
+
+    func generateDownloadUrl(bookId: UUID, deviceId: String?) async throws -> GenerateDownloadUrl200Response {
+        generateDownloadUrlCalls.append((bookId, deviceId))
+        return try generateDownloadUrlResult.get()
     }
 }

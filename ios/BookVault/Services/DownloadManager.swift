@@ -143,13 +143,6 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
     private let storageManager: any StorageManaging
     private let networkMonitor: any NetworkMonitoring
 
-    // Force logout handler (enables DI for testing)
-    var forceLogoutHandler: () -> Void = {
-        Task { @MainActor in
-            AuthManager.shared.forceLogout()
-        }
-    }
-
     private var downloadSession: URLSession!
     private var downloadTasks: [String: URLSessionDownloadTask] = [:]
     private var pendingBooks: [String: Book] = [:]
@@ -404,7 +397,7 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
 
         do {
             // Check eligibility with backend
-            let eligible = try await checkEligibility(bookId: bookId)
+            let eligible = try await checkEligibility(bookId: book.id)
             guard eligible else {
                 activeDownloads.removeValue(forKey: bookId)
                 removePendingDownloadInfo(bookId: bookId)
@@ -412,7 +405,7 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
             }
 
             // Get pre-signed download URL
-            let downloadInfo = try await generateDownloadUrl(bookId: bookId)
+            let downloadInfo = try await generateDownloadUrl(bookId: book.id)
 
             // Check storage space
             guard storageManager.canDownload(fileSize: Int64(downloadInfo.fileSize)) else {
@@ -546,94 +539,47 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
 
     // MARK: - API Calls
 
-    private func checkEligibility(bookId: String) async throws -> Bool {
-        let request = try createAuthenticatedRequest(
-            path: "/api/downloads/\(bookId)/check",
-            method: "GET"
-        )
+    private func checkEligibility(bookId: UUID) async throws -> Bool {
+        DebugLogger.download("Checking eligibility for book: \(bookId.uuidString)")
 
-        DebugLogger.download("Checking eligibility: \(request.url?.absoluteString ?? "nil")")
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw DownloadError.networkError("Invalid response")
-        }
-
-        DebugLogger.download("Eligibility response: HTTP \(httpResponse.statusCode)")
-
-        switch httpResponse.statusCode {
-        case 200:
-            let result = try JSONDecoder().decode(CheckDownloadEligibility200Response.self, from: data)
+        do {
+            let result = try await apiClient.checkDownloadEligibility(bookId: bookId)
             DebugLogger.download("Eligibility result: \(result.eligible)")
             return result.eligible
-        case 401:
-            // Force logout via handler (enables DI for testing)
-            forceLogoutHandler()
-            throw DownloadError.unauthorized
-        case 429:
-            throw DownloadError.rateLimitExceeded
-        default:
-            // Log response body for debugging
-            if let responseBody = String(data: data, encoding: .utf8) {
-                DebugLogger.error("Eligibility check failed: \(responseBody)")
-            }
-            throw DownloadError.networkError("HTTP \(httpResponse.statusCode)")
+        } catch {
+            DebugLogger.error("Eligibility check failed", error: error)
+            throw Self.mapToDownloadError(error)
         }
     }
 
-    private func generateDownloadUrl(bookId: String) async throws -> GenerateDownloadUrl200Response {
-        var request = try createAuthenticatedRequest(
-            path: "/api/downloads/\(bookId)",
-            method: "POST"
-        )
-
-        // Add device ID to request body
+    private func generateDownloadUrl(bookId: UUID) async throws -> GenerateDownloadUrl200Response {
         let deviceId = UIDevice.current.identifierForVendor?.uuidString
-        let body = GenerateDownloadUrlRequest(deviceId: deviceId)
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        request.httpBody = try encoder.encode(body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw DownloadError.networkError("Invalid response")
-        }
-
-        switch httpResponse.statusCode {
-        case 200:
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode(GenerateDownloadUrl200Response.self, from: data)
-        case 401:
-            // Force logout via handler (enables DI for testing)
-            forceLogoutHandler()
-            throw DownloadError.unauthorized
-        case 429:
-            throw DownloadError.rateLimitExceeded
-        case 501:
-            throw DownloadError.networkError("Downloads require S3 configuration")
-        default:
-            throw DownloadError.networkError("HTTP \(httpResponse.statusCode)")
+        do {
+            return try await apiClient.generateDownloadUrl(bookId: bookId, deviceId: deviceId)
+        } catch {
+            DebugLogger.error("Download URL generation failed", error: error)
+            throw Self.mapToDownloadError(error)
         }
     }
 
-    private func createAuthenticatedRequest(path: String, method: String) throws -> URLRequest {
-        guard let url = URL(string: path, relativeTo: apiClient.baseURL) else {
-            throw DownloadError.networkError("Invalid URL")
+    /// Map APIClient errors to download-specific error cases
+    private static func mapToDownloadError(_ error: Error) -> DownloadError {
+        guard let apiError = error as? APIError else {
+            return .networkError(error.localizedDescription)
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = method
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-
-        if let token = apiClient.accessToken {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        switch apiError {
+        case .unauthorized:
+            // APIClient already attempted token refresh and forced logout if needed
+            return .unauthorized
+        case .serverError(429, _):
+            return .rateLimitExceeded
+        case .serverError(501, _):
+            return .networkError("Downloads require S3 configuration")
+        default:
+            return .networkError(apiError.localizedDescription)
         }
-
-        return request
     }
 
     // MARK: - Pending Downloads Persistence
