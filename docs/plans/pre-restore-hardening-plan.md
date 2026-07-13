@@ -66,6 +66,8 @@
 
 **Acceptance**: `npm run test:coverage` exits 0 with a non-zero coverage table.
 
+> **Resolved (July 12, 2026)**: The override was a CVE patch (commit 21fe3fc), kept as-is; the fix was forcing `test-exclude@^7.0.1` (compatible with modern glob) instead of downgrading glob. Measured baseline (unit projects): **37.0% statements / 35.4% branches / 38.1% functions / 37.6% lines**; thresholds set at 34/32/35/34.
+
 ### P0-4: Truth in STATUS.md
 
 Update [docs/STATUS.md](../STATUS.md): remove/correct "All tests passing" (unit suite requires Docker DB today; coverage was unmeasurable), link the architecture review, and list this plan + the restore plan under Next Up. Keep it to a handful of lines.

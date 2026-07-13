@@ -370,6 +370,15 @@ describeFn('API Response Type Validation', () => {
     });
 
     it('validates POST /api/library response', async () => {
+      // Ensure a known starting state: the book may linger in the library from
+      // a previous run or the sibling contract suite (both share the dev DB),
+      // in which case the add correctly returns 200 instead of 201.
+      await axios
+        .delete(`${API_BASE}/api/library/${sampleBookId}`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        })
+        .catch(() => {});
+
       const response = await axios.post(
         `${API_BASE}/api/library`,
         { bookId: sampleBookId },

@@ -8,22 +8,24 @@
 
 ## Quick Reference
 
-| Command                  | Purpose                                         |
-| ------------------------ | ----------------------------------------------- |
-| `npm test`               | Run Jest tests                                  |
-| `npm run test:watch`     | Jest watch mode                                 |
-| `npm run test:coverage`  | Jest with coverage report                       |
-| `npm run test:contract`  | Run OpenAPI contract tests (auto-starts server) |
-| `npm run validate`       | Format + lint + types + tests                   |
-| `npm run validate:full`  | Above + API validation + drift checks           |
-| `npm run ios:validate`   | iOS drift check + lint + build + tests          |
-| `npm run ios:lint`       | SwiftLint only                                  |
-| `npm run ios:build`      | iOS build only                                  |
-| `npm run ios:test`       | iOS tests only                                  |
-| `npm run deploy`         | Full validation (web + iOS) + deploy            |
-| `npm run deploy:dry-run` | Full validation only (no deploy)                |
-| `npm run deploy:web`     | Web validation + deploy                         |
-| `npm run deploy:only`    | Deploy without checks                           |
+| Command                    | Purpose                                                      |
+| -------------------------- | ------------------------------------------------------------ |
+| `npm test`                 | Unit tests only (node + jsdom projects, no DB needed)        |
+| `npm run test:watch`       | Jest watch mode (unit projects)                              |
+| `npm run test:coverage`    | Unit tests with coverage report (threshold enforced)         |
+| `npm run test:integration` | Real-DB tests — requires `docker-compose up -d`              |
+| `npm run test:all`         | Every Jest project including integration                     |
+| `npm run test:contract`    | Run OpenAPI contract tests (auto-starts server, needs DB)    |
+| `npm run validate`         | Format + lint + types + unit tests                           |
+| `npm run validate:full`    | Above + API drift checks + integration + live contract tests |
+| `npm run ios:validate`     | iOS drift check + lint + build + tests                       |
+| `npm run ios:lint`         | SwiftLint only                                               |
+| `npm run ios:build`        | iOS build only                                               |
+| `npm run ios:test`         | iOS tests only                                               |
+| `npm run deploy`           | Full validation (web + iOS) + deploy                         |
+| `npm run deploy:dry-run`   | Full validation only (no deploy)                             |
+| `npm run deploy:web`       | Web validation + deploy                                      |
+| `npm run deploy:only`      | Deploy without checks                                        |
 
 ---
 
@@ -31,14 +33,21 @@
 
 ### Running Tests
 
+Jest is split into three projects (`jest.config.js`): `unit-node` (API routes, lib,
+scripts), `unit-dom` (components, pages), and `integration` (tests that hit the real
+Postgres — kept out of `npm test` so a fresh clone is always green without Docker).
+
 ```bash
-# Run all tests
+# Run all unit tests (no DB required)
 npm test
+
+# Run integration tests (start the DB first: docker-compose up -d)
+npm run test:integration
 
 # Run tests in watch mode
 npm run test:watch
 
-# Run tests with coverage report
+# Run tests with coverage report (enforces the coverage ratchet)
 npm run test:coverage
 
 # Run specific test file

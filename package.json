@@ -7,9 +7,11 @@
     "dev:https": "node server.js",
     "build": "next build",
     "start": "next start",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "jest --selectProjects unit-node unit-dom",
+    "test:watch": "jest --watch --selectProjects unit-node unit-dom",
+    "test:coverage": "jest --coverage --selectProjects unit-node unit-dom",
+    "test:integration": "jest --selectProjects integration --forceExit",
+    "test:all": "jest",
     "test:contract": "node scripts/check-port.js 3000 && concurrently --kill-others --success first \"npm run dev\" \"npm run test:contract:wait\"",
     "test:contract:wait": "wait-on http://localhost:3000 && RUN_CONTRACT_TESTS=true npm test -- __tests__/api",
     "lint": "eslint . --max-warnings 0",
@@ -124,7 +126,8 @@
     "yaml": "^2.8.2"
   },
   "overrides": {
-    "glob": "^11.0.0"
+    "glob": "^11.0.0",
+    "test-exclude": "^7.0.1"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
