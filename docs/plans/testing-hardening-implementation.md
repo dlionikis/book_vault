@@ -180,7 +180,13 @@ Also add the happy-path GET to `openapi-contract.test.ts` — `/api/audio/{path}
 
 ---
 
-## Phase 5 — `AuthenticatedAVAssetResourceLoaderDelegate` tests
+## Phase 5 — `AuthenticatedAVAssetResourceLoaderDelegate` tests ✅ UNIT DONE / ⏳ DEVICE SMOKE PENDING (July 13, 2026)
+
+> **Outcome**: Did the full protocol-wrapper refactor. Extracted the delegate's core into `ios/BookVault/Services/AuthenticatedResourceLoader.swift` — a `ResourceLoadingRequesting` protocol + an AVFoundation-free `AuthenticatedResourceLoader` (injectable `URLSession`; injectable `concurrentRefreshWaitNanoseconds` so the single-flight "loser" wait doesn't stall tests at the production 0.5s). The delegate is now a thin shim: an `AVAssetResourceLoadingRequest: ResourceLoadingRequesting` extension + forwarding into the core. Public delegate init unchanged, so `AudioPlayerManager` (the only consumer, L486) needs no change. New tests: `ios/BookVaultTests/Services/Real/AuthenticatedResourceLoaderTests.swift` (14 tests, driving a `MockResourceLoadingRequest` + reusing `MockURLProtocol`) — all 6 planned cases plus success-delivers-data/Content-Range parse, missing-token, precedence, and server-error. Concurrency test verified stable across 5 isolated runs (~0.42s each). Full suite **614 tests, 0 failures**; SwiftLint `--strict` clean.
+>
+> Small hardening done alongside: added an `NSLock` (`tasksLock`) around the `loadingTasks` dict — the original mutated it from both the delegate queue and the session completion queue without synchronization (latent data race). Preserved the original `loadingRequest.response = httpResponse` behavior via the shim's `acceptResponse`.
+>
+> **⏳ REMAINING — device playback smoke (see handoff prompt below).** Per the plan's rule, the AVFoundation shim is the one part unit tests don't cover, and simulator AVFoundation is not authoritative. Do not mark this phase fully DONE until a real book streams through the loader on a device (or simulator fallback) with audio + seeking confirmed.
 
 **SUT**: `ios/BookVault/Services/AuthenticatedAVAssetResourceLoaderDelegate.swift`. Injectable: `tokenProvider`, `tokenRefreshHandler` (init, L19–22). **Not** injectable: internal `URLSession` (L35–38) — add a `URLSessionConfiguration` (or session) init parameter defaulting to current behavior, so MockURLProtocol can intercept.
 
@@ -213,19 +219,24 @@ Manual verification after the refactor: stream one book on a device/simulator (t
 
 ### 📋 Xcode handoff prompt (Phase 5)
 
-> Paste into Claude running in Xcode after the VS Code agent has done the protocol-wrapper refactor + written the tests. This is the most involved iOS phase: a production-code refactor, a concurrency test, and a required real-device playback check.
+> The refactor and unit tests are **already implemented and green in CI** (PR #86, iOS Tests: 614 tests, 0 failures; concurrency test stable across 5 CI + 5 local runs). The one thing unit tests cannot cover is the AVFoundation shim, so the remaining work for this phase is a **real-device playback smoke**. Paste into Claude running in Xcode.
 >
 > ```
-> The current branch refactored ios/BookVault/Services/AuthenticatedAVAssetResourceLoaderDelegate.swift for testability and added ios/BookVaultTests/Services/Real/AuthenticatedResourceLoaderTests.swift. The refactor: extracted the delegate's core logic (bookvault:// → http:// scheme conversion, authenticated URLRequest building with Range header, and the 401→refresh→retry state machine with its single-flight NSLock) into an internal type that operates on a `ResourceLoadingRequesting` protocol — because `AVAssetResourceLoadingRequest` has no public initializer and cannot be constructed in a test. The AVFoundation delegate is now a thin shim conforming the real request to that protocol; the tests drive the core type with a MockResourceLoadingRequest. An injectable URLSession (defaulting to .shared) was also added so MockURLProtocol can intercept.
+> Phase 5 refactored the authenticated AVAsset resource loader. What shipped (PR #86, already merged/green — do NOT re-do it):
+>   - ios/BookVault/Services/AuthenticatedResourceLoader.swift (NEW): the AVFoundation-free core — bookvault://→http, bookvaults://→https scheme conversion; authenticated URLRequest building with Range header; and the 401→refresh→retry state machine with its single-flight NSLock. Operates on a ResourceLoadingRequesting protocol (methods: requestURL, explicitRangeHeader, requestedByteRange, acceptResponse(_:info:), respondWithData(_:), complete(), complete(with:)) because AVAssetResourceLoadingRequest has no public initializer. Its URLSession and the concurrent-refresh wait are injectable (for tests only).
+>   - ios/BookVault/Services/AuthenticatedAVAssetResourceLoaderDelegate.swift: now a thin shim — an `AVAssetResourceLoadingRequest: ResourceLoadingRequesting` extension plus forwarding into the core. Its PUBLIC init is unchanged (still tokenProvider + tokenRefreshHandler, builds its own 30s/300s-timeout URLSession), so AudioPlayerManager (the only caller, ~L486) was not touched.
+>   - ios/BookVaultTests/Services/Real/AuthenticatedResourceLoaderTests.swift (NEW): 14 tests via a MockResourceLoadingRequest + MockURLProtocol.
+>
+> Your job is the REAL-DEVICE PLAYBACK SMOKE — the shim is the one part unit tests don't exercise, and simulator AVFoundation is not authoritative (this project has been burned before by simulator-only verification of media/icon features).
 >
 > Do this:
-> 1. Run `cd ios && xcodegen generate` (new test file, possibly new source file for the extracted type).
-> 2. Build the BookVault scheme and run AuthenticatedResourceLoaderTests on an iPhone simulator.
-> 3. Confirm all pass: scheme conversion (bookvault→http, bookvaults→https); outgoing request carries Authorization: Bearer <token>; Range header propagates for seek requests; 401→refresh-succeeds→retry-with-new-token; 401→refresh-fails→NSError domain AuthenticatedAVAssetResourceLoaderDelegate code 401.
-> 4. The HARDEST and most important test is concurrency: two simultaneous loading requests both hit 401 → tokenRefreshHandler must be called EXACTLY ONCE (single-flight via the NSLock). If this test is flaky or the count is >1, the lock is being released too early or the refresh isn't actually shared — this is a real bug to fix in the production code, not a test to loosen. Run it several times to check for flake.
-> 5. Verify the full BookVaultTests suite still builds and passes — the refactor touched a production file used by real playback, so nothing else should regress.
-> 6. ⚠️ REQUIRED after unit tests pass: do a real playback smoke. Build to a physical device (or, if unavailable, the simulator as a fallback) and actually play an audiobook that streams through this resource loader — confirm audio starts and seeking works. The thin AVFoundation shim is the one part unit tests do NOT cover, and simulator behavior for AVFoundation/media is not authoritative (this project has been burned before by simulator-only verification of media/icon features). Do not mark this phase done on unit tests alone.
-> 7. Report: unit pass/fail counts, concurrency-test stability across runs, any production-code fixes, and the result of the real playback smoke (device vs. simulator).
+> 1. `cd ios && xcodegen generate`, then build the BookVault scheme to a PHYSICAL device (simulator only as a last-resort fallback, and say so if you fall back).
+> 2. Play an audiobook that streams through this resource loader (i.e. a non-downloaded book served over http/https via the bookvault:// custom scheme). Confirm: audio actually starts, and SEEKING to a later position works (this exercises the Range-header path).
+> 3. If you can, exercise the 401→refresh path: play long enough for the access token to expire (~1hr) OR temporarily shorten token lifetime, and confirm playback continues without a re-login (the loader refreshes and retries transparently). If you can't feasibly force expiry, say so — don't fake it.
+> 4. Optionally re-run the unit suite to reconfirm locally (already green in CI): xcodebuild test -scheme BookVault -destination '<simulator>' -only-testing:BookVaultTests/AuthenticatedResourceLoaderTests CODE_SIGNING_ALLOWED=NO.
+> 5. Report: device vs. simulator, whether audio started, whether seeking worked, and the result of the token-refresh check (or why it was skipped). Only after a successful device smoke should Phase 5 be marked fully DONE in this plan.
+>
+> Note on the concurrency test (testConcurrent401sTriggerSingleRefresh): "exactly one refresh" holds ONLY when the second 401 arrives while a refresh is still in flight — the test forces that by holding tokenRefreshHandler open. Non-overlapping 401s refreshing twice is correct, not a bug. Don't "fix" the production lock to force a global single-refresh; that would be wrong.
 > ```
 
 ---
