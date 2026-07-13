@@ -180,7 +180,13 @@ Also add the happy-path GET to `openapi-contract.test.ts` — `/api/audio/{path}
 
 ---
 
-## Phase 5 — `AuthenticatedAVAssetResourceLoaderDelegate` tests
+## Phase 5 — `AuthenticatedAVAssetResourceLoaderDelegate` tests ✅ UNIT DONE / ⏳ DEVICE SMOKE PENDING (July 13, 2026)
+
+> **Outcome**: Did the full protocol-wrapper refactor. Extracted the delegate's core into `ios/BookVault/Services/AuthenticatedResourceLoader.swift` — a `ResourceLoadingRequesting` protocol + an AVFoundation-free `AuthenticatedResourceLoader` (injectable `URLSession`; injectable `concurrentRefreshWaitNanoseconds` so the single-flight "loser" wait doesn't stall tests at the production 0.5s). The delegate is now a thin shim: an `AVAssetResourceLoadingRequest: ResourceLoadingRequesting` extension + forwarding into the core. Public delegate init unchanged, so `AudioPlayerManager` (the only consumer, L486) needs no change. New tests: `ios/BookVaultTests/Services/Real/AuthenticatedResourceLoaderTests.swift` (14 tests, driving a `MockResourceLoadingRequest` + reusing `MockURLProtocol`) — all 6 planned cases plus success-delivers-data/Content-Range parse, missing-token, precedence, and server-error. Concurrency test verified stable across 5 isolated runs (~0.42s each). Full suite **614 tests, 0 failures**; SwiftLint `--strict` clean.
+>
+> Small hardening done alongside: added an `NSLock` (`tasksLock`) around the `loadingTasks` dict — the original mutated it from both the delegate queue and the session completion queue without synchronization (latent data race). Preserved the original `loadingRequest.response = httpResponse` behavior via the shim's `acceptResponse`.
+>
+> **⏳ REMAINING — device playback smoke (see handoff prompt below).** Per the plan's rule, the AVFoundation shim is the one part unit tests don't cover, and simulator AVFoundation is not authoritative. Do not mark this phase fully DONE until a real book streams through the loader on a device (or simulator fallback) with audio + seeking confirmed.
 
 **SUT**: `ios/BookVault/Services/AuthenticatedAVAssetResourceLoaderDelegate.swift`. Injectable: `tokenProvider`, `tokenRefreshHandler` (init, L19–22). **Not** injectable: internal `URLSession` (L35–38) — add a `URLSessionConfiguration` (or session) init parameter defaulting to current behavior, so MockURLProtocol can intercept.
 
