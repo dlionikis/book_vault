@@ -6,6 +6,17 @@
 
 ---
 
+## Execution split (VS Code vs. Xcode)
+
+The test code for every phase is **authored in VS Code** (that's where the plan, codebase context, and web tooling live). Verification differs by language:
+
+- **Phases 4, 6 (web/Node)** — authored AND verified in VS Code (`npm test`, `npm run test:e2e`). Fully autonomous; Xcode not involved.
+- **Phases 1, 2, 3, 5 (Swift)** — authored in VS Code, but Swift can only be compiled/run via Xcode or the `xcodebuild` CLI. Each of these phases ends with a **📋 Xcode handoff prompt** — a self-contained instruction block to paste into Claude running inside Xcode, so it can build, run the tests, and fix failures with the tight inline loop (per-test run buttons, assertion overlays, debugger). The handoff prompt assumes no knowledge of this conversation; everything it needs is in the block. (Alternatively, the VS Code agent can self-verify via `xcodebuild test` — slower log-parsing loop, but no context handoff.)
+
+**Note for Phase 5**: authenticated AV playback should get a real-device smoke test after the unit tests pass — simulator behavior isn't authoritative for AVFoundation/media paths (cf. the project's icon-switching lesson).
+
+---
+
 ## Phase 0 — Land #79, re-measure, ratchet (BLOCKING — do first) ✅ DONE (July 13, 2026)
 
 > **Outcome**: #79 merged (`f30646f`). Measured floor on the post-#79 unit tree: 37.21% stmts / 36.52% branch / 38.0% funcs / 37.55% lines. `coverageThreshold` ratcheted 34/32/35/34 → **37/36/38/37**; `npm run validate` green.
@@ -51,6 +62,21 @@ All 11 have Real equivalents in `AuthManagerRealTests.swift` (login success/fail
 
 **Done when**: `grep -rl 'XCTAssertTrue(true' ios/BookVaultTests/ | wc -l` returns 0 (`grep -rc` prints per-file counts, never a clean zero); iOS suite green (`mcp BuildProject`/`RunAllTests` or CI `ios-tests.yml`).
 
+### 📋 Xcode handoff prompt (Phase 1)
+
+> Paste into Claude running in Xcode after the VS Code agent has written/deleted the test files on the current branch. Goal: verify the placeholder-cleanup compiles and the suite is green.
+>
+> ```
+> The iOS test suite in ios/BookVaultTests/ was just edited to remove ~24 placeholder `XCTAssertTrue(true)` stub tests. Two files changed: APIClientTests.swift (stubs deleted, two real tests added — testUnauthenticatedRequestOmitsAuthorizationHeader and testHandlesDecodingError) and AuthManagerTests.swift (deleted entirely — its content was all stubs or duplicated by AuthManagerRealTests.swift).
+>
+> Do this:
+> 1. If any target membership or file references changed, run `cd ios && xcodegen generate` first.
+> 2. Build the BookVault scheme and run the full BookVaultTests suite on an iPhone simulator.
+> 3. Confirm: (a) it compiles, (b) all tests pass, (c) `grep -rl 'XCTAssertTrue(true' ios/BookVaultTests/ | wc -l` returns 0.
+> 4. If the two new tests (omits-auth-header, decoding-error) fail, fix them: the first uses MockURLProtocol to assert no Authorization header is present when no token is set; the second returns malformed JSON via MockURLProtocol and asserts APIError.decodingError. Match the patterns already in APIClientRealTests.swift.
+> 5. Report pass/fail counts and any fixes made. Do not add new test coverage beyond these two ported tests — this phase is cleanup only.
+> ```
+
 ---
 
 ## Phase 2 — `CoverCacheManagerTests` (the #75 change with no safety net)
@@ -72,6 +98,22 @@ All 11 have Real equivalents in `AuthManagerRealTests.swift` (login success/fail
 5. **Already cached → no network request issued** — pre-populate the cache, call `cacheCover` again, assert zero requests (pins the `hasCover` guard at the top of `cacheCover`).
 6. Cache mechanics: `cacheCover` writes file, `hasCover`/`localCoverURL` find it, `deleteCover`/`clearCache` remove it, `getCacheStats` counts correctly — per-user directory isolation via `userIdProvider`.
 
+### 📋 Xcode handoff prompt (Phase 2)
+
+> Paste into Claude running in Xcode after the VS Code agent has (a) added the injectable `URLSession` seam to `CoverCacheManager.swift` and (b) written `CoverCacheManagerRealTests.swift`. Goal: verify the seam change + new tests, with the security assertion front and center.
+>
+> ```
+> Two files changed on the current branch: ios/BookVault/Services/CoverCacheManager.swift gained an injectable URLSession init parameter (defaulting to .shared, following the same dual-init DI pattern DownloadManager uses), and a new test file ios/BookVaultTests/Services/Real/CoverCacheManagerRealTests.swift was added.
+>
+> Do this:
+> 1. Run `cd ios && xcodegen generate` (a new test file was added).
+> 2. Build the BookVault scheme and run CoverCacheManagerRealTests on an iPhone simulator.
+> 3. The SECURITY-CRITICAL test is "token NOT attached to presigned S3 URL": when the download URL host is an S3 host (not the API base URL host), the request must carry NO Authorization header. If this test does not exist or does not actually assert header absence, that is a blocker — flag it, don't paper over it. The bearer token must never leak to S3.
+> 4. Also confirm these pass: token IS attached for same-host+same-port API URLs; no token for same-host-different-port; no token when the token provider returns nil; already-cached covers issue zero network requests; and the cache mechanics (write/find/delete/clear/stats, per-user dir isolation).
+> 5. If the URLSession seam didn't land correctly (e.g. tests can't intercept requests via MockURLProtocol because .shared is still hardcoded on the request path), fix the production code so the injected session is actually used for the download.
+> 6. Report pass/fail counts and any fixes. Confirm the full BookVaultTests suite still builds and passes (the seam change must not break existing DownloadManager/other tests).
+> ```
+
 ---
 
 ## Phase 3 — `SystemKeychain` tests
@@ -85,6 +127,22 @@ New file `ios/BookVaultTests/Services/Real/SystemKeychainTests.swift`, using uni
 3. `load` of a missing key returns `nil`.
 4. `delete` removes; subsequent `load` is `nil`; `delete` of a missing key doesn't throw.
 5. Unicode/long values round-trip (encoding path, `KeychainError.encodingFailed` guard).
+
+### 📋 Xcode handoff prompt (Phase 3)
+
+> Paste into Claude running in Xcode after the VS Code agent has written `SystemKeychainTests.swift`. Goal: verify keychain round-trips against the real Security framework on the simulator.
+>
+> ```
+> A new test file ios/BookVaultTests/Services/Real/SystemKeychainTests.swift was added on the current branch. It tests the REAL SystemKeychain implementation (ios/BookVault/Services/SystemKeychain.swift) against the simulator's keychain — no mock, because the mock exists for consumers, not for testing the keychain itself.
+>
+> Do this:
+> 1. Run `cd ios && xcodegen generate` (new test file).
+> 2. Build and run SystemKeychainTests on an iPhone simulator.
+> 3. Confirm all pass: save→load round-trip; save over an existing key OVERWRITES (the delete-then-add-or-update path — the classic keychain bug to guard against); load of a missing key returns nil; delete removes and delete-of-missing doesn't throw; unicode/long values round-trip.
+> 4. Watch for test pollution: each test must use a unique key prefix and clean up in tearDown, or a leftover keychain item fails a later run. If you see nondeterministic failures across runs, that's the cause — fix the isolation, don't just re-run.
+> 5. If the simulator returns errSecItemNotFound / -25300 unexpectedly on save-then-load, it usually means the keychain access group or bundle entitlement isn't set for the test host — report the exact OSStatus rather than guessing.
+> 6. Report pass/fail counts and any fixes.
+> ```
 
 ---
 
@@ -144,6 +202,23 @@ Also add the happy-path GET to `openapi-contract.test.ts` — `/api/audio/{path}
 6. Concurrent 401s trigger **one** refresh (NSLock, L29/206–211) — two simultaneous mock loading requests, assert `tokenRefreshHandler` called once.
 
 Manual verification after the refactor: stream one book on a device/simulator (the shim is the one part tests don't cover).
+
+### 📋 Xcode handoff prompt (Phase 5)
+
+> Paste into Claude running in Xcode after the VS Code agent has done the protocol-wrapper refactor + written the tests. This is the most involved iOS phase: a production-code refactor, a concurrency test, and a required real-device playback check.
+>
+> ```
+> The current branch refactored ios/BookVault/Services/AuthenticatedAVAssetResourceLoaderDelegate.swift for testability and added ios/BookVaultTests/Services/Real/AuthenticatedResourceLoaderTests.swift. The refactor: extracted the delegate's core logic (bookvault:// → http:// scheme conversion, authenticated URLRequest building with Range header, and the 401→refresh→retry state machine with its single-flight NSLock) into an internal type that operates on a `ResourceLoadingRequesting` protocol — because `AVAssetResourceLoadingRequest` has no public initializer and cannot be constructed in a test. The AVFoundation delegate is now a thin shim conforming the real request to that protocol; the tests drive the core type with a MockResourceLoadingRequest. An injectable URLSession (defaulting to .shared) was also added so MockURLProtocol can intercept.
+>
+> Do this:
+> 1. Run `cd ios && xcodegen generate` (new test file, possibly new source file for the extracted type).
+> 2. Build the BookVault scheme and run AuthenticatedResourceLoaderTests on an iPhone simulator.
+> 3. Confirm all pass: scheme conversion (bookvault→http, bookvaults→https); outgoing request carries Authorization: Bearer <token>; Range header propagates for seek requests; 401→refresh-succeeds→retry-with-new-token; 401→refresh-fails→NSError domain AuthenticatedAVAssetResourceLoaderDelegate code 401.
+> 4. The HARDEST and most important test is concurrency: two simultaneous loading requests both hit 401 → tokenRefreshHandler must be called EXACTLY ONCE (single-flight via the NSLock). If this test is flaky or the count is >1, the lock is being released too early or the refresh isn't actually shared — this is a real bug to fix in the production code, not a test to loosen. Run it several times to check for flake.
+> 5. Verify the full BookVaultTests suite still builds and passes — the refactor touched a production file used by real playback, so nothing else should regress.
+> 6. ⚠️ REQUIRED after unit tests pass: do a real playback smoke. Build to a physical device (or, if unavailable, the simulator as a fallback) and actually play an audiobook that streams through this resource loader — confirm audio starts and seeking works. The thin AVFoundation shim is the one part unit tests do NOT cover, and simulator behavior for AVFoundation/media is not authoritative (this project has been burned before by simulator-only verification of media/icon features). Do not mark this phase done on unit tests alone.
+> 7. Report: unit pass/fail counts, concurrency-test stability across runs, any production-code fixes, and the result of the real playback smoke (device vs. simulator).
+> ```
 
 ---
 
