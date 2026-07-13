@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
 import { parseBookFields, parsePagination, buildPagination } from '@/lib/api-utils';
 import { transformBook } from '@/lib/book-transformer';
-import { withLogging } from '@/lib/logger';
+import { logger, withLogging } from '@/lib/logger';
 
 export const GET = withLogging(async (request: NextRequest) => {
   // Check both auth methods
-  const session = await getServerSession(authOptions);
-  const mobileUser = await getAuthUserFromRequest(request);
-  const user = session?.user || mobileUser;
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireUser(request);
+  if (auth.error) return auth.error;
   try {
     const searchParams = request.nextUrl.searchParams;
     const query = (searchParams.get('q') || '').trim();
@@ -166,7 +160,7 @@ export const GET = withLogging(async (request: NextRequest) => {
       pagination: buildPagination(page, limit, total),
     });
   } catch (error) {
-    console.error('Error searching books:', error);
+    logger.error('Error searching books', { error: String(error) });
     return NextResponse.json({ error: 'Failed to search books' }, { status: 500 });
   }
 });

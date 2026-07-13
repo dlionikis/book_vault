@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { normalizeUuid, isValidUuid } from '@/lib/api-utils';
 
@@ -8,13 +8,9 @@ import { normalizeUuid, isValidUuid } from '@/lib/api-utils';
 export async function POST(request: NextRequest, { params }: { params: { seriesId: string } }) {
   try {
     // Check both auth methods
-    const session = await getServerSession(authOptions);
-    const mobileUser = await getAuthUserFromRequest(request);
-    const user = session?.user || mobileUser;
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireUser(request);
+    if (auth.error) return auth.error;
+    const user = auth.user;
 
     const seriesId = normalizeUuid(params.seriesId);
     if (!isValidUuid(seriesId)) {
@@ -82,7 +78,7 @@ export async function POST(request: NextRequest, { params }: { params: { seriesI
       total: seriesBooks.length,
     });
   } catch (error) {
-    console.error('Error adding series to library:', error);
+    logger.error('Error adding series to library', { error: String(error) });
     return NextResponse.json({ error: 'Failed to add series to library' }, { status: 500 });
   }
 }
@@ -91,13 +87,9 @@ export async function POST(request: NextRequest, { params }: { params: { seriesI
 export async function DELETE(request: NextRequest, { params }: { params: { seriesId: string } }) {
   try {
     // Check both auth methods
-    const session = await getServerSession(authOptions);
-    const mobileUser = await getAuthUserFromRequest(request);
-    const user = session?.user || mobileUser;
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireUser(request);
+    if (auth.error) return auth.error;
+    const user = auth.user;
 
     const seriesId = normalizeUuid(params.seriesId);
     if (!isValidUuid(seriesId)) {
@@ -146,7 +138,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { serie
       removed: result.count,
     });
   } catch (error) {
-    console.error('Error removing series from library:', error);
+    logger.error('Error removing series from library', { error: String(error) });
     return NextResponse.json({ error: 'Failed to remove series from library' }, { status: 500 });
   }
 }

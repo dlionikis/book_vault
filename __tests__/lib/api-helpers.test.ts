@@ -443,7 +443,10 @@ describe('handleEntityDetailWithBooks', () => {
 
       await handleEntityDetailWithBooks(request, params, baseConfig);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error fetching author:', expect.any(Error));
+      // logger.error formats a single string: "<timestamp> [ERROR] <message> <meta JSON>"
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Error fetching author')
+      );
 
       consoleErrorSpy.mockRestore();
     });

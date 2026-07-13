@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { normalizeUuid } from '@/lib/api-utils';
 
@@ -8,13 +8,9 @@ import { normalizeUuid } from '@/lib/api-utils';
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Check both auth methods
-    const session = await getServerSession(authOptions);
-    const mobileUser = await getAuthUserFromRequest(request);
-    const user = session?.user || mobileUser;
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireUser(request);
+    if (auth.error) return auth.error;
+    const user = auth.user;
 
     const listId = normalizeUuid(params.id);
     if (!listId) {
@@ -67,7 +63,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
-    console.error('Error adding book to list:', error);
+    logger.error('Error adding book to list', { error: String(error) });
     return NextResponse.json({ error: 'Failed to add book to list' }, { status: 500 });
   }
 }
@@ -76,13 +72,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Check both auth methods
-    const session = await getServerSession(authOptions);
-    const mobileUser = await getAuthUserFromRequest(request);
-    const user = session?.user || mobileUser;
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireUser(request);
+    if (auth.error) return auth.error;
+    const user = auth.user;
 
     const listId = normalizeUuid(params.id);
     if (!listId) {
@@ -119,7 +111,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error removing book from list:', error);
+    logger.error('Error removing book from list', { error: String(error) });
     return NextResponse.json({ error: 'Failed to remove book from list' }, { status: 500 });
   }
 }

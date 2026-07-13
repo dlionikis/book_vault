@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
-import { withLogging } from '@/lib/logger';
+import { logger, withLogging } from '@/lib/logger';
 
 export const GET = withLogging(async (request: NextRequest) => {
   try {
     // Check both auth methods
-    const session = await getServerSession(authOptions);
-    const mobileUser = await getAuthUserFromRequest(request);
-    const user = session?.user || mobileUser;
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireUser(request);
+    if (auth.error) return auth.error;
+    const user = auth.user;
 
     // Get download history with book details
     const downloads = await prisma.userDownload.findMany({
@@ -51,7 +46,7 @@ export const GET = withLogging(async (request: NextRequest) => {
       dailyCount,
     });
   } catch (error) {
-    console.error('Download history fetch error:', error);
+    logger.error('Download history fetch error', { error: String(error) });
     return NextResponse.json({ error: 'Failed to fetch download history' }, { status: 500 });
   }
 });

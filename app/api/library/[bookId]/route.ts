@@ -1,22 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { normalizeUuid } from '@/lib/api-utils';
-import { withLogging } from '@/lib/logger';
+import { logger, withLogging } from '@/lib/logger';
 
 // DELETE /api/library/[bookId] - Remove book from library
 export const DELETE = withLogging(async (request: NextRequest, context) => {
   const { bookId: bookIdParam } = await context!.params;
   try {
     // Check both auth methods
-    const session = await getServerSession(authOptions);
-    const mobileUser = await getAuthUserFromRequest(request);
-    const user = session?.user || mobileUser;
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireUser(request);
+    if (auth.error) return auth.error;
+    const user = auth.user;
 
     const bookId = normalizeUuid(bookIdParam);
     if (!bookId) {
@@ -45,7 +40,7 @@ export const DELETE = withLogging(async (request: NextRequest, context) => {
 
     return NextResponse.json({ message: 'Book removed from library' });
   } catch (error) {
-    console.error('Error removing from library:', error);
+    logger.error('Error removing from library', { error: String(error) });
     return NextResponse.json({ error: 'Failed to remove book from library' }, { status: 500 });
   }
 });

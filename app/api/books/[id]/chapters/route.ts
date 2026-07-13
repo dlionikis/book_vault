@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
+import { logger } from '@/lib/logger';
 import { requireAdmin } from '@/lib/admin-auth';
 import { prisma } from '@/lib/db';
 import { extractChaptersBestMethod, isFFProbeAvailable } from '@/lib/audio-metadata';
@@ -28,13 +28,8 @@ import path from 'path';
  */
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   // Check both auth methods
-  const session = await getServerSession(authOptions);
-  const mobileUser = await getAuthUserFromRequest(request);
-  const user = session?.user || mobileUser;
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireUser(request);
+  if (auth.error) return auth.error;
 
   const id = normalizeUuid(params.id);
   if (!id) {
@@ -180,14 +175,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       source: 'extracted',
     });
   } catch (error) {
-    console.error('Error getting chapters:', error);
-    return NextResponse.json(
-      {
-        error: 'Failed to get chapters',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    logger.error('Error getting chapters', { error: String(error) });
+    return NextResponse.json({ error: 'Failed to get chapters' }, { status: 500 });
   }
 }
 
@@ -301,7 +290,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       message: `Re-extracted ${savedChapters.length} chapters (deleted ${deletedCount.count} old chapters)`,
     });
   } catch (error) {
-    console.error('Error re-extracting chapters:', error);
+    logger.error('Error re-extracting chapters', { error: String(error) });
     return NextResponse.json(
       {
         error: 'Failed to re-extract chapters',

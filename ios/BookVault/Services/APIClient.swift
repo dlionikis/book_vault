@@ -603,4 +603,30 @@ class APIClient: APIClientProtocol {
 
         let _: LogoutMobile200Response = try await execute(request: request)
     }
+
+    // MARK: - Downloads (Authenticated)
+
+    /// Check whether the current user is eligible to download a book
+    func checkDownloadEligibility(bookId: UUID) async throws -> CheckDownloadEligibility200Response {
+        let request = try createRequest(
+            path: "/api/downloads/\(bookId.uuidString)/check",
+            method: "GET",
+            requiresAuth: true
+        )
+
+        return try await execute(request: request)
+    }
+
+    /// Generate a pre-signed download URL for a book
+    func generateDownloadUrl(bookId: UUID, deviceId: String?) async throws -> GenerateDownloadUrl200Response {
+        let requestBody = GenerateDownloadUrlRequest(deviceId: deviceId)
+        let request = try createRequest(
+            path: "/api/downloads/\(bookId.uuidString)",
+            method: "POST",
+            body: requestBody,
+            requiresAuth: true
+        )
+
+        return try await execute(request: request)
+    }
 }

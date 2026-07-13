@@ -1884,7 +1884,7 @@ describe('OpenAPI Contract Tests', () => {
       // The password endpoint currently returns 401 for all auth-related issues
       // including wrong password, so we test that behavior
 
-      testFn('should return 401 for wrong current password', async () => {
+      testFn('should return 400 for wrong current password', async () => {
         const response = await authenticatedRequest(`${BASE_URL}/api/user/password`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -1894,14 +1894,16 @@ describe('OpenAPI Contract Tests', () => {
           },
         });
 
-        // Wrong password returns 401 (auth failure)
-        expect(response.status).toBe(401);
+        // Per spec: wrong current password is a 400 (the request was
+        // authenticated; the payload is what's invalid). Previously this
+        // endpoint was session-only, so Bearer requests 401'd before ever
+        // reaching password validation — that inconsistency is fixed.
+        expect(response.status).toBe(400);
         expect(response).toSatisfyApiSpec();
         expect(response.data).toHaveProperty('error');
       });
 
-      testFn('should return 401 for weak new password when current is wrong', async () => {
-        // Note: When current password is wrong, we get 401 before validation
+      testFn('should return 400 for weak new password when current is wrong', async () => {
         const response = await authenticatedRequest(`${BASE_URL}/api/user/password`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -1911,7 +1913,7 @@ describe('OpenAPI Contract Tests', () => {
           },
         });
 
-        expect(response.status).toBe(401);
+        expect(response.status).toBe(400);
         expect(response).toSatisfyApiSpec();
         expect(response.data).toHaveProperty('error');
       });

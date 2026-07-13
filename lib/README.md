@@ -11,9 +11,7 @@
 ### Core API Utilities
 
 - **api-helpers.ts** - Reusable API route handlers and entity detail endpoints. Includes `handleEntityDetailWithBooks()` for authors/narrators/series pages with pagination. Used by: browse API routes.
-- **api-schemas.ts** - Zod validation schemas for API request/response validation. Ensures type safety at runtime. Used by: all API routes.
 - **api-types.ts** - TypeScript interfaces for API contracts. Matches OpenAPI specification. Used by: components, API routes, transformers.
-- **api-url.ts** - URL construction helpers for API endpoints. Centralizes URL formatting. Used by: client components making API calls.
 - **api-utils.ts** - API utility functions including pagination builder, UUID normalization, and field parsing. Used by: API routes.
 
 ### Database & Authentication

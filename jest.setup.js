@@ -1,6 +1,10 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 
+// Deterministic secret for real JWT signing/verification in tests
+// (lib/jwt.ts throws without NEXTAUTH_SECRET; don't depend on developer .env files)
+process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'jest-test-secret-do-not-use-in-prod';
+
 // Polyfill TextEncoder/TextDecoder for undici (required by @fastify/busboy)
 const { TextEncoder, TextDecoder } = require('util');
 global.TextEncoder = TextEncoder;

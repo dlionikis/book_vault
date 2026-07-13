@@ -517,4 +517,97 @@ final class APIClientRealTests: XCTestCase {
         // Then
         XCTAssertNil(sut.accessToken)
     }
+
+    // MARK: - Download Endpoint Tests
+
+    func testCheckDownloadEligibilitySuccess() async throws {
+        // Given
+        sut.accessToken = "download-token"
+        let bookId = UUID()
+
+        var capturedAuthHeader: String?
+
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, "/api/downloads/\(bookId.uuidString)/check")
+            XCTAssertEqual(request.httpMethod, "GET")
+            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+            return self.makeJSONResponse(statusCode: 200, json: ["eligible": true])
+        }
+
+        // When
+        let response = try await sut.checkDownloadEligibility(bookId: bookId)
+
+        // Then
+        XCTAssertTrue(response.eligible)
+        XCTAssertEqual(capturedAuthHeader, "Bearer download-token")
+    }
+
+    func testGenerateDownloadUrlSendsDeviceIdAndDecodesResponse() async throws {
+        // Given
+        sut.accessToken = "download-token"
+        let bookId = UUID()
+        let responseJSON: [String: Any] = [
+            "downloadUrl": "https://s3.example.com/audiobooks/test.mp3?signature=abc",
+            "expiresAt": "2026-01-01T00:00:00Z",
+            "fileSize": 12_345_678
+        ]
+
+        var capturedBody: [String: String]?
+
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, "/api/downloads/\(bookId.uuidString)")
+            XCTAssertEqual(request.httpMethod, "POST")
+            // httpBody can be nil in URLProtocol - try httpBodyStream instead
+            if let bodyData = request.httpBody {
+                capturedBody = try? JSONSerialization.jsonObject(with: bodyData) as? [String: String]
+            } else if let stream = request.httpBodyStream {
+                stream.open()
+                var data = Data()
+                let bufferSize = 1024
+                let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+                defer { buffer.deallocate() }
+                while stream.hasBytesAvailable {
+                    let bytesRead = stream.read(buffer, maxLength: bufferSize)
+                    if bytesRead > 0 {
+                        data.append(buffer, count: bytesRead)
+                    }
+                }
+                stream.close()
+                capturedBody = try? JSONSerialization.jsonObject(with: data) as? [String: String]
+            }
+            return self.makeJSONResponse(statusCode: 200, json: responseJSON)
+        }
+
+        // When
+        let response = try await sut.generateDownloadUrl(bookId: bookId, deviceId: "test-device-id")
+
+        // Then
+        XCTAssertEqual(capturedBody?["deviceId"], "test-device-id")
+        XCTAssertEqual(response.downloadUrl, "https://s3.example.com/audiobooks/test.mp3?signature=abc")
+        XCTAssertEqual(response.fileSize, 12_345_678)
+    }
+
+    func testGenerateDownloadUrlServerError() async {
+        // Given
+        sut.accessToken = "download-token"
+
+        MockURLProtocol.requestHandler = { _ in
+            self.makeJSONResponse(statusCode: 501, json: ["error": "S3 not configured"])
+        }
+
+        // When/Then
+        do {
+            _ = try await sut.generateDownloadUrl(bookId: UUID(), deviceId: nil)
+            XCTFail("Expected serverError")
+        } catch let error as APIError {
+            if case let .serverError(code, message) = error {
+                XCTAssertEqual(code, 501)
+                XCTAssertEqual(message, "S3 not configured")
+            } else {
+                XCTFail("Expected serverError, got \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
 }

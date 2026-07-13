@@ -32,4 +32,8 @@ protocol APIClientProtocol {
     func fetchLibrary() async throws -> GetLibrary200Response
     func addToLibrary(bookId: UUID) async throws -> LogoutMobile200Response
     func removeFromLibrary(bookId: UUID) async throws
+
+    // Downloads
+    func checkDownloadEligibility(bookId: UUID) async throws -> CheckDownloadEligibility200Response
+    func generateDownloadUrl(bookId: UUID, deviceId: String?) async throws -> GenerateDownloadUrl200Response
 }

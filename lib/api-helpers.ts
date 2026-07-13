@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
 import { normalizeUuid, buildPagination } from '@/lib/api-utils';
@@ -82,13 +82,8 @@ export async function handleEntityDetailWithBooks<TEntity>(
   config: EntityDetailConfig<TEntity>
 ): Promise<NextResponse> {
   // 1. Check authentication (both session and mobile bearer token)
-  const session = await getServerSession(authOptions);
-  const mobileUser = await getAuthUserFromRequest(request);
-  const user = session?.user || mobileUser;
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireUser(request);
+  if (auth.error) return auth.error;
 
   // 2. Normalize and validate UUID
   const entityId = normalizeUuid(params.id);
@@ -151,7 +146,7 @@ export async function handleEntityDetailWithBooks<TEntity>(
       pagination: buildPagination(page, limit, total),
     });
   } catch (error) {
-    console.error(`Error fetching ${config.entityName.toLowerCase()}:`, error);
+    logger.error(`Error fetching ${config.entityName.toLowerCase()}`, { error: String(error) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

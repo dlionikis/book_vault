@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { formatRuntime } from '@/lib/utils/formatRuntime';
 import { Book, Author, Narrator } from '@/lib/types';
 
 interface BookCardProps {
@@ -21,14 +22,6 @@ interface BookCardProps {
  * <BookCard book={myBook} />
  */
 export default function BookCard({ book }: BookCardProps) {
-  // Format runtime as hours and minutes
-  const formatRuntime = (minutes?: number | null) => {
-    if (!minutes) return null;
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
-  };
-
   // Get first series if exists
   const primarySeries = book.series.length > 0 ? book.series[0] : null;
 

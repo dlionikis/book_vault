@@ -128,15 +128,21 @@ final class MockNetworkMonitorForDownloads: NetworkMonitoring {
 @MainActor
 final class DownloadManagerRealTests: XCTestCase {
     var sut: DownloadManager!
-    var mockAPIClient: MockAPIClientForAuth!
+    var mockAPIClient: MockAPIClient!
     var mockStorageManager: MockStorageManagerForDownloads!
     var mockNetworkMonitor: MockNetworkMonitorForDownloads!
+    var testDefaultsSuiteName: String!
+    var testDefaults: UserDefaults!
 
     override func setUp() async throws {
-        mockAPIClient = MockAPIClientForAuth()
+        mockAPIClient = MockAPIClient()
         mockAPIClient.accessToken = "test-token"
         mockStorageManager = MockStorageManagerForDownloads()
         mockNetworkMonitor = MockNetworkMonitorForDownloads()
+
+        // Isolated UserDefaults so pending-download persistence doesn't leak between tests
+        testDefaultsSuiteName = "com.bookvault.tests.\(UUID().uuidString)"
+        testDefaults = UserDefaults(suiteName: testDefaultsSuiteName)
 
         // Create with a test session identifier and nil session (won't create background session)
         let config = URLSessionConfiguration.ephemeral
@@ -148,19 +154,20 @@ final class DownloadManagerRealTests: XCTestCase {
             storageManager: mockStorageManager,
             networkMonitor: mockNetworkMonitor,
             sessionIdentifier: "com.bookvault.downloads.test.\(UUID().uuidString)",
+            userDefaults: testDefaults,
             session: testSession
         )
-
-        // Disable force logout for tests
-        sut.forceLogoutHandler = {}
     }
 
     override func tearDown() async throws {
         MockURLProtocol.reset()
+        testDefaults.removePersistentDomain(forName: testDefaultsSuiteName)
         sut = nil
         mockAPIClient = nil
         mockStorageManager = nil
         mockNetworkMonitor = nil
+        testDefaults = nil
+        testDefaultsSuiteName = nil
     }
 
     // MARK: - Initial State Tests
@@ -307,6 +314,155 @@ final class DownloadManagerRealTests: XCTestCase {
         try await sut.startDownload(book: book)
 
         // Then - no active download should be created
+        XCTAssertTrue(sut.activeDownloads.isEmpty)
+    }
+
+    // MARK: - Eligibility Tests (via APIClient seam)
+
+    func testStartDownloadNotEligible() async {
+        // Given
+        let book = TestFixtures.makeBook()
+        mockAPIClient.checkDownloadEligibilityResult = .success(
+            CheckDownloadEligibility200Response(eligible: false)
+        )
+
+        // When/Then
+        do {
+            try await sut.startDownload(book: book)
+            XCTFail("Expected notEligible error")
+        } catch let error as DownloadError {
+            XCTAssertEqual(error, .notEligible)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertEqual(mockAPIClient.checkDownloadEligibilityCalls, [book.id])
+        XCTAssertTrue(mockAPIClient.generateDownloadUrlCalls.isEmpty)
+        XCTAssertTrue(sut.activeDownloads.isEmpty)
+    }
+
+    func testStartDownloadEligibilityUnauthorized() async {
+        // Given
+        let book = TestFixtures.makeBook()
+        mockAPIClient.checkDownloadEligibilityResult = .failure(APIError.unauthorized)
+
+        // When/Then
+        do {
+            try await sut.startDownload(book: book)
+            XCTFail("Expected unauthorized error")
+        } catch let error as DownloadError {
+            XCTAssertEqual(error, .unauthorized)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertTrue(sut.activeDownloads.isEmpty)
+    }
+
+    func testStartDownloadEligibilityRateLimited() async {
+        // Given
+        let book = TestFixtures.makeBook()
+        mockAPIClient.checkDownloadEligibilityResult = .failure(APIError.serverError(429, nil))
+
+        // When/Then
+        do {
+            try await sut.startDownload(book: book)
+            XCTFail("Expected rateLimitExceeded error")
+        } catch let error as DownloadError {
+            XCTAssertEqual(error, .rateLimitExceeded)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertTrue(sut.activeDownloads.isEmpty)
+    }
+
+    // MARK: - URL Generation Tests (via APIClient seam)
+
+    func testStartDownloadSuccessStartsDownloadTask() async throws {
+        // Given
+        let book = TestFixtures.makeBook()
+        let bookId = book.id.uuidString
+        mockAPIClient.checkDownloadEligibilityResult = .success(
+            CheckDownloadEligibility200Response(eligible: true)
+        )
+        mockAPIClient.generateDownloadUrlResult = .success(GenerateDownloadUrl200Response(
+            downloadUrl: "https://s3.example.com/audiobooks/test.mp3?signature=abc",
+            expiresAt: Date().addingTimeInterval(3600),
+            fileSize: 1_000_000
+        ))
+        MockURLProtocol.requestHandler = { request in
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            return (response, Data("audio".utf8))
+        }
+
+        // When
+        try await sut.startDownload(book: book)
+
+        // Then - both API calls went through the injected client
+        XCTAssertEqual(mockAPIClient.checkDownloadEligibilityCalls, [book.id])
+        XCTAssertEqual(mockAPIClient.generateDownloadUrlCalls.count, 1)
+        XCTAssertEqual(mockAPIClient.generateDownloadUrlCalls.first?.bookId, book.id)
+
+        // And the download task was started with the returned URL info
+        let download = try XCTUnwrap(sut.activeDownloads[bookId])
+        XCTAssertEqual(download.state, .downloading(progress: 0))
+        XCTAssertEqual(download.totalBytes, 1_000_000)
+        XCTAssertNotNil(download.task)
+
+        // Cleanup - cancel the in-flight task
+        sut.cancelDownload(bookId: bookId)
+    }
+
+    func testStartDownloadUrlGenerationRequiresS3() async {
+        // Given
+        let book = TestFixtures.makeBook()
+        mockAPIClient.checkDownloadEligibilityResult = .success(
+            CheckDownloadEligibility200Response(eligible: true)
+        )
+        mockAPIClient.generateDownloadUrlResult = .failure(APIError.serverError(501, nil))
+
+        // When/Then
+        do {
+            try await sut.startDownload(book: book)
+            XCTFail("Expected networkError")
+        } catch let error as DownloadError {
+            XCTAssertEqual(error, .networkError("Downloads require S3 configuration"))
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertTrue(sut.activeDownloads.isEmpty)
+    }
+
+    func testStartDownloadInsufficientStorage() async {
+        // Given
+        let book = TestFixtures.makeBook()
+        mockStorageManager.canDownloadResult = false
+        mockAPIClient.checkDownloadEligibilityResult = .success(
+            CheckDownloadEligibility200Response(eligible: true)
+        )
+        mockAPIClient.generateDownloadUrlResult = .success(GenerateDownloadUrl200Response(
+            downloadUrl: "https://s3.example.com/audiobooks/test.mp3",
+            expiresAt: Date().addingTimeInterval(3600),
+            fileSize: 999_000_000_000
+        ))
+
+        // When/Then
+        do {
+            try await sut.startDownload(book: book)
+            XCTFail("Expected insufficientStorage error")
+        } catch let error as DownloadError {
+            XCTAssertEqual(error, .insufficientStorage)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
         XCTAssertTrue(sut.activeDownloads.isEmpty)
     }
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
+import { logger } from '@/lib/logger';
 import fs from 'fs/promises';
 import path from 'path';
 import { getAbsoluteMediaPath, validateMediaPath } from '@/lib/media';
@@ -21,16 +21,8 @@ const CONTENT_TYPES: Record<string, string> = {
 export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
   try {
     // Authentication check - support both session cookies (web) and Bearer tokens (mobile)
-    const session = await getServerSession(authOptions);
-    const tokenUser = await getAuthUserFromRequest(request);
-    const user = session?.user || tokenUser;
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required to access images' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser(request);
+    if (auth.error) return auth.error;
 
     const filePath = params.path.join('/');
 
@@ -52,7 +44,7 @@ export async function GET(request: NextRequest, { params }: { params: { path: st
           },
         });
       } catch (error: any) {
-        console.error('Error streaming image from S3:', error);
+        logger.error('Error streaming image from S3', { error: String(error) });
 
         // Handle S3-specific errors
         if (error.name === 'NoSuchKey' || error.name === 'NotFound') {
@@ -91,7 +83,7 @@ export async function GET(request: NextRequest, { params }: { params: { path: st
       },
     });
   } catch (error) {
-    console.error('Error serving image:', error);
+    logger.error('Error serving image', { error: String(error) });
     return NextResponse.json({ error: 'Failed to serve image' }, { status: 500 });
   }
 }

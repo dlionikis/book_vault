@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { normalizeUuid } from '@/lib/api-utils';
@@ -24,13 +23,9 @@ import { logger, withLogging } from '@/lib/logger';
  */
 export const GET = withLogging(async (request: NextRequest) => {
   // Check both auth methods
-  const session = await getServerSession(authOptions);
-  const mobileUser = await getAuthUserFromRequest(request);
-  const user = session?.user || mobileUser;
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireUser(request);
+  if (auth.error) return auth.error;
+  const user = auth.user;
 
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -90,14 +85,9 @@ export const GET = withLogging(async (request: NextRequest) => {
  */
 export const POST = withLogging(async (request: NextRequest) => {
   // Support both session-based (web) and Bearer token (mobile) auth
-  const session = await getServerSession(authOptions);
-  const mobileUser = await getAuthUserFromRequest(request);
-
-  const user = session?.user || mobileUser;
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireUser(request);
+  if (auth.error) return auth.error;
+  const user = auth.user;
 
   // Rate limiting check
   if (!checkRateLimit(user.id, 100, 60000)) {
@@ -185,13 +175,9 @@ export const POST = withLogging(async (request: NextRequest) => {
 // PUT /api/progress - Mark book as completed or reset to not started
 export const PUT = withLogging(async (request: NextRequest) => {
   // Check both auth methods
-  const session = await getServerSession(authOptions);
-  const mobileUser = await getAuthUserFromRequest(request);
-  const user = session?.user || mobileUser;
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireUser(request);
+  if (auth.error) return auth.error;
+  const user = auth.user;
 
   try {
     const body = await request.json();

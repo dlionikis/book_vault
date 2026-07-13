@@ -34,7 +34,7 @@ import {
   LoginResponseSchema,
   LibraryResponseSchema,
   LibraryCheckResponseSchema,
-} from '@/lib/api-schemas';
+} from '../helpers/api-schemas';
 
 // Configure axios to use Node.js adapters
 axios.defaults.adapter = require('axios/lib/adapters/http');
@@ -95,10 +95,12 @@ describeFn('API Response Type Validation', () => {
   let authToken: string;
   let sampleBookId: string;
 
+  // Generous timeout: this hits a dev server that may be compiling these
+  // routes for the first time, which can exceed Jest's default 5s hook limit
   beforeAll(async () => {
     authToken = await getAuthToken();
     sampleBookId = await getSampleBookId(authToken);
-  });
+  }, 30_000);
 
   describe('Books API', () => {
     it('validates /api/books response', async () => {
@@ -370,6 +372,15 @@ describeFn('API Response Type Validation', () => {
     });
 
     it('validates POST /api/library response', async () => {
+      // Ensure a known starting state: the book may linger in the library from
+      // a previous run or the sibling contract suite (both share the dev DB),
+      // in which case the add correctly returns 200 instead of 201.
+      await axios
+        .delete(`${API_BASE}/api/library/${sampleBookId}`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        })
+        .catch(() => {});
+
       const response = await axios.post(
         `${API_BASE}/api/library`,
         { bookId: sampleBookId },

@@ -655,7 +655,7 @@ export interface operations {
         /** @description Items per page */
         limit?: number;
         /** @description Sort order (title, author, narrator, or series) */
-        sort?: "title" | "author" | "narrator" | "series";
+        sort?: "title";
       };
     };
     responses: {

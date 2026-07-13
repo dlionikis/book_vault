@@ -78,9 +78,31 @@ run_api_coverage() {
 }
 
 run_tests() {
-  CURRENT_STEP="Jest tests"
-  echo "🧪 Running tests..."
+  CURRENT_STEP="Jest tests (unit)"
+  echo "🧪 Running unit tests..."
   npm test
+}
+
+require_database() {
+  CURRENT_STEP="Database availability check"
+  if ! (echo > /dev/tcp/localhost/5433) 2>/dev/null; then
+    echo -e "${RED}❌ PostgreSQL is not reachable on port 5433.${NC}"
+    echo "   Integration and contract tests need the database:"
+    echo "   docker-compose up -d"
+    exit 1
+  fi
+}
+
+run_integration_tests() {
+  CURRENT_STEP="Jest tests (integration, real DB)"
+  echo "🧪 Running integration tests..."
+  npm run test:integration
+}
+
+run_contract_tests() {
+  CURRENT_STEP="OpenAPI contract tests (live server)"
+  echo "🔍 Running live contract tests against the spec..."
+  npm run test:contract
 }
 
 # Run all validations
@@ -91,6 +113,9 @@ run_api_validate
 run_api_drift_check
 run_api_coverage
 run_tests
+require_database
+run_integration_tests
+run_contract_tests
 
 # Clear step tracking on success
 CURRENT_STEP=""

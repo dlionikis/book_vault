@@ -271,7 +271,7 @@ describe('Book Detail Page', () => {
       asin: 'B001',
       title: 'Test Book',
       publisherSummary: 'Summary',
-      runtimeMinutes: 125, // 2 hr 5 min
+      runtimeMinutes: 125, // 2h 5m
       releaseDate: new Date(),
       publisher: 'Publisher',
       coverUrl: '/cover.jpg',
@@ -293,7 +293,7 @@ describe('Book Detail Page', () => {
     const page = await BookDetailPage({ params });
     render(page);
 
-    expect(screen.getByText('2 hr 5 min')).toBeInTheDocument();
+    expect(screen.getByText('2h 5m')).toBeInTheDocument();
   });
 
   it('displays series information with sequence number', async () => {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { normalizeUuid } from '@/lib/api-utils';
 
@@ -8,13 +8,9 @@ import { normalizeUuid } from '@/lib/api-utils';
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Check both auth methods
-    const session = await getServerSession(authOptions);
-    const mobileUser = await getAuthUserFromRequest(request);
-    const user = session?.user || mobileUser;
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireUser(request);
+    if (auth.error) return auth.error;
+    const user = auth.user;
 
     // Normalize UUID
     const id = normalizeUuid(params.id);
@@ -63,7 +59,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       updatedAt: list.updatedAt.toISOString(),
     });
   } catch (error) {
-    console.error('Error updating list:', error);
+    logger.error('Error updating list', { error: String(error) });
     return NextResponse.json({ error: 'Failed to update list' }, { status: 500 });
   }
 }
@@ -72,13 +68,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Check both auth methods
-    const session = await getServerSession(authOptions);
-    const mobileUser = await getAuthUserFromRequest(request);
-    const user = session?.user || mobileUser;
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireUser(request);
+    if (auth.error) return auth.error;
+    const user = auth.user;
 
     // Normalize UUID
     const id = normalizeUuid(params.id);
@@ -106,7 +98,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting list:', error);
+    logger.error('Error deleting list', { error: String(error) });
     return NextResponse.json({ error: 'Failed to delete list' }, { status: 500 });
   }
 }

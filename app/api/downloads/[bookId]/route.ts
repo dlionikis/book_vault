@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { isS3Enabled, generatePresignedUrl, getS3ObjectMetadata } from '@/lib/s3';
 import { checkDownloadLimit } from '@/lib/rate-limit';
@@ -12,13 +12,9 @@ import { join } from 'path';
 export async function POST(request: NextRequest, { params }: { params: { bookId: string } }) {
   try {
     // Check both auth methods
-    const session = await getServerSession(authOptions);
-    const mobileUser = await getAuthUserFromRequest(request);
-    const user = session?.user || mobileUser;
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireUser(request);
+    if (auth.error) return auth.error;
+    const user = auth.user;
 
     const { bookId } = params;
     const normalizedBookId = normalizeUuid(bookId) as string;
@@ -105,7 +101,7 @@ export async function POST(request: NextRequest, { params }: { params: { bookId:
       fileSize,
     });
   } catch (error) {
-    console.error('Download URL generation error:', error);
+    logger.error('Download URL generation error', { error: String(error) });
     return NextResponse.json({ error: 'Failed to generate download URL' }, { status: 500 });
   }
 }
