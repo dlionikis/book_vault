@@ -501,6 +501,62 @@ final class APIClientRealTests: XCTestCase {
         XCTAssertEqual(capturedContentType, "application/json")
     }
 
+    // Ported from the former APIClientTests placeholder stub (Phase 1 cleanup):
+    // when no access token is set, requests must NOT carry an Authorization header.
+    func testUnauthenticatedRequestOmitsAuthorizationHeader() async throws {
+        // Given: no access token set (sut starts with nil token from setUp)
+        XCTAssertNil(sut.accessToken)
+        let responseJSON: [String: Any] = [
+            "books": [],
+            "pagination": ["page": 1, "limit": 20, "total": 0, "pages": 0]
+        ]
+
+        var capturedAuthHeader: String? = "sentinel"
+        MockURLProtocol.requestHandler = { request in
+            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+            return self.makeJSONResponse(statusCode: 200, json: responseJSON)
+        }
+
+        // When
+        _ = try await sut.fetchBooks(page: 1, limit: 20, sortBy: nil)
+
+        // Then
+        XCTAssertNil(capturedAuthHeader, "No Authorization header should be sent without a token")
+    }
+
+    // Ported from the former APIClientTests placeholder stub (Phase 1 cleanup):
+    // malformed JSON in a 200 response surfaces as APIError.decodingError.
+    func testMalformedJSONThrowsDecodingError() async {
+        // Given
+        sut.accessToken = "valid-token"
+
+        MockURLProtocol.requestHandler = { _ in
+            let response = HTTPURLResponse(
+                url: URL(string: "http://localhost:3000")!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            // Not valid JSON for the expected model
+            let data = Data("{ this is not valid json".utf8)
+            return (response, data)
+        }
+
+        // When/Then
+        do {
+            _ = try await sut.fetchBooks(page: 1, limit: 20, sortBy: nil)
+            XCTFail("Expected decodingError")
+        } catch let error as APIError {
+            if case .decodingError = error {
+                // Expected
+            } else {
+                XCTFail("Expected decodingError, got \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
     // MARK: - Logout Tests
 
     func testLogoutClearsAccessToken() async throws {

@@ -120,7 +120,6 @@
 		A1786235CB8353766F483273 /* BrowseProtocols.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FF46025FCDAE59CDB4CACB6 /* BrowseProtocols.swift */; };
 		A17A3F59D79869DDFF6B6E75 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8DB4844CCD3B17010EB7FD0 /* Models.swift */; };
 		A1CAA075BE8DF5520E0854E7 /* LibraryBook.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DC7D398C47D0C9C5CA9FE26 /* LibraryBook.swift */; };
-		A1F0AD20ACE3B37F4BB97CA5 /* AuthManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29661D097AA4FFF2CCD70207 /* AuthManagerTests.swift */; };
 		A40CC0099F8B239885C3F8AF /* GetAdminEcsHealth200ResponseTasksRecentlyStoppedInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44DF90F8F5FA8E114228744E /* GetAdminEcsHealth200ResponseTasksRecentlyStoppedInner.swift */; };
 		A566CC93465A65B21426953D /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 224B1150587B17F911A52A29 /* User.swift */; };
 		A5DB67327C963199B08F7DE4 /* GetAdminCosts200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 523EEBD6A04F5BFD8239FD57 /* GetAdminCosts200Response.swift */; };
@@ -261,7 +260,6 @@
 		255ABE20652EA7C49D4319DB /* LibraryCacheManagerRealTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryCacheManagerRealTests.swift; sourceTree = "<group>"; };
 		25CF782C7941A830B3E5CFB2 /* GetSearchSuggestions200ResponseBooksInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetSearchSuggestions200ResponseBooksInner.swift; sourceTree = "<group>"; };
 		27AFCF681EA09136DEEA923A /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
-		29661D097AA4FFF2CCD70207 /* AuthManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManagerTests.swift; sourceTree = "<group>"; };
 		2A74D57A5BC18D96438D69E0 /* BatchUpdateProgressRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchUpdateProgressRequest.swift; sourceTree = "<group>"; };
 		2ABCD382712C188F4C8A5D23 /* TestFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestFixtures.swift; sourceTree = "<group>"; };
 		2B72983E7A01DE984068CFC5 /* RemoveSeriesFromLibrary200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoveSeriesFromLibrary200Response.swift; sourceTree = "<group>"; };
@@ -476,7 +474,6 @@
 			children = (
 				30EB210CC802D6C40312FBF3 /* APIClientTests.swift */,
 				D71CB719A9962A71E6BD13DE /* AudioPlayerManagerTests.swift */,
-				29661D097AA4FFF2CCD70207 /* AuthManagerTests.swift */,
 				F9B6A555C877E79571CC0F67 /* BackgroundDownloadTests.swift */,
 				83D3D5F1F28570B3C742079C /* BiometricAuthManagerTests.swift */,
 				385EB15DDF57C20F636082D2 /* ChapterManagerTests.swift */,
@@ -984,7 +981,6 @@
 				C8CB83F3CB333ADD3EDDEE89 /* AudioPlayerManagerRealTests.swift in Sources */,
 				7A50313796F8EB20ADF5E2E4 /* AudioPlayerManagerTests.swift in Sources */,
 				DB3C1016C5AC00F490B72DF7 /* AuthManagerRealTests.swift in Sources */,
-				A1F0AD20ACE3B37F4BB97CA5 /* AuthManagerTests.swift in Sources */,
 				64509F4F54A0E3A5B73F5375 /* BackgroundDownloadTests.swift in Sources */,
 				45854C4250CFDC639EA8A3FB /* BiometricAuthManagerTests.swift in Sources */,
 				268E98174B0C26405194323F /* ChapterManagerRealTests.swift in Sources */,
