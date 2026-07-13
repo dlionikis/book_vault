@@ -1,17 +1,17 @@
 # S3 Archive Restore Workflow - Updated Implementation Plan
 
 > **Created**: January 2, 2026
-> **Updated**: March 1, 2026
+> **Updated**: July 12, 2026 (revised for verified S3 Intelligent-Tiering semantics; added development & testing workflow)
 > **Status**: Planned (not yet implemented)
-> **Priority**: High (next major feature)
-> **Dependencies**: S3 Intelligent-Tiering with Archive tiers enabled
+> **Priority**: High — a HeadObject sample on July 12, 2026 showed **5 of 8 audio files already in ARCHIVE_ACCESS**. A large portion of the library is currently unstreamable in production.
+> **Dependencies**: S3 Intelligent-Tiering with Archive Access tier (already enabled — verified)
 > **⚠️ PREREQUISITE**: Requires refactoring to on-demand URL generation (Phase 0)
 
 ---
 
 ## Overview
 
-When S3 Intelligent-Tiering moves audiobook audio files to Archive Access tier (after 90 days of no access), they become temporarily unavailable for streaming. This plan covers the full restore pipeline:
+When S3 Intelligent-Tiering moves audiobook audio files to the Archive Access tier (after 90 days of no access), they become temporarily unavailable for streaming. This plan covers the full restore pipeline:
 
 1. Detect archived books and surface availability status across all UIs
 2. Let users request restores (single book or full series)
@@ -19,7 +19,31 @@ When S3 Intelligent-Tiering moves audiobook audio files to Archive Access tier (
 4. Push notifications via AWS SNS + APNs when books are ready
 5. Graceful UX on both web and iOS
 
-**Only audio files (> 5MB) are subject to archiving.** Cover images, metadata, and cue files remain in S3 Standard permanently — browsing always works instantly.
+**Only audio files (`.m4b`) are subject to archiving.** Verified July 2026: audio files were uploaded with the `INTELLIGENT_TIERING` storage class; cover images, metadata JSON, and cue files are `STANDARD` and never archive — browsing always works instantly.
+
+---
+
+## Verified AWS Facts (July 12, 2026)
+
+These were confirmed against the live `book-vault-media` bucket and current AWS behavior. **The rest of this plan depends on them — do not re-introduce Glacier storage-class assumptions.**
+
+1. **Bucket config**: One Intelligent-Tiering configuration (`ArchiveConfig`), `ARCHIVE_ACCESS` after 90 days. **Deep Archive is NOT enabled** — there is exactly one archive tier, and restores always take ~3-5 hours (Standard tier).
+2. **Detection is easy**: `HeadObject` returns an `ArchiveStatus` field (`ARCHIVE_ACCESS`) for IT objects in the archive tier. No range-request tricks, no S3 Inventory needed. When the object is in Frequent/Infrequent Access, `ArchiveStatus` is absent.
+3. **Restores are free**: Standard (and Bulk) retrievals from IT archive tiers have no retrieval fee. Expedited is available for a fee (future option).
+4. **`RestoreObject` must NOT include `Days`**: Intelligent-Tiering restores reject the `Days` element. There is no temporary restored copy.
+5. **No expiry after restore**: Unlike Glacier storage classes, a restored IT object **moves back to the Frequent Access tier permanently** (until it again goes unaccessed for 90 days). There is no 24-hour window, no `expiry-date`, and no "restored_expiring" state.
+6. **Completion signal**: While restoring, `HeadObject` shows `ArchiveStatus` present and `x-amz-restore: ongoing-request="true"`. When complete, **`ArchiveStatus` disappears**. Do not look for `expiry-date` — IT restores never produce one.
+7. **Presigning is local**: `generatePresignedUrl()` ([lib/s3.ts](../../lib/s3.ts)) is pure HMAC signing — it makes **no S3 API call** and cannot fail for archived objects. A presigned URL for an archived object is happily generated and then fails with `403 InvalidObjectState` when the _client_ GETs it. Archive detection must therefore use `HeadObject`, never "try presign and catch".
+
+### Glacier vs. Intelligent-Tiering cheat sheet
+
+| Behavior             | Glacier storage classes            | S3 Intelligent-Tiering (ours)               |
+| -------------------- | ---------------------------------- | ------------------------------------------- |
+| Tier detection       | `StorageClass` on object           | `ArchiveStatus` field on HeadObject         |
+| `RestoreObject` Days | Required                           | **Rejected — omit it**                      |
+| Restored copy        | Temporary copy, expires after Days | Object moves back to Frequent Access, stays |
+| Completion signal    | `ongoing-request="false"` + expiry | `ArchiveStatus` absent                      |
+| Retrieval cost       | $0.01–$0.03/GB                     | **Free** (Standard/Bulk)                    |
 
 ---
 
@@ -48,15 +72,15 @@ When S3 Intelligent-Tiering moves audiobook audio files to Archive Access tier (
 ```
 User browses library
   ↓
-Books show archive status badge (cached from nightly job)
+Books show archive status badge (from cached audio_availability column, synced nightly)
   ↓
-User taps "Play" on archived book
+User taps "Play" on a book
   ↓
 Client calls GET /api/books/{id}/stream
   ↓
-API calls S3 HeadObject → detects ARCHIVE_ACCESS tier
+API calls S3 HeadObject → reads ArchiveStatus field
   ↓
-API creates restore request in DB + calls S3 RestoreObject
+If archived: API calls S3 RestoreObject (no Days) + records restore request in DB
   ↓
 Returns 202 { status: 'restoring', estimatedCompletion: '...' }
   ↓
@@ -64,9 +88,9 @@ Client shows "Restoring... ~3-5 hours" UI
   ↓
 Background job polls S3 every 5 minutes for in-progress restores
   ↓
-Restore completes:
-  1. Update DB: status → 'available'
-  2. Look up user's device tokens
+HeadObject no longer shows ArchiveStatus → restore complete:
+  1. Update DB: request → 'completed', book → 'AVAILABLE'
+  2. Look up requesting user's device tokens
   3. Send push notification via AWS SNS → APNs
   ↓
 iOS receives push: "Your audiobook is ready to play!"
@@ -74,25 +98,28 @@ iOS receives push: "Your audiobook is ready to play!"
 User taps notification → deep links to book detail → Play button active
 ```
 
+**Design principle**: The cached `audio_availability` column drives _badges only_. Playback and download decisions always do a real-time `HeadObject` (one cheap call at tap time), so a stale cache can never hand the client a URL that 403s.
+
 ### New Components
 
-| Component                             | Purpose                                           |
-| ------------------------------------- | ------------------------------------------------- |
-| `media_restore_requests` table        | Track restore state per file                      |
-| `user_device_tokens` table            | Store APNs device tokens + SNS endpoints          |
-| `s3_storage_class` column on `books`  | Cached archive status for list views              |
-| `GET /api/books/{id}/stream`          | On-demand URL generation + archive detection      |
-| `GET /api/books/{id}/restore-status`  | Poll restore progress                             |
-| `POST /api/books/{id}/restore`        | Explicitly request a restore                      |
-| `POST /api/books/{id}/restore-series` | Restore all archived books in a series            |
-| `GET /api/books/restores`             | List active restore requests                      |
-| `POST /api/notifications/register`    | Register iOS device token                         |
-| `DELETE /api/notifications/register`  | Unregister device token                           |
-| Background: `poll-restore-status`     | Detect completed restores + trigger notifications |
-| Background: `sync-storage-classes`    | Nightly job to cache archive status               |
-| `NotificationService`                 | Server-side SNS integration                       |
-| iOS `RestoreManager`                  | Restore state + polling on client                 |
-| iOS push notification handling        | APNs registration, deep linking                   |
+| Component                              | Purpose                                               |
+| -------------------------------------- | ----------------------------------------------------- |
+| `media_restore_requests` table         | Track restore state per file                          |
+| `user_device_tokens` table             | Store APNs device tokens + SNS endpoints              |
+| `audio_availability` column on books   | Cached availability for list-view badges              |
+| `lib/restore.ts`                       | `initiateRestore()` + `parseRestoreHeader()` helpers  |
+| `GET /api/books/{id}/stream`           | On-demand URL generation + archive detection          |
+| `GET /api/books/{id}/restore-status`   | Poll restore progress                                 |
+| `POST /api/books/{id}/restore`         | Explicitly request a restore (web/iOS restore button) |
+| `POST /api/series/{id}/restore`        | Restore all archived books in a series                |
+| `GET /api/books/restores`              | List active + recently completed restore requests     |
+| `POST /api/notifications/register`     | Register iOS device token                             |
+| `DELETE /api/notifications/register`   | Unregister device token                               |
+| Update: `POST /api/downloads/{bookId}` | Archive detection added to existing download endpoint |
+| Background: `poll-restore-status`      | Detect completed restores + trigger notifications     |
+| Background: `sync-availability`        | Nightly job to cache archive status                   |
+| `NotificationService`                  | Server-side SNS integration                           |
+| iOS push notification handling         | APNs registration, deep linking                       |
 
 ---
 
@@ -104,50 +131,94 @@ User taps notification → deep links to book detail → Play button active
 
 ### Problem
 
-Currently, `transformBook()` eagerly generates presigned S3 URLs for every book in list responses. This means:
+Currently, `transformBook()` ([lib/book-transformer.ts](../../lib/book-transformer.ts)) eagerly generates presigned S3 URLs for every book in list responses.
 
-- 100+ presigned URLs generated per `/api/books` request
-- Can't check storage class before generating URLs
-- Unnecessary S3 API calls and cost
-- URLs in list responses that expire unused
+**Note**: presigning is a local signing operation — the old framing of "100+ S3 API calls per request" was wrong; eager generation costs no S3 calls and ~no money. The _real_ problems are:
+
+- Playback can't be gated on archive status when URLs are handed out eagerly in lists
+- Presigned URLs expire after 1 hour — a list left open goes stale and playback breaks
+- There's no single endpoint where "this file is archived, restoring, ETA X" semantics can live
+- Response payload hygiene (every list ships URLs almost nobody uses)
 
 ### Solution
 
-Move presigned URL generation to a dedicated stream endpoint called only when a user actually plays or downloads a book.
+Move presigned URL generation for **audio** to a dedicated stream endpoint called only when a user actually plays a book. Keep `coverUrl` generation as-is (covers are `STANDARD`, never archived).
 
-### Changes
+### Enabler: `S3_ENABLED` override for local development
 
-**New endpoint**: `GET /api/books/{id}/stream`
+`isS3Enabled()` ([lib/s3.ts](../../lib/s3.ts)) requires `NODE_ENV === 'production'`, and `next dev` pins `NODE_ENV=development` — so the S3/archive code path is unreachable in local dev with hot reload. Add an explicit override honored alongside the existing check:
+
+```typescript
+export function isS3Enabled(): boolean {
+  const override = process.env.S3_ENABLED === 'true';
+  if (process.env.NODE_ENV !== 'production' && !override) return false;
+  if (!S3_BUCKET) return false;
+  // ... existing credential checks unchanged ...
+}
+```
+
+This unlocks **hybrid mode** — local server + local Postgres + the real production bucket — which the entire manual-testing workflow relies on (see [Testing Strategy](#testing-strategy)).
+
+### New endpoint: `GET /api/books/{id}/stream`
 
 ```typescript
 // app/api/books/[id]/stream/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { prisma } from '@/lib/db';
+import { normalizeUuid } from '@/lib/api-utils';
+import { isS3Enabled, generatePresignedUrl } from '@/lib/s3';
+import { getLocalAudioUrl } from '@/lib/media';
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  // Dual auth, same pattern as app/api/downloads/[bookId]/route.ts
   const session = await getServerSession(authOptions);
   const mobileUser = await getAuthUserFromRequest(request);
   const user = session?.user || mobileUser;
-  if (!user) return new Response('Unauthorized', { status: 401 });
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const bookId = normalizeUuid(params.id);
+  if (!bookId) return NextResponse.json({ error: 'Invalid book ID format' }, { status: 400 });
 
   const book = await prisma.book.findUnique({
-    where: { id: params.id },
-    select: { audioUrl: true },
+    where: { id: bookId },
+    select: { id: true, audioUrl: true },
   });
+  if (!book?.audioUrl) return NextResponse.json({ error: 'Book not found' }, { status: 404 });
 
-  if (!book?.audioUrl) return new Response('Book not found', { status: 404 });
+  // Development: local files are always available, no presigning
+  if (!isS3Enabled()) {
+    return NextResponse.json({
+      status: 'available',
+      streamUrl: getLocalAudioUrl(book.audioUrl),
+      expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+    });
+  }
 
   const streamUrl = await generatePresignedUrl(book.audioUrl, 3600);
-  return Response.json({
+  return NextResponse.json({
+    status: 'available',
     streamUrl,
-    expiresAt: new Date(Date.now() + 3600 * 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 3600_000).toISOString(),
   });
 }
 ```
 
-**Update `transformBook()`**: Remove `audioUrl` presigned URL generation. Return `audioUrl: null` in list responses. Keep `coverUrl` generation as-is (covers are never archived).
+(Phase 2 extends this with `HeadObject` archive detection — this phase just moves URL generation.)
 
-**Update clients**:
+### Client updates
 
-- Web `AudioPlayer`: Fetch `/api/books/{id}/stream` when user clicks Play
-- iOS `AudioPlayerManager`: Add `APIClient.getBookStreamUrl(bookId:)` method, call before playback
+- **Web** `PlaybackClient`/`AudioPlayer`: fetch `/api/books/{id}/stream` when the player mounts / user clicks Play, instead of receiving `audioUrl` as a prop from the server component
+- **iOS** `AudioPlayerManager`: add `APIClient.getBookStream(bookId:)`, call before playback instead of using `book.audioUrl` ([AudioPlayerManager.swift:431](../../ios/BookVault/Services/AudioPlayerManager.swift#L431) currently streams `book.audioUrl` directly)
+
+### ⚠️ Rollout order (don't break installed iOS builds)
+
+Installed iOS builds stream from `book.audioUrl` in list responses. Removing it before the updated app is installed breaks streaming on old builds. Sequence:
+
+1. **Deploy backend** with the new stream endpoint, **keeping `audioUrl` populated** in `transformBook()`
+2. **Ship web + iOS client updates** that use the stream endpoint (TestFlight → device)
+3. **Once updated app is installed on all devices**, change `transformBook()` to return `audioUrl: null` (keep the field for schema compatibility until the OpenAPI spec drops it)
 
 ### OpenAPI Spec Addition
 
@@ -158,8 +229,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     tags: [Media]
     summary: Get on-demand streaming URL for a book
     description: |
-      Generates a presigned S3 URL for audio playback.
-      Returns 202 if the file is archived and a restore has been initiated.
+      Generates a presigned S3 URL for audio playback (local API URL in development).
+      Returns 202 with status=restoring if the file is archived; a restore is
+      initiated automatically.
     security:
       - sessionAuth: []
       - bearerAuth: []
@@ -176,33 +248,54 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         content:
           application/json:
             schema:
-              type: object
-              required: [streamUrl, expiresAt]
-              properties:
-                streamUrl:
-                  type: string
-                  format: uri
-                expiresAt:
-                  type: string
-                  format: date-time
+              $ref: '#/components/schemas/BookStreamResponse'
       '202':
-        description: File is archived, restore initiated
+        description: File is archived; restore initiated or already in progress
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RestoreStatus'
+              $ref: '#/components/schemas/BookStreamResponse'
       '401':
         description: Unauthorized
       '404':
         description: Book not found
+
+# components/schemas — single schema for both status codes keeps Swift codegen simple
+BookStreamResponse:
+  type: object
+  required: [status]
+  properties:
+    status:
+      type: string
+      enum: [available, restoring]
+    streamUrl:
+      type: string
+      format: uri
+      description: Present when status=available
+    expiresAt:
+      type: string
+      format: date-time
+      description: Presigned URL expiry. Present when status=available
+    bookId:
+      type: string
+      format: uuid
+    message:
+      type: string
+      description: Human-readable status. Present when status=restoring
+    requestedAt:
+      type: string
+      format: date-time
+    estimatedCompletion:
+      type: string
+      format: date-time
+      description: requestedAt + 5h (Standard tier upper bound). Present when status=restoring
 ```
 
 ### Success Metrics
 
-- `/api/books` responses no longer include presigned audio URLs
-- S3 API calls reduced by ~99%
-- Playback still works on web and iOS
-- URLs only generated when user clicks play/download
+- Playback still works on web and iOS (dev local mode AND production S3)
+- Audio URLs only generated at play time; list responses eventually drop them
+- Old iOS build keeps working until step 3 of the rollout
 
 ---
 
@@ -214,27 +307,22 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 ```prisma
 model MediaRestoreRequest {
-  id                      String    @id @default(uuid())
-  bookId                  String    @map("book_id")
-  s3Key                   String    @map("s3_key")
-  storageClass            String    @map("storage_class") // ARCHIVE_ACCESS or DEEP_ARCHIVE_ACCESS
+  id                String    @id @default(uuid())
+  bookId            String    @map("book_id")
+  s3Key             String    @map("s3_key")
 
-  status                  String    @default("pending") // pending, in_progress, available, expired, failed
-  restoreTier             String    @default("Standard") @map("restore_tier") // Standard (3-5h) or Expedited (1-5min)
-  daysAvailable           Int       @default(1) @map("days_available")
+  status            String    @default("in_progress") // in_progress, completed, failed
+  restoreTier       String    @default("Standard") @map("restore_tier") // Standard (3-5h); Expedited is a future paid option
 
-  requestedAt             DateTime  @default(now()) @map("requested_at")
-  restoreStartedAt        DateTime? @map("restore_started_at")
-  availableAt             DateTime? @map("available_at")
-  expiresAt               DateTime? @map("expires_at")
+  requestedAt       DateTime  @default(now()) @map("requested_at")
+  completedAt       DateTime? @map("completed_at")
+  lastCheckedAt     DateTime? @map("last_checked_at")
+  errorMessage      String?   @map("error_message")
 
-  requestedByUserId       String    @map("requested_by_user_id")
-  estimatedCompletionTime DateTime? @map("estimated_completion_time")
-  lastCheckedAt           DateTime? @map("last_checked_at")
-  errorMessage            String?   @map("error_message")
+  requestedByUserId String?   @map("requested_by_user_id")
 
-  book                    Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  requestedBy             User      @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  book              Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  requestedBy       User?     @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
 
   @@index([status, lastCheckedAt])
   @@index([bookId])
@@ -243,20 +331,26 @@ model MediaRestoreRequest {
 }
 ```
 
+Changes from the original draft, per verified IT semantics:
+
+- **Dropped `daysAvailable` and `expiresAt`** — IT restores have no temporary copy and no expiry
+- **Dropped `storageClass`, `restoreStartedAt`, `availableAt`, `estimatedCompletionTime`** — single archive tier means the ETA is always `requestedAt + 5h` (derive it, don't store it); `pending`/`available`/`expired` statuses collapse into `in_progress`/`completed`
+- **`requestedByUserId` is now optional (`String?`)** — required for `onDelete: SetNull` (Prisma rejects SetNull on a required relation), and lets system-initiated restores exist later
+
 ### New Table: `user_device_tokens`
 
 ```prisma
 model UserDeviceToken {
-  id              String    @id @default(uuid())
-  userId          String    @map("user_id")
-  deviceToken     String    @map("device_token")
-  platform        String    @default("ios") // ios, web (future)
-  snsEndpointArn  String?   @map("sns_endpoint_arn")
-  isActive        Boolean   @default(true) @map("is_active")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  deviceToken    String   @map("device_token")
+  platform       String   @default("ios") // ios, web (future)
+  snsEndpointArn String?  @map("sns_endpoint_arn")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, deviceToken])
   @@index([userId])
@@ -266,27 +360,31 @@ model UserDeviceToken {
 
 ### Update `Book` Model
 
-Add cached storage class to avoid per-request HeadObject calls on list views:
+Cached availability for list-view badges (never used for playback decisions — see Phase 2):
 
 ```prisma
 model Book {
   // ... existing fields ...
 
-  audioStorageClass  String   @default("STANDARD") @map("audio_storage_class")
-  storageClassCheckedAt DateTime? @map("storage_class_checked_at")
+  audioAvailability     String    @default("AVAILABLE") @map("audio_availability") // AVAILABLE, ARCHIVED, RESTORING
+  availabilityCheckedAt DateTime? @map("availability_checked_at")
 
   // ... existing relations ...
-  restoreRequests  MediaRestoreRequest[]
+  restoreRequests       MediaRestoreRequest[]
 }
 ```
+
+We model **availability**, not raw storage class — every audio object's `StorageClass` is just `INTELLIGENT_TIERING`, which tells the UI nothing. `HeadObject.ArchiveStatus` (plus the restore header) maps cleanly onto these three states.
+
+After the migration, all books default to `AVAILABLE`; the first run of the nightly sync (Phase 5) corrects them.
 
 ### Update `User` Model
 
 ```prisma
 model User {
   // ... existing fields and relations ...
-  deviceTokens     UserDeviceToken[]
-  restoreRequests  MediaRestoreRequest[]
+  deviceTokens    UserDeviceToken[]
+  restoreRequests MediaRestoreRequest[]
 }
 ```
 
@@ -294,143 +392,261 @@ model User {
 
 ## Phase 2: Backend API
 
-**Time estimate**: 3-4 hours
+**Time estimate**: 4-5 hours
 
-### 2.1 Update Stream Endpoint for Archive Detection
+### 2.1 Restore Helpers (`lib/restore.ts`)
 
-Extend the Phase 0 stream endpoint to check storage class:
+The most correctness-sensitive code in the feature. Full spec:
 
 ```typescript
-// app/api/books/[id]/stream/route.ts
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  // ... auth check ...
+// lib/restore.ts
+import { HeadObjectCommand, RestoreObjectCommand } from '@aws-sdk/client-s3';
+import { getS3Client, getS3Bucket } from './s3';
+import { prisma } from './db';
 
-  const book = await prisma.book.findUnique({
-    where: { id: params.id },
-    select: { id: true, audioUrl: true, audioStorageClass: true },
+/** Standard-tier IT restores complete in 3-5 hours; use the upper bound for ETAs. */
+export const RESTORE_ETA_HOURS = 5;
+
+/**
+ * Parse the x-amz-restore header (SDK: HeadObjectCommandOutput.Restore).
+ * Format while restoring: `ongoing-request="true"`.
+ * NOTE: IT restores never produce an expiry-date (no temporary copy) —
+ * completion is signaled by ArchiveStatus disappearing, not by this header.
+ */
+export function parseRestoreHeader(header: string | undefined): { ongoingRequest: boolean } | null {
+  if (!header) return null;
+  return { ongoingRequest: /ongoing-request="true"/.test(header) };
+}
+
+/**
+ * Initiate an S3 restore for an archived audio file. Idempotent:
+ * - An existing in_progress DB request is returned as-is (dedup across devices/users)
+ * - S3's RestoreAlreadyInProgress error is swallowed (concurrent play taps,
+ *   or a restore initiated outside the app) and a DB row is still recorded
+ */
+export async function initiateRestore(
+  book: { id: string; audioUrl: string },
+  userId: string | null
+) {
+  const existing = await prisma.mediaRestoreRequest.findFirst({
+    where: { bookId: book.id, status: 'in_progress' },
   });
+  if (existing) return existing;
 
-  if (!book?.audioUrl) return new Response('Not found', { status: 404 });
+  // Standard (3-5h, free) in normal operation. RESTORE_TIER=Expedited collapses
+  // the feedback loop to 1-5 minutes for pipeline testing (~$0.03/GB — pennies
+  // per book). Never leave Expedited set in production config.
+  const tier = process.env.RESTORE_TIER === 'Expedited' ? 'Expedited' : 'Standard';
 
-  // Fast path: cached storage class says it's available
-  if (book.audioStorageClass === 'STANDARD' || book.audioStorageClass === 'FREQUENT_ACCESS') {
-    const streamUrl = await generatePresignedUrl(book.audioUrl, 3600);
-    return Response.json({ streamUrl, expiresAt: new Date(Date.now() + 3600_000).toISOString() });
-  }
-
-  // Slow path: check S3 directly for archived/restoring files
-  const headResult = await s3Client.send(
-    new HeadObjectCommand({ Bucket: S3_BUCKET, Key: book.audioUrl })
-  );
-
-  // Parse restore header if present
-  if (headResult.Restore) {
-    const restore = parseRestoreHeader(headResult.Restore);
-
-    if (restore.ongoingRequest) {
-      return Response.json(
-        {
-          status: 'restoring',
-          message: 'This audiobook is being restored. It will be ready in 3-5 hours.',
-          estimatedCompletion: restore.estimatedCompletion,
-          bookId: book.id,
-        },
-        { status: 202 }
-      );
-    }
-
-    if (restore.expiryDate && new Date(restore.expiryDate) > new Date()) {
-      // Restored and available — generate URL
-      await prisma.book.update({
-        where: { id: book.id },
-        data: { audioStorageClass: 'RESTORED' },
-      });
-      const streamUrl = await generatePresignedUrl(book.audioUrl, 3600);
-      return Response.json({ streamUrl, expiresAt: new Date(Date.now() + 3600_000).toISOString() });
-    }
-  }
-
-  // File is archived — initiate restore
   try {
-    const streamUrl = await generatePresignedUrl(book.audioUrl, 3600);
-    // If this succeeds, file is actually accessible
-    await prisma.book.update({
-      where: { id: book.id },
-      data: { audioStorageClass: 'STANDARD', storageClassCheckedAt: new Date() },
-    });
-    return Response.json({ streamUrl, expiresAt: new Date(Date.now() + 3600_000).toISOString() });
-  } catch (error: any) {
-    if (error.Code === 'InvalidObjectState' || error.name === 'InvalidObjectState') {
-      await initiateRestore(book, user.id);
-      return Response.json(
-        {
-          status: 'restoring',
-          message: 'This audiobook is being restored. It will be ready in 3-5 hours.',
-          bookId: book.id,
-          estimatedCompletion: new Date(Date.now() + 5 * 3600_000).toISOString(),
+    await getS3Client().send(
+      new RestoreObjectCommand({
+        Bucket: getS3Bucket(),
+        Key: book.audioUrl,
+        // ⚠️ No Days element — Intelligent-Tiering restores reject it.
+        RestoreRequest: {
+          GlacierJobParameters: { Tier: tier },
         },
-        { status: 202 }
-      );
-    }
-    throw error;
+      })
+    );
+  } catch (error: any) {
+    if (error.name !== 'RestoreAlreadyInProgress') throw error;
   }
+
+  const [request] = await prisma.$transaction([
+    prisma.mediaRestoreRequest.create({
+      data: {
+        bookId: book.id,
+        s3Key: book.audioUrl,
+        status: 'in_progress',
+        restoreTier: tier,
+        requestedByUserId: userId,
+      },
+    }),
+    prisma.book.update({
+      where: { id: book.id },
+      data: { audioAvailability: 'RESTORING' },
+    }),
+  ]);
+  return request;
+}
+
+export function estimatedCompletion(requestedAt: Date): string {
+  return new Date(requestedAt.getTime() + RESTORE_ETA_HOURS * 3600_000).toISOString();
 }
 ```
 
-### 2.2 Restore Status Endpoint
+### 2.2 Extend Stream Endpoint with Archive Detection
+
+Replaces the Phase 0 production path. **Always HeadObject at play time** — one call (~$0.0000004, tens of ms) per play tap. The cached column can be ~24h stale and must never gate playback; this also means any cache drift self-heals on play.
+
+```typescript
+// app/api/books/[id]/stream/route.ts (production branch)
+const head = await getS3Client().send(
+  new HeadObjectCommand({ Bucket: getS3Bucket(), Key: book.audioUrl })
+);
+
+if (head.ArchiveStatus) {
+  // Archived (restore may or may not be in flight) — initiateRestore is
+  // idempotent for both cases and records/reuses the DB request.
+  const restoreRequest = await initiateRestore(book, user.id);
+  return NextResponse.json(
+    {
+      status: 'restoring',
+      message: 'This audiobook is being restored from archive. It will be ready in 3-5 hours.',
+      bookId: book.id,
+      requestedAt: restoreRequest.requestedAt.toISOString(),
+      estimatedCompletion: estimatedCompletion(restoreRequest.requestedAt),
+    },
+    { status: 202 }
+  );
+}
+
+// Available — self-heal cached state if stale, then presign
+if (book.audioAvailability !== 'AVAILABLE') {
+  await prisma.book.update({
+    where: { id: book.id },
+    data: { audioAvailability: 'AVAILABLE', availabilityCheckedAt: new Date() },
+  });
+}
+const streamUrl = await generatePresignedUrl(book.audioUrl, 3600);
+return NextResponse.json({
+  status: 'available',
+  streamUrl,
+  expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+});
+```
+
+> **Why no try/presign/catch?** Presigning is local signing and never contacts S3 — it cannot throw `InvalidObjectState`. The only reliable server-side archive signal is `HeadObject.ArchiveStatus`.
+
+### 2.3 Explicit Restore Endpoint
+
+Backs the "Request restore" button (Phase 4/7) — lets a user restore without pretending to play:
+
+```typescript
+// app/api/books/[id]/restore/route.ts
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+  // ... dual auth + normalizeUuid + book lookup (id, audioUrl), 404 if missing ...
+
+  if (!isS3Enabled()) {
+    return NextResponse.json({ status: 'available' }); // local files never archive
+  }
+
+  const head = await getS3Client().send(
+    new HeadObjectCommand({ Bucket: getS3Bucket(), Key: book.audioUrl })
+  );
+
+  if (!head.ArchiveStatus) {
+    // Nothing to restore — self-heal cache and report available
+    await prisma.book.update({
+      where: { id: book.id },
+      data: { audioAvailability: 'AVAILABLE', availabilityCheckedAt: new Date() },
+    });
+    return NextResponse.json({ status: 'available' });
+  }
+
+  const restoreRequest = await initiateRestore(book, user.id);
+  return NextResponse.json(
+    {
+      status: 'restoring',
+      bookId: book.id,
+      requestedAt: restoreRequest.requestedAt.toISOString(),
+      estimatedCompletion: estimatedCompletion(restoreRequest.requestedAt),
+    },
+    { status: 202 }
+  );
+}
+```
+
+### 2.4 Restore Status Endpoint
+
+Driven by the book's availability state (kept current by stream endpoint, poller, and nightly sync):
 
 ```typescript
 // app/api/books/[id]/restore-status/route.ts
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  // ... auth check ...
+  // ... auth + book lookup (audioAvailability) ...
 
-  const restoreRequest = await prisma.mediaRestoreRequest.findFirst({
-    where: {
-      bookId: params.id,
-      status: { in: ['pending', 'in_progress', 'available'] },
-    },
+  const latest = await prisma.mediaRestoreRequest.findFirst({
+    where: { bookId: book.id },
     orderBy: { requestedAt: 'desc' },
   });
 
-  if (!restoreRequest) {
-    return Response.json({ status: 'not_needed' });
+  switch (book.audioAvailability) {
+    case 'RESTORING':
+      return NextResponse.json({
+        status: 'restoring',
+        requestedAt: latest?.requestedAt,
+        estimatedCompletion: latest ? estimatedCompletion(latest.requestedAt) : null,
+      });
+    case 'ARCHIVED':
+      return NextResponse.json({
+        status: 'archived',
+        lastError: latest?.status === 'failed' ? latest.errorMessage : null,
+      });
+    default:
+      return NextResponse.json({ status: 'available', completedAt: latest?.completedAt ?? null });
   }
-
-  return Response.json({
-    status: restoreRequest.status,
-    estimatedCompletion: restoreRequest.estimatedCompletionTime,
-    requestedAt: restoreRequest.requestedAt,
-    availableAt: restoreRequest.availableAt,
-    expiresAt: restoreRequest.expiresAt,
-  });
 }
 ```
 
-### 2.3 Active Restores List
+OpenAPI schema:
+
+```yaml
+RestoreStatus:
+  type: object
+  required: [status]
+  properties:
+    status:
+      type: string
+      enum: [available, archived, restoring]
+    requestedAt:
+      type: string
+      format: date-time
+    estimatedCompletion:
+      type: string
+      format: date-time
+    completedAt:
+      type: string
+      format: date-time
+    lastError:
+      type: string
+```
+
+### 2.5 Active Restores List
 
 ```typescript
 // app/api/books/restores/route.ts
 export async function GET(request: NextRequest) {
   // ... auth check ...
 
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600_000);
   const restores = await prisma.mediaRestoreRequest.findMany({
     where: {
       requestedByUserId: user.id,
-      status: { in: ['pending', 'in_progress', 'available'] },
+      OR: [{ status: 'in_progress' }, { status: 'completed', completedAt: { gte: sevenDaysAgo } }],
     },
     include: {
-      book: {
-        select: { id: true, title: true, coverUrl: true, audioStorageClass: true },
-      },
+      book: { select: { id: true, title: true, coverUrl: true, audioAvailability: true } },
     },
     orderBy: { requestedAt: 'desc' },
   });
 
-  return Response.json({ restores });
+  return NextResponse.json({ restores });
 }
 ```
 
-### 2.4 Device Token Registration
+(No expiry language — completed restores are simply available again.)
+
+### 2.6 Update Existing Downloads Endpoint
+
+[POST /api/downloads/[bookId]](../../app/api/downloads/%5BbookId%5D/route.ts) already does a HeadObject (via `getS3ObjectMetadata`) and presigns for iOS downloads. **An archived book currently gets a URL that 403s mid-download.** Fix: use a raw `HeadObjectCommand` (or extend the helper to return `ArchiveStatus`), and when `ArchiveStatus` is present, `initiateRestore()` and return the same 202 shape as the stream endpoint. Update the OpenAPI spec's download responses accordingly; iOS `DownloadManager` handles the 202 in Phase 7.
+
+### 2.7 Chapters Endpoint — Graceful Degradation
+
+The chapters route presigns a URL and runs ffprobe against it. For an archived file, ffprobe's HTTP reads fail, and extraction falls through to the cue/Audible-metadata fallbacks (both `STANDARD`, never archived) — verify this degrades without a 500. Optional optimization: when `book.audioAvailability !== 'AVAILABLE'`, skip the ffprobe attempt and go straight to the metadata fallbacks.
+
+### 2.8 Device Token Registration
 
 ```typescript
 // app/api/notifications/register/route.ts
@@ -440,16 +656,14 @@ export async function POST(request: NextRequest) {
   const { deviceToken, platform } = await request.json();
 
   if (!deviceToken || typeof deviceToken !== 'string') {
-    return Response.json({ error: 'deviceToken is required' }, { status: 400 });
+    return NextResponse.json({ error: 'deviceToken is required' }, { status: 400 });
   }
 
-  // Create or update SNS platform endpoint
-  const snsEndpointArn = await createSNSEndpoint(deviceToken, platform);
+  // Create (or recover) the SNS platform endpoint — see NotificationService in Phase 6
+  const snsEndpointArn = await NotificationService.registerEndpoint(deviceToken, platform || 'ios');
 
   await prisma.userDeviceToken.upsert({
-    where: {
-      userId_deviceToken: { userId: user.id, deviceToken },
-    },
+    where: { userId_deviceToken: { userId: user.id, deviceToken } },
     create: {
       userId: user.id,
       deviceToken,
@@ -457,14 +671,10 @@ export async function POST(request: NextRequest) {
       snsEndpointArn,
       isActive: true,
     },
-    update: {
-      snsEndpointArn,
-      isActive: true,
-      updatedAt: new Date(),
-    },
+    update: { snsEndpointArn, isActive: true },
   });
 
-  return Response.json({ success: true });
+  return NextResponse.json({ success: true });
 }
 
 export async function DELETE(request: NextRequest) {
@@ -476,7 +686,7 @@ export async function DELETE(request: NextRequest) {
     data: { isActive: false },
   });
 
-  return Response.json({ success: true });
+  return NextResponse.json({ success: true });
 }
 ```
 
@@ -484,31 +694,23 @@ export async function DELETE(request: NextRequest) {
 
 ## Phase 3: Book Availability Status
 
-**Time estimate**: 2-3 hours
+**Time estimate**: 2 hours
 
 ### Problem
 
-Users have no way to know a book is archived until they try to play it. We need archive status visible throughout the UI — in book grids, detail pages, and search results.
+Users have no way to know a book is archived until they try to play it. Archive status should be visible throughout the UI — book grids, detail pages, search results.
 
-### Solution: Cached `audioStorageClass` on Book
+### Solution: Cached `audioAvailability` on Book
 
-The `audioStorageClass` column (added in Phase 1) is the source of truth for list views. A nightly background job syncs this by calling HeadObject on all books. The stream endpoint does a real-time check as a fallback.
+The `audioAvailability` column (Phase 1) drives list-view badges. It's kept current by three writers:
 
-### Storage Class Values
-
-| Value                 | Meaning                                            | UI Treatment                         |
-| --------------------- | -------------------------------------------------- | ------------------------------------ |
-| `STANDARD`            | Immediately available                              | Normal play button                   |
-| `FREQUENT_ACCESS`     | Immediately available                              | Normal play button                   |
-| `INFREQUENT_ACCESS`   | Immediately available (slightly slower first byte) | Normal play button                   |
-| `ARCHIVE_ACCESS`      | Archived, 3-5 hour restore                         | Archive badge + "Request" button     |
-| `DEEP_ARCHIVE_ACCESS` | Deep archived, 12+ hour restore                    | Archive badge + "Request" button     |
-| `RESTORING`           | Restore in progress                                | Restoring badge + progress indicator |
-| `RESTORED`            | Temporarily available after restore                | Normal play button + "expires" note  |
+1. **Nightly sync job** (Phase 5) — HeadObject sweep reading `ArchiveStatus`
+2. **Stream/restore endpoints** — self-heal on every play/restore attempt
+3. **Restore poller** (Phase 5) — flips `RESTORING → AVAILABLE` on completion
 
 ### API Response Changes
 
-Add `archiveStatus` to the Book schema in OpenAPI:
+Add `archiveStatus` to the Book schema in OpenAPI (three states only — no expiring state exists with IT):
 
 ```yaml
 Book:
@@ -517,88 +719,36 @@ Book:
     # ... existing properties ...
     archiveStatus:
       type: string
-      enum: [available, archived, restoring, restored_expiring]
+      enum: [available, archived, restoring]
       description: |
-        Availability status of the audio file:
+        Availability of the audio file:
         - available: Ready to stream immediately
-        - archived: In S3 Glacier, requires 3-5 hour restore
+        - archived: In the Intelligent-Tiering Archive Access tier; requires a ~3-5 hour restore
         - restoring: Restore in progress
-        - restored_expiring: Temporarily available, will re-archive
 ```
+
+Make it required in the schema so contract tests enforce it, and regenerate TS + Swift types.
 
 ### Update `transformBook()`
 
+Derived purely from the row already in hand — **zero extra queries** (the original draft's per-book `findFirst` would have been an N+1 on every 100-book list page):
+
 ```typescript
+const ARCHIVE_STATUS_MAP = {
+  AVAILABLE: 'available',
+  ARCHIVED: 'archived',
+  RESTORING: 'restoring',
+} as const;
+
 export async function transformBook(book: BookWithIncludes) {
   // ... existing transform logic ...
-
-  // Derive archive status from cached storage class
-  let archiveStatus: 'available' | 'archived' | 'restoring' | 'restored_expiring' = 'available';
-
-  const sc = book.audioStorageClass;
-  if (sc === 'ARCHIVE_ACCESS' || sc === 'DEEP_ARCHIVE_ACCESS') {
-    // Check if there's an active restore request
-    const activeRestore = await prisma.mediaRestoreRequest.findFirst({
-      where: { bookId: book.id, status: { in: ['pending', 'in_progress'] } },
-    });
-    archiveStatus = activeRestore ? 'restoring' : 'archived';
-  } else if (sc === 'RESTORED') {
-    archiveStatus = 'restored_expiring';
-  }
-
   return {
     // ... existing fields ...
-    archiveStatus,
+    archiveStatus:
+      ARCHIVE_STATUS_MAP[book.audioAvailability as keyof typeof ARCHIVE_STATUS_MAP] ?? 'available',
   };
 }
 ```
-
-> **Performance note**: The restore request lookup adds a DB query per book. For list views, consider a batch approach — query all active restores for the page of books in one query, then map by bookId.
-
-### Nightly Storage Class Sync Job
-
-```typescript
-// scripts/sync-storage-classes.ts
-async function syncStorageClasses() {
-  const books = await prisma.book.findMany({
-    where: { audioUrl: { not: null } },
-    select: { id: true, audioUrl: true, audioStorageClass: true },
-  });
-
-  for (const book of books) {
-    try {
-      const head = await s3Client.send(
-        new HeadObjectCommand({ Bucket: S3_BUCKET, Key: book.audioUrl! })
-      );
-
-      // S3 Intelligent-Tiering doesn't expose the exact tier via StorageClass.
-      // StorageClass will be 'INTELLIGENT_TIERING'. The actual access tier
-      // is only detectable via the Restore header or by attempting access.
-      // For now, mark as STANDARD unless we know otherwise from restore history.
-      const storageClass = head.StorageClass || 'STANDARD';
-
-      await prisma.book.update({
-        where: { id: book.id },
-        data: {
-          audioStorageClass: storageClass,
-          storageClassCheckedAt: new Date(),
-        },
-      });
-    } catch (error: any) {
-      if (error.name === 'InvalidObjectState') {
-        await prisma.book.update({
-          where: { id: book.id },
-          data: { audioStorageClass: 'ARCHIVE_ACCESS', storageClassCheckedAt: new Date() },
-        });
-      }
-      // Log and continue — don't fail the whole job for one book
-      console.error(`Failed to check storage class for book ${book.id}:`, error);
-    }
-  }
-}
-```
-
-> **Important S3 Intelligent-Tiering caveat**: S3 returns `StorageClass: INTELLIGENT_TIERING` for all objects in an IT bucket — it doesn't tell you which tier (Frequent, Infrequent, Archive) the object is in. The actual tier is only discoverable by attempting to access the object and catching `InvalidObjectState`. The nightly job should attempt a HeadObject + small range request to detect this. Alternatively, S3 Storage Lens or S3 Inventory can provide tier-level reporting on a schedule.
 
 ---
 
@@ -615,7 +765,7 @@ New component for book cards and detail views:
 'use client';
 
 interface ArchiveStatusBadgeProps {
-  status: 'available' | 'archived' | 'restoring' | 'restored_expiring';
+  status: 'available' | 'archived' | 'restoring';
   estimatedCompletion?: string;
   compact?: boolean; // For book cards (icon only)
 }
@@ -629,7 +779,7 @@ export function ArchiveStatusBadge({
 
   // archived → snowflake icon + "Archived"
   // restoring → spinner icon + "Restoring..." + ETA
-  // restored_expiring → clock icon + "Available for 24h"
+  // (remember dark: variants)
 }
 ```
 
@@ -638,7 +788,6 @@ export function ArchiveStatusBadge({
 Show archive badge overlay on book cards in grids:
 
 ```tsx
-// In BookCard component
 <div className="relative">
   <Image src={coverUrl} ... />
   <ArchiveStatusBadge status={book.archiveStatus} compact />
@@ -647,17 +796,19 @@ Show archive badge overlay on book cards in grids:
 
 ### 4.3 Update Book Detail Page
 
-Replace play button with restore button when archived:
-
 ```tsx
-{book.archiveStatus === 'archived' ? (
-  <RestoreButton bookId={book.id} />
-) : book.archiveStatus === 'restoring' ? (
-  <RestoringIndicator bookId={book.id} estimatedCompletion={...} />
-) : (
-  <PlayButton bookId={book.id} />
-)}
+{
+  book.archiveStatus === 'archived' ? (
+    <RestoreButton bookId={book.id} /> // calls POST /api/books/{id}/restore
+  ) : book.archiveStatus === 'restoring' ? (
+    <RestoringIndicator bookId={book.id} />
+  ) : (
+    <PlayButton bookId={book.id} />
+  );
+}
 ```
+
+The player itself must also handle a 202 from `/stream` (race: book archived since page load) by switching to the restoring UI.
 
 ### 4.4 Restoring Indicator with Polling
 
@@ -665,38 +816,40 @@ Replace play button with restore button when archived:
 // components/RestoringIndicator.tsx
 'use client';
 
-export function RestoringIndicator({ bookId, estimatedCompletion }: Props) {
-  const [status, setStatus] = useState<string>('restoring');
+export function RestoringIndicator({ bookId }: Props) {
+  const [status, setStatus] = useState<'restoring' | 'available'>('restoring');
 
   useEffect(() => {
     const interval = setInterval(async () => {
       const res = await fetch(`/api/books/${bookId}/restore-status`);
       const data = await res.json();
-      setStatus(data.status);
-      if (data.status === 'available' || data.status === 'not_needed') {
+      if (data.status === 'available') {
+        setStatus('available');
         clearInterval(interval);
-        // Refresh page or update parent state
+        // Update parent state / router.refresh()
       }
-    }, 30_000); // Poll every 30 seconds
+    }, 30_000);
 
     return () => clearInterval(interval);
   }, [bookId]);
 
-  // Show spinner + ETA countdown
+  // Spinner + ETA countdown from estimatedCompletion
 }
 ```
 
 ### 4.5 Restores List Page
 
-New page at `/library/restores` showing all active and recent restore requests:
+New page at `/library/restores`:
 
 ```
 /library/restores
-├── Active Restores (pending, in_progress)
-│   └── BookCard + progress + ETA
-└── Recently Restored (available, last 7 days)
-    └── BookCard + "expires in X hours"
+├── Active Restores (in_progress)
+│   └── BookCard + spinner + ETA
+└── Recently Restored (completed, last 7 days)
+    └── BookCard + "ready to play"
 ```
+
+(No "expires in X hours" — restored books stay available.)
 
 ---
 
@@ -706,119 +859,133 @@ New page at `/library/restores` showing all active and recent restore requests:
 
 ### 5.1 Restore Status Poller
 
-Runs every 5 minutes. Checks S3 for all in-progress restores:
+Runs every 5 minutes. **Completion signal: `ArchiveStatus` disappears from HeadObject** (IT restores never produce an `expiry-date`; the original draft's `!ongoingRequest && expiryDate` check would never have fired).
 
 ```typescript
 // scripts/poll-restore-status.ts
-import { S3Client, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { HeadObjectCommand } from '@aws-sdk/client-s3';
+import { getS3Client, getS3Bucket } from '@/lib/s3';
 import { prisma } from '@/lib/db';
 import { NotificationService } from '@/lib/notification-service';
 
-async function pollRestoreStatus() {
+const STUCK_THRESHOLD_MS = 24 * 3600_000; // Standard tier finishes in 3-5h; 24h = something is wrong
+
+export async function pollRestoreStatus() {
   const activeRestores = await prisma.mediaRestoreRequest.findMany({
-    where: { status: { in: ['pending', 'in_progress'] } },
-    include: {
-      book: { select: { id: true, title: true, audioUrl: true } },
-      requestedBy: { select: { id: true } },
-    },
+    where: { status: 'in_progress' },
+    include: { book: { select: { id: true, title: true } } },
   });
 
   console.log(`Checking ${activeRestores.length} active restores...`);
 
   for (const restore of activeRestores) {
     try {
-      const head = await s3Client.send(
-        new HeadObjectCommand({ Bucket: S3_BUCKET, Key: restore.s3Key })
+      const head = await getS3Client().send(
+        new HeadObjectCommand({ Bucket: getS3Bucket(), Key: restore.s3Key })
       );
 
-      if (!head.Restore) continue;
-
-      const parsed = parseRestoreHeader(head.Restore);
-
-      if (!parsed.ongoingRequest && parsed.expiryDate) {
-        // Restore complete!
+      if (!head.ArchiveStatus) {
+        // Object is back in the Frequent Access tier — restore complete
         console.log(`✅ Restore complete: ${restore.book.title}`);
 
         await prisma.$transaction([
           prisma.mediaRestoreRequest.update({
             where: { id: restore.id },
-            data: {
-              status: 'available',
-              availableAt: new Date(),
-              expiresAt: new Date(parsed.expiryDate),
-            },
+            data: { status: 'completed', completedAt: new Date() },
           }),
           prisma.book.update({
             where: { id: restore.bookId },
-            data: { audioStorageClass: 'RESTORED' },
+            data: { audioAvailability: 'AVAILABLE', availabilityCheckedAt: new Date() },
           }),
         ]);
 
-        // Send push notification
-        await NotificationService.sendRestoreComplete(
-          restore.requestedByUserId,
-          restore.book.id,
-          restore.book.title
-        );
+        if (restore.requestedByUserId) {
+          await NotificationService.sendRestoreComplete(
+            restore.requestedByUserId,
+            restore.book.id,
+            restore.book.title
+          );
+        }
+        continue;
       }
 
+      // Still restoring
       await prisma.mediaRestoreRequest.update({
         where: { id: restore.id },
         data: { lastCheckedAt: new Date() },
       });
-    } catch (error) {
-      console.error(`Error checking restore ${restore.id}:`, error);
 
-      // Mark as failed if stuck for > 24 hours
-      if (
-        restore.restoreStartedAt &&
-        Date.now() - restore.restoreStartedAt.getTime() > 24 * 3600_000
-      ) {
+      if (Date.now() - restore.requestedAt.getTime() > STUCK_THRESHOLD_MS) {
         await prisma.mediaRestoreRequest.update({
           where: { id: restore.id },
-          data: { status: 'failed', errorMessage: String(error) },
+          data: { status: 'failed', errorMessage: 'Restore did not complete within 24 hours' },
         });
+        // Book stays RESTORING until nightly sync corrects it to ARCHIVED,
+        // or correct it here directly for faster feedback.
       }
+    } catch (error) {
+      console.error(`Error checking restore ${restore.id}:`, error);
     }
   }
 }
 ```
 
-### 5.2 Deployment Options
+### 5.2 Nightly Availability Sync
 
-**Option A: Cron API route (simplest for ECS)**
+`HeadObject.ArchiveStatus` makes this trivial (the original draft's caveat about IT tiers being undetectable was wrong):
 
 ```typescript
-// app/api/cron/poll-restores/route.ts
+// scripts/sync-availability.ts
+import { parseRestoreHeader } from '@/lib/restore';
+
+export async function syncAvailability() {
+  const books = await prisma.book.findMany({
+    where: { audioUrl: { not: null } },
+    select: { id: true, audioUrl: true, audioAvailability: true },
+  });
+
+  // Process in batches of ~10 concurrent HeadObjects; 691 books ≈ a few seconds
+  for (const book of books) {
+    try {
+      const head = await getS3Client().send(
+        new HeadObjectCommand({ Bucket: getS3Bucket(), Key: book.audioUrl! })
+      );
+
+      const availability = !head.ArchiveStatus
+        ? 'AVAILABLE'
+        : parseRestoreHeader(head.Restore)?.ongoingRequest
+          ? 'RESTORING'
+          : 'ARCHIVED';
+
+      await prisma.book.update({
+        where: { id: book.id },
+        data: { audioAvailability: availability, availabilityCheckedAt: new Date() },
+      });
+    } catch (error) {
+      // Log and continue — don't fail the whole job for one book
+      console.error(`Failed availability check for book ${book.id}:`, error);
+    }
+  }
+}
+```
+
+Run this **once immediately after deploying Phase 1+3** — it will reveal exactly how many books are currently archived (sample suggests a majority).
+
+### 5.3 Deployment: Cron API Routes
+
+```typescript
+// app/api/cron/poll-restores/route.ts  (and /api/cron/sync-availability)
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response('Unauthorized', { status: 401 });
   }
   await pollRestoreStatus();
-  return Response.json({ success: true, checkedAt: new Date() });
+  return Response.json({ success: true, checkedAt: new Date().toISOString() });
 }
 ```
 
-Then use an external cron service, CloudWatch Events + Lambda, or a simple `crontab` on the ECS task to hit the endpoint every 5 minutes.
-
-**Option B: ECS Scheduled Task**
-
-Create a separate ECS task definition that runs the poller script on a schedule via CloudWatch Events. More operationally complex but cleaner separation.
-
-**Recommendation**: Option A — keep it simple. You're running a single ECS task already; adding a cron hit to an API route is the lowest-effort approach.
-
-### 5.3 Nightly Storage Class Sync
-
-Separate cron job (once daily, e.g., 3 AM):
-
-```bash
-# Cron hits this endpoint nightly
-GET /api/cron/sync-storage-classes
-Authorization: Bearer ${CRON_SECRET}
-```
-
-This updates `audioStorageClass` on all books so browse views show accurate archive badges without real-time S3 calls.
+**Scheduling recommendation**: EventBridge Scheduler → API destination hitting `https://bookvault.lionikis.com/api/cron/poll-restores` every 5 minutes (with the `Authorization` header stored in an EventBridge connection), and `/api/cron/sync-availability` nightly at 3 AM. Serverless, no new ECS tasks, and the endpoints remain manually triggerable with `curl` for testing. (An in-process `setInterval` via Next.js `instrumentation.ts` is a viable simpler fallback given the single ECS task, at the cost of coupling job execution to web deploys/restarts.)
 
 ---
 
@@ -826,30 +993,29 @@ This updates `audioStorageClass` on all books so browse views show accurate arch
 
 **Time estimate**: 4-5 hours
 
-This is the most significant new addition to the plan. The full pipeline:
+Pipeline:
 
 ```
 iOS app launch
   → Register with APNs → receive device token
   → POST /api/notifications/register { deviceToken }
-  → Backend creates AWS SNS Platform Endpoint
+  → Backend creates/recovers AWS SNS Platform Endpoint
   → Store endpoint ARN + device token in DB
 
 Restore completes (detected by poller)
   → NotificationService.sendRestoreComplete(userId, bookId, title)
   → Look up user's active device tokens
   → For each: SNS.publish() with APNs payload
-  → iOS receives push notification
-  → User taps → deep link to book detail
+  → iOS receives push → user taps → deep link to book detail
 ```
 
 ### 6.1 AWS Setup (One-Time)
 
 **a) Create APNs key in Apple Developer Portal:**
 
-1. Go to Certificates, Identifiers & Profiles → Keys
-2. Create a new key with "Apple Push Notifications service (APNs)" enabled
-3. Download the `.p8` file — you'll need Key ID and Team ID
+1. Certificates, Identifiers & Profiles → Keys
+2. Create a key with "Apple Push Notifications service (APNs)" enabled
+3. Download the `.p8` file — note the Key ID and Team ID
 
 **b) Create SNS Platform Application:**
 
@@ -866,12 +1032,11 @@ aws sns create-platform-application \
   --region us-east-1
 ```
 
-> **Note**: Use `APNS` for production, `APNS_SANDBOX` for development. You may want both during testing. Store the returned Platform Application ARN in environment variables.
+> **Note**: `APNS` for production builds, `APNS_SANDBOX` for development — create both during testing. Store the ARNs in environment variables / Secrets Manager. The ECS task role needs `sns:CreatePlatformEndpoint`, `sns:SetEndpointAttributes`, and `sns:Publish` on these resources.
 
 **c) Environment variables:**
 
 ```env
-# .env
 AWS_SNS_PLATFORM_APPLICATION_ARN=arn:aws:sns:us-east-1:XXXX:app/APNS/book-vault-ios
 AWS_SNS_PLATFORM_APPLICATION_ARN_SANDBOX=arn:aws:sns:us-east-1:XXXX:app/APNS_SANDBOX/book-vault-ios
 ```
@@ -880,30 +1045,58 @@ AWS_SNS_PLATFORM_APPLICATION_ARN_SANDBOX=arn:aws:sns:us-east-1:XXXX:app/APNS_SAN
 
 ```typescript
 // lib/notification-service.ts
-import { SNSClient, PublishCommand, CreatePlatformEndpointCommand } from '@aws-sdk/client-sns';
+import {
+  SNSClient,
+  PublishCommand,
+  CreatePlatformEndpointCommand,
+  SetEndpointAttributesCommand,
+} from '@aws-sdk/client-sns';
 import { prisma } from './db';
 
-const snsClient = new SNSClient({ region: 'us-east-1' });
+const snsClient = new SNSClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 export class NotificationService {
   /**
-   * Create an SNS platform endpoint for a device token.
-   * Returns the endpoint ARN for future publishes.
+   * Create or recover the SNS platform endpoint for a device token.
+   *
+   * ⚠️ CreatePlatformEndpoint is only idempotent when attributes match. If the
+   * token exists with different attributes, SNS throws InvalidParameter with
+   * the existing ARN embedded in the message — recover it. Also re-enable
+   * endpoints that APNs feedback disabled.
    */
-  static async createSNSEndpoint(deviceToken: string, platform: string): Promise<string> {
+  static async registerEndpoint(deviceToken: string, platform: string): Promise<string> {
     const platformAppArn =
       process.env.NODE_ENV === 'production'
         ? process.env.AWS_SNS_PLATFORM_APPLICATION_ARN
         : process.env.AWS_SNS_PLATFORM_APPLICATION_ARN_SANDBOX;
 
-    const result = await snsClient.send(
-      new CreatePlatformEndpointCommand({
-        PlatformApplicationArn: platformAppArn,
-        Token: deviceToken,
+    let endpointArn: string;
+    try {
+      const result = await snsClient.send(
+        new CreatePlatformEndpointCommand({
+          PlatformApplicationArn: platformAppArn,
+          Token: deviceToken,
+        })
+      );
+      endpointArn = result.EndpointArn!;
+    } catch (error: any) {
+      const match = /Endpoint (arn:aws:sns:\S+) already exists/.exec(error.message ?? '');
+      if (error.name === 'InvalidParameterException' && match) {
+        endpointArn = match[1];
+      } else {
+        throw error;
+      }
+    }
+
+    // Ensure the endpoint is enabled and carries the current token
+    await snsClient.send(
+      new SetEndpointAttributesCommand({
+        EndpointArn: endpointArn,
+        Attributes: { Token: deviceToken, Enabled: 'true' },
       })
     );
 
-    return result.EndpointArn!;
+    return endpointArn;
   }
 
   /**
@@ -931,7 +1124,6 @@ export class NotificationService {
             },
             sound: 'default',
             badge: 1,
-            'content-available': 1,
           },
           // Custom data for deep linking
           bookId,
@@ -952,7 +1144,6 @@ export class NotificationService {
 
         console.log(`Push sent to user ${userId} for book "${bookTitle}"`);
       } catch (error: any) {
-        // Handle disabled/invalid endpoints
         if (error.name === 'EndpointDisabledException') {
           await prisma.userDeviceToken.update({
             where: { id: token.id },
@@ -970,7 +1161,7 @@ export class NotificationService {
 
 ### 6.3 Token Refresh Handling
 
-APNs device tokens can change. The iOS app should re-register on every launch, and the backend should handle this via upsert (already implemented in the register endpoint above). SNS also handles token updates via `CreatePlatformEndpoint` — if the token already exists, it returns the existing endpoint ARN.
+APNs device tokens can change. The iOS app re-registers on every launch; the backend handles it via the upsert + `registerEndpoint()` recovery logic above.
 
 ---
 
@@ -1027,7 +1218,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         DebugLogger.error("Failed to register for push: \(error)")
     }
 
-    // Handle notification tap (foreground)
+    // Handle notification tap
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler handler: @escaping () -> Void) {
@@ -1035,7 +1226,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         if let bookId = userInfo["bookId"] as? String,
            let action = userInfo["action"] as? String,
            action == "restore_complete" {
-            // Deep link to book detail
             DeepLinkManager.shared.navigate(to: .bookDetail(bookId: bookId))
         }
         handler()
@@ -1077,22 +1267,22 @@ class NotificationRegistrar {
 
 ### 7.3 Restore UI in iOS
 
-**BookDetailView** — swap play button based on `archiveStatus`:
+**BookDetailView** — swap play button based on `archiveStatus` (three states — no expiring state exists):
 
 ```swift
-// In BookDetailView
 switch book.archiveStatus {
 case .archived:
-    RestoreRequestButton(bookId: book.id)
+    RestoreRequestButton(bookId: book.id)   // POST /api/books/{id}/restore
 case .restoring:
-    RestoringProgressView(bookId: book.id, estimatedCompletion: ...)
-case .restoredExpiring:
-    PlayButton(bookId: book.id)
-    Text("Available for 24 hours").font(.caption).foregroundColor(.secondary)
+    RestoringProgressView(bookId: book.id)  // polls /restore-status
 default:
     PlayButton(bookId: book.id)
 }
 ```
+
+**AudioPlayerManager**: handle a 202 from `getBookStream(bookId:)` (book archived since the list was fetched) by surfacing the restoring state instead of a playback error.
+
+**DownloadManager**: handle a 202 from `POST /api/downloads/{bookId}` the same way (see Phase 2.6).
 
 **Archive badge on book cards** — subtle overlay icon (snowflake for archived, spinner for restoring).
 
@@ -1128,46 +1318,41 @@ Wire this into the root `ContentView` to handle navigation when a push notificat
 
 ### Problem
 
-If a user wants to listen to a 15-book series and all are archived, they'd need to request restores one at a time — hitting the 3-5 hour wall 15 times. Series-level restore batch-initiates all archived books in a series.
+If a user wants to listen to a 15-book series and all are archived, they'd need to request restores one at a time. Series-level restore batch-initiates all archived books in a series.
 
 ### API Endpoint
+
+Canonical path: **`POST /api/series/{id}/restore`** (it's a series operation; the earlier draft listed an inconsistent `/api/books/{id}/restore-series` — that path is dropped).
 
 ```typescript
 // app/api/series/[id]/restore/route.ts
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
-  // ... auth check ...
+  // ... dual auth + normalizeUuid ...
 
-  // Find all archived books in the series
   const seriesBooks = await prisma.bookSeries.findMany({
-    where: { seriesId: params.id },
+    where: { seriesId },
     include: {
-      book: {
-        select: {
-          id: true,
-          title: true,
-          audioUrl: true,
-          audioStorageClass: true,
-        },
-      },
+      book: { select: { id: true, title: true, audioUrl: true, audioAvailability: true } },
     },
     orderBy: { sequence: 'asc' },
   });
 
   const archivedBooks = seriesBooks.filter(
-    (sb) =>
-      sb.book.audioStorageClass === 'ARCHIVE_ACCESS' ||
-      sb.book.audioStorageClass === 'DEEP_ARCHIVE_ACCESS'
+    (sb) => sb.book.audioUrl && sb.book.audioAvailability === 'ARCHIVED'
   );
 
   if (archivedBooks.length === 0) {
-    return Response.json({ message: 'No archived books in this series', restored: 0 });
+    return NextResponse.json({
+      message: 'No archived books in this series',
+      total: 0,
+      results: [],
+    });
   }
 
-  // Initiate restore for each archived book
   const results = [];
   for (const sb of archivedBooks) {
     try {
-      await initiateRestore(sb.book, user.id);
+      await initiateRestore({ id: sb.book.id, audioUrl: sb.book.audioUrl! }, user.id);
       results.push({ bookId: sb.book.id, title: sb.book.title, status: 'initiated' });
     } catch (error) {
       results.push({
@@ -1179,7 +1364,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
   }
 
-  return Response.json({
+  return NextResponse.json({
     message: `Restore initiated for ${results.filter((r) => r.status === 'initiated').length} books`,
     total: archivedBooks.length,
     results,
@@ -1187,17 +1372,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 }
 ```
 
+(Filtering on the cached column is fine here — `initiateRestore` is harmless if a book turns out to be available, and the per-book stream call self-corrects at play time.)
+
 ### OpenAPI Spec
 
 ```yaml
 /api/series/{id}/restore:
   post:
     operationId: restoreSeries
-    tags: [Series, Restore]
+    tags: [Series]
     summary: Restore all archived books in a series
-    description: |
-      Initiates S3 restore for all archived books in the specified series.
-      Returns status for each book.
     security:
       - sessionAuth: []
       - bearerAuth: []
@@ -1232,108 +1416,141 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
                         type: string
                       status:
                         type: string
-                        enum: [initiated, failed, already_restoring]
+                        enum: [initiated, failed]
 ```
 
 ### UI Integration
 
-**Web**: Add "Restore All Archived" button on series detail page when any books are archived. Show count: "3 of 12 books are archived".
+**Web**: "Restore All Archived" button on the series detail page when any books are archived, with a count: "3 of 12 books are archived".
 
-**iOS**: Same treatment on the series view. The button triggers a single API call, and individual book cards update as restores complete.
+**iOS**: Same treatment on the series view. One API call; individual book cards update as restores complete.
 
 ### Notification Behavior
 
-When a series restore is in progress, the poller detects individual book completions. Each book triggers its own push notification. Consider batching: if multiple books in the same series complete within the same poll cycle, send a single notification: "3 books from [Series Name] are ready to play."
+The poller detects individual book completions, each triggering its own push. Improvement: if multiple books from the same series complete within one poll cycle, send a single batched notification: "3 books from [Series Name] are ready to play."
 
 ---
 
 ## Cost Analysis
 
-### S3 Restore Costs
+### S3 Restore Costs — free at our tier
 
-| Tier      | Restore Time | Cost per GB | Cost for 500MB book |
-| --------- | ------------ | ----------- | ------------------- |
-| Standard  | 3-5 hours    | $0.03       | $0.015              |
-| Bulk      | 5-12 hours   | $0.0025     | $0.00125            |
-| Expedited | 1-5 minutes  | $0.10       | $0.05               |
+Restores from the Intelligent-Tiering Archive Access tier using **Standard (3-5h) or Bulk retrieval are free** — no retrieval fee (that's what the IT monitoring fee, already being paid, covers). The earlier Glacier-based cost table ($0.03/GB etc.) did not apply.
 
-**Recommendation**: Standard tier. At your usage (~handful of restores/month), cost is negligible.
+| Tier                      | Restore Time | Cost                                                 |
+| ------------------------- | ------------ | ---------------------------------------------------- |
+| Standard                  | 3-5 hours    | **$0.00**                                            |
+| Expedited (future option) | minutes      | ~$0.03/GB + $10/1k requests (verify current pricing) |
 
-### Restored File Availability
-
-Setting `Days: 1` means the file stays accessible for 24 hours post-restore. No additional charge for keeping restored copies for 1-30 days. After 24 hours, the file automatically returns to archive tier.
+After restore, the object sits in Frequent Access (standard storage rates) and descends through the tiers again if unaccessed — no action or cost on our side.
 
 ### AWS SNS Costs
 
 | Component                 | Free Tier            | After Free Tier |
 | ------------------------- | -------------------- | --------------- |
 | Mobile push notifications | 1M/month (permanent) | $0.50 per 1M    |
-| SNS API requests          | 1M/month (12 months) | $0.50 per 1M    |
 
-**Your projected usage**: Single-digit notifications per month. **Effective cost: $0.00.**
+Projected usage: single-digit notifications/month. **$0.00.**
 
-### Total Monthly Cost Estimate
+### HeadObject Requests
 
-For a handful of users restoring ~5-10 books/month:
+- Nightly sync: 691 books × 30 days ≈ 20,700 requests/month × $0.0004/1k ≈ **$0.008/month**
+- Poller + play-time checks: negligible (a few hundred requests/month)
 
-- S3 restores: ~$0.15 (10 × 500MB × $0.03/GB)
-- SNS: $0.00
-- Additional S3 HeadObject calls (nightly sync): ~$0.005 (691 books × $0.0000044/request × 30 days)
-- **Total: ~$0.16/month**
+### Total: ≈ $0.01/month
 
 ---
 
 ## Testing Strategy
 
-### Manual Testing
+### Development & Testing Workflow (three rings)
 
-1. **Archive a test file**:
+Backend, web, and scripts are developed in VSCode; only the Xcode project itself needs Xcode. Feedback loops, fastest to slowest:
 
-   ```bash
-   aws s3api copy-object \
-     --bucket book-vault-media \
-     --copy-source book-vault-media/test-file.m4b \
-     --key test-file.m4b \
-     --storage-class GLACIER \
-     --profile book_vault
-   ```
+**Ring 1 — Jest with mocked S3 (seconds).** Add `aws-sdk-client-mock` as a dev dependency and mock `HeadObjectCommand` / `RestoreObjectCommand` responses. All branch logic is verified here — including asserting that the `RestoreObject` input contains **no `Days`** and that dedup prevents duplicate restore calls. Run `npm run validate:full` before each PR (contract tests guard the generated Swift models).
 
-2. **Test the full flow**: Try to play → see restore UI → wait for restore → receive notification → play
+**Ring 2 — Hybrid mode: local server + local DB + real production bucket (minutes).** Enabled by the Phase 0 `S3_ENABLED` override:
 
-3. **Test push notifications**: Use SNS console to send a test push to a registered device token
+```bash
+# .env.local
+S3_ENABLED=true
+AWS_S3_BUCKET=book-vault-media
+AWS_ACCESS_KEY_ID=...        # book_vault profile credentials
+AWS_SECRET_ACCESS_KEY=...
+```
 
-4. **Test series restore**: Archive 2-3 books from a series → trigger series restore → verify all complete
+Because `audioUrl` values double as both local relative paths and S3 keys, running `npx tsx scripts/sync-availability.ts` locally against the prod bucket fills the **local** DB with real archive states. The whole web UI (badges, restore buttons, restores page) is then developed against genuine data, and clicking Play on a genuinely archived book exercises the 202 path for real. Trigger cron routes with `curl -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/poll-restores`, or run the scripts directly from the CLI. Hybrid mode is safe: the app only HeadObjects, presigns, and restores against S3 (never writes objects), and IT restores are free. One caveat — restoring a book moves it back to Frequent Access and **resets its 90-day archive clock**, so pick one or two _designated test books_ rather than restoring indiscriminately.
+
+**Ring 3 — Full pipeline with fast restores (minutes, not hours).** Set `RESTORE_TIER=Expedited` (Phase 2) so test restores complete in 1-5 minutes (~$0.02 per 500MB book) instead of 3-5 hours: request restore → poller detects completion → push notification → playback. Works from hybrid mode or in production. Finish with **one Standard-tier restore as an overnight soak test**, then confirm the default is back to Standard.
+
+### iOS testing
+
+- **UI states (Simulator, fast loop)**: point the simulator build at the local hybrid-mode server. Archived/restoring badges and 202 handling in `AudioPlayerManager`/`DownloadManager` are plain API responses — no device needed.
+- **Deep-link handling without a backend**: `xcrun simctl push booted <bundle-id> payload.apns` injects a notification payload into the simulator. Write a `payload.apns` with the `bookId`/`action: restore_complete` fields and iterate on the tap → `DeepLinkManager` → book detail flow before SNS even exists.
+- **Real push E2E (physical device — required)**: real APNs registration and delivery must be verified on a device (simulator-only testing has burned this project before). The full pipeline works without deploying anything: iPhone on the same LAN → local hybrid-mode server → `APNS_SANDBOX` platform app → APNs → device. Verify delivery from the SNS console first to isolate Apple-side config issues from app code.
+- **Xcode mechanics**: the push entitlement goes in `project.yml`, then `cd ios && xcodegen generate` — never edit the generated project directly. Debug builds on device use `APNS_SANDBOX`; the production `APNS` platform app only matters for TestFlight builds.
+
+### Use real archived objects — they already exist
+
+The bucket has been live since December 2025 with a 90-day archive threshold. A HeadObject sample (July 12, 2026) found **5 of 8 audio files in `ARCHIVE_ACCESS`**. There is no need to simulate archiving:
+
+1. **Find test subjects**: run `scripts/sync-availability.ts` (or a one-off HeadObject sweep) against production — it doubles as the first real validation of the sync job
+2. **Full flow**: pick an archived book → tap play → verify 202 + restoring UI → confirm `RestoreObject` accepted (HeadObject shows `ongoing-request="true"`) → wait 3-5h → poller flips it → push notification arrives → playback works
+3. **Push notifications**: use the SNS console to send a test push to a registered endpoint before wiring the poller
+4. **Series restore**: find a series with 2+ archived books via the sync results → trigger → verify all complete
+
+> **⚠️ Do NOT test with `copy-object --storage-class GLACIER`** (the earlier draft suggested this). That puts the object in the _Glacier storage class_, which has different semantics — `Days` required on restore, `expiry-date` headers, retrieval fees — none of which this implementation handles, by design. It would test code paths we deliberately don't have. There's also no way to force an IT object into Archive Access early; the real archived objects above are the test bed.
 
 ### Automated Tests
+
+Mock the S3 client with `aws-sdk-client-mock` (`HeadObjectCommand` / `RestoreObjectCommand`).
 
 ```typescript
 // __tests__/api/books/stream.test.ts
 describe('GET /api/books/{id}/stream', () => {
-  it('returns 200 with streamUrl for available books');
-  it('returns 202 with restore status for archived books');
+  it('returns 200 with streamUrl when HeadObject has no ArchiveStatus');
+  it('returns local /api/audio URL in development (S3 disabled)');
+  it('returns 202 and calls RestoreObject when ArchiveStatus present');
+  it('returns 202 without duplicate RestoreObject when restore already ongoing');
+  it('self-heals stale audioAvailability on successful stream');
   it('returns 401 for unauthenticated requests');
   it('returns 404 for non-existent books');
-  it('handles concurrent restore requests for same book (dedup)');
+});
+
+// __tests__/lib/restore.test.ts
+describe('initiateRestore', () => {
+  it('sends RestoreObject WITHOUT Days (IT requirement)');
+  it('dedupes against an existing in_progress request');
+  it('swallows RestoreAlreadyInProgress and still records the request');
+  it('sets book.audioAvailability to RESTORING transactionally');
+});
+
+// __tests__/scripts/poll-restore-status.test.ts
+describe('pollRestoreStatus', () => {
+  it('marks completed + book AVAILABLE when ArchiveStatus is absent');
+  it('leaves in_progress and updates lastCheckedAt while ArchiveStatus present');
+  it('marks failed after 24h without completion');
+  it('sends push notification to the requesting user on completion');
 });
 
 // __tests__/api/books/restore-status.test.ts
 describe('GET /api/books/{id}/restore-status', () => {
-  it('returns not_needed when no active restore');
-  it('returns in_progress with ETA for active restore');
-  it('returns available with expiry for completed restore');
+  it('returns available for AVAILABLE books');
+  it('returns restoring with ETA for RESTORING books');
+  it('returns archived for ARCHIVED books with no active restore');
 });
 
 // __tests__/api/notifications/register.test.ts
 describe('POST /api/notifications/register', () => {
   it('registers a new device token');
   it('updates existing token (upsert)');
-  it('handles invalid token gracefully');
+  it('recovers existing endpoint ARN from InvalidParameter error');
 });
 
 // __tests__/api/series/restore.test.ts
 describe('POST /api/series/{id}/restore', () => {
   it('initiates restore for all archived books in series');
-  it('skips already-available books');
+  it('skips available books');
   it('returns results per book');
 });
 ```
@@ -1344,116 +1561,118 @@ describe('POST /api/series/{id}/restore', () => {
 
 ### Phase 0: On-Demand URL Generation (4-6 hours)
 
-- [ ] Create `GET /api/books/{id}/stream` endpoint
-- [ ] Update `transformBook()` to remove presigned audio URL generation
-- [ ] Add `APIClient.getBookStreamUrl()` method (iOS)
-- [ ] Update `AudioPlayerManager` to fetch URLs on-demand (iOS)
-- [ ] Update `AudioPlayer` component to fetch URLs on-demand (Web)
-- [ ] Update OpenAPI spec with stream endpoint
-- [ ] Regenerate TypeScript + Swift types
+- [ ] Add `S3_ENABLED` override to `isS3Enabled()` (unlocks local hybrid mode for all later phases)
+- [ ] Create `GET /api/books/{id}/stream` endpoint (with dev-mode local URL branch)
+- [ ] Update OpenAPI spec (`BookStreamResponse` schema) + regenerate TS/Swift types
+- [ ] Update web player to fetch stream URL on demand
+- [ ] Add `APIClient.getBookStream(bookId:)` + update `AudioPlayerManager` (iOS)
 - [ ] Add tests for stream endpoint
-- [ ] Verify S3 API call reduction (CloudWatch)
-- [ ] Test playback on web and iOS
+- [ ] **Rollout step 3 only after iOS update installed**: null `audioUrl` in `transformBook()`
+- [ ] Test playback on web and iOS (dev + production)
 
 ### Phase 1: Database Schema (1-2 hours)
 
-- [ ] Create Prisma migration for `media_restore_requests` table
-- [ ] Create Prisma migration for `user_device_tokens` table
-- [ ] Add `audioStorageClass` + `storageClassCheckedAt` to `Book` model
+- [ ] Prisma migration: `media_restore_requests` (nullable `requestedByUserId`, SetNull)
+- [ ] Prisma migration: `user_device_tokens`
+- [ ] Add `audioAvailability` + `availabilityCheckedAt` to `Book`
 - [ ] Add relations to `User` and `Book` models
 - [ ] Run migration, verify in Prisma Studio
 
-### Phase 2: Backend API (3-4 hours)
+### Phase 2: Backend API (4-5 hours)
 
-- [ ] Update stream endpoint with archive detection logic
-- [ ] Create `GET /api/books/{id}/restore-status` endpoint
-- [ ] Create `GET /api/books/restores` endpoint
-- [ ] Create `POST /api/notifications/register` endpoint
-- [ ] Create `DELETE /api/notifications/register` endpoint
-- [ ] Add `initiateRestore()` helper function
-- [ ] Add `parseRestoreHeader()` helper function
-- [ ] Update OpenAPI spec with all new endpoints
-- [ ] Regenerate types
+- [ ] Add `aws-sdk-client-mock` dev dependency
+- [ ] Create `lib/restore.ts`: `initiateRestore()` (no `Days`!), `parseRestoreHeader()`, `estimatedCompletion()`
+- [ ] `RESTORE_TIER` env override in `initiateRestore()` (Expedited for fast pipeline testing)
+- [ ] Extend stream endpoint with HeadObject `ArchiveStatus` detection
+- [ ] Create `POST /api/books/{id}/restore`
+- [ ] Create `GET /api/books/{id}/restore-status`
+- [ ] Create `GET /api/books/restores`
+- [ ] Update `POST /api/downloads/{bookId}` with archive detection (202)
+- [ ] Verify chapters endpoint degrades gracefully for archived files
+- [ ] Create `POST`/`DELETE /api/notifications/register`
+- [ ] Update OpenAPI spec (all new endpoints + `RestoreStatus` schema) + regenerate types
 
-### Phase 3: Book Availability Status (2-3 hours)
+### Phase 3: Book Availability Status (2 hours)
 
-- [ ] Add `archiveStatus` to OpenAPI Book schema
-- [ ] Update `transformBook()` to include `archiveStatus`
-- [ ] Create nightly `sync-storage-classes` script
-- [ ] Set up cron for nightly sync
+- [ ] Add required `archiveStatus` to OpenAPI Book schema
+- [ ] Update `transformBook()` — derive from `audioAvailability`, zero extra queries
 - [ ] Regenerate Swift models
+- [ ] Contract tests pass
 
 ### Phase 4: Web Frontend (2-3 hours)
 
-- [ ] Create `ArchiveStatusBadge` component
+- [ ] Create `ArchiveStatusBadge` component (with `dark:` variants)
 - [ ] Update `BookCard` with archive badge
 - [ ] Update book detail page with restore/restoring/play states
+- [ ] Handle 202 from `/stream` inside the player (race case)
 - [ ] Create `RestoringIndicator` with polling
 - [ ] Create `/library/restores` page
 - [ ] Test full web flow
 
 ### Phase 5: Background Jobs (2-3 hours)
 
-- [ ] Create `poll-restore-status` script
-- [ ] Create cron API route with auth
-- [ ] Set up 5-minute polling schedule
-- [ ] Add error handling and failure detection (24h timeout)
-- [ ] Test with manually archived file
+- [ ] Create `sync-availability` script + cron route — **run once immediately to survey archived books**
+- [ ] Create `poll-restore-status` script + cron route (completion = `ArchiveStatus` absent)
+- [ ] Add `CRON_SECRET` to environment/Secrets Manager
+- [ ] Set up EventBridge Scheduler: poller every 5 min, sync nightly 3 AM
+- [ ] Stuck-restore failure handling (24h threshold)
+- [ ] Test poller against a real in-progress restore
 
 ### Phase 6: iOS Push Notifications (4-5 hours)
 
 - [ ] Create APNs key in Apple Developer Portal
-- [ ] Create SNS Platform Application (APNS + APNS_SANDBOX)
-- [ ] Add SNS ARN to environment variables / Secrets Manager
-- [ ] Implement `NotificationService` on backend
-- [ ] Implement `createSNSEndpoint()` helper
+- [ ] Create SNS Platform Applications (APNS + APNS_SANDBOX)
+- [ ] Add SNS ARNs to env / Secrets Manager; extend ECS task role IAM (CreatePlatformEndpoint, SetEndpointAttributes, Publish)
+- [ ] Implement `NotificationService` (endpoint recovery + re-enable handling)
 - [ ] Test push delivery via SNS console
 - [ ] Wire notification sending into restore poller
 
 ### Phase 7: iOS App Updates (4-5 hours)
 
-- [ ] Add push notification entitlement to Xcode project
+- [ ] Add push notification entitlement to Xcode project (`project.yml` + `xcodegen generate`)
 - [ ] Implement `AppDelegate` with APNs registration
 - [ ] Implement `NotificationRegistrar` service
 - [ ] Implement `DeepLinkManager` for notification taps
-- [ ] Add `archiveStatus` to Swift Book model (via OpenAPI regeneration)
+- [ ] Iterate deep-link handling via `xcrun simctl push` (no backend needed)
+- [ ] `archiveStatus` in Swift Book model (via OpenAPI regeneration)
 - [ ] Update `BookDetailView` with restore/restoring states
+- [ ] Handle 202 in `AudioPlayerManager` and `DownloadManager`
 - [ ] Add archive badge to book cards
-- [ ] Test on physical device
+- [ ] Test on physical device (push does not work on simulator)
 
 ### Phase 8: Series-Level Restore (2-3 hours)
 
 - [ ] Create `POST /api/series/{id}/restore` endpoint
 - [ ] Update OpenAPI spec
-- [ ] Add "Restore Series" button to web series page
-- [ ] Add "Restore Series" button to iOS series view
-- [ ] Handle batched notifications for series restores
-- [ ] Test with multi-book series
+- [ ] "Restore All Archived" button on web series page
+- [ ] Same on iOS series view
+- [ ] Batched notifications for same-cycle series completions
+- [ ] Test with a real multi-book archived series
 
 ### Post-Implementation
 
 - [ ] Add CloudWatch metrics for restore requests
 - [ ] Monitor SNS delivery success rate
 - [ ] Document user-facing restore behavior
-- [ ] Update CLAUDE.md with new patterns
+- [ ] Update CLAUDE.md with new patterns (restore helpers, availability column)
 
 ---
 
 ## Future Enhancements
 
 1. **Proactive Restore**: If user adds an archived book to "Want to Listen" list, auto-initiate restore
-2. **Expedited Restore**: Premium option — $0.10 per book for 1-5 minute restore
+2. **Expedited Restore**: Paid option (~$0.03/GB) for minutes-fast restores via `GlacierJobParameters.Tier: 'Expedited'`
 3. **Smart Notifications**: Batch series notifications ("3 books from Mistborn are ready")
 4. **Web Push**: Extend notification support to browsers via Web Push API
-5. **Restore History**: Analytics page showing restore patterns, costs, frequency
-6. **S3 Inventory Integration**: Use S3 Inventory reports instead of HeadObject for storage class sync (cheaper at scale)
+5. **Restore History**: Analytics page showing restore patterns and frequency
+6. **S3 Inventory Integration**: Replace the nightly HeadObject sweep with S3 Inventory reports (only worth it at much larger library sizes)
 
 ---
 
 ## Related Documents
 
-- [aws-cost-optimization-plan.md](./aws-cost-optimization-plan.md) - S3 Intelligent-Tiering setup
-- [media-configuration.md](./media-configuration.md) - S3 and media handling
-- [API_SECURITY.md](./API_SECURITY.md) - Authentication patterns
-- [mobile/architecture.md](./mobile/architecture.md) - iOS app architecture
-- [data-validation-layers.md](./data-validation-layers.md) - OpenAPI-first workflow
+- [docs/archive/s3-archive-restore-workflow.md](../archive/s3-archive-restore-workflow.md) - Original v1 plan (superseded)
+- [media-configuration.md](../media-configuration.md) - S3 and media handling
+- [API_SECURITY.md](../API_SECURITY.md) - Authentication patterns
+- [mobile/architecture.md](../mobile/architecture.md) - iOS app architecture
+- [data-validation-layers.md](../data-validation-layers.md) - OpenAPI-first workflow

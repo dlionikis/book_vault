@@ -40,6 +40,8 @@ export interface paths {
      * Re-extract chapters for a book (deletes existing and extracts fresh)
      * @description Deletes all existing chapters for a book and re-extracts them from the audio file.
      * Useful when chapter timing needs to be corrected or when the extraction method has improved.
+     *
+     * **Admin only** — this deletes and rewrites chapter data shared by all users.
      */
     post: operations["reExtractChapters"];
   };
@@ -759,6 +761,8 @@ export interface operations {
    * Re-extract chapters for a book (deletes existing and extracts fresh)
    * @description Deletes all existing chapters for a book and re-extracts them from the audio file.
    * Useful when chapter timing needs to be corrected or when the extraction method has improved.
+   *
+   * **Admin only** — this deletes and rewrites chapter data shared by all users.
    */
   reExtractChapters: {
     parameters: {
@@ -787,6 +791,18 @@ export interface operations {
             /** @example Re-extracted 64 chapters (deleted 64 old chapters) */
             message?: string;
           };
+        };
+      };
+      /** @description Not authenticated */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Forbidden - admin access required */
+      403: {
+        content: {
+          "application/json": components["schemas"]["Error"];
         };
       };
       /** @description Book not found or no audio file */

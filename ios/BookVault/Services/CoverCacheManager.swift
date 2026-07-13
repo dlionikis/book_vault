@@ -29,6 +29,14 @@ class CoverCacheManager: ObservableObject, CoverCaching {
     /// Provider for current user ID (injected for testing)
     private let userIdProvider: () -> String?
 
+    /// Provider for the current API bearer token (injected for testing).
+    /// Dev builds serve covers via the authenticated /api/images route, so
+    /// downloads from the API host must carry the token.
+    private let authTokenProvider: () -> String?
+
+    /// Provider for the API base URL, used to decide when to attach the token
+    private let apiBaseURLProvider: () -> URL?
+
     // Metadata tracking
     private let metadataFileName = "cover_metadata.json"
     private var metadataFileURL: URL {
@@ -72,7 +80,9 @@ class CoverCacheManager: ObservableObject, CoverCaching {
         let cacheDir = documentsPath.appendingPathComponent("covers", isDirectory: true)
         self.init(
             cacheDirectory: cacheDir,
-            userIdProvider: { AuthManager.shared.currentUser?.id.uuidString }
+            userIdProvider: { AuthManager.shared.currentUser?.id.uuidString },
+            authTokenProvider: { APIClient.shared.accessToken },
+            apiBaseURLProvider: { APIClient.shared.baseURL }
         )
     }
 
@@ -80,9 +90,18 @@ class CoverCacheManager: ObservableObject, CoverCaching {
     /// - Parameters:
     ///   - cacheDirectory: Directory for cache files (Documents/covers in production)
     ///   - userIdProvider: Closure that returns current user ID (uses AuthManager in production)
-    init(cacheDirectory: URL, userIdProvider: @escaping () -> String?) {
+    ///   - authTokenProvider: Closure that returns the API bearer token (uses APIClient in production)
+    ///   - apiBaseURLProvider: Closure that returns the API base URL (uses APIClient in production)
+    init(
+        cacheDirectory: URL,
+        userIdProvider: @escaping () -> String?,
+        authTokenProvider: @escaping () -> String? = { nil },
+        apiBaseURLProvider: @escaping () -> URL? = { nil }
+    ) {
         self.cacheDirectory = cacheDirectory
         self.userIdProvider = userIdProvider
+        self.authTokenProvider = authTokenProvider
+        self.apiBaseURLProvider = apiBaseURLProvider
 
         // Ensure directory exists
         try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
@@ -143,7 +162,17 @@ class CoverCacheManager: ObservableObject, CoverCaching {
         // Skip if already cached
         guard !hasCover(for: bookId) else { return }
 
-        let (data, response) = try await URLSession.shared.data(from: url)
+        var request = URLRequest(url: url)
+        // Covers served by the API host (/api/images, dev builds) require auth.
+        // Presigned S3 URLs (production) must NOT receive the bearer token.
+        if let apiURL = apiBaseURLProvider(),
+           url.host == apiURL.host,
+           url.port == apiURL.port,
+           let token = authTokenProvider() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200,

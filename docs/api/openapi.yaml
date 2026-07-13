@@ -791,6 +791,8 @@ paths:
       description: |
         Deletes all existing chapters for a book and re-extracts them from the audio file.
         Useful when chapter timing needs to be corrected or when the extraction method has improved.
+
+        **Admin only** — this deletes and rewrites chapter data shared by all users.
       parameters:
         - name: id
           in: path
@@ -825,6 +827,18 @@ paths:
                   message:
                     type: string
                     example: 'Re-extracted 64 chapters (deleted 64 old chapters)'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           description: Book not found or no audio file
           content:
