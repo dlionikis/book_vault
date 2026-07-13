@@ -99,15 +99,16 @@ module.exports = async () => {
       '!**/node_modules/**',
       '!**/.next/**',
     ],
-    // Ratchet, not target: set ~3 points below the measured baseline
-    // (July 2026: 37% stmts / 35.4% branch / 38.1% funcs / 37.6% lines)
-    // so coverage can only regress deliberately. Raise as coverage grows.
+    // Ratchet, not target: pinned at the measured floor (rounded down) so
+    // coverage can only regress deliberately. Raise as coverage grows.
+    // Measured July 13, 2026 on the post-#79 unit tree (unit-node + unit-dom):
+    // 37.21% stmts / 36.52% branch / 38.0% funcs / 37.55% lines.
     coverageThreshold: {
       global: {
-        statements: 34,
-        branches: 32,
-        functions: 35,
-        lines: 34,
+        statements: 37,
+        branches: 36,
+        functions: 38,
+        lines: 37,
       },
     },
   };
