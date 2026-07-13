@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { parsePagination } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   // Check both auth methods
-  const session = await getServerSession(authOptions);
-  const mobileUser = await getAuthUserFromRequest(request);
-  const user = session?.user || mobileUser;
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireUser(request);
+  if (auth.error) return auth.error;
 
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -62,7 +57,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching categories:', error);
+    logger.error('Error fetching categories', { error: String(error) });
     return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 });
   }
 }

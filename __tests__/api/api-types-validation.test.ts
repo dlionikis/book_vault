@@ -34,7 +34,7 @@ import {
   LoginResponseSchema,
   LibraryResponseSchema,
   LibraryCheckResponseSchema,
-} from '@/lib/api-schemas';
+} from '../helpers/api-schemas';
 
 // Configure axios to use Node.js adapters
 axios.defaults.adapter = require('axios/lib/adapters/http');

@@ -1,23 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { logger } from '@/lib/logger';
+import { requireUser } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { normalizeUuid } from '@/lib/api-utils';
 
-// Force dynamic rendering - this route uses headers() via getServerSession
+// Force dynamic rendering - this route uses headers() via requireUser (session lookup)
 export const dynamic = 'force-dynamic';
 
 // GET /api/library/check?bookId=xxx - Check if book is in library
 export async function GET(request: NextRequest) {
   try {
     // Check both auth methods
-    const session = await getServerSession(authOptions);
-    const mobileUser = await getAuthUserFromRequest(request);
-    const user = session?.user || mobileUser;
-
-    if (!user) {
+    const auth = await requireUser(request);
+    if (auth.error) {
+      // Soft check: unauthenticated users get a 200 with inLibrary=false, not a 401
       return NextResponse.json({ inLibrary: false });
     }
+    const user = auth.user;
 
     const bookId = normalizeUuid(request.nextUrl.searchParams.get('bookId'));
     if (!bookId) {
@@ -48,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ inLibrary: !!inLibrary });
   } catch (error) {
-    console.error('Error checking library:', error);
+    logger.error('Error checking library', { error: String(error) });
     return NextResponse.json({ inLibrary: false });
   }
 }

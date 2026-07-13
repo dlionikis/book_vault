@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { normalizeUuid } from '@/lib/api-utils';
 import { BOOK_INCLUDE, transformLibraryBook } from '@/lib/book-transformer';
-import { withLogging } from '@/lib/logger';
+import { logger, withLogging } from '@/lib/logger';
 
 /**
  * GET /api/library
@@ -25,13 +24,9 @@ import { withLogging } from '@/lib/logger';
 export const GET = withLogging(async (request: NextRequest) => {
   try {
     // Check both auth methods
-    const session = await getServerSession(authOptions);
-    const mobileUser = await getAuthUserFromRequest(request);
-    const user = session?.user || mobileUser;
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireUser(request);
+    if (auth.error) return auth.error;
+    const user = auth.user;
 
     // Get or create user's library list
     const library = await prisma.userList.findFirst({
@@ -66,7 +61,7 @@ export const GET = withLogging(async (request: NextRequest) => {
 
     return NextResponse.json({ books, total: books.length });
   } catch (error) {
-    console.error('Error fetching library:', error);
+    logger.error('Error fetching library', { error: String(error) });
     return NextResponse.json({ error: 'Failed to fetch library' }, { status: 500 });
   }
 });
@@ -77,13 +72,9 @@ export const GET = withLogging(async (request: NextRequest) => {
 export const POST = withLogging(async (request: NextRequest) => {
   try {
     // Check both auth methods
-    const session = await getServerSession(authOptions);
-    const mobileUser = await getAuthUserFromRequest(request);
-    const user = session?.user || mobileUser;
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireUser(request);
+    if (auth.error) return auth.error;
+    const user = auth.user;
 
     const body = await request.json();
     const bookId = normalizeUuid(body.bookId);
@@ -134,7 +125,7 @@ export const POST = withLogging(async (request: NextRequest) => {
 
     return NextResponse.json({ message: 'Book added to library' }, { status: 201 });
   } catch (error) {
-    console.error('Error adding to library:', error);
+    logger.error('Error adding to library', { error: String(error) });
     return NextResponse.json({ error: 'Failed to add book to library' }, { status: 500 });
   }
 });

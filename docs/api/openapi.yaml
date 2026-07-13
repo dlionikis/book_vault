@@ -658,7 +658,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [title, author, narrator, series]
+            enum: [title]
             default: title
           description: Sort order (title, author, narrator, or series)
       responses:

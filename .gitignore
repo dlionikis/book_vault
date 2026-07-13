@@ -173,3 +173,7 @@ ios/DerivedData/
 *.xcuserdatad/
 
 docs/infra
+
+# Local scratch
+.tmp/
+debug-storybook.log

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatTime } from '@/lib/utils/formatTime';
 
 interface Chapter {
   id: string;
@@ -15,17 +16,6 @@ interface ChapterListProps {
   bookId: string;
   currentTime?: number;
   onChapterClick: (startTime: number) => void;
-}
-
-function formatTime(seconds: number): string {
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-
-  if (hrs > 0) {
-    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 export default function ChapterList({ bookId, currentTime = 0, onChapterClick }: ChapterListProps) {

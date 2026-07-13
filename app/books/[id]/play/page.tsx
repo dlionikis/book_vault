@@ -5,6 +5,7 @@ import { Book, SeriesInfo, Author, Narrator } from '@/lib/types';
 import { prisma } from '@/lib/db';
 import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
 import PlaybackClient from '@/components/PlaybackClient';
+import { formatRuntime } from '@/lib/utils/formatRuntime';
 
 async function getBook(id: string): Promise<Book | null> {
   try {
@@ -22,13 +23,6 @@ async function getBook(id: string): Promise<Book | null> {
     console.error('Error fetching book:', error);
     return null;
   }
-}
-
-function formatRuntime(minutes?: number | null) {
-  if (!minutes) return null;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours} hr ${mins} min`;
 }
 
 export default async function PlayPage({ params }: { params: { id: string } }) {

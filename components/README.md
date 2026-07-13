@@ -28,7 +28,6 @@
 
 ## Progress & Status
 
-- **ProgressBadge** - Visual indicator showing listening progress percentage with circular or linear display. Props: `percentage`, `variant`. Used in: book cards, detail pages.
 - **ProgressControls** - Manual controls to mark books as finished or reset progress. Props: `bookId`, `currentStatus`. Used in: book detail pages.
 - **ProgressStatus** - Displays current playback position and total duration in human-readable format. Props: `positionSeconds`, `durationSeconds`. Used in: AudioPlayer.
 - **AddToLibraryButton** - Toggle button to add/remove books from user's library. Shows different states for in/out of library. Props: `bookId`, `initialState`. Used in: book detail pages, book cards.
@@ -47,7 +46,7 @@
 Most components have corresponding `.stories.tsx` files for isolated development and testing:
 
 - AudioPlayer, BackButton, BookCard, BookGrid, ChapterList
-- ContinueListening, Pagination, ProgressBadge, SearchBar, ThemeToggle
+- ContinueListening, Pagination, SearchBar, ThemeToggle
 
 See [storybook.md](../docs/storybook.md) for running Storybook.
 
@@ -77,7 +76,6 @@ const books = await fetchBooks();
 ```tsx
 // Show progress on book cards
 <BookCard book={book} />
-<ProgressBadge percentage={book.progressPercentage} />
 ```
 
 ---

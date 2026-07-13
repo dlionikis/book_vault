@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireUser } from '@/lib/api-auth';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -25,14 +25,9 @@ interface UpdateResult {
  */
 export async function POST(request: NextRequest) {
   // Support both session-based (web) and Bearer token (mobile) auth
-  const session = await getServerSession(authOptions);
-  const mobileUser = await getAuthUserFromRequest(request);
-
-  const user = session?.user || mobileUser;
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireUser(request);
+  if (auth.error) return auth.error;
+  const user = auth.user;
 
   // Rate limiting check
   if (!checkRateLimit(user.id, 100, 60000)) {
@@ -113,7 +108,7 @@ export async function POST(request: NextRequest) {
       details,
     });
   } catch (error) {
-    console.error('Error in batch progress update:', error);
+    logger.error('Error in batch progress update', { error: String(error) });
     return NextResponse.json({ error: 'Batch update failed' }, { status: 500 });
   }
 }

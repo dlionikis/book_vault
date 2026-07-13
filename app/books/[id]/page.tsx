@@ -10,6 +10,7 @@ import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import ReactMarkdown from 'react-markdown';
+import { formatRuntime } from '@/lib/utils/formatRuntime';
 
 // Type for customer reviews from Libation metadata
 interface CustomerReview {
@@ -52,13 +53,6 @@ async function getBook(id: string): Promise<Book | null> {
     console.error('Error fetching book:', error);
     return null;
   }
-}
-
-function formatRuntime(minutes?: number | null) {
-  if (!minutes) return null;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours} hr ${mins} min`;
 }
 
 function formatDate(dateString?: string | Date | null) {

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import BackButton from '@/components/BackButton';
 import AddToLibraryButton from '@/components/AddToLibraryButton';
 import ProgressStatus from '@/components/ProgressStatus';
+import { formatRuntime } from '@/lib/utils/formatRuntime';
 
 interface LibraryBook {
   id: string;
@@ -125,13 +126,6 @@ async function getLibraryBooks(userId: string): Promise<LibraryBook[]> {
     console.error('Error fetching library:', error);
     return [];
   }
-}
-
-function formatRuntime(minutes?: number | null) {
-  if (!minutes) return null;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours}h ${mins}m`;
 }
 
 export default async function LibraryPage() {
