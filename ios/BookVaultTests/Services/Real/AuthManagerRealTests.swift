@@ -123,6 +123,14 @@ final class MockAPIClientForAuth: APIClientProtocol {
     func removeFromLibrary(bookId _: UUID) async throws {
         fatalError("Not implemented for auth tests")
     }
+
+    func checkDownloadEligibility(bookId _: UUID) async throws -> CheckDownloadEligibility200Response {
+        fatalError("Not implemented for auth tests")
+    }
+
+    func generateDownloadUrl(bookId _: UUID, deviceId _: String?) async throws -> GenerateDownloadUrl200Response {
+        fatalError("Not implemented for auth tests")
+    }
 }
 
 // MARK: - AuthManagerRealTests
