@@ -15,7 +15,7 @@
 | Backend API | ✅ Complete - OpenAPI spec, contract tests, dual auth         |
 | AWS         | ✅ Live - ECS Fargate, RDS PostgreSQL, S3 (514 GB, 691 books) |
 
-**Known Issues**: None blocking. All tests passing.
+**Known Issues**: See [analysis/architecture-review-2026-07.md](analysis/architecture-review-2026-07.md) (July 2026 review). Notables: unit `npm test` requires the Docker Postgres (downloads suite is a real-DB integration test); contract tests only run via `npm run test:contract`; coverage tooling broken until the `glob` override fix lands ([plans/pre-restore-hardening-plan.md](plans/pre-restore-hardening-plan.md) P0-3).
 
 ---
 
@@ -35,6 +35,8 @@
 
 ### Next Up
 
+- [ ] **Pre-restore hardening (P0+P1)** - Security fixes + test infrastructure ([docs/plans/pre-restore-hardening-plan.md](plans/pre-restore-hardening-plan.md)) — in progress
+- [ ] **S3 archive restore workflow** - Restore pipeline + push notifications ([docs/plans/s3-archive-restore-workflow-v2.md](plans/s3-archive-restore-workflow-v2.md)) — blocked on hardening
 - [ ] **Remove volume slider (iOS)** - Remove the volume slider from the iOS audio playback view
 - [ ] **Duration remaining (iOS)** - Add remaining time display to the audio playback view
 - [ ] **Dismiss mini-player** - Add ability to close the recent playback mini-player
