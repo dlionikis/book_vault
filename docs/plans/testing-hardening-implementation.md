@@ -79,7 +79,9 @@ All 11 have Real equivalents in `AuthManagerRealTests.swift` (login success/fail
 
 ---
 
-## Phase 2 — `CoverCacheManagerTests` (the #75 change with no safety net)
+## Phase 2 — `CoverCacheManagerTests` (the #75 change with no safety net) ✅ DONE (July 13, 2026)
+
+> **Outcome**: Added an injectable `URLSession` (option b) and `CoverCacheManagerRealTests.swift` (6 tests) reusing `MockURLProtocol`. All 6 pass; full suite 600 tests / 0 failures. The security test (`testTokenNotAttachedForS3URL`) was mutation-verified: deliberately removing the host guard made it (and the different-port test) fail, confirming they exercise the real logic rather than passing trivially.
 
 **SUT**: `ios/BookVault/Services/CoverCacheManager.swift`. Testable init already exists:
 `init(cacheDirectory:userIdProvider:authTokenProvider:apiBaseURLProvider:)` (L95–110). The security-relevant logic is L166–173: bearer token attached **only when** `url.host == apiURL.host && url.port == apiURL.port`.

@@ -37,6 +37,9 @@ class CoverCacheManager: ObservableObject, CoverCaching {
     /// Provider for the API base URL, used to decide when to attach the token
     private let apiBaseURLProvider: () -> URL?
 
+    /// URLSession used for cover downloads (injected for testing via MockURLProtocol)
+    private let urlSession: URLSession
+
     // Metadata tracking
     private let metadataFileName = "cover_metadata.json"
     private var metadataFileURL: URL {
@@ -92,16 +95,19 @@ class CoverCacheManager: ObservableObject, CoverCaching {
     ///   - userIdProvider: Closure that returns current user ID (uses AuthManager in production)
     ///   - authTokenProvider: Closure that returns the API bearer token (uses APIClient in production)
     ///   - apiBaseURLProvider: Closure that returns the API base URL (uses APIClient in production)
+    ///   - urlSession: Session used for downloads (defaults to .shared; inject a mock-backed session in tests)
     init(
         cacheDirectory: URL,
         userIdProvider: @escaping () -> String?,
         authTokenProvider: @escaping () -> String? = { nil },
-        apiBaseURLProvider: @escaping () -> URL? = { nil }
+        apiBaseURLProvider: @escaping () -> URL? = { nil },
+        urlSession: URLSession = .shared
     ) {
         self.cacheDirectory = cacheDirectory
         self.userIdProvider = userIdProvider
         self.authTokenProvider = authTokenProvider
         self.apiBaseURLProvider = apiBaseURLProvider
+        self.urlSession = urlSession
 
         // Ensure directory exists
         try? FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
@@ -172,7 +178,7 @@ class CoverCacheManager: ObservableObject, CoverCaching {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await urlSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200,
