@@ -1,0 +1,96 @@
+name: E2E Web Smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'e2e/**'
+      - 'scripts/seed-e2e.ts'
+      - 'playwright.config.ts'
+      - 'prisma/**'
+      - '.github/workflows/e2e.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'e2e/**'
+      - 'scripts/seed-e2e.ts'
+      - 'playwright.config.ts'
+      - 'prisma/**'
+      - '.github/workflows/e2e.yml'
+
+# Separate workflow from unit CI so any e2e flake never blocks the unit gate.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Playwright web smoke
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: book_vault
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      # CI Postgres listens on 5432 (local dev uses 5433 via docker-compose).
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/book_vault?schema=public
+      NEXTAUTH_SECRET: test-secret-for-ci
+      NEXTAUTH_URL: http://localhost:3000
+      # Point global-setup's DB probe at the CI Postgres port.
+      E2E_DB_HOST: 127.0.0.1
+      E2E_DB_PORT: '5432'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+
+      - name: Generate Prisma Client
+        run: npm run db:generate
+
+      - name: Install Playwright browser (chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Build Next.js app
+        run: npm run build
+
+      # Playwright's webServer starts `npm run dev`, waits on /api/health, and
+      # globalSetup probes Postgres + seeds fixtures before the run.
+      - name: Run web smoke
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

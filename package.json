@@ -14,6 +14,10 @@
     "test:all": "JEST_INTEGRATION=true jest --forceExit",
     "test:contract": "node scripts/check-port.js 3000 && concurrently --kill-others --success first \"npm run dev\" \"npm run test:contract:wait\"",
     "test:contract:wait": "wait-on http://localhost:3000 && RUN_CONTRACT_TESTS=true npm test -- __tests__/api",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "e2e:seed": "tsx scripts/seed-e2e.ts",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix --max-warnings 0",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
@@ -84,6 +88,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",
+    "@playwright/test": "^1.61.1",
     "@redocly/cli": "^1.25.14",
     "@storybook/addon-a11y": "^10.1.10",
     "@storybook/addon-docs": "^10.1.10",
