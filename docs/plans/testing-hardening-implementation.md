@@ -152,7 +152,9 @@ New file `ios/BookVaultTests/Services/Real/SystemKeychainTests.swift`, using uni
 
 ---
 
-## Phase 4 — `/api/audio/[...path]` route tests
+## Phase 4 — `/api/audio/[...path]` route tests ✅ DONE (July 13, 2026)
+
+> **Outcome**: Added `__tests__/api/audio/route.test.ts` (11 tests) covering the auth, S3, and local-filesystem branches incl. 206/416/404. Mocked the `requireUser` seam via a stub factory (the real module pulls in Prisma, which can't init in-test). The contract-suite happy-path GET already exists (openapi-contract.test.ts L2023), so no spec/contract change. Audio route coverage 0 → ~86% stmts / 71% branch; full unit suite 357 tests, 0 failures; overall coverage 38.87/38.42/38.4/39.29 (above the 37/36/38/37 gate).
 
 **SUT**: `app/api/audio/[...path]/route.ts`. New file `__tests__/api/audio/route.test.ts` → lands in the **unit-node** Jest project (`__tests__/api/**` testMatch). Model directly on `__tests__/api/images/route.test.ts` from #75 — same auth pattern, same mocking style.
 
