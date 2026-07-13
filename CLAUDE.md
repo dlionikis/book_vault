@@ -78,6 +78,8 @@ npm run deploy:dry-run         # Validate only
 
 4. **Read-Only Libation** - Never modify source audiobook files
 
+5. **No AI attribution in git** - Never mention Claude or AI assistance in commit messages, PR titles, or PR bodies. No `Co-Authored-By: Claude` trailers, no "Generated with Claude Code" footers.
+
 ### File Organization
 
 ```
