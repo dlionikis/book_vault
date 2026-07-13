@@ -95,10 +95,12 @@ describeFn('API Response Type Validation', () => {
   let authToken: string;
   let sampleBookId: string;
 
+  // Generous timeout: this hits a dev server that may be compiling these
+  // routes for the first time, which can exceed Jest's default 5s hook limit
   beforeAll(async () => {
     authToken = await getAuthToken();
     sampleBookId = await getSampleBookId(authToken);
-  });
+  }, 30_000);
 
   describe('Books API', () => {
     it('validates /api/books response', async () => {

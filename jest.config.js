@@ -38,6 +38,11 @@ function allowEsmPackages(project) {
  * - unit-dom:    components and pages — jsdom environment, no DB required
  * - integration: tests that need the real Postgres (docker-compose up -d first);
  *                run via `npm run test:integration`, excluded from `npm test`
+ *
+ * The integration project is gated behind JEST_INTEGRATION=true instead of CLI
+ * `--selectProjects` because Jest ignores positional test-path patterns whenever
+ * --selectProjects is present — which silently broke `npm test -- <pattern>`
+ * (and CI's `npm test -- openapi-contract` ran the entire suite).
  */
 module.exports = async () => {
   const unitNode = allowEsmPackages(
@@ -78,8 +83,13 @@ module.exports = async () => {
     })()
   );
 
+  const projects = [unitNode, unitDom];
+  if (process.env.JEST_INTEGRATION === 'true') {
+    projects.push(integration);
+  }
+
   return {
-    projects: [unitNode, unitDom, integration],
+    projects,
     collectCoverageFrom: [
       'app/**/*.{js,jsx,ts,tsx}',
       'components/**/*.{js,jsx,ts,tsx}',
