@@ -118,9 +118,13 @@ All 11 have Real equivalents in `AuthManagerRealTests.swift` (login success/fail
 
 ---
 
-## Phase 3 — `SystemKeychain` tests
+## Phase 3 — `SystemKeychain` tests ❌ REVERTED (July 13, 2026)
 
-**SUT**: `ios/BookVault/Services/SystemKeychain.swift` (conforms to `KeychainStoring`). Simulator fully supports `kSecClassGenericPassword` — test the **real** implementation, no mock (the mock is for consumers, not the SUT).
+> **Outcome**: `SystemKeychainTests.swift` was added, passed locally, but the 5 write-based tests **failed in CI** and the file was removed. Root cause: CI builds with `CODE_SIGNING_ALLOWED=NO`, so no keychain-access-group entitlement is applied, and `SecItemAdd` for a generic password on the CI simulator returns `errSecMissingEntitlement` (**-34018**). This reproduces locally with `CODE_SIGNING_ALLOWED=NO` and is _not_ fixable with an entitlements file — entitlements only take effect during code signing (verified empirically). The `KeychainStoring` mock still covers keychain **consumers**; the real `SystemKeychain` is left untested by CI on purpose.
+>
+> **If revisiting**: don't test the real Security framework under the current signing-disabled CI. Options are (a) `throw XCTSkip` on `-34018` so the tests still run on real devices / signed local builds, or (b) enable ad-hoc signing (`CODE_SIGN_IDENTITY=-` + an entitlements file) in `ios-tests.yml`. Neither was adopted; the simpler "no real-keychain test in CI" stance won.
+
+**SUT** (was): `ios/BookVault/Services/SystemKeychain.swift` (conforms to `KeychainStoring`). NOTE: the earlier assumption below — "Simulator fully supports `kSecClassGenericPassword`" — is only true with code signing on; it is **false** under CI's `CODE_SIGNING_ALLOWED=NO`.
 
 New file `ios/BookVaultTests/Services/Real/SystemKeychainTests.swift`, using unique per-test key prefixes + `tearDown` deletion:
 
