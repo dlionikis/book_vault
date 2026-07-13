@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { normalizeUuid, isValidUuid } from '@/lib/api-utils';
 
 // POST /api/library/series/[seriesId] - Add all books in series to library
 export async function POST(request: NextRequest, { params }: { params: { seriesId: string } }) {
@@ -15,7 +16,10 @@ export async function POST(request: NextRequest, { params }: { params: { seriesI
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { seriesId } = params;
+    const seriesId = normalizeUuid(params.seriesId);
+    if (!isValidUuid(seriesId)) {
+      return NextResponse.json({ error: 'Invalid series ID format' }, { status: 400 });
+    }
 
     // Get all books in the series
     const seriesBooks = await prisma.bookSeries.findMany({
@@ -95,7 +99,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { serie
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { seriesId } = params;
+    const seriesId = normalizeUuid(params.seriesId);
+    if (!isValidUuid(seriesId)) {
+      return NextResponse.json({ error: 'Invalid series ID format' }, { status: 400 });
+    }
 
     // Get all books in the series
     const seriesBooks = await prisma.bookSeries.findMany({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
+import { requireAdmin } from '@/lib/admin-auth';
 import { prisma } from '@/lib/db';
 import { extractChaptersBestMethod, isFFProbeAvailable } from '@/lib/audio-metadata';
 import { getAbsoluteMediaPath } from '@/lib/media';
@@ -194,15 +195,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
  * POST /api/books/[id]/chapters
  * Re-extract chapters for a book (deletes existing chapters and extracts fresh ones)
  * This is useful when chapter timing needs to be corrected.
+ *
+ * Auth: Admin only - this deletes and rewrites the shared Chapter table.
  */
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
-  // Check both auth methods
-  const session = await getServerSession(authOptions);
-  const mobileUser = await getAuthUserFromRequest(request);
-  const user = session?.user || mobileUser;
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { error } = await requireAdmin(request);
+  if (error) {
+    return error;
   }
 
   const id = normalizeUuid(params.id);

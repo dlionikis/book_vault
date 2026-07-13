@@ -1,12 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 import fs from 'fs/promises';
 import path from 'path';
 import { getAbsoluteMediaPath, validateMediaPath } from '@/lib/media';
 import { isS3Enabled, streamS3Object } from '@/lib/s3';
 
+// Only image content may be served from this route. Without this allowlist the
+// route could stream any object in the media store (including audio files).
+const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+
+const CONTENT_TYPES: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+};
+
 export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
   try {
+    // Authentication check - support both session cookies (web) and Bearer tokens (mobile)
+    const session = await getServerSession(authOptions);
+    const tokenUser = await getAuthUserFromRequest(request);
+    const user = session?.user || tokenUser;
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Authentication required to access images' },
+        { status: 401 }
+      );
+    }
+
     const filePath = params.path.join('/');
+
+    const ext = path.extname(filePath).toLowerCase();
+    if (!ALLOWED_IMAGE_EXTENSIONS.includes(ext)) {
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
+    }
 
     // Use S3 in production if configured
     if (isS3Enabled()) {
@@ -17,7 +48,7 @@ export async function GET(request: NextRequest, { params }: { params: { path: st
           headers: {
             'Content-Type': contentType,
             'Content-Length': contentLength.toString(),
-            'Cache-Control': 'public, max-age=31536000, immutable',
+            'Cache-Control': 'private, max-age=31536000, immutable',
           },
         });
       } catch (error: any) {
@@ -52,20 +83,11 @@ export async function GET(request: NextRequest, { params }: { params: { path: st
     // Read the file
     const fileBuffer = await fs.readFile(localFilePath);
 
-    // Determine content type based on extension
-    const ext = path.extname(localFilePath).toLowerCase();
-    const contentType =
-      ext === '.jpg' || ext === '.jpeg'
-        ? 'image/jpeg'
-        : ext === '.png'
-          ? 'image/png'
-          : 'application/octet-stream';
-
     // Return the image
     return new NextResponse(fileBuffer, {
       headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Content-Type': CONTENT_TYPES[ext] ?? 'application/octet-stream',
+        'Cache-Control': 'private, max-age=31536000, immutable',
       },
     });
   } catch (error) {

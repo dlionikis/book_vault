@@ -28,7 +28,9 @@ export function getAbsoluteMediaPath(): string {
 export function validateMediaPath(requestedPath: string): boolean {
   const mediaDir = getAbsoluteMediaPath();
   const resolvedPath = path.resolve(requestedPath);
-  return resolvedPath.startsWith(mediaDir);
+  // Compare with a trailing separator so sibling directories sharing a prefix
+  // (e.g. /data/media-evil vs /data/media) don't pass the check
+  return resolvedPath === mediaDir || resolvedPath.startsWith(mediaDir + path.sep);
 }
 
 // ============================================================================
