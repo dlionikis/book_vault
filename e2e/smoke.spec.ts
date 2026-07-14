@@ -37,39 +37,55 @@ function guardServerErrors(page: Page): { serverErrors: string[] } {
 }
 
 async function login(page: Page): Promise<void> {
-  // The login page is a client component with a controlled form whose
-  // onSubmit={handleSubmit} calls signIn(). If we click before React has
-  // hydrated, the browser performs a NATIVE form GET (URL gets ?username=...&
-  // password=...) and no auth happens. There's no DOM marker for "hydrated", so
-  // we submit and verify the React handler actually ran (signIn fires the
-  // NextAuth credentials callback); if it didn't, we reload and retry.
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  // Logging in reliably in CI has two distinct races, so we retry the WHOLE
+  // submit until we actually land authenticated on '/':
+  //
+  //   1. Pre-hydration native submit. The login page is a client component whose
+  //      onSubmit={handleSubmit} calls signIn(). Click before React hydrates and
+  //      the browser does a native form GET (no auth) — URL keeps ?username=...
+  //   2. Cookie not yet honored. Even once signIn's credentials callback fires
+  //      and handleSubmit does window.location.href='/', the session cookie may
+  //      not be readable by middleware on the very next request yet, so '/'
+  //      bounces back to /auth/login?callbackUrl=%2F. (This is the CI flake.)
+  //
+  // Waiting for the callback isn't enough (covers only #1); we must confirm the
+  // final landing on '/'. If we bounce back to the login page, reload and retry.
+  for (let attempt = 1; attempt <= 4; attempt++) {
     await page.goto('/auth/login', { waitUntil: 'networkidle' });
 
     await page.locator('#username').fill(USERNAME);
     await page.locator('#password').fill(PASSWORD);
 
+    // The credentials callback only fires if handleSubmit ran, i.e. React is
+    // hydrated. On a freshly-compiled dev route (CI, cold server) the first
+    // click can beat hydration → native form GET, no callback. Watch for the
+    // callback; if it doesn't come, this attempt was a native submit → retry.
     const callback = page
       .waitForResponse((r) => r.url().includes('/api/auth/callback/credentials'), {
         timeout: 10_000,
       })
       .catch(() => null);
     await page.getByRole('button', { name: 'Sign in' }).click();
-
-    // If the credentials callback fired, the React handler ran → proceed.
-    if (await callback) break;
-
-    // Otherwise it was a pre-hydration native submit; retry with a fresh load.
-    if (attempt === 3) {
-      throw new Error('Login form never triggered signIn (client never hydrated?)');
+    if (!(await callback)) {
+      if (attempt === 4) throw new Error('Login never triggered signIn (client never hydrated?)');
+      continue; // pre-hydration native submit — reload and retry.
     }
-  }
 
-  // On success handleSubmit does window.location.href = '/'. Wait for the app to
-  // land on a real in-app page (not still on /auth/login with query params).
-  await page.waitForURL((url) => url.pathname === '/', { timeout: 20_000 });
-  // Header shows the username once the session is live.
-  await expect(page.getByText(USERNAME).first()).toBeVisible();
+    // signIn succeeded → handleSubmit does window.location.href='/'. But the
+    // session cookie may not be honored by middleware on the very next request,
+    // bouncing '/' back to /auth/login. If so, reload and retry the whole login.
+    try {
+      await page.waitForURL((url) => url.pathname === '/', { timeout: 15_000 });
+    } catch {
+      if (attempt === 4) {
+        throw new Error('Login authenticated but never landed on / (session not honored)');
+      }
+      continue;
+    }
+
+    await expect(page.getByText(USERNAME).first()).toBeVisible();
+    return;
+  }
 }
 
 test('web smoke: login → search → detail → play → add to library', async ({ page }) => {
