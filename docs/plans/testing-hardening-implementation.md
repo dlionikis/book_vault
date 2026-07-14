@@ -241,7 +241,18 @@ Manual verification after the refactor: stream one book on a device/simulator (t
 
 ---
 
-## Phase 6 — Playwright web smoke
+## Phase 6 — Playwright web smoke ✅ DONE (July 13, 2026)
+
+> **Outcome**: Installed `@playwright/test` + chromium; added `playwright.config.ts` (testDir `e2e`, chromium-only, `webServer` runs `npm run dev` and waits on `/api/health`, `reuseExistingServer` locally), `e2e/global-setup.ts` (TCP-probes Postgres, fails with a "run docker-compose up -d" message, then seeds), and `e2e/smoke.spec.ts` (the full login→search→detail→play→add-to-library flow). New `.github/workflows/e2e.yml` (separate from unit CI, Postgres service on 5432, retries:1). Passes locally 3× warm (~8s) and once cold in CI-mode (~19s, exercises the cold-hydration path). No app source changed — the smoke drives real selectors (roles/placeholders/aria-labels; there are no test ids in the app).
+>
+> **Deviations from the plan below, and why:**
+>
+> - **New `scripts/seed-e2e.ts`** instead of reusing `seed-test-user.ts`: the flow needs a _book_, and `db:seed` only seeds a user. The e2e seed adds a deterministic, media-free (audioUrl set so the play page renders the player; no real bytes), series-free (so "Add to Library" is one click, no dialog) book + author/narrator/chapter. It also **resets mutable state** (`userListBook`/`userProgress` for the fixture) each run so the smoke is idempotent — without this the second run fails because the book is already "In Library".
+> - **Backend validated by asserting API + response codes, not by scraping dev-server logs** (as floated in the original question): a `page.on('response')` guard fails the run on ANY 5xx, and a direct `GET /api/library` (reusing the browser session) confirms the add persisted server-side. This is deterministic where log-grep is brittle.
+> - **Login needs a hydration retry**, not storage-state reuse: the login page is a client component whose `onSubmit` runs `signIn(redirect:false)`. Clicking before hydration does a native form GET (no auth). The spec submits and confirms the NextAuth credentials callback actually fired, retrying with a fresh load otherwise. (Storage-state reuse was in the original plan but unnecessary for a single-spec smoke.)
+> - **eslint.config.mjs**: added `e2e/**` + `**/*.spec.ts` to the `no-console`-off override (harness files log progress).
+>
+> **Run it:** `npm run test:e2e` (headless/background) · `npm run test:e2e:headed` (watch it) · `npm run test:e2e:ui` (Playwright UI). Requires `docker-compose up -d` first.
 
 **Current state**: not installed (`@playwright/test` orphaned in lockfile only), no config, no e2e dir.
 

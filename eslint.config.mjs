@@ -28,9 +28,17 @@ const eslintConfig = [
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
-  // Allow console.log in test files, scripts, and dev server
+  // Allow console.log in test files, scripts, e2e harness, and dev server
   {
-    files: ['**/__tests__/**', '**/*.test.ts', '**/*.test.tsx', 'scripts/**', 'server.js'],
+    files: [
+      '**/__tests__/**',
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.spec.ts',
+      'scripts/**',
+      'e2e/**',
+      'server.js',
+    ],
     rules: {
       'no-console': 'off',
     },

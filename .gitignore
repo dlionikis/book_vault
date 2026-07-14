@@ -180,3 +180,9 @@ debug-storybook.log
 
 # Xcode local build output
 ios/build/
+
+# Playwright (Phase 6 web smoke)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
