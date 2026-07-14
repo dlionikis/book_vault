@@ -105,6 +105,15 @@ run_contract_tests() {
   npm run test:contract
 }
 
+run_e2e_smoke() {
+  CURRENT_STEP="Playwright web smoke (E2E, live server)"
+  echo "🎭 Running Playwright web smoke..."
+  # Playwright owns the dev server (webServer in playwright.config.ts) and
+  # globalSetup re-checks the DB + seeds fixtures. The DB was already gated by
+  # require_database above.
+  npm run test:e2e
+}
+
 # Run all validations
 run_format_check
 run_lint
@@ -116,6 +125,7 @@ run_tests
 require_database
 run_integration_tests
 run_contract_tests
+run_e2e_smoke
 
 # Clear step tracking on success
 CURRENT_STEP=""

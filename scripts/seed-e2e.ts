@@ -30,6 +30,11 @@ export const E2E_BOOK = {
   author: 'Ada E2E Author',
   narrator: 'Nora E2E Narrator',
   audioUrl: 'e2e-fixtures/zephyr-protocol.m4b',
+  // A cover path is required for the fixture to satisfy the API contract tests,
+  // which run against this same dev DB and assert every book's coverUrl is a
+  // real http(s) URL. getCoverUrl() turns this relative path into
+  // http://localhost:3000/api/images/... in dev.
+  coverUrl: 'e2e-fixtures/zephyr-protocol.jpg',
 } as const;
 
 async function seedUser(): Promise<void> {
@@ -53,6 +58,7 @@ async function seedBook(): Promise<void> {
     update: {
       title: E2E_BOOK.title,
       audioUrl: E2E_BOOK.audioUrl,
+      coverUrl: E2E_BOOK.coverUrl,
       runtimeMinutes: 60,
     },
     create: {
@@ -60,6 +66,7 @@ async function seedBook(): Promise<void> {
       title: E2E_BOOK.title,
       description: 'A deterministic fixture book for the Playwright web smoke test.',
       audioUrl: E2E_BOOK.audioUrl,
+      coverUrl: E2E_BOOK.coverUrl,
       runtimeMinutes: 60,
     },
   });
