@@ -1,11 +1,25 @@
 # S3 Archive Restore Workflow - Updated Implementation Plan
 
 > **Created**: January 2, 2026
-> **Updated**: July 12, 2026 (revised for verified S3 Intelligent-Tiering semantics; added development & testing workflow)
-> **Status**: Planned (not yet implemented)
+> **Updated**: July 12, 2026 (revised for verified S3 Intelligent-Tiering semantics; added development & testing workflow); **July 19, 2026** (accuracy re-verified against current code — see the accuracy-review section below; Phase 0 marked complete)
+> **Status**: **Phase 0 ✅ complete** (PR #88, deployed); Phases 1–8 not started
 > **Priority**: High — a HeadObject sample on July 12, 2026 showed **5 of 8 audio files already in ARCHIVE_ACCESS**. A large portion of the library is currently unstreamable in production.
 > **Dependencies**: S3 Intelligent-Tiering with Archive Access tier (already enabled — verified)
-> **⚠️ PREREQUISITE**: Requires refactoring to on-demand URL generation (Phase 0)
+
+---
+
+## Accuracy review — July 19, 2026
+
+Every load-bearing claim was re-verified against the current tree. **The core of the plan is sound**: the verified AWS/IT facts, the architecture (cached column for badges + HeadObject at play time), the schema, phases 1–8, cost analysis, and testing strategy all hold. What changed:
+
+1. **Phase 0 shipped (PR #88)** and matches the design: `GET /api/books/{id}/stream` exists (with the `status` discriminator so Phase 2's 202 is non-breaking), `S3_ENABLED` hybrid-mode override in `isS3Enabled()`, `getS3Client()`/`getS3Bucket()` exported from `lib/s3.ts`, `BookStreamResponse` in the OpenAPI spec, web `PlaybackClient` fetches the URL on demand (with `audioUrl`-prop fallback), iOS `APIClient.getBookStream` wired into `AudioPlayerManager`, and `__tests__/api/books/stream.test.ts` exists. **Rollout step 3 (nulling `audioUrl` in `transformBook`) is deliberately NOT done** — old installed iOS builds still stream from `book.audioUrl`; hold until all devices run the updated app.
+2. **The code samples below predate the hardening and Next 16 — do not copy them literally.** New routes must use `requireUser(request)` (never inline `getServerSession`/`getAuthUserFromRequest` — hardening invariant), `normalizeUuid` + `isValidUuid` for id params, and the Next 16 async-params signature (`props: { params: Promise<{ id: string }> }` + `await props.params`). **The merged stream route (`app/api/books/[id]/stream/route.ts`) is the canonical template.**
+3. **§5.3's "single ECS task" premise is false** — `book-vault-spot` currently runs **desiredCount 2**. The in-process `setInterval`/`instrumentation.ts` fallback would double-run every job (double `RestoreObject`s are harmless — DB dedup — but the poller would double-send push notifications). **Use EventBridge Scheduler; the in-process fallback is struck.**
+4. **The iOS `DownloadManager` DI prerequisite is already met** — its eligibility/URL-generation calls were routed through the injected `APIClientProtocol` in the hardening (#79), so Phase 7's 202-handling in `DownloadManager` is mock-testable as-is.
+5. **§2.7 verified**: the chapters route already degrades without a 500 — extraction failures are caught and return `200 { chapters: [], source: 'error' }`. ffprobe now runs via `execFile` with a 30s timeout (so an archived file's failing HTTP reads can't hang the handler).
+6. **New deps to add when Phase 2/6 start**: `aws-sdk-client-mock` (devDep) and `@aws-sdk/client-sns` — pin SNS to the same `^3.1000` family as the existing `@aws-sdk/*` deps. Neither is installed yet.
+7. **Contract-test side effects**: new response schemas in `__tests__/helpers/api-schemas.ts` must use **zod 4** forms (`z.uuid()`, `z.iso.datetime()` — not the removed `z.string().uuid()` style). The runtime is Node 24 / Next 16 / React 19 / Prisma 6; Phase 1's migrations run on Prisma 6 (the Prisma 7 move is a separate plan and does not block this).
+8. **Fold-ins from the July 19 architecture review**: build the restore UI with `dark:` variants from the start, and take the D-5 items (route `error.tsx`/`loading.tsx` boundaries, a shared client-fetch helper with user-visible error states) alongside Phase 4 — the restore UI lands on exactly those surfaces.
 
 ---
 
@@ -985,7 +999,7 @@ export async function GET(req: Request) {
 }
 ```
 
-**Scheduling recommendation**: EventBridge Scheduler → API destination hitting `https://bookvault.lionikis.com/api/cron/poll-restores` every 5 minutes (with the `Authorization` header stored in an EventBridge connection), and `/api/cron/sync-availability` nightly at 3 AM. Serverless, no new ECS tasks, and the endpoints remain manually triggerable with `curl` for testing. (An in-process `setInterval` via Next.js `instrumentation.ts` is a viable simpler fallback given the single ECS task, at the cost of coupling job execution to web deploys/restarts.)
+**Scheduling**: EventBridge Scheduler → API destination hitting `https://bookvault.lionikis.com/api/cron/poll-restores` every 5 minutes (with the `Authorization` header stored in an EventBridge connection), and `/api/cron/sync-availability` nightly at 3 AM. Serverless, no new ECS tasks, and the endpoints remain manually triggerable with `curl` for testing. (~~In-process `setInterval` via `instrumentation.ts`~~ — **struck July 19**: the service runs **2 ECS tasks**, so every in-process job would run twice; duplicate `RestoreObject`s are dedup'd in the DB, but the poller would double-send push notifications. EventBridge hits the ALB once per schedule and lands on one task.)
 
 ---
 
@@ -1559,16 +1573,16 @@ describe('POST /api/series/{id}/restore', () => {
 
 ## Implementation Checklist
 
-### Phase 0: On-Demand URL Generation (4-6 hours)
+### Phase 0: On-Demand URL Generation — ✅ COMPLETE (PR #88, July 19, 2026)
 
-- [ ] Add `S3_ENABLED` override to `isS3Enabled()` (unlocks local hybrid mode for all later phases)
-- [ ] Create `GET /api/books/{id}/stream` endpoint (with dev-mode local URL branch)
-- [ ] Update OpenAPI spec (`BookStreamResponse` schema) + regenerate TS/Swift types
-- [ ] Update web player to fetch stream URL on demand
-- [ ] Add `APIClient.getBookStream(bookId:)` + update `AudioPlayerManager` (iOS)
-- [ ] Add tests for stream endpoint
-- [ ] **Rollout step 3 only after iOS update installed**: null `audioUrl` in `transformBook()`
-- [ ] Test playback on web and iOS (dev + production)
+- [x] Add `S3_ENABLED` override to `isS3Enabled()` (unlocks local hybrid mode for all later phases)
+- [x] Create `GET /api/books/{id}/stream` endpoint (with dev-mode local URL branch)
+- [x] Update OpenAPI spec (`BookStreamResponse` schema) + regenerate TS/Swift types
+- [x] Update web player to fetch stream URL on demand (`PlaybackClient`, with `audioUrl` fallback)
+- [x] Add `APIClient.getBookStream(bookId:)` + update `AudioPlayerManager` (iOS)
+- [x] Add tests for stream endpoint (`__tests__/api/books/stream.test.ts`)
+- [ ] **Rollout step 3 — deliberately deferred**: null `audioUrl` in `transformBook()` only after ALL installed iOS builds use the stream endpoint (an old build still streams from `book.audioUrl`)
+- [x] Test playback on web and iOS (dev + production — E2E smoke exercises the play flow)
 
 ### Phase 1: Database Schema (1-2 hours)
 
