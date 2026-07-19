@@ -1,8 +1,8 @@
 # Dependency Major-Version Upgrade Plan
 
 > **Created**: July 19, 2026
-> **Status**: In progress — Phases 1 ✅, 2 ✅, 3 ✅, 4 ✅ done (July 19, 2026); Phases 5–6 planned.
-> **`npm audit`: 0 high/critical** as of Phase 4.
+> **Status**: In progress — Phases 1 ✅, 2 ✅, 3 ✅, 4 ✅, 5 ✅ done (July 19, 2026); Phase 5b
+> (Prisma 7) + Phase 6 planned. **`npm audit`: 0 high/critical** as of Phase 4.
 > **Context**: The safe, in-semver dependency updates + `npm audit fix` already landed
 > (26 → residual vulnerabilities, all remaining ones require the breaking upgrades below).
 > This plan covers the **major-version** jumps deliberately deferred from that pass.
@@ -184,25 +184,64 @@ next-auth v5). No iOS files touched.
 **Acceptance**: ✅ `build-storybook` green; contract tests green; `npm audit` shows the
 axios/openapi-validator **and** undici highs cleared.
 
-### Phase 5 — Prisma 5 → 7 (data layer, careful)
+### Phase 5 — Prisma 5 → **6** + browse-page `force-dynamic` — ✅ DONE (July 19, 2026)
 
-- Two majors (5 → 6 → 7). Read both upgrade guides.
-- Regenerate client (`prisma generate`); run migrations against a scratch DB;
-  run the integration suite (real Postgres) hard.
-- Watch for query-engine / client API changes and any raw-query usage.
-- **While here — silence the build-time Prisma noise** (independent of the version
-  bump, can be done anytime): the `/browse/{categories,authors,narrators,series}`
-  pages are DB-backed but Next treats them as `○ (Static)` and runs their
-  `prisma.*.findMany()` during `next build`, where there is no `DATABASE_URL`. The
-  queries throw, the pages' own `try/catch` swallows it, and Next renders them at
-  runtime anyway (they work in prod) — but the build log fills with alarming
-  `PrismaClientInitializationError: Environment variable not found: DATABASE_URL`.
-  Add `export const dynamic = 'force-dynamic'` (or `revalidate`) to those four page
-  components so Next never attempts static prerender. Removes the noise and avoids
-  shipping an empty build-time snapshot.
+Landed in `deps/phase-5-prisma-6`. **Scope changed from the original "5 → 7".** Prisma 7 turned
+out to be a data-layer overhaul, not a routine bump — it forces ESM (`"type": "module"` +
+`tsconfig` module changes), a required **`prisma.config.ts`**, a **driver adapter** in the
+`PrismaClient` constructor (a real `lib/db.ts` rewrite), env vars no longer auto-loaded, and CLI
+changes that ripple into our `db:migrate`/`db:seed` scripts and the Dockerfile's
+`node_modules/.prisma` COPYs. Per the "if a phase balloons, split it" guardrail, **Prisma 7 is
+carved into its own plan** (see below) and best sequenced with the Node 20→22 move (v7 wants Node
+≥20.19; we're on 20.20).
 
-**Acceptance**: `prisma migrate` clean on a fresh DB; integration + contract tests
-green; the browse-page Prisma errors no longer appear in the build log.
+Prisma **6** is a clean, low-risk stop for this codebase:
+
+- `prisma` + `@prisma/client` 5.22.0 → **6.19.3**. Kept the `prisma-client-js` generator, so the
+  client still generates to `node_modules/.prisma` — the Dockerfile COPYs and every
+  `@prisma/client` type import (`Prisma.BookSelect` in `lib/api-utils.ts`, `Prisma.BookGetPayload`
+  in `lib/book-transformer.ts`) are unchanged. `tsc` clean, no code changes needed.
+- **None of Prisma 6's breaking changes apply**: no `Bytes` fields (so no `Buffer`→`Uint8Array`),
+  no implicit m-n relations (we use explicit join tables — no relation-table migration), no
+  `NotFoundError` catches / `findUniqueOrThrow`, no `fullTextSearch`/preview features. `P2002` is
+  matched as a raw code string, unaffected.
+- **Browse-page build noise fixed**: added `export const dynamic = 'force-dynamic'` to the four
+  `/browse/{categories,authors,narrators,series}` pages. They were DB-backed but Next tried to
+  statically prerender them during `next build` (no `DATABASE_URL`), the query threw, the
+  `try/catch` swallowed it, and the build log filled with
+  `PrismaClientInitializationError: Environment variable not found: DATABASE_URL`. Now Next renders
+  them per-request (as it already did in prod) and the build log is clean.
+
+Verified: `prisma migrate status` clean (3 migrations, schema up to date); integration **13/13**
+(real Postgres, exercises `$transaction` both forms + `mode:'insensitive'`); contract **218/218**;
+unit green; Docker native-arm64 build clean with no browse-page Prisma noise. (E2E smoke flaked
+once on a transient JWT/session timing issue during the combined gate, then passed **3/3** in
+isolation — unrelated to Prisma/the browse change.)
+
+**Acceptance**: ✅ `prisma migrate status` clean; integration + contract green; browse-page Prisma
+errors gone from the build log.
+
+### Phase 5b — Prisma 6 → 7 (own plan; do with / after Node 22) — planned
+
+Not a routine bump. Required before/with this work:
+
+- **Node 20 → 22** first (v7 needs Node ≥20.19; pairs naturally with the base-image move below).
+- **ESM**: `"type": "module"` + `tsconfig` (`module: ESNext`, `moduleResolution: bundler`).
+  Verify Next 16 build + jest (`next/jest`) still work — this is the biggest unknown.
+- **New `prisma-client` generator** with a **required `output`** path (client leaves
+  `node_modules/.prisma`). Update: the two type-import sites, `lib/db.ts`, the Dockerfile COPYs
+  (`node_modules/.prisma` + `@prisma`), `.dockerignore`, and the inline `require('@prisma/client')`
+  shell scripts (`db-migrate.sh`, `create-user.sh`, `delete-user.sh`, `reset-password.sh`,
+  `db-connect.sh`).
+- **`prisma.config.ts`** at project root; **explicit env loading** (`import 'dotenv/config'`).
+- **Driver adapter** required in the `PrismaClient` constructor → rewrite `lib/db.ts`.
+- **CLI**: `generate` no longer auto-runs with `migrate`; seeding is manual — update
+  `db:migrate`/`db:seed`, `scripts/db-migrate.sh`, and the CI/Docker `prisma generate` steps.
+- The one deep-mock test (`__tests__/scripts/import-libation.test.ts`, `mockDeep<PrismaClient>()`)
+  is the most likely type-shape casualty.
+
+**Acceptance**: `prisma migrate` clean on a fresh DB; integration + contract green; Docker build +
+a real deploy; the new generated-client path resolves in the standalone runtime.
 
 ### Phase 6 — Remaining ecosystem majors (evaluate individually)
 
