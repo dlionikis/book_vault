@@ -961,10 +961,14 @@ export interface components {
              *     - archived: in the S3 Intelligent-Tiering Archive Access tier;
              *       requires a ~3-5 hour restore
              *     - restoring: restore in progress
+             *
+             *     Optional (not in `required`) for backward compatibility: a backend
+             *     deployed before the restore feature omits it, and clients must treat
+             *     its absence as `available`. The current server always sends it.
              * @example available
              * @enum {string}
              */
-            archiveStatus: "available" | "archived" | "restoring";
+            archiveStatus?: "available" | "archived" | "restoring";
             /** @example Told in Kvothe's own voice, this is the tale of the magically gifted young man... */
             publisherSummary?: string | null;
             /** @example 1068 */

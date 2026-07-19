@@ -21,8 +21,8 @@ public struct LibraryBook: Codable, JSONEncodable, Hashable {
     public var id: UUID
     public var asin: String
     public var title: String
-    /** Availability of the audio file (derived from the cached audio_availability column — synced nightly and self-healed at play time): - available: ready to stream immediately - archived: in the S3 Intelligent-Tiering Archive Access tier;   requires a ~3-5 hour restore - restoring: restore in progress  */
-    public var archiveStatus: ArchiveStatus
+    /** Availability of the audio file (derived from the cached audio_availability column — synced nightly and self-healed at play time): - available: ready to stream immediately - archived: in the S3 Intelligent-Tiering Archive Access tier;   requires a ~3-5 hour restore - restoring: restore in progress  Optional (not in `required`) for backward compatibility: a backend deployed before the restore feature omits it, and clients must treat its absence as `available`. The current server always sends it.  */
+    public var archiveStatus: ArchiveStatus?
     public var publisherSummary: String?
     public var runtimeMinutes: Int?
     public var releaseDate: Date?
@@ -36,7 +36,7 @@ public struct LibraryBook: Codable, JSONEncodable, Hashable {
     /** Timestamp when book was added to library */
     public var addedAt: Date
 
-    public init(id: UUID, asin: String, title: String, archiveStatus: ArchiveStatus, publisherSummary: String? = nil, runtimeMinutes: Int? = nil, releaseDate: Date? = nil, publisher: String? = nil, coverUrl: String? = nil, audioUrl: String? = nil, authors: [Author], narrators: [Narrator]? = nil, series: [SeriesInfo]? = nil, categories: [Category]? = nil, addedAt: Date) {
+    public init(id: UUID, asin: String, title: String, archiveStatus: ArchiveStatus? = nil, publisherSummary: String? = nil, runtimeMinutes: Int? = nil, releaseDate: Date? = nil, publisher: String? = nil, coverUrl: String? = nil, audioUrl: String? = nil, authors: [Author], narrators: [Narrator]? = nil, series: [SeriesInfo]? = nil, categories: [Category]? = nil, addedAt: Date) {
         self.id = id
         self.asin = asin
         self.title = title
@@ -79,7 +79,7 @@ public struct LibraryBook: Codable, JSONEncodable, Hashable {
         try container.encode(id, forKey: .id)
         try container.encode(asin, forKey: .asin)
         try container.encode(title, forKey: .title)
-        try container.encode(archiveStatus, forKey: .archiveStatus)
+        try container.encodeIfPresent(archiveStatus, forKey: .archiveStatus)
         try container.encodeIfPresent(publisherSummary, forKey: .publisherSummary)
         try container.encodeIfPresent(runtimeMinutes, forKey: .runtimeMinutes)
         try container.encodeIfPresent(releaseDate, forKey: .releaseDate)

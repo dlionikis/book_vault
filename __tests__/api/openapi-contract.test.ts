@@ -116,7 +116,7 @@ const SCHEMA_DEFINITIONS: Record<string, SchemaDefinition> = {
     id: { required: true, type: 'string' },
     asin: { required: true, type: 'string' },
     title: { required: true, type: 'string' },
-    archiveStatus: { required: true, type: 'string' },
+    archiveStatus: { required: false, type: 'string' },
     description: { required: false, type: 'string' },
     publisherSummary: { required: false, type: 'string' },
     runtimeMinutes: { required: true, type: 'number' },

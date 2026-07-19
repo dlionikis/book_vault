@@ -225,7 +225,7 @@ components:
     # Core models (from lib/types.ts)
     Book:
       type: object
-      required: [id, asin, title, authors, archiveStatus]
+      required: [id, asin, title, authors]
       properties:
         id:
           type: string
@@ -248,6 +248,10 @@ components:
             - archived: in the S3 Intelligent-Tiering Archive Access tier;
               requires a ~3-5 hour restore
             - restoring: restore in progress
+
+            Optional (not in `required`) for backward compatibility: a backend
+            deployed before the restore feature omits it, and clients must treat
+            its absence as `available`. The current server always sends it.
           example: available
         publisherSummary:
           type: string

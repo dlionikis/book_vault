@@ -741,7 +741,7 @@ Book:
         - restoring: Restore in progress
 ```
 
-Make it required in the schema so contract tests enforce it, and regenerate TS + Swift types.
+Keep it **optional** in the schema (additive, backward-compatible): a pre-restore backend omits it and clients treat absent as available — a newly-required field would break decoding of old responses during rollout (notably an updated iOS build hitting the not-yet-deployed backend). Regenerate TS + Swift types.
 
 ### Update `transformBook()`
 
