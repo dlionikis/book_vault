@@ -45,6 +45,20 @@ export interface paths {
      */
     post: operations["reExtractChapters"];
   };
+  "/api/books/{id}/stream": {
+    /**
+     * Get on-demand streaming URL for a book
+     * @description Generates a presigned S3 URL for audio playback (a local /api/audio URL
+     * in development). Called at play time instead of eagerly attaching audio
+     * URLs to list responses.
+     *
+     * The response carries a `status` discriminator. Today it is always
+     * `available`. A future release returns 202 with `status=restoring` when
+     * the audio file is in the S3 Intelligent-Tiering Archive Access tier and
+     * a restore has been initiated.
+     */
+    get: operations["getBookStream"];
+  };
   "/api/progress": {
     /** Get user progress for a book */
     get: operations["getProgress"];
@@ -266,6 +280,39 @@ export interface components {
        * @example 8
        */
       pages: number;
+    };
+    BookStreamResponse: {
+      /**
+       * @description - available: streamUrl is ready to play immediately
+       * - restoring: audio is archived; a restore was initiated (future)
+       *
+       * @enum {string}
+       */
+      status: "available" | "restoring";
+      /**
+       * Format: uri
+       * @description Presigned S3 URL (or local /api/audio URL). Present when status=available.
+       */
+      streamUrl?: string;
+      /**
+       * Format: date-time
+       * @description When streamUrl expires. Present when status=available.
+       */
+      expiresAt?: string;
+      /** Format: uuid */
+      bookId?: string;
+      /** @description Human-readable status. Present when status=restoring. */
+      message?: string;
+      /**
+       * Format: date-time
+       * @description When the restore was requested. Present when status=restoring.
+       */
+      requestedAt?: string;
+      /**
+       * Format: date-time
+       * @description Estimated restore completion (requestedAt + ~5h). Present when status=restoring.
+       */
+      estimatedCompletion?: string;
     };
     Book: {
       /**
@@ -806,6 +853,57 @@ export interface operations {
         };
       };
       /** @description Book not found or no audio file */
+      404: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  /**
+   * Get on-demand streaming URL for a book
+   * @description Generates a presigned S3 URL for audio playback (a local /api/audio URL
+   * in development). Called at play time instead of eagerly attaching audio
+   * URLs to list responses.
+   *
+   * The response carries a `status` discriminator. Today it is always
+   * `available`. A future release returns 202 with `status=restoring` when
+   * the audio file is in the S3 Intelligent-Tiering Archive Access tier and
+   * a restore has been initiated.
+   */
+  getBookStream: {
+    parameters: {
+      path: {
+        /** @description Book ID */
+        id: string;
+      };
+    };
+    responses: {
+      /** @description Stream URL ready */
+      200: {
+        content: {
+          "application/json": components["schemas"]["BookStreamResponse"];
+        };
+      };
+      /** @description File is archived; restore initiated or already in progress */
+      202: {
+        content: {
+          "application/json": components["schemas"]["BookStreamResponse"];
+        };
+      };
+      /** @description Invalid book ID or book has no audio file */
+      400: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description Book not found */
       404: {
         content: {
           "application/json": components["schemas"]["Error"];

@@ -5,7 +5,12 @@ import AudioPlayer from '@/components/AudioPlayer';
 import ChapterList from '@/components/ChapterList';
 
 interface PlaybackClientProps {
-  audioUrl: string;
+  /**
+   * Optional fallback stream URL. Phase 0 fetches the URL on demand from
+   * /api/books/{id}/stream; this prop is only used as a fallback if that fetch
+   * fails, and will be dropped once list responses stop shipping audioUrl.
+   */
+  audioUrl?: string;
   title: string;
   author: string;
   bookId: string;
@@ -22,6 +27,8 @@ export default function PlaybackClient({
   const [currentTime, setCurrentTime] = useState(0);
   const [initialPosition, setInitialPosition] = useState<number | undefined>(undefined);
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
+  const [streamUrl, setStreamUrl] = useState<string | undefined>(undefined);
+  const [streamError, setStreamError] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Fetch user's progress on mount
@@ -43,6 +50,31 @@ export default function PlaybackClient({
     fetchProgress();
   }, [bookId]);
 
+  // Fetch the on-demand stream URL (Phase 0). Falls back to the audioUrl prop
+  // if the request fails, so playback keeps working during rollout.
+  useEffect(() => {
+    const fetchStreamUrl = async () => {
+      try {
+        const res = await fetch(`/api/books/${bookId}/stream`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'available' && data.streamUrl) {
+            setStreamUrl(data.streamUrl);
+            return;
+          }
+        }
+        setStreamError(true);
+      } catch (error) {
+        console.error('Error fetching stream URL:', error);
+        setStreamError(true);
+      }
+    };
+
+    fetchStreamUrl();
+  }, [bookId]);
+
+  const resolvedUrl = streamUrl ?? (streamError ? audioUrl : undefined);
+
   const handleChapterClick = (startTime: number) => {
     if (audioRef.current) {
       audioRef.current.currentTime = startTime;
@@ -61,8 +93,8 @@ export default function PlaybackClient({
     audioRef.current = ref;
   };
 
-  // Don't render player until we've loaded progress
-  if (isLoadingProgress) {
+  // Don't render player until we've loaded progress and resolved the stream URL
+  if (isLoadingProgress || !resolvedUrl) {
     return (
       <div className="bg-white rounded-lg shadow-lg p-8">
         <div className="flex items-center justify-center h-32">
@@ -85,7 +117,7 @@ export default function PlaybackClient({
 
       {/* Audio Player - Fixed at bottom */}
       <AudioPlayer
-        audioUrl={audioUrl}
+        audioUrl={resolvedUrl}
         title={title}
         author={author}
         bookId={bookId}

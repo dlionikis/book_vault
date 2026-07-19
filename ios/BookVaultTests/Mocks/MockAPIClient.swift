@@ -29,6 +29,7 @@ class MockAPIClient: APIClientProtocol {
     var removeFromLibraryCalls: [UUID] = []
     var checkDownloadEligibilityCalls: [UUID] = []
     var generateDownloadUrlCalls: [(bookId: UUID, deviceId: String?)] = []
+    var getBookStreamCalls: [UUID] = []
 
     // MARK: - Configurable Results
 
@@ -74,6 +75,9 @@ class MockAPIClient: APIClientProtocol {
     var generateDownloadUrlResult: Result<GenerateDownloadUrl200Response, Error> = .failure(
         APIError.networkError(NSError(domain: "Test", code: -1))
     )
+    var getBookStreamResult: Result<BookStreamResponse, Error> = .success(
+        BookStreamResponse(status: .available, streamUrl: "http://localhost:3000/api/audio/test.m4b")
+    )
 
     // MARK: - Reset
 
@@ -92,6 +96,7 @@ class MockAPIClient: APIClientProtocol {
         removeFromLibraryCalls = []
         checkDownloadEligibilityCalls = []
         generateDownloadUrlCalls = []
+        getBookStreamCalls = []
         accessToken = nil
     }
 
@@ -168,5 +173,10 @@ class MockAPIClient: APIClientProtocol {
     func generateDownloadUrl(bookId: UUID, deviceId: String?) async throws -> GenerateDownloadUrl200Response {
         generateDownloadUrlCalls.append((bookId, deviceId))
         return try generateDownloadUrlResult.get()
+    }
+
+    func getBookStream(bookId: UUID) async throws -> BookStreamResponse {
+        getBookStreamCalls.append(bookId)
+        return try getBookStreamResult.get()
     }
 }

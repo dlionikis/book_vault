@@ -131,6 +131,10 @@ final class MockAPIClientForAuth: APIClientProtocol {
     func generateDownloadUrl(bookId _: UUID, deviceId _: String?) async throws -> GenerateDownloadUrl200Response {
         fatalError("Not implemented for auth tests")
     }
+
+    func getBookStream(bookId _: UUID) async throws -> BookStreamResponse {
+        fatalError("Not implemented for auth tests")
+    }
 }
 
 // MARK: - AuthManagerRealTests

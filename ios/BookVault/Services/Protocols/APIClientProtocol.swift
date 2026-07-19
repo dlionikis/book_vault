@@ -36,4 +36,7 @@ protocol APIClientProtocol {
     // Downloads
     func checkDownloadEligibility(bookId: UUID) async throws -> CheckDownloadEligibility200Response
     func generateDownloadUrl(bookId: UUID, deviceId: String?) async throws -> GenerateDownloadUrl200Response
+
+    // Streaming
+    func getBookStream(bookId: UUID) async throws -> BookStreamResponse
 }

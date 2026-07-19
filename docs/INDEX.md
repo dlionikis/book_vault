@@ -27,17 +27,22 @@
 
 ## Core References
 
-| File                                     | Purpose             | When to Use                    |
-| ---------------------------------------- | ------------------- | ------------------------------ |
-| [component-guide.md](component-guide.md) | Component selection | "Which component?"             |
-| [data-flows.md](data-flows.md)           | How data moves      | "How does this flow?"          |
-| [api-quick-ref.md](api-quick-ref.md)     | API endpoints       | "What's the request/response?" |
-| [testing.md](testing.md)                 | All test commands   | "How do I test?"               |
-| [storybook.md](storybook.md)             | Component stories   | "How do I use Storybook?"      |
+| File                                             | Purpose                      | When to Use                     |
+| ------------------------------------------------ | ---------------------------- | ------------------------------- |
+| [development-process.md](development-process.md) | Gates, all tests, invariants | "What must pass before I push?" |
+| [component-guide.md](component-guide.md)         | Component selection          | "Which component?"              |
+| [data-flows.md](data-flows.md)                   | How data moves               | "How does this flow?"           |
+| [api-quick-ref.md](api-quick-ref.md)             | API endpoints                | "What's the request/response?"  |
+| [testing.md](testing.md)                         | All test commands            | "How do I test?"                |
+| [storybook.md](storybook.md)                     | Component stories            | "How do I use Storybook?"       |
 
 ---
 
 ## By Task
+
+**Before pushing / opening a PR** (read this first):
+
+- [development-process.md](development-process.md) - The complete gate: every test, the pre-commit hook, what CI enforces, and the hardening invariants that must not regress
 
 **Implementing features**:
 

@@ -112,6 +112,39 @@ components:
           example: 8
           description: Total number of pages
 
+    BookStreamResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [available, restoring]
+          description: |
+            - available: streamUrl is ready to play immediately
+            - restoring: audio is archived; a restore was initiated (future)
+        streamUrl:
+          type: string
+          format: uri
+          description: Presigned S3 URL (or local /api/audio URL). Present when status=available.
+        expiresAt:
+          type: string
+          format: date-time
+          description: When streamUrl expires. Present when status=available.
+        bookId:
+          type: string
+          format: uuid
+        message:
+          type: string
+          description: Human-readable status. Present when status=restoring.
+        requestedAt:
+          type: string
+          format: date-time
+          description: When the restore was requested. Present when status=restoring.
+        estimatedCompletion:
+          type: string
+          format: date-time
+          description: Estimated restore completion (requestedAt + ~5h). Present when status=restoring.
+
     # Core models (from lib/types.ts)
     Book:
       type: object
@@ -841,6 +874,61 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Book not found or no audio file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Streaming endpoint
+  /api/books/{id}/stream:
+    get:
+      operationId: getBookStream
+      tags: [Books]
+      summary: Get on-demand streaming URL for a book
+      description: |
+        Generates a presigned S3 URL for audio playback (a local /api/audio URL
+        in development). Called at play time instead of eagerly attaching audio
+        URLs to list responses.
+
+        The response carries a `status` discriminator. Today it is always
+        `available`. A future release returns 202 with `status=restoring` when
+        the audio file is in the S3 Intelligent-Tiering Archive Access tier and
+        a restore has been initiated.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Book ID
+      responses:
+        '200':
+          description: Stream URL ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookStreamResponse'
+        '202':
+          description: File is archived; restore initiated or already in progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookStreamResponse'
+        '400':
+          description: Invalid book ID or book has no audio file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Book not found
           content:
             application/json:
               schema:

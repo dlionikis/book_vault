@@ -60,3 +60,53 @@ describe('S3 Helper Module', () => {
     expect(client).toBeDefined();
   });
 });
+
+describe('isS3Enabled — S3_ENABLED dev override', () => {
+  let originalEnv: NodeJS.ProcessEnv;
+
+  beforeEach(() => {
+    originalEnv = { ...process.env };
+    jest.resetModules(); // S3_BUCKET is captured at module load, so re-import per case
+    // Non-production baseline (mirrors `next dev`, which pins NODE_ENV=development)
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'development',
+      writable: true,
+      configurable: true,
+    });
+    process.env.AWS_S3_BUCKET = 'test-bucket';
+    process.env.AWS_ACCESS_KEY_ID = 'test-key-id';
+    process.env.AWS_SECRET_ACCESS_KEY = 'test-secret-key';
+    delete process.env.S3_ENABLED;
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it('returns false in development by default (no override)', async () => {
+    const { isS3Enabled } = await import('@/lib/s3');
+    expect(isS3Enabled()).toBe(false);
+  });
+
+  it('returns true in development when S3_ENABLED=true (hybrid mode)', async () => {
+    process.env.S3_ENABLED = 'true';
+    jest.resetModules();
+    const { isS3Enabled } = await import('@/lib/s3');
+    expect(isS3Enabled()).toBe(true);
+  });
+
+  it('still requires a bucket even with the override set', async () => {
+    process.env.S3_ENABLED = 'true';
+    delete process.env.AWS_S3_BUCKET;
+    jest.resetModules();
+    const { isS3Enabled } = await import('@/lib/s3');
+    expect(isS3Enabled()).toBe(false);
+  });
+
+  it('ignores non-"true" override values', async () => {
+    process.env.S3_ENABLED = '1';
+    jest.resetModules();
+    const { isS3Enabled } = await import('@/lib/s3');
+    expect(isS3Enabled()).toBe(false);
+  });
+});

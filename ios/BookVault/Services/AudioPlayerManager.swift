@@ -44,6 +44,7 @@ class AudioPlayerManager: ObservableObject {
     private let progressManager: any ProgressManaging
     private let downloadManager: any DownloadManaging
     private let storageManager: any StorageManaging
+    private let apiClient: any APIClientProtocol
 
     // Concrete reference for download observation (protocols can't expose $publishers)
     private weak var concreteDownloadManager: DownloadManager?
@@ -83,6 +84,7 @@ class AudioPlayerManager: ObservableObject {
             progressManager: ProgressManager.shared,
             downloadManager: DownloadManager.shared,
             storageManager: StorageManager.shared,
+            apiClient: APIClient.shared,
             concreteDownloadManager: DownloadManager.shared
         )
         setupAudioSession()
@@ -95,12 +97,14 @@ class AudioPlayerManager: ObservableObject {
         progressManager: any ProgressManaging,
         downloadManager: any DownloadManaging,
         storageManager: any StorageManaging,
+        apiClient: any APIClientProtocol = APIClient.shared,
         concreteDownloadManager: DownloadManager? = nil,
         skipAudioSetup: Bool = false
     ) {
         self.progressManager = progressManager
         self.downloadManager = downloadManager
         self.storageManager = storageManager
+        self.apiClient = apiClient
         self.concreteDownloadManager = concreteDownloadManager
 
         if !skipAudioSetup {
@@ -420,7 +424,6 @@ class AudioPlayerManager: ObservableObject {
 
     private func playFromStreamingUrl(book: Book) async {
         DebugLogger.audio("Starting streaming playback for \(book.title)")
-        DebugLogger.verbose("Audio URL: \(book.audioUrl ?? "")")
 
         // Auto-start download in background (non-blocking)
         startBackgroundDownload(for: book)
@@ -428,8 +431,34 @@ class AudioPlayerManager: ObservableObject {
         // Observe download completion to switch to local file
         observeDownloadCompletion(for: book)
 
-        guard let url = URL(string: book.audioUrl ?? "") else {
-            DebugLogger.error("Invalid audio URL: \(book.audioUrl ?? "")")
+        // Phase 0: fetch the stream URL on demand instead of using book.audioUrl
+        // (which is being phased out of list responses). A future release returns
+        // status == .restoring here when the audio is archived in cold storage.
+        let streamUrlString: String
+        do {
+            let response = try await apiClient.getBookStream(bookId: book.id)
+            guard response.status == .available, let url = response.streamUrl else {
+                DebugLogger.error("Stream not available (status: \(response.status.rawValue))")
+                self.error = NSError(
+                    domain: "AudioPlayerManager",
+                    code: 409,
+                    userInfo: [NSLocalizedDescriptionKey: "This audiobook is not available to stream."]
+                )
+                self.isLoading = false
+                return
+            }
+            streamUrlString = url
+        } catch {
+            DebugLogger.error("Failed to fetch stream URL", error: error)
+            self.error = error
+            self.isLoading = false
+            return
+        }
+
+        DebugLogger.verbose("Audio URL: \(streamUrlString)")
+
+        guard let url = URL(string: streamUrlString) else {
+            DebugLogger.error("Invalid audio URL: \(streamUrlString)")
             self.error = NSError(
                 domain: "AudioPlayerManager",
                 code: 400,
