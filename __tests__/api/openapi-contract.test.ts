@@ -632,6 +632,63 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('error');
       });
     });
+
+    describe('GET /api/books/{id}/stream', () => {
+      let testBookId: string;
+
+      beforeAll(async () => {
+        const response = await authenticatedRequest(`${BASE_URL}/api/books?limit=1`, {
+          method: 'GET',
+        });
+        if (response.data.books && response.data.books.length > 0) {
+          testBookId = response.data.books[0].id;
+        }
+      });
+
+      testFn('should satisfy OpenAPI spec for a streamable book', async () => {
+        if (!testBookId) {
+          console.warn('No books in database, skipping test');
+          return;
+        }
+
+        const response = await authenticatedRequest(`${BASE_URL}/api/books/${testBookId}/stream`, {
+          method: 'GET',
+        });
+
+        // 200 (available) in dev; a 202 (restoring) would also satisfy the spec
+        // once Phase 2 lands. Assert the response conforms either way.
+        expect([200, 202]).toContain(response.status);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('status');
+        if (response.status === 200) {
+          expect(response.data.status).toBe('available');
+          expect(response.data).toHaveProperty('streamUrl');
+        }
+      });
+
+      testFn('should return 404 for non-existent book', async () => {
+        const nonExistentId = '00000000-0000-0000-0000-000000000000';
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/books/${nonExistentId}/stream`,
+          { method: 'GET' }
+        );
+
+        expect(response.status).toBe(404);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('error');
+      });
+
+      testFn('should return 401 for unauthenticated request', async () => {
+        const nonExistentId = '00000000-0000-0000-0000-000000000000';
+        const response = await axios.get(`${BASE_URL}/api/books/${nonExistentId}/stream`, {
+          validateStatus: () => true,
+        });
+
+        expect(response.status).toBe(401);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('error');
+      });
+    });
   });
 
   describe('Chapters Endpoints', () => {

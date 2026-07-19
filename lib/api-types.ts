@@ -897,6 +897,12 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      /** @description Unauthorized */
+      401: {
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       /** @description Book not found */
       404: {
         content: {
