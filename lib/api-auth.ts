@@ -8,8 +8,7 @@ export interface AuthedUser {
 }
 
 export type RequireUserResult =
-  | { user: AuthedUser; error?: never }
-  | { user?: never; error: NextResponse };
+  { user: AuthedUser; error?: never } | { user?: never; error: NextResponse };
 
 /**
  * Require an authenticated user for an API route.

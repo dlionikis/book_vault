@@ -574,9 +574,17 @@ paths:
                     type: boolean
                     example: true
                   user:
-                    oneOf:
+                    # OpenAPI 3.0 nullable ref. 3.0 forbids `nullable` as a sibling
+                    # of `$ref`, and `type: 'null'` is 3.1-only (this spec is 3.0.0),
+                    # so wrap the ref in allOf and mark the wrapper nullable. We omit
+                    # `type` deliberately: jest-openapi's runtime validator treats
+                    # `type: object` + allOf as "must be object" and rejects null,
+                    # breaking the live contract test. redocly's struct rule wants a
+                    # `type` here, so that one rule is relaxed in redocly.yaml.
+                    # Result: the User object, or null when the token is invalid.
+                    nullable: true
+                    allOf:
                       - $ref: '#/components/schemas/User'
-                      - type: 'null'
 
   /api/auth/mobile/logout:
     post:
