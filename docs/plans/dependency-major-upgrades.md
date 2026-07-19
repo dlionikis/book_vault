@@ -253,7 +253,8 @@ Lower urgency; some may not be worth it:
 - `eslint` 9 → 10 — flat-config already in use; check plugin compat.
 - `node-fetch` 2 → 3 (ESM-only) — only if still used; prefer removing in favor of global `fetch`.
 - `sharp` 0.34 → 0.35 — minor within 0.x but native; verify image handling in Docker.
-- ~~`undici`~~ — ✅ done in Phase 4 (direct devDep 5→8, test-only Fetch polyfill).
+- ~~`undici`~~ — ✅ done in Phase 4 (direct devDep 5→**7**, test-only Fetch polyfill). Was 8,
+  reverted to 7 for Node 20 compat; **undici 8 is now unblocked by the Node 24 move** below.
 
 ---
 
@@ -294,27 +295,39 @@ engines, sharp, ffmpeg) work on arm64. The **first** arm64 rollout is a real pro
 cutover — watch the `book-vault-fallback` (on-demand) task come healthy before
 trusting Spot capacity.
 
-**Consequence for the Node bump below:** the base image is now effectively arm64 —
-`node:22-alpine` is multi-arch, so no extra change is needed there.
+**Consequence for the Node move below:** the base image is now effectively arm64 —
+`node:24-alpine` is multi-arch, so no extra change is needed there.
 
-### Node 20 → 22 on the Docker base image
+### Node 20 → **24** on the Docker base image — ✅ DONE (July 19, 2026)
 
-**Real deadline, harmless today.** The AWS SDK bump in #90 (3.958 → 3.1090) surfaced a
-build-log warning:
+Landed in `deps/node-24`. **Went to 24, not the originally-planned 22.** The trigger was the
+AWS SDK bump in #90 (3.958 → 3.1090), which surfaced:
 
 ```
 NodeVersionSupportWarning: The AWS SDK for JavaScript (v3) versions published after the
 first week of January 2027 will require node >=22. You are running node v20.20.2.
 ```
 
-Our Docker image is `node:20-alpine` (deps/builder/runner stages in [Dockerfile](../../Dockerfile)).
-Node 20 also reaches EOL **April 2026**. So this move is warranted regardless of the SDK.
+Node 20 also reached EOL **April 2026**, so the move was overdue regardless of the SDK.
 
-- Change all three `FROM node:20-alpine` stages to `node:22-alpine`.
-- Keep `@types/node` in step (it's pinned to `^22` — see Phase 1 — which already matches 22).
-- Verify the Docker build + a real deploy; confirm the SDK warning is gone.
-- **Best paired with a future AWS SDK bump** (so the runtime and SDK move together), but
-  can be done standalone anytime before the 2027 cutoff.
+**Why 24 over 22.** AWS was never the ceiling — the SDK needs only Node ≥20 today and ≥22 after
+Jan 2027; our own floor is Next 16's ≥20.9. The real question was which LTS line to sit on.
+Node **22 is already in Maintenance LTS (EOL Apr 2027)** — landing there would force a repeat of
+this same deploy-affecting migration within ~9 months. Node **24 is the Active LTS line
+(EOL Apr 2028)**, satisfies the future AWS ≥22, and the migration cost is identical. (Node 26 is
+Current, not LTS until Oct 2026 — too bleeding-edge for the prod runtime; it's also the local
+dev version that masked the qemu + undici-8 Node-mismatch bugs.)
+
+- All three `FROM node:20-alpine` → `node:24-alpine` ([Dockerfile](../../Dockerfile)).
+- CI `node-version: '20'` → `'24'` across all four workflows (api, e2e, storybook, main) — 9 lines.
+- `@types/node` `^22` → `^24` (24.13.3), kept in step with the runtime.
+- **Unblocks undici 8** (needs ≥22.19) and **Prisma 7** (needs ≥20.19) for their own phases.
+
+Verified: `tsc` clean; unit **369** + integration **17/17** under a real `node:24-alpine`
+container (not just local Node 26); `validate:web` green; native-arm64 Docker build on
+`node:24-alpine` clean; the AWS SDK `NodeVersionSupportWarning` is **gone** from the runtime boot.
+Deploy-affecting — needs a real prod deploy to confirm the runtime (the arm64 `:5` cutover from
+the deploy fix is already healthy in prod).
 
 ---
 
