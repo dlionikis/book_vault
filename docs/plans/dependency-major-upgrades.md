@@ -118,8 +118,19 @@ downloads, admin dashboard; `npm audit` shows the Image Optimizer high gone.
 - Regenerate client (`prisma generate`); run migrations against a scratch DB;
   run the integration suite (real Postgres) hard.
 - Watch for query-engine / client API changes and any raw-query usage.
+- **While here — silence the build-time Prisma noise** (independent of the version
+  bump, can be done anytime): the `/browse/{categories,authors,narrators,series}`
+  pages are DB-backed but Next treats them as `○ (Static)` and runs their
+  `prisma.*.findMany()` during `next build`, where there is no `DATABASE_URL`. The
+  queries throw, the pages' own `try/catch` swallows it, and Next renders them at
+  runtime anyway (they work in prod) — but the build log fills with alarming
+  `PrismaClientInitializationError: Environment variable not found: DATABASE_URL`.
+  Add `export const dynamic = 'force-dynamic'` (or `revalidate`) to those four page
+  components so Next never attempts static prerender. Removes the noise and avoids
+  shipping an empty build-time snapshot.
 
-**Acceptance**: `prisma migrate` clean on a fresh DB; integration + contract tests green.
+**Acceptance**: `prisma migrate` clean on a fresh DB; integration + contract tests
+green; the browse-page Prisma errors no longer appear in the build log.
 
 ### Phase 6 — Remaining ecosystem majors (evaluate individually)
 
@@ -132,6 +143,29 @@ Lower urgency; some may not be worth it:
 - `node-fetch` 2 → 3 (ESM-only) — only if still used; prefer removing in favor of global `fetch`.
 - `sharp` 0.34 → 0.35 — minor within 0.x but native; verify image handling in Docker.
 - `undici` — transitively resolved by Phase 1/2; pin only if still flagged.
+
+---
+
+## Runtime / infrastructure (not a package.json dep)
+
+### Node 20 → 22 on the Docker base image
+
+**Real deadline, harmless today.** The AWS SDK bump in #90 (3.958 → 3.1090) surfaced a
+build-log warning:
+
+```
+NodeVersionSupportWarning: The AWS SDK for JavaScript (v3) versions published after the
+first week of January 2027 will require node >=22. You are running node v20.20.2.
+```
+
+Our Docker image is `node:20-alpine` (deps/builder/runner stages in [Dockerfile](../../Dockerfile)).
+Node 20 also reaches EOL **April 2026**. So this move is warranted regardless of the SDK.
+
+- Change all three `FROM node:20-alpine` stages to `node:22-alpine`.
+- Keep `@types/node` in step (it's pinned to `^22` — see Phase 1 — which already matches 22).
+- Verify the Docker build + a real deploy; confirm the SDK warning is gone.
+- **Best paired with a future AWS SDK bump** (so the runtime and SDK move together), but
+  can be done standalone anytime before the 2027 cutoff.
 
 ---
 
