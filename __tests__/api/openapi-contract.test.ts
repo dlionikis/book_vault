@@ -16,8 +16,10 @@ import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import http from 'http';
 import https from 'https';
 
-// Configure axios to use Node.js adapters instead of XHR (for Jest/JSDOM environment)
-axios.defaults.adapter = require('axios/lib/adapters/http');
+// Configure axios to use Node.js adapters instead of XHR (for Jest/JSDOM environment).
+// axios 1.x exposes named adapters ('http'); the old internal
+// `require('axios/lib/adapters/http')` path was removed in 1.x.
+axios.defaults.adapter = 'http';
 axios.defaults.httpAgent = new http.Agent({ keepAlive: true });
 axios.defaults.httpsAgent = new https.Agent({ keepAlive: true });
 

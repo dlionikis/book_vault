@@ -10,7 +10,19 @@ const { TextEncoder, TextDecoder } = require('util');
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
 
-// Polyfill Web Fetch API for API route tests using undici (Node.js 18+ compatible)
+// Polyfill Web Fetch API for API route tests using undici.
+// undici 8's fetch implementation reads the Web Streams globals off `global`,
+// which the jsdom test environment doesn't define (undici 5 didn't need them).
+// Provide them from Node's built-in `stream/web` before requiring undici.
+if (typeof global.ReadableStream === 'undefined') {
+  const { ReadableStream, WritableStream, TransformStream } = require('node:stream/web');
+  global.ReadableStream = ReadableStream;
+  global.WritableStream = WritableStream;
+  global.TransformStream = TransformStream;
+}
+if (typeof global.MessagePort === 'undefined') {
+  global.MessagePort = require('node:worker_threads').MessagePort;
+}
 if (typeof global.Request === 'undefined') {
   const { Request, Response, Headers, FormData } = require('undici');
   global.Request = Request;

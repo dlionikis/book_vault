@@ -36,8 +36,9 @@ import {
   LibraryCheckResponseSchema,
 } from '../helpers/api-schemas';
 
-// Configure axios to use Node.js adapters
-axios.defaults.adapter = require('axios/lib/adapters/http');
+// Configure axios to use Node.js adapters. axios 1.x exposes named adapters
+// ('http'); the old internal `require('axios/lib/adapters/http')` was removed.
+axios.defaults.adapter = 'http';
 axios.defaults.httpAgent = new http.Agent({ keepAlive: true });
 axios.defaults.httpsAgent = new https.Agent({ keepAlive: true });
 axios.defaults.validateStatus = () => true; // Don't throw on any status code
