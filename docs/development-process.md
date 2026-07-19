@@ -316,9 +316,77 @@ Before opening a PR:
 - [ ] No AI attribution in commit/PR text (see [CLAUDE.md](../CLAUDE.md) §3.5)
 - [ ] Branch off `main`; don't commit generated artifacts by hand — let the hook do it
 
+Before a **deploy** (in addition to the above): `npm run deploy:dry-run` green — it runs
+the deploy's own validation phase, including `swiftlint --strict`, which CI does **not**
+fail on (§8).
+
 ---
 
-## 8. Environment quick reference
+## 8. Deployment (`npm run deploy`)
+
+[`scripts/deploy.sh`](../scripts/deploy.sh) runs a **validation phase** and then a
+**deploy phase**, both under `set -eo pipefail` — so **any failing validation step
+aborts the whole deploy before a single byte ships**. When a deploy "fails to deploy,"
+check the validation phase first; it usually never reached AWS. The log is
+`logs/deploy.log`.
+
+### Deploy variants
+
+| Command                  | Web checks | iOS checks | Deploys? |
+| ------------------------ | ---------- | ---------- | -------- |
+| `npm run deploy`         | yes        | **yes**    | yes      |
+| `npm run deploy:web`     | yes        | no         | yes      |
+| `npm run deploy:only`    | no         | no         | yes      |
+| `npm run deploy:dry-run` | yes        | yes        | no       |
+
+### ⚠️ Deploy validation ≠ `validate:full`
+
+They overlap but are **not** the same set — this divergence has bitten us:
+
+- **Deploy runs iOS validation** (Swift drift, **`swiftlint --strict`**, iOS build, iOS
+  tests) that `validate:full` does **not**. `swiftlint --strict` is a **hard gate** here,
+  even though CI's `ios-tests.yml` runs SwiftLint as `continue-on-error`. **Result: a
+  lint violation can pass CI green and still block `npm run deploy`.** (This is exactly
+  what happened — an unused-closure-param violation from a merged PR failed deploy while
+  CI was green.)
+- **Deploy does NOT run** integration, contract, or E2E tests (suites 3–5). It runs only
+  format, lint, type-check, api validate/drift/coverage, and `npm test` (unit). So a
+  green deploy does **not** prove contract/E2E health — run `validate:full` separately.
+
+**Takeaway**: before a real deploy, run **`npm run deploy:dry-run`** to exercise the exact
+validation phase deploy uses (web + iOS), and `npm run validate:full` for the DB-backed
+suites deploy skips. Together they cover everything.
+
+### Deploy validation phase — exact steps
+
+Web (`run_web_validation`): `format:check` → `lint` → `type-check` → `api:validate` →
+`api:check-drift` → `api:check-coverage` → `npm test`.
+
+iOS (`run_ios_validation`, only on `npm run deploy` / `deploy:dry-run`):
+`api:check-drift:swift` → `swiftlint --strict` → `xcodebuild build` → `xcodebuild test`.
+
+### Deploy phase requirements (what the AWS push needs)
+
+Only reached after validation passes (skipped entirely on `--dry-run`):
+
+- **AWS CLI** authenticated with the **`book_vault` profile** (`AWS_PROFILE=book_vault` /
+  `--profile book_vault`), region **us-east-1**, with permission to `sts:GetCallerIdentity`,
+  ECR (`get-login-password`, push), and ECS (`update-service`, `wait services-stable`).
+- **Docker with `buildx`** — builds `linux/amd64` (cross-build on Apple Silicon) and
+  pushes to ECR `book-vault:latest`.
+- **`osxkeychain` docker cred helper** — deploy writes a temp `DOCKER_CONFIG` using it.
+- Deploys to **both** ECS services `book-vault-spot` and `book-vault-fallback` with
+  `--force-new-deployment`, waits for `book-vault-spot` to stabilize, then hard-checks
+  `https://bookvault.lionikis.com/api/health` (deploy fails if health check fails).
+- A **git safety prompt** (`check_git_status`) warns if you're off `main` or have
+  uncommitted/untracked changes, because Docker builds from your **local filesystem**,
+  not from git. Confirm intentionally.
+
+Full AWS architecture: [aws-deployment-reference.md](aws-deployment-reference.md).
+
+---
+
+## 9. Environment quick reference
 
 ```bash
 docker-compose up -d                 # Postgres :5433 (local). CI uses :5432.
