@@ -1,11 +1,17 @@
 // Utility to extract chapter information from audio files using ffprobe
 // and from Audible metadata.json files
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs/promises';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+// ffprobe runs inside request handlers (lazy chapter extraction). Use execFile
+// with an argument array — no shell, so the file path can't break out of a
+// quoted string (SEC-4) — and cap it so a pathological/huge file can't hang the
+// handler indefinitely.
+const FFPROBE_TIMEOUT_MS = 30_000;
 
 export interface Chapter {
   chapterNumber: number;
@@ -77,12 +83,12 @@ function parseCuesheet(cuesheet: string): Map<number, string> {
  */
 export async function extractChapters(audioFilePath: string): Promise<Chapter[]> {
   try {
-    // Escape quotes in file path for shell command
-    const escapedPath = audioFilePath.replace(/"/g, '\\"');
-
-    // Run ffprobe to extract chapters and format metadata
-    const { stdout } = await execAsync(
-      `ffprobe -v quiet -print_format json -show_chapters -show_format "${escapedPath}"`
+    // Run ffprobe to extract chapters and format metadata. execFile passes the
+    // path as a literal argv entry — no shell interpolation, no escaping needed.
+    const { stdout } = await execFileAsync(
+      'ffprobe',
+      ['-v', 'quiet', '-print_format', 'json', '-show_chapters', '-show_format', audioFilePath],
+      { timeout: FFPROBE_TIMEOUT_MS }
     );
 
     const data: FFProbeOutput = JSON.parse(stdout);
@@ -144,10 +150,10 @@ export async function extractAudioMetadata(audioFilePath: string): Promise<{
   seriesPart?: string;
 }> {
   try {
-    const escapedPath = audioFilePath.replace(/"/g, '\\"');
-
-    const { stdout } = await execAsync(
-      `ffprobe -v quiet -print_format json -show_format "${escapedPath}"`
+    const { stdout } = await execFileAsync(
+      'ffprobe',
+      ['-v', 'quiet', '-print_format', 'json', '-show_format', audioFilePath],
+      { timeout: FFPROBE_TIMEOUT_MS }
     );
 
     const data: FFProbeOutput = JSON.parse(stdout);
@@ -185,7 +191,7 @@ export async function extractAudioMetadata(audioFilePath: string): Promise<{
  */
 export async function isFFProbeAvailable(): Promise<boolean> {
   try {
-    await execAsync('which ffprobe');
+    await execFileAsync('which', ['ffprobe'], { timeout: FFPROBE_TIMEOUT_MS });
     return true;
   } catch {
     return false;

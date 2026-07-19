@@ -32,6 +32,12 @@ jest.mock('@/lib/api-utils', () => ({
     total,
     pages: Math.ceil(total / limit),
   })),
+  // Mirrors the real parsePagination (caps limit at 100).
+  parsePagination: jest.fn((pageParam, limitParam) => {
+    const page = Math.max(1, parseInt(pageParam || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(limitParam || '20')));
+    return { page, limit, skip: (page - 1) * limit };
+  }),
 }));
 
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>;

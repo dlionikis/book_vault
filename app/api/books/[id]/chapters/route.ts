@@ -292,13 +292,9 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       message: `Re-extracted ${savedChapters.length} chapters (deleted ${deletedCount.count} old chapters)`,
     });
   } catch (error) {
+    // Log internally; don't leak internal error text to the client (matches
+    // the GET handler and the rest of the API).
     logger.error('Error re-extracting chapters', { error: String(error) });
-    return NextResponse.json(
-      {
-        error: 'Failed to re-extract chapters',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to re-extract chapters' }, { status: 500 });
   }
 }

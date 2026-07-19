@@ -3,7 +3,7 @@ import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
-import { normalizeUuid, buildPagination } from '@/lib/api-utils';
+import { normalizeUuid, buildPagination, parsePagination } from '@/lib/api-utils';
 
 /**
  * Configuration for entity detail endpoints that return paginated books.
@@ -97,9 +97,12 @@ export async function handleEntityDetailWithBooks<TEntity>(
   try {
     // 3. Parse pagination parameters
     const searchParams = request.nextUrl.searchParams;
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const skip = (page - 1) * limit;
+    // parsePagination caps limit at 100 (same as /api/books) — a raw parseInt
+    // here let `limit=1000000` through on the entity-detail endpoints.
+    const { page, limit, skip } = parsePagination(
+      searchParams.get('page'),
+      searchParams.get('limit')
+    );
 
     // 4. Fetch the main entity
     const entity = await config.entityModel.findUnique({
