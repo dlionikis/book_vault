@@ -31,10 +31,12 @@ const nextConfig = {
       },
     ],
   },
-  // serverActions graduated from `experimental` to a stable top-level option in
-  // Next 15+.
-  serverActions: {
-    bodySizeLimit: '2mb',
+  // serverActions.bodySizeLimit still lives under `experimental` in Next 16
+  // (top-level `serverActions` is rejected as an unrecognized key).
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
   },
 };
 
