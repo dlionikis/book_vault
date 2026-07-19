@@ -1,8 +1,9 @@
 # Dependency Major-Version Upgrade Plan
 
 > **Created**: July 19, 2026
-> **Status**: In progress — Phases 1 ✅, 2 ✅, 3 ✅, 4 ✅, 5 ✅ done (July 19, 2026); Phase 5b
-> (Prisma 7) + Phase 6 planned. **`npm audit`: 0 high/critical** as of Phase 4.
+> **Status**: In progress — Phases 1 ✅, 2 ✅, 3 ✅, 4 ✅, 5 ✅ done; Node 20→24 ✅; Phase 6 ⚙️
+> partial (node-fetch removed, undici 8, zod 4; TS 7 / Tailwind 4 / eslint 10 / sharp deferred)
+> — all July 19, 2026. Phase 5b (Prisma 7) remaining. **`npm audit`: 0 high/critical** as of Phase 4.
 > **Context**: The safe, in-semver dependency updates + `npm audit fix` already landed
 > (26 → residual vulnerabilities, all remaining ones require the breaking upgrades below).
 > This plan covers the **major-version** jumps deliberately deferred from that pass.
@@ -243,18 +244,43 @@ Not a routine bump. Required before/with this work:
 **Acceptance**: `prisma migrate` clean on a fresh DB; integration + contract green; Docker build +
 a real deploy; the new generated-client path resolves in the standalone runtime.
 
-### Phase 6 — Remaining ecosystem majors (evaluate individually)
+### Phase 6 — Remaining ecosystem majors (evaluate individually) — ⚙️ PARTIAL (July 19, 2026)
 
-Lower urgency; some may not be worth it:
+Landed the low-risk subset in `deps/phase-6-ecosystem`; deferred the rest with reasons.
 
-- `typescript` 5.9 → 7.x — large; wait until the ecosystem (Next, eslint) supports it.
-- `tailwindcss` 3 → 4 — config format overhaul (CSS-first config); notable UI-regression risk.
-- `zod` 3 → 4 — used in the api-schemas test helper; check breaking API.
-- `eslint` 9 → 10 — flat-config already in use; check plugin compat.
-- `node-fetch` 2 → 3 (ESM-only) — only if still used; prefer removing in favor of global `fetch`.
-- `sharp` 0.34 → 0.35 — minor within 0.x but native; verify image handling in Docker.
-- ~~`undici`~~ — ✅ done in Phase 4 (direct devDep 5→**7**, test-only Fetch polyfill). Was 8,
-  reverted to 7 for Node 20 compat; **undici 8 is now unblocked by the Node 24 move** below.
+**Shipped:**
+
+- ✅ **`node-fetch` removed** (was `^2`, a direct dep with **zero usage** anywhere in our
+  code). Node 24 has global `fetch`. Removed the package + `@types/node-fetch` — a deletion,
+  not an upgrade.
+- ✅ **`undici` 7 → 8.** Node 24 (≥22.19) unblocks it. Test-only Fetch polyfill in
+  `jest.setup.js`; the Web-Streams globals it needs were already polyfilled there. Closes the
+  "undici was meant to be 8" loop from Phase 4.
+- ✅ **`zod` 3 → 4** in the one file that uses it (`__tests__/helpers/api-schemas.ts`, ~25
+  composed schemas backing the contract tests). Migrated the deprecated string-format methods
+  to zod 4's preferred forms: `z.string().uuid()` → `z.uuid()` (×19), `.url()` → `z.url()`
+  (×2), `.datetime()` → `z.iso.datetime()` (×2). Verified via the contract suite (218/218 with
+  a live server — the schemas validate real API responses). Kept zod (NOT removed): it's
+  load-bearing runtime validation; hand-rolling it would be more code and more bug surface.
+
+**Deferred (with reasons):**
+
+- ⏸️ **`typescript` 5.9 → 7.x** — TS 7.0 is GA (Go-native compiler) but shipped **without a
+  stable programmatic API**, so **typescript-eslint is incompatible** (issue closed "not
+  planned"; waiting on TS 7.1, ~Oct 2026). Our lint gate uses `eslint-config-next/typescript`
+  (typescript-eslint under the hood), so TS 7 would **break `npm run lint`**. Revisit after 7.1.
+- ⏸️ **`tailwindcss` 3 → 4** — CSS-first config overhaul; notable UI-regression risk. Its own
+  plan when we choose to take the risk (we use `tailwind.config.ts`).
+- ⏸️ **`eslint` 9 → 10** — deferred alongside TS 7 (plugin/typescript-eslint churn); no
+  advisory pressure.
+- ⏸️ **`sharp` 0.34 → 0.35** — evaluated and **intentionally NOT bumped**. We declare `sharp`
+  but **never import it directly**; Next's image optimizer uses its **own internal copy**
+  (`next/node_modules/sharp`, pinned by Next), which our `package.json` doesn't control. A
+  top-level bump changes an effectively-unused dep — and in the standalone Docker output Next's
+  tracer doesn't even copy the unused top-level `sharp`'s `dist/`. Left at `^0.34.5` to match
+  Next's internal copy and avoid an orphan. (Verified: image serving works via Next's bundled
+  sharp; E2E cover-loading passes.)
+- ~~`undici`~~ — ✅ done here (7 → 8).
 
 ---
 

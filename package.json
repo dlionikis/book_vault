@@ -86,7 +86,7 @@
     "recharts": "^3.7.0",
     "sharp": "^0.34.5",
     "turndown": "^7.2.2",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",
@@ -102,7 +102,6 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.9.2",
-    "@types/node-fetch": "^2.6.11",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/turndown": "^5.0.6",
@@ -118,7 +117,6 @@
     "jest-mock-extended": "^4.0.0",
     "jest-openapi": "^0.14.2",
     "lint-staged": "^17.1.0",
-    "node-fetch": "^2.7.0",
     "nodemon": "^3.0.2",
     "openapi-typescript": "^7.13.0",
     "postcss": "^8.4.49",
@@ -128,7 +126,7 @@
     "tailwindcss": "^3.4.15",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "undici": "^7.16.0",
+    "undici": "^8.7.0",
     "wait-on": "^9.0.10",
     "yaml": "^2.8.2"
   },

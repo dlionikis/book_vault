@@ -48,7 +48,7 @@ export const PaginationSchema = z.object({
  */
 export const AuthorSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Author name, required */
   name: z.string(),
@@ -62,7 +62,7 @@ export const AuthorSchema = z.object({
  */
 export const NarratorSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Narrator name, required */
   name: z.string(),
@@ -77,7 +77,7 @@ export const NarratorSchema = z.object({
  */
 export const SeriesInfoSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Series title */
   title: z.string(),
@@ -94,7 +94,7 @@ export const SeriesInfoSchema = z.object({
  */
 export const CategorySchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Category name (e.g., "Science Fiction") */
   name: z.string(),
@@ -107,7 +107,7 @@ export const CategorySchema = z.object({
  */
 export const BookSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Amazon Standard Identification Number */
   asin: z.string(),
@@ -128,10 +128,10 @@ export const BookSchema = z.object({
   publisher: z.string().nullable().optional(),
 
   /** Cover image URL - validated as valid URL format */
-  coverUrl: z.string().url(),
+  coverUrl: z.url(),
 
   /** Audio file URL - validated as valid URL format */
-  audioUrl: z.string().url(),
+  audioUrl: z.url(),
 
   /** Array of authors - ensures at least empty array (never null) */
   authors: z.array(AuthorSchema),
@@ -153,7 +153,7 @@ export const BookSchema = z.object({
  */
 export const ChapterSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Chapter name (e.g., "Prologue", "Chapter 1") */
   title: z.string(),
@@ -175,13 +175,13 @@ export const ChapterSchema = z.object({
  */
 export const UserProgressSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Reference to the book being tracked */
-  bookId: z.string().uuid(),
+  bookId: z.uuid(),
 
   /** Reference to the user */
-  userId: z.string().uuid(),
+  userId: z.uuid(),
 
   /** Current playback position in seconds */
   positionSeconds: z.number(),
@@ -190,7 +190,7 @@ export const UserProgressSchema = z.object({
   completed: z.boolean(),
 
   /** ISO 8601 datetime string of most recent playback */
-  lastPlayed: z.string().datetime(),
+  lastPlayed: z.iso.datetime(),
 });
 
 /**
@@ -199,7 +199,7 @@ export const UserProgressSchema = z.object({
  */
 export const UserSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Username */
   username: z.string(),
@@ -212,7 +212,7 @@ export const UserSchema = z.object({
  */
 export const AuthorWithBookCountSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Author name */
   name: z.string(),
@@ -230,7 +230,7 @@ export const AuthorWithBookCountSchema = z.object({
  */
 export const SeriesWithBookCountSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Series title */
   title: z.string(),
@@ -245,7 +245,7 @@ export const SeriesWithBookCountSchema = z.object({
  */
 export const NarratorWithBookCountSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Narrator name */
   name: z.string(),
@@ -263,7 +263,7 @@ export const NarratorWithBookCountSchema = z.object({
  */
 export const CategoryWithBookCountSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Category name */
   name: z.string(),
@@ -317,7 +317,7 @@ export const ProgressResponseSchema = z.object({
   completed: z.boolean(),
 
   /** ISO 8601 datetime of last playback, null if never played */
-  lastPlayed: z.string().datetime().nullable(),
+  lastPlayed: z.iso.datetime().nullable(),
 });
 
 /**
@@ -338,7 +338,7 @@ export const AuthorsListResponseSchema = z.object({
  */
 export const AuthorDetailResponseSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Author name */
   name: z.string(),
@@ -368,7 +368,7 @@ export const SeriesListResponseSchema = z.object({
  */
 export const SeriesDetailResponseSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Series title */
   title: z.string(),
@@ -395,7 +395,7 @@ export const NarratorsListResponseSchema = z.object({
  */
 export const NarratorDetailResponseSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Narrator name */
   name: z.string(),
@@ -425,7 +425,7 @@ export const CategoriesListResponseSchema = z.object({
  */
 export const CategoryDetailResponseSchema = z.object({
   /** UUID v4 format enforced */
-  id: z.string().uuid(),
+  id: z.uuid(),
 
   /** Category name */
   name: z.string(),
@@ -486,7 +486,7 @@ export const VerifyTokenResponseSchema = z.object({
   valid: z.boolean(),
 
   /** User ID if token is valid, undefined otherwise */
-  userId: z.string().uuid().optional(),
+  userId: z.uuid().optional(),
 });
 
 /**
