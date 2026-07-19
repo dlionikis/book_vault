@@ -1,3 +1,4 @@
+import type { JSX } from 'react'; // React 19 removed the global JSX namespace; import it from 'react'
 import { render, screen } from '@testing-library/react';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';

@@ -1,7 +1,7 @@
 # Dependency Major-Version Upgrade Plan
 
 > **Created**: July 19, 2026
-> **Status**: In progress — Phases 1 ✅ & 2 ✅ done (July 19, 2026); Phases 3–6 planned
+> **Status**: In progress — Phases 1 ✅, 2 ✅, 3 ✅ done (July 19, 2026); Phases 4–6 planned
 > **Context**: The safe, in-semver dependency updates + `npm audit fix` already landed
 > (26 → residual vulnerabilities, all remaining ones require the breaking upgrades below).
 > This plan covers the **major-version** jumps deliberately deferred from that pass.
@@ -116,24 +116,42 @@ XSS advisory now fires on a copy **bundled inside Next 16** (`<8.5.10`); our top
 **Rollout note**: `images.remotePatterns` stays tightened (defense in depth). Do a real
 canary/staging deploy before prod — this is a framework major.
 
-### Phase 3 — React 18 → 19 (+ @types/react 19, react-dom 19)
+### Phase 3 — React 18 → 19 (+ @types/react 19, react-dom 19) — ✅ DONE (July 19, 2026)
 
-- React 19 codemods (`npx codemod@latest react/19/migration-recipe`).
-- Check: `ref` as a prop, `useFormState` → `useActionState`, removed `propTypes`,
-  the new JSX transform. Storybook + Testing Library must support 19 (see Phase 4 —
-  may need to sequence Phase 4 first or together).
-- `@testing-library/react` already on 16.x supports React 19; verify.
+Landed in `deps/phase-3-react-19`. Turned out **near-mechanical** — a pre-flight scan found
+**none** of the React 19 breaking-change patterns in the codebase (no `forwardRef`,
+`useFormState`, `propTypes`, `ReactDOM.render`, or `defaultProps`), so no codemod was needed.
 
-**Acceptance**: all component/page tests green; Storybook builds; visual check of the app.
+- `react`/`react-dom` 18.3.1 → **19.2.7**, `@types/react`/`@types/react-dom` → 19.
+  **Did NOT need to bundle Phase 4** — verified Next 16, Storybook 10.5 (already on 10.5 from
+  Phase 1's minor bumps), and Testing Library 16.3 all list `^19.0.0` in their react peer deps.
+- **One type fix**: React 19 removed the global `JSX` namespace. `admin-dashboard.test.tsx`
+  used `Promise<JSX.Element>` → added `import type { JSX } from 'react'`.
+- **`.prettierignore`**: added `next-env.d.ts`. Next regenerates it with double quotes on
+  every build; prettier kept reformatting it to single quotes (a permanent tug-of-war). The
+  file says "should not be edited" — now correctly left to Next.
 
-### Phase 4 — Storybook 10.1 → 10.5 major + jest-openapi
+Verified: `validate:full` green — web (unit 369, integration 13, contract 218/218, E2E 1
+passed; component/page tests exercise React 19 via Testing Library 16) + iOS (build + test) —
+plus **`build-storybook` clean** (Storybook 10.5 + React 19) and Docker production build clean.
 
-- `@storybook/*` (`nextjs`, `addon-*`, `eslint-plugin-storybook`) — run
-  `npx storybook@latest upgrade`. Clears `elliptic`/`crypto-browserify`/`node-polyfill`.
-- `jest-openapi` 0.14 — clears the `axios`/`openapi-validator` high. Verify the contract
-  test's `toSatisfyApiSpec` matcher API is unchanged.
+React 19 clears no advisories (expected); none regressed.
 
-**Acceptance**: `build-storybook` green; contract tests green.
+**Acceptance**: ✅ all component/page tests green; Storybook builds; app builds & renders.
+
+### Phase 4 — jest-openapi (+ any remaining Storybook/webpack transitive advisories)
+
+- **Note**: Storybook is already on **10.5** (Phase 1's in-semver bumps) and builds clean
+  on React 19 (verified in Phase 3), so the "Storybook major" framing is largely moot. What
+  remains is whether any `elliptic`/`crypto-browserify`/`node-polyfill-webpack-plugin`
+  transitive advisories still surface under `@storybook/nextjs` — check `npm audit` and bump
+  only if flagged; a further `@storybook/*` bump may pull those in.
+- `jest-openapi` 0.14 — clears the `axios`/`openapi-validator` high. **Watch out**: the
+  contract suite depends on `toSatisfyApiSpec`; verify the matcher API is unchanged (it drove
+  the verify-endpoint nullable-`user` handling in Phase 1).
+
+**Acceptance**: `build-storybook` green; contract tests green; `npm audit` shows the
+axios/openapi-validator highs cleared.
 
 ### Phase 5 — Prisma 5 → 7 (data layer, careful)
 
