@@ -108,10 +108,27 @@ run_ios_validation() {
 }
 
 run_deploy() {
-  CURRENT_STEP="Docker build (AMD64)"
-  log_step "Building Docker image for AMD64..."
-  docker buildx create --use --name amd64builder 2>/dev/null || true
-  docker buildx build --platform linux/amd64 -t book-vault:amd64 --load .
+  # ECS task definition revision the services run on. This revision declares
+  # runtimePlatform=ARM64/LINUX, so the image we build+push MUST be arm64.
+  #
+  # We build natively on the (arm64) build host rather than cross-compiling to
+  # amd64: Next 16's SWC compiler segfaults under qemu-emulated amd64 on Apple
+  # Silicon (`next build` -> "qemu: uncaught target signal 11"), which is what
+  # broke the deploy. Native arm64 build + Graviton Fargate avoids emulation
+  # entirely (Fargate Spot supports ARM64 since Oct 2024) and is ~20% cheaper.
+  TASK_DEF="book-vault:5"
+
+  CURRENT_STEP="Docker build (native arm64)"
+  log_step "Building Docker image (native arm64)..."
+  docker build -t book-vault:arm64 .
+
+  # Guard: the image arch must match the task def's runtimePlatform (ARM64).
+  IMAGE_ARCH=$(docker image inspect book-vault:arm64 --format '{{.Architecture}}')
+  if [ "$IMAGE_ARCH" != "arm64" ]; then
+    log_error "Built image arch is '$IMAGE_ARCH', expected 'arm64' (task def $TASK_DEF is ARM64). Aborting."
+    return 1
+  fi
+  log_step "  Image architecture: $IMAGE_ARCH ✓"
 
   CURRENT_STEP="ECR authentication"
   log_step "Authenticating to ECR..."
@@ -130,20 +147,24 @@ EOF
 
   CURRENT_STEP="ECR push"
   log_step "Tagging and pushing to ECR..."
-  docker tag book-vault:amd64 "${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/book-vault:latest"
+  docker tag book-vault:arm64 "${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/book-vault:latest"
   DOCKER_CONFIG=/tmp/docker-config docker push "${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/book-vault:latest"
 
   CURRENT_STEP="ECS deployment"
-  log_step "Deploying to ECS (spot + fallback)..."
+  log_step "Deploying to ECS (spot + fallback) on $TASK_DEF..."
+  # Pin the ARM64 task definition explicitly. --force-new-deployment alone keeps
+  # whatever revision the service is on; passing --task-definition is what moves
+  # a service from the old x86_64 revision onto the arm64 one.
   for SERVICE in book-vault-spot book-vault-fallback; do
     log_step "  Updating $SERVICE..."
     aws ecs update-service \
       --cluster book-vault \
       --service "$SERVICE" \
+      --task-definition "$TASK_DEF" \
       --force-new-deployment \
       --profile book_vault \
       --region us-east-1 \
-      --query 'service.{status:status,runningCount:runningCount,desiredCount:desiredCount}' \
+      --query 'service.{status:status,runningCount:runningCount,desiredCount:desiredCount,taskDef:taskDefinition}' \
       --output json
   done
 
