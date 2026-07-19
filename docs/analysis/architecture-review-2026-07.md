@@ -1,189 +1,146 @@
 # Architecture & Test Review — July 2026
 
-> **Date**: July 12, 2026
-> **Scope**: Full application review — backend (app/api, lib), web frontend (app, components), iOS app, database schema, test suites, and validation tooling — conducted before starting the S3 archive/restore feature ([plans/s3-archive-restore-workflow-v2.md](../plans/s3-archive-restore-workflow-v2.md)).
-> **Method**: Four parallel subsystem reviews with file:line evidence, key claims independently re-verified, full test suite and coverage tooling executed.
+> **Original**: July 12, 2026 — full application review conducted before the S3 archive/restore feature.
+> **Refreshed**: July 19, 2026 — every finding below was **independently re-verified against current code** (three parallel verification passes with file:line evidence). Status tags reflect the July 19 state.
+> **Scope**: backend (app/api, lib), web frontend, iOS app, schema, test suites, validation/CI tooling.
 
 ---
 
-## Executive Summary
+## What changed between July 12 and July 19
 
-The codebase is in **good architectural shape for its size** — significantly better than typical for a personal project. The foundations are right: correct Prisma singleton usage, a centralized book transformer, OpenAPI-first with generated types and drift checks on both platforms, a genuinely well-engineered iOS dependency-injection layer, and disciplined schema design. The debt is concentrated and specific rather than systemic.
+Two large bodies of work landed after the original review and substantially closed its gaps:
 
-However, the review found:
+1. **Pre-restore hardening (PRs #75–#79)** — fixed the P0 security holes and the test-infrastructure defects.
+2. **Dependency major-upgrade ladder (PRs #88–#101)** — see [plans/dependency-major-upgrades.md](../plans/dependency-major-upgrades.md). Net result:
+   - **Next 14 → 16**, **React 18 → 19**, **Prisma 5 → 6**, **Storybook → 10.5**, **zod 3 → 4**, **undici → 8**; **`node-fetch` removed** (was unused).
+   - **Runtime Node 20 → 24 (Active LTS)** across Docker + CI; the AWS SDK `NodeVersionSupportWarning` is gone.
+   - **Deploy build fixed**: cross-arch amd64 (qemu segfault on the Next 16 SWC binary) → **native arm64 / Graviton** (`book-vault:5` task def, healthy in prod).
+   - **`npm audit`: 0 high / 0 critical** (4 framework-internal moderates remain).
+   - Test infra hardened: Jest partitioned (unit vs `JEST_INTEGRATION` integration), coverage tooling fixed with a `coverageThreshold` ratchet, and **contract + integration suites now run in both `validate:full` and GitHub CI**.
+   - Real-DB `$transaction` integration coverage added (`progress/batch`, `refresh`, `reorder`).
 
-- **One P0 security hole**: the images route has no authentication and streams arbitrary S3 keys — the entire audiobook library is downloadable without credentials.
-- **The safety net has holes exactly where it matters**: the live OpenAPI contract tests (the best tests in the repo) are skipped in every default validation path; coverage tooling is silently broken; `npm test` is red on a fresh machine; and the security-critical auth/JWT code has zero unit tests.
-- **A tractable duplication problem**: the dual-auth block is copy-pasted ~34 times, and several utility behaviors exist in 2–4 copies while shared versions sit unused.
-
-**Verdict**: fix the P0s and the test-infrastructure defects before starting the restore feature (~1–2 days), fold the `requireUser()` helper into the feature work, and take the rest opportunistically. No large refactor is warranted.
-
-### Scorecard
-
-| Area                           | Grade  | One-line assessment                                                                                |
-| ------------------------------ | ------ | -------------------------------------------------------------------------------------------------- |
-| Data layer / schema            | **A−** | 16 models, correct join tables, composite indexes matching query patterns                          |
-| Backend API design             | **B**  | Right patterns exist but adopted inconsistently; heavy auth duplication; one unauthenticated route |
-| Web frontend                   | **B**  | Correct server/client split; player component overloaded; no error/loading boundaries              |
-| iOS app                        | **A−** | Protocol-oriented DI done properly; two god-objects; strongest layer in the repo                   |
-| Test effectiveness             | **C+** | Good tests exist but the highest-value layer never runs; critical modules untested                 |
-| Test/validation infrastructure | **C**  | Coverage broken, DB tests mixed into unit run, contract tests orphaned from CI                     |
-| API governance (OpenAPI-first) | **A**  | Spec-first + codegen + drift checks + pre-commit hooks — genuinely excellent                       |
+**The only remaining dependency-ladder item is Prisma 6 → 7** (its own plan, "Phase 5b" — ESM + `prisma.config.ts` + driver adapter + generated-client path move; unblocked by Node 24, guarded by the new real-DB coverage). Deferred by design: TypeScript 7 (typescript-eslint incompatible until ~TS 7.1, Oct 2026 — would break `npm run lint`), Tailwind 4 (CSS-first overhaul, UI-regression risk, no visual-regression net), eslint 10 (coupled to the TS 7 churn).
 
 ---
 
-## What Is Done Well (calibration)
+## Executive Summary (refreshed)
 
-These are worth naming so the findings below don't read as systemic criticism:
+The July 12 verdict — "good architectural shape for its size; concentrated, specific debt, not systemic" — still holds, and the codebase is now **materially healthier**: every P0 security hole and every test-infrastructure defect from the original review is resolved and verified.
 
-1. **OpenAPI governance is exemplary.** Spec-first workflow, TS + Swift codegen, `api:check-drift` for both platforms, `check-endpoint-coverage.ts` for spec↔route parity, and a pre-commit hook that regenerates types when the spec changes. This is better governance than most production teams have.
-2. **iOS protocol-oriented DI.** 13 focused protocols, dual initializers (private production wiring + public DI init), injected closures instead of singleton reach-through, injectable `URLSession`/`UserDefaults`, `skipAudioSetup` for tests. The expensive architectural work for testability is already done.
-3. **Correct concurrency where it's hard**: actor-based single-flight token refresh (iOS), synchronous temp-file move inside the background-download delegate, refresh-token rotation in a DB transaction ([app/api/auth/mobile/refresh/route.ts](../../app/api/auth/mobile/refresh/route.ts)).
-4. **`lib/db.ts`, `BOOK_INCLUDE` + `transformBook`, and `requireAdmin`** are each the right abstraction, correctly implemented. (`requireAdmin`'s discriminated-union shape is the template the user-auth path should copy.)
-5. **Offline-first iOS data flow**: local-first progress writes, conflict-aware merge, connectivity-triggered sync drain, and background-download state reconciliation across app termination.
-6. **Web server/client component split is correct by default** — data fetching in async server components, `'use client'` reserved for interactive leaves.
-7. **Real-handler testing is the norm** where tests exist — the admin cost tests mock only the AWS boundary and assert real aggregation logic plus secret redaction ([\_\_tests\_\_/api/admin/costs.test.ts:215](../../__tests__/api/admin/costs.test.ts#L215)).
+What **remains open** (all lower-severity, none blocking):
+
+- **Two security items**: **SEC-2** (mobile bearer path doesn't re-check the DB, so a deleted user's token works until expiry — single-user app, low practical risk) and **half of SEC-4** (ffprobe still invoked via shell-string `exec` with no timeout, in a request handler).
+- **Web resilience (D-5)**: still no `error.tsx`/`loading.tsx`/`not-found.tsx` boundaries; client fetches still have no user-visible error state; the AudioPlayer still has **zero `dark:` variants**.
+- **Consistency/debt**: no `errorResponse()` helper (D-2); the `/api/books` limit-cap fix (D-3) was **not** applied to the analogous `lib/api-helpers.ts` entity-detail path; the POST /chapters handler still leaks `error.message`; per-instance rate-limit/cache assumptions (D-4) remain undocumented.
+- **Test tail**: the library add/remove/check/lists routes still lack unit tests (reorder is covered via integration); the real `rate-limit` path is only exercised in the gated integration suite; a handful of low-value component tests ("verify no errors", Tailwind-class assertions) remain; one misnamed `performance.test.ts`.
+
+**Verdict**: no blocker to the S3 restore feature. The remaining items are a modest, well-understood backlog — fold the resilience + `dark:` items into the restore-feature UI work (which touches those exact surfaces), and address SEC-2/SEC-4 and the `api-helpers` limit cap as small standalone fixes.
+
+### Scorecard (July 12 → July 19)
+
+| Area                           | Was   | Now    | What moved it                                                                                    |
+| ------------------------------ | ----- | ------ | ------------------------------------------------------------------------------------------------ |
+| Data layer / schema            | A−    | **A−** | Unchanged; Prisma 5→6 clean, singleton discipline intact                                         |
+| Backend API design             | B     | **B+** | `requireUser` extracted + fully adopted (26 routes, 0 inline auth); books correctness fixed      |
+| Web frontend                   | B     | **B−** | No regressions, but D-5 (boundaries, error UX, AudioPlayer dark mode) still entirely open        |
+| iOS app                        | A−    | **A−** | 24 `XCTAssertTrue(true)` placeholders removed; god-objects/`URLSession.shared` bypass still open |
+| Test effectiveness             | C+    | **B+** | Real-jose auth/JWT tests, audio-range + images tests, real-DB `$transaction` tests added         |
+| Test/validation infrastructure | C     | **A−** | Jest partitioned; coverage fixed + ratcheted; contract **and** integration now in CI             |
+| API governance (OpenAPI-first) | A     | **A**  | Unchanged — still exemplary                                                                      |
+| Dependency / supply-chain      | (n/a) | **A−** | 0 high/critical; on current LTS Node 24 + current framework majors; one Prisma major remaining   |
 
 ---
 
-## Part 1: Design Findings
+## Part 1: Design Findings — status
 
-### P0 — Security (fix before anything else)
+### Security
 
-**SEC-1. `/api/images/[...path]` is completely unauthenticated and streams arbitrary S3 keys.**
-[app/api/images/[...path]/route.ts:7](../../app/api/images/%5B...path%5D/route.ts#L7) has no session or bearer check (every other media/data route has one), and the S3 branch passes the raw joined path to `streamS3Object()` with no key restriction. Consequence: **any unauthenticated caller can stream any object in the media bucket — including full audiobooks** — via `/api/images/<book-folder>/<file>.m4b`. Keys are predictable (`Title [ASIN]/…`). Fix: add the dual-auth check; if covers should remain cacheable without auth, instead restrict the route to image content (extension/content-type allowlist) and keep audio keys out. Note the `Cache-Control: public, immutable` header — if auth is added, the caching strategy needs a decision at the same time.
-
-**SEC-2. Deleted users keep working on mobile until token expiry.**
-The web session callback re-checks the DB and invalidates deleted users ([lib/auth.ts:59-73](../../lib/auth.ts#L59-L73)); the bearer path ([lib/auth.ts:99-121](../../lib/auth.ts#L99-L121) → `verifyAccessToken`) never touches the DB. A deleted user's access token remains valid for up to 1 hour, and the refresh flow is the only revocation point. For a single-user app this is low practical risk, but the two auth channels should have the same posture — either accept token-lifetime staleness on both (and document it) or check existence on both.
-
-**SEC-3. Content-mutating endpoints gated only by "logged in."**
-`POST /api/books/[id]/chapters` lets any authenticated user trigger ffprobe extraction and delete/rewrite the shared `Chapter` table. `POST /api/library/series/[seriesId]` skips UUID validation that sibling routes perform. Gate chapter mutation behind `requireAdmin` (or remove the POST); add `normalizeUuid` to the series route.
-
-**SEC-4 (low). Hardening nits.** `validateMediaPath` uses a `startsWith` prefix check without a trailing separator ([lib/media.ts:28-32](../../lib/media.ts#L28-L32)) — `/data/media-evil` passes for `/data/media`. ffprobe is invoked via shell-string interpolation with only quote escaping ([lib/audio-metadata.ts:81-86](../../lib/audio-metadata.ts#L81-L86)) — switch to `execFile` with an argument array and add a timeout (it currently runs unbounded inside a request handler).
+| ID                                | July 12      | July 19           | Evidence                                                                                                                                                                                                                                                                                                                |
+| --------------------------------- | ------------ | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **SEC-1** images route unauth     | P0 open      | ✅ **FIXED**      | `app/api/images/[...path]/route.ts:24-26` dual-auth; `:11,30-33` extension allowlist; `Cache-Control: private`. _Minor caveat:_ content-type is trusted from S3, not derived from the allowlisted extension — the audiobook-download vector is closed, but a non-image body under an image extension would still serve. |
+| **SEC-2** deleted user on bearer  | P0 open      | ⚠️ **STILL-OPEN** | `lib/auth.ts` web session re-checks DB (`:59-73`); the bearer path `getAuthUserFromRequest` (`:99-127`) → `verifyAccessToken` (`jwt.ts:51-70`) does pure crypto, no DB lookup. `requireUser` inherits the gap. Deleted user's token valid ~1h. Low practical risk (single-user), but the two channels still disagree.   |
+| **SEC-3** content-mutating routes | P0 open      | ✅ **FIXED**      | `chapters/route.ts:191-201` POST now `requireAdmin` + `normalizeUuid`; `library/series/[seriesId]/route.ts:16-19` now `isValidUuid`-guards (POST + DELETE).                                                                                                                                                             |
+| **SEC-4** hardening nits          | P0(low) open | ⚙️ **PARTIAL**    | Path check fixed — `media.ts:28-34` now uses `resolvedPath === mediaDir                                                                                                                                                                                                                                                 |     | startsWith(mediaDir + path.sep)`. **ffprobe NOT fixed** — `audio-metadata.ts`still`exec`with shell-string interpolation + manual`\"` escaping and **no timeout** (`:81-86,147-151`); runs unbounded inside a request handler. Switch to `execFile(args[])` + timeout. |
 
 ### Design improvements
 
-**D-1. Extract `requireUser(request)` — the single highest-leverage refactor.**
-The 6-line dual-auth block appears in **23 route files, ~34 handler occurrences**. `requireAdmin` ([lib/admin-auth.ts](../../lib/admin-auth.ts)) already demonstrates the right shape (discriminated union `{ user } | { error }`). Consequences of the duplication are concrete: SEC-2 can't be fixed in one place today, and the images route (SEC-1) shows what happens when boilerplate is the mechanism — it gets forgotten. **This directly benefits the restore feature, which adds ~6 new authenticated routes.**
+| ID                                  | July 19             | Evidence / note                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ----------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **D-1** `requireUser` extraction    | ✅ **FIXED**        | `lib/api-auth.ts:26-36` (discriminated union). 26 route files adopt it; **0** inline `getServerSession`/`getAuthUserFromRequest` remain in `app/api/`.                                                                                                                                                                                                                                                                                         |
+| **D-2** error/logging consistency   | ⚙️ **PARTIAL**      | `logger` adoption 2 → 36 files; `console.error` in `app/api` down to 8 files. **But** no `errorResponse()` helper was added, and **POST /chapters still leaks `error.message`** to clients (`chapters/route.ts:301-306`). GET-chapters leak is fixed.                                                                                                                                                                                          |
+| **D-3** `/api/books` correctness    | ✅ **FIXED**        | Phantom filters removed from JSDoc + code; page-only sort removed (DB `orderBy`); `parsePagination` caps limit at 100. **New**: the _same_ uncapped-limit bug survives in `lib/api-helpers.ts:101` (entity-detail endpoints) — `parseInt(limit                                                                                                                                                                                                 |     | '20')`with no cap. Migrate it to`parsePagination`. |
+| **D-4** single-instance assumptions | ⚠️ **OPEN**         | `rate-limit.ts` progress limiter still in-memory `Map` + `setInterval`, undocumented; `admin-cache.ts` still per-instance FIFO. (The _download_ limiter is correctly DB-backed.) Add a comment stating the single-task assumption, or make the progress limiter DB-backed like its sibling.                                                                                                                                                    |
+| **D-5** web resilience              | ⚠️ **OPEN (all 3)** | (a) still no `error.tsx`/`loading.tsx`/`not-found.tsx` anywhere in `app/`. (b) client fetches still swallow to `console.error` with no user-facing state — though `AddToLibraryButton` now guards on `res.ok` (`:56,74,92,111`), a failed add just silently no-ops. (c) `AudioPlayer.tsx` still has **0** `dark:` classes (hard-coded `bg-white`/`text-gray-*`). **Fold into the restore-feature UI work — it lands on these exact surfaces.** |
+| **D-6** iOS structural debt         | ⚠️ **OPEN**         | `AudioPlayerManager` god-object, `DownloadManager`'s two `URLSession.shared` bypasses, `APIClient.execute` duplication + refresh check-then-act gap — none addressed. **The `URLSession.shared` bypass should be fixed before the restore feature adds 202-handling to those calls.**                                                                                                                                                          |
 
-**D-2. Standardize error handling and logging.**
-Three patterns coexist: bare `console.error` (~33 route files) vs `lib/logger.ts` (2 files); `withLogging` wraps 15 of 39 routes; error bodies are `{ error }` ×145 but `{ message }` ×7, and the chapters route leaks internal `error.message` to clients. Add an `errorResponse(status, message)` helper next to `requireUser`, adopt `logger` in touched files, and normalize on `{ error }`.
+### Dead code / cleanup
 
-**D-3. `/api/books` correctness trio.** ([app/api/books/route.ts](../../app/api/books/route.ts))
-
-- JSDoc documents `authorId/narratorId/categoryId/seriesId` filters that were never implemented — false API contract; implement or delete the docs.
-- `sort=author|narrator|series` sorts only the current page in JS after DB pagination — semantically wrong results; sort in the query or drop the options.
-- `limit` is raw `parseInt` with no cap (`limit=1000000` is honored); use the existing `parsePagination` (which caps at 100) as `search/route.ts` already does.
-
-**D-4. Single-instance assumptions should be documented or removed.**
-`lib/rate-limit.ts` keeps the progress rate-limit map in module memory with a module-scope `setInterval` (per-instance limits, does nothing meaningful under scale-out or serverless), while `checkDownloadLimit` in the same file is correctly DB-backed. `lib/admin-cache.ts` is likewise per-instance with FIFO (not LRU) eviction. With a single ECS task this works today — add a comment stating the assumption, or make the progress limiter DB-backed like its sibling.
-
-**D-5. Web resilience gaps.**
-
-- **No `error.tsx`, `loading.tsx`, or `not-found.tsx` anywhere in `app/`**, and no error boundaries — any client-side throw white-screens; multi-query server pages have no loading UI.
-- **Every client fetch swallows errors to `console.error`** with no user-visible state (~10 copy-pasted sites; `AddToLibraryButton` doesn't even check `res.ok`). A tiny shared fetch helper with error state would fix all of them.
-- **The AudioPlayer has zero `dark:` variants** — the app's most prominent surface glows white in dark mode while the rest of the app is fully themed. (Relevant to the restore feature: the new `ArchiveStatusBadge`/restore UI lands on these same surfaces.)
-
-**D-6. iOS structural debt (from the iOS review, ranked).**
-
-- `AudioPlayerManager` (1,042 LOC) owns audio session, remote commands, now-playing info, chapters, observers, progress saving, _and_ auto-download/stream-swap orchestration. Extract `NowPlayingInfoController`, `RemoteCommandController`, and a `PlaybackDownloadCoordinator` (the last also removes the `concreteDownloadManager` protocol-escape hatch).
-- `DownloadManager` bypasses its own DI seam: eligibility/URL-generation calls use `URLSession.shared` directly (lines ~557, ~598) — the only network code in the app that can't be mock-tested. Route through `APIClient` or the injected session. **Do this before the restore feature adds 202-handling to those exact calls.**
-- `APIClient.execute`/`executeWithoutRefresh` are ~90% identical; the refresh coordinator contains a dead `beginRefresh()` and a check-then-act gap between `isRefreshInProgress()` and `markRefreshStarted()` (two separate actor hops — two callers can both start a refresh). Collapse to one atomic actor method.
-
-### Simplification / dead code (safe deletions, verified unused)
-
-| Item                                                    | Evidence                                                                                                                 | Action                                                                   |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `lib/api-schemas.ts` (514 LOC)                          | Imported only by the gated type-validation test; the runtime validation it implies doesn't happen                        | Keep **only** if wired into contract testing; otherwise delete           |
-| `lib/api-url.ts`                                        | Imported nowhere; contains a literal `'https://your-production-domain.com'` placeholder                                  | Delete                                                                   |
-| `components/ProgressBadge.tsx` (162 LOC + story + test) | Imported nowhere (README mention only); duplicates `ProgressStatus`/`ProgressControls`                                   | Delete; consolidate the two survivors around a shared `useProgress` hook |
-| `formatRuntime` ×4 inline copies                        | `BookCard`, `books/[id]/page`, `play/page`, `library/page` each define it while `lib/utils/formatRuntime.ts` sits unused | Point all four at the lib version                                        |
-| `formatTime` ×2                                         | `AudioPlayer.tsx`, `ChapterList.tsx`                                                                                     | Consolidate                                                              |
-| iOS stale artifacts                                     | `BookVault.xcodeproj.backup/`, nested `ios/ios/BookVault`, `archive/`, `build/`                                          | Delete from tree                                                         |
-| `ContinueListening` vs `ContinueListeningButton`        | Same session + `userProgress` query duplicated in two server components                                                  | Extract one shared query function                                        |
-| Cover URL convention split                              | `ContinueListening*` prefix with `/api/images/`, `BookCard`/detail pages use raw `transformBook` output                  | Pick one convention; one of these paths is wrong                         |
-| N+1 series-add loop                                     | `library/series/[seriesId]/route.ts:53-73` — per-book `findUnique`+`create`, no transaction                              | `createMany({ skipDuplicates: true })`                                   |
-
-**Testability cross-cutting note**: several modules read `process.env` and construct AWS clients at import time (`lib/s3.ts:12-13`, all four admin routes). The `S3_ENABLED` work in Phase 0 of the restore plan is the natural moment to move `lib/s3.ts` env reads inside functions.
+| Item                                                       | July 19                                                                                                                                               |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lib/api-url.ts`                                           | ✅ already deleted                                                                                                                                    |
+| `components/ProgressBadge.tsx` (+ story + test)            | ✅ already deleted                                                                                                                                    |
+| inline `formatRuntime` ×4 / `formatTime` ×2                | ✅ consolidated — `lib/utils/formatRuntime.ts` & `formatTime.ts` now the live single sources (do NOT delete)                                          |
+| `__mocks__/@/lib/prisma.ts`                                | 🧹 **still a delete-safe orphan** — targets `@/lib/prisma` (doesn't exist; real client is `@/lib/db`), not wired by `jest.config.js`. Safe to delete. |
+| N+1 series-add loop (`library/series/[seriesId]/route.ts`) | ⚠️ still per-book `findUnique`+`create`; `createMany({skipDuplicates})` still wanted                                                                  |
 
 ---
 
-## Part 2: Test Review
+## Part 2: Test Review — status
 
-### Are the existing tests effective?
+### Test-infrastructure defects — all ✅ FIXED
 
-**Mixed — with a sharp pattern: the best layers don't run, and the layers that run miss the riskiest code.**
+1. **`npm test` red on fresh machine** → Jest now has three projects (`jest.config.js:80-116`); default export ships only `unit-node` + `unit-dom`, and `integration` is pushed **only** when `JEST_INTEGRATION=true`. The downloads test moved to `__tests__/integration/`. `npm test` is unit-only and green without Docker.
+2. **Coverage tooling broken** → works now; `coverageThreshold` ratchet at `jest.config.js:138-145` (37/36/38/37). The `glob`/`test-exclude` overrides resolve cleanly; coverage artifacts regenerate.
+3. **Contract suite orphaned from CI** → `validate.sh` → `run_db_suites` runs **both** `test:contract` and `test:integration`; `api.yml`'s `contract-tests` job runs the integration suite (`:153-158`) **and** contract tests (`:180-185`) against a `postgres:15` service. Both layers now gate PRs.
 
-| Layer                                       | Verdict                                | Evidence                                                                                                                                                                          |
-| ------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Live OpenAPI contract tests (~43 endpoints) | **Excellent — but skipped by default** | Real HTTP against a running server, `toSatisfyApiSpec()`, strict extra-field checks. Gated behind `RUN_CONTRACT_TESTS`; **not run by `npm test`, `validate`, or `validate:full`** |
-| Admin API tests                             | **Effective**                          | Boundary-mocked AWS, real aggregation + secret-redaction assertions                                                                                                               |
-| Progress API tests                          | **Effective**                          | Real conflict-resolution logic asserted (last-write-wins path)                                                                                                                    |
-| Mobile auth tests                           | **Weak where it matters**              | `jose` globally stubbed → tokens asserted only `toBeDefined()`; **no test anywhere really signs/verifies a JWT**                                                                  |
-| Downloads API tests                         | **Effective but misplaced**            | Real-DB integration tests inside the default unit run → `npm test` fails without Docker Postgres                                                                                  |
-| Component tests (10 components, 5 pages)    | **Mixed**                              | Good role/label-driven tests; but 4 AudioPlayer tests assert nothing ("verify no errors"), one asserts Tailwind class names                                                       |
-| Performance tests                           | **Not effective**                      | Wall-clock `toBeLessThan(1000)` against fully mocked Prisma — measures nothing real, adds flake                                                                                   |
-| iOS XCTest (42 files, ~608 tests)           | **Strongest layer**                    | Mock/Real dual suites, `MockURLProtocol`, integration flow tests — but 24 literal `XCTAssertTrue(true)` placeholders, and the outer (non-Real) suites largely test mocks          |
+### Missing tests (ranked) — status
 
-### Test-infrastructure defects (verified by running them)
+1. **`lib/auth.ts` + `lib/jwt.ts`** → ✅ **FIXED** — `__tests__/lib/jwt.test.ts` + `auth.test.ts` use **real jose**: sign/verify roundtrip, expiry, tampered payload, wrong-secret rejection, and a structural assertion that the bearer path never hits the DB (which is also the evidence for SEC-2).
+2. **`/api/library/**`** → ⚙️ **PARTIAL** — only `series-route.test.ts` has unit coverage; `reorder` is covered end-to-end via `integration/transaction-routes.test.ts`. `library/route` (add/list), `library/check`, `library/[bookId]` (remove), `library/lists*` still lack unit tests.
+3. **Playback routes** → ✅ **FIXED** — `__tests__/api/audio/route.test.ts` tests HTTP Range (206 + `Content-Range`, 416, open-ended, local + S3); `images/route.test.ts` tests auth + allowlist + traversal.
+4. **`lib/rate-limit.ts`, `lib/media.ts`, `api-utils.ts`** → ⚙️ **PARTIAL** — `media` ✅ (incl. the sibling-prefix case), `api-utils` ✅ (`parsePagination`/`parseBookFields`). `rate-limit`'s real path runs **only** in the gated integration suite; the default unit run always mocks it.
 
-1. **`npm test` is red on a fresh machine**: 13 failures in `__tests__/api/downloads/route.test.ts` because it uses the real Prisma client against a live DB that wasn't running. STATUS.md's "All tests passing" is stale. Unit and DB-integration tests must be partitioned (separate Jest project or a `test:integration` script that manages the DB).
-2. **Coverage tooling is completely broken**: `jest --coverage` crashes during istanbul instrumentation and reports 0/0. Root cause: `"overrides": { "glob": "^11.0.0" }` in package.json breaks `test-exclude`'s `promisify(glob)` (glob ≥9 removed the callback API). Until fixed, coverage cannot be measured at all — and there's no `coverageThreshold` configured even once it works.
-3. **The contract suite is orphaned**: `validate:full` runs drift + endpoint-coverage checks + `npm test`, but never `test:contract`. The one layer that would catch handler↔spec behavioral drift ships green without executing.
-4. **Single jsdom environment for everything** — API route tests run in jsdom with undici polyfills instead of a node environment (works, but a multi-project Jest config would remove the polyfill hacks and enable the unit/integration split cleanly).
+### Low-value tests flagged for deletion — status
 
-### What testing is missing (ranked by risk)
-
-1. **`lib/auth.ts` + `lib/jwt.ts` — zero unit tests, and JWT signing/verification is stubbed everywhere.** Expiry, claims, tampered tokens, and the bearer-path behavior in SEC-2 are all unverifiable today. Un-stub `jose` for a dedicated `jwt.test.ts` (it runs fine in Jest with the existing transform config).
-2. **The entire `/api/library/**` surface\*\* (add/remove, checks, lists CRUD, reorder) — no unit tests; only reachable via the skipped contract suite.
-3. **Core playback path on web**: `PlaybackClient` untested; `app/api/audio/[...path]` (range requests! the thing iOS seeking depends on) and `app/api/images/[...path]` untested — the two routes where a regression means "the app stops working."
-4. **`lib/rate-limit.ts`, `lib/media.ts`, `api-utils.ts`** — small, pure, high-fan-in; cheap to cover.
-5. **Books route pagination/sort behavior** (would have caught D-3).
-6. **For the upcoming restore feature**: the plan's Ring-1 tests (mocked `HeadObject`/`RestoreObject`) need `aws-sdk-client-mock`; the S3 mocking pattern established there should also backfill `lib/s3.ts` streaming-range tests.
-
-### Recommended test-suite changes
-
-1. Fix the glob override (pin only where needed, or drop it) → coverage works → add a modest `coverageThreshold` to prevent regression.
-2. Split Jest into projects: `unit` (node env for API/lib, jsdom for components) and `integration` (downloads + future DB tests, run via `test:integration` with the DB up). `npm test` = unit only, always green.
-3. Add `test:contract` to `validate:full` (it already manages its own server lifecycle).
-4. Write `jwt.test.ts` + `auth.test.ts` with real jose.
-5. Delete the meaningless tests: the 2 wall-clock performance suites, the 4 "verify no errors" AudioPlayer tests (replace with real seek/skip assertions via a stubbed media element), the Tailwind-class assertion, and the 24 iOS placeholders (or fill them).
-6. Reuse Storybook stories in RTL tests via `composeStories` — 10 stories currently contribute zero regression coverage.
+- 4 AudioPlayer "verify no errors" tests → ⚠️ **still present** (`AudioPlayer.test.tsx:126,229,301,313` — tautological `toBeInTheDocument()` after "verify no errors"). Replace with real seek/skip assertions via a stubbed media element.
+- Tailwind-class assertions → ⚠️ **still present** (AudioPlayer `:163,213`; also `BookGrid`, `BackButton`, `Pagination`). Assert behavior/roles, not class strings.
+- 2 wall-clock perf suites → ⚙️ **1 of 2 remain** — `books/chapters-performance.test.ts:235` still has `toBeLessThan(1000)` on mocked Prisma; `app/api/search/performance.test.ts` was repurposed into a real `api-utils` test (but is now **misnamed** — rename to reflect it tests pagination parsing, and drop the stale coverage HTML).
+- 24 iOS `XCTAssertTrue(true)` placeholders → ✅ **all removed** (0 matches in `ios/`).
 
 ---
 
-## Part 3: Prioritized Action Plan
+## Part 3: Prioritized Action Plan (refreshed)
 
-### P0 — Before anything else (~half a day)
+The original P0/P1 are done. What remains, re-prioritized:
 
-1. Auth (or content-restrict) `/api/images/[...path]` — SEC-1
-2. Admin-gate `POST /api/books/[id]/chapters`; UUID-validate series route — SEC-3
-3. Fix the glob override so coverage works; update STATUS.md's stale "all tests passing" claim
+### Small standalone fixes (~half day total)
 
-### P1 — Pre-feature hardening (~1–1.5 days, do before restore-feature Phase 0)
+1. **SEC-4 ffprobe** — switch `lib/audio-metadata.ts` to `execFile(['ffprobe', ...args])` + a timeout. Removes a shell-injection surface and an unbounded call in a request handler.
+2. **`lib/api-helpers.ts` limit cap** — route the entity-detail pagination through `parsePagination` (the D-3 fix, unmigrated here). One-line class of bug, currently `limit=1000000` honored on author/narrator/series/category detail.
+3. **POST /chapters leak** — stop returning `details: error.message`; log it, return a generic message (matches the GET handler).
+4. **Delete the orphan** `__mocks__/@/lib/prisma.ts`; rename the misnamed `app/api/search/performance.test.ts`.
 
-4. `requireUser()` helper + `errorResponse()` helper; migrate routes (mechanical, ~34 sites) — D-1, D-2
-5. Partition Jest (unit vs integration); wire `test:contract` into `validate:full`
-6. `jwt.test.ts`/`auth.test.ts` with real jose; decide SEC-2 posture and test it
-7. Fix `/api/books` limit cap + remove phantom filters/broken sorts — D-3
-8. Delete verified dead code (`api-url.ts`, `ProgressBadge.tsx`, `formatRuntime` copies; decide `api-schemas.ts`)
-9. iOS: route `DownloadManager`'s two `URLSession.shared` calls through the injected seam (the restore feature touches exactly these)
+### SEC-2 — decide the posture (not just patch)
 
-### P2 — Opportunistic (fold into feature work or do later)
+Either accept token-lifetime staleness on **both** auth channels and document it (reasonable for a single-user app), or add a DB existence check to the bearer path to match the web session. Pick one and write the test (the auth test already asserts the _current_ no-DB behavior, so changing it is a deliberate contract change).
 
-10. `error.tsx`/`loading.tsx`/`not-found.tsx`; shared client-fetch helper with error states — D-5
-11. AudioPlayer: extract `useProgressSaver` + `useMediaElement` hooks; add `dark:` variants (do alongside the restore-feature player changes, which touch this component anyway)
-12. iOS: split `AudioPlayerManager`; collapse `APIClient.execute` duplication; fix refresh-coordinator check-then-act gap
-13. Consolidate progress components; unify cover-URL convention; `createMany` for series-add
-14. Document or fix single-instance rate-limit/cache assumptions
-15. Storybook `composeStories` reuse; delete/replace no-op tests
+### Fold into the S3 restore feature (it touches these exact surfaces)
 
-### Explicitly not recommended
+5. **D-5 web resilience** — add `error.tsx`/`loading.tsx`/`not-found.tsx`, a shared client-fetch helper with error state, and **`dark:` variants on the AudioPlayer** (the restore UI — `ArchiveStatusBadge`/cold-storage warnings — lands on the player and detail surfaces).
+6. **D-6 iOS** — route `DownloadManager`'s two `URLSession.shared` calls through the injected seam **before** the restore feature adds 202/restore-status handling to them.
+7. **Test tail** — as the restore feature adds S3-mocked tests (`aws-sdk-client-mock`), backfill unit tests for the untested `library/**` routes and replace the low-value AudioPlayer tests with real assertions.
 
-- No framework changes, no state-management library for the web app (the server-component architecture is right), no iOS rearchitecture (the DI foundation is sound), no test-runner migration. The codebase's shape is good; it needs seams tightened, not walls moved.
+### Opportunistic / later
+
+8. `errorResponse()` helper (D-2); document or DB-back the per-instance rate-limit/cache (D-4); `createMany` for series-add; Storybook `composeStories` reuse; a `rate-limit` unit test that runs in the default suite.
+9. **Prisma 6 → 7** — the one remaining dependency major; its own plan.
+
+### Explicitly still not recommended
+
+No framework changes beyond the ladder already in progress, no web state-management library, no iOS rearchitecture. The shape is right; this is seam-tightening, not wall-moving. (Original review's judgment, unchanged.)
 
 ---
 
 ## Relationship to the S3 Restore Feature
 
-The restore feature multiplies exposure to exactly the weak spots found here: it adds ~6 authenticated routes (build them on `requireUser`, not 6 more copies), extends the downloads endpoint and iOS `DownloadManager` (fix the `URLSession.shared` bypass first), adds S3-mocked tests (needs the Jest partition + working coverage), and adds UI to the player surfaces (the dark-mode and error-state gaps become more visible). Doing P0+P1 first (~2 days) makes the feature cheaper and safer to build; deferring the rest is fine.
+The original coupling still holds, now with most prerequisites met: `requireUser` exists (build the ~6 new routes on it), Jest is partitioned with working coverage + CI-enforced contract/integration suites (S3-mocked tests have a home), and the deploy path is stable on native-arm64/Graviton. The two things still worth doing **before/within** the feature: fix the iOS `DownloadManager.URLSession.shared` bypass (the feature adds 202-handling there), and land the D-5 resilience + AudioPlayer `dark:` work alongside the restore UI that lands on those surfaces. Phase 0 (on-demand stream endpoint, PR #88) is already merged.
