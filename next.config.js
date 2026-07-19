@@ -31,10 +31,10 @@ const nextConfig = {
       },
     ],
   },
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '2mb',
-    },
+  // serverActions graduated from `experimental` to a stable top-level option in
+  // Next 15+.
+  serverActions: {
+    bodySizeLimit: '2mb',
   },
 };
 

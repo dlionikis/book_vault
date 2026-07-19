@@ -26,7 +26,8 @@ import path from 'path';
  * @example
  * fetch('/api/books/abc-123/chapters')
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   // Check both auth methods
   const auth = await requireUser(request);
   if (auth.error) return auth.error;
@@ -187,7 +188,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
  *
  * Auth: Admin only - this deletes and rewrites the shared Chapter table.
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { error } = await requireAdmin(request);
   if (error) {
     return error;

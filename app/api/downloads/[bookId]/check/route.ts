@@ -4,7 +4,8 @@ import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { normalizeUuid } from '@/lib/api-utils';
 
-export async function GET(request: NextRequest, { params }: { params: { bookId: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ bookId: string }> }) {
+  const params = await props.params;
   try {
     // Check both auth methods
     const auth = await requireUser(request);

@@ -70,14 +70,12 @@ async function getAuthor(id: string, page?: string): Promise<AuthorWithBooks | n
   }
 }
 
-export default async function AuthorPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
+export default async function AuthorPage(props: {
+  params: Promise<{ id: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
-  const sp = await searchParams;
+  const params = await props.params;
+  const sp = await props.searchParams;
   const author = await getAuthor(params.id, sp.page);
 
   if (!author) {

@@ -70,14 +70,12 @@ async function getNarrator(id: string, page?: string): Promise<NarratorWithBooks
   }
 }
 
-export default async function NarratorPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
+export default async function NarratorPage(props: {
+  params: Promise<{ id: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
-  const sp = await searchParams;
+  const params = await props.params;
+  const sp = await props.searchParams;
   const narrator = await getNarrator(params.id, sp.page);
 
   if (!narrator) {

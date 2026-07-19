@@ -68,7 +68,7 @@ describe('GET /api/audio/[...path]', () => {
       error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
     });
 
-    const res = await GET(makeRequest(), { params: { path: PATH } });
+    const res = await GET(makeRequest(), { params: Promise.resolve({ path: PATH }) });
 
     expect(res.status).toBe(401);
     expect(mockIsS3Enabled).not.toHaveBeenCalled();
@@ -80,7 +80,7 @@ describe('GET /api/audio/[...path]', () => {
     mockStatSync.mockReturnValue({ size: 5000 } as fs.Stats);
     mockCreateReadStream.mockReturnValue(Readable.from(['data']) as any);
 
-    const res = await GET(makeRequest(), { params: { path: PATH } });
+    const res = await GET(makeRequest(), { params: Promise.resolve({ path: PATH }) });
 
     expect(res.status).toBe(200);
     expect(res.headers.get('Accept-Ranges')).toBe('bytes');
@@ -99,7 +99,7 @@ describe('GET /api/audio/[...path]', () => {
       totalSize: 5000,
     });
 
-    const res = await GET(makeRequest(), { params: { path: PATH } });
+    const res = await GET(makeRequest(), { params: Promise.resolve({ path: PATH }) });
 
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('audio/mp4');
@@ -118,7 +118,7 @@ describe('GET /api/audio/[...path]', () => {
       totalSize: 5000,
     });
 
-    const res = await GET(makeRequest('bytes=0-1023'), { params: { path: PATH } });
+    const res = await GET(makeRequest('bytes=0-1023'), { params: Promise.resolve({ path: PATH }) });
 
     expect(res.status).toBe(206);
     expect(res.headers.get('Content-Range')).toBe('bytes 0-1023/5000');
@@ -131,7 +131,9 @@ describe('GET /api/audio/[...path]', () => {
     mockIsS3Enabled.mockReturnValue(true);
     mockGetMetadata.mockResolvedValue({ size: 5000, contentType: 'audio/mp4' });
 
-    const res = await GET(makeRequest('bytes=6000-7000'), { params: { path: PATH } });
+    const res = await GET(makeRequest('bytes=6000-7000'), {
+      params: Promise.resolve({ path: PATH }),
+    });
 
     expect(res.status).toBe(416);
     expect(mockStreamRange).not.toHaveBeenCalled();
@@ -144,7 +146,7 @@ describe('GET /api/audio/[...path]', () => {
     err.name = 'NoSuchKey';
     mockGetMetadata.mockRejectedValue(err);
 
-    const res = await GET(makeRequest(), { params: { path: PATH } });
+    const res = await GET(makeRequest(), { params: Promise.resolve({ path: PATH }) });
 
     expect(res.status).toBe(404);
   });
@@ -156,7 +158,9 @@ describe('GET /api/audio/[...path]', () => {
     mockIsS3Enabled.mockReturnValue(false);
     mockValidatePath.mockReturnValue(false);
 
-    const res = await GET(makeRequest(), { params: { path: ['..', '..', 'etc', 'passwd'] } });
+    const res = await GET(makeRequest(), {
+      params: Promise.resolve({ path: ['..', '..', 'etc', 'passwd'] }),
+    });
 
     expect(res.status).toBe(403);
     expect(mockStatSync).not.toHaveBeenCalled();
@@ -169,7 +173,7 @@ describe('GET /api/audio/[...path]', () => {
       throw new Error('ENOENT');
     });
 
-    const res = await GET(makeRequest(), { params: { path: PATH } });
+    const res = await GET(makeRequest(), { params: Promise.resolve({ path: PATH }) });
 
     expect(res.status).toBe(404);
   });
@@ -180,7 +184,9 @@ describe('GET /api/audio/[...path]', () => {
     mockStatSync.mockReturnValue({ size: 5000 } as fs.Stats);
     mockCreateReadStream.mockReturnValue(Readable.from(['chunk']) as any);
 
-    const res = await GET(makeRequest('bytes=100-199'), { params: { path: PATH } });
+    const res = await GET(makeRequest('bytes=100-199'), {
+      params: Promise.resolve({ path: PATH }),
+    });
 
     expect(res.status).toBe(206);
     expect(res.headers.get('Content-Range')).toBe('bytes 100-199/5000');
@@ -193,7 +199,9 @@ describe('GET /api/audio/[...path]', () => {
     mockIsS3Enabled.mockReturnValue(false);
     mockStatSync.mockReturnValue({ size: 5000 } as fs.Stats);
 
-    const res = await GET(makeRequest('bytes=9000-9999'), { params: { path: PATH } });
+    const res = await GET(makeRequest('bytes=9000-9999'), {
+      params: Promise.resolve({ path: PATH }),
+    });
 
     expect(res.status).toBe(416);
     expect(mockCreateReadStream).not.toHaveBeenCalled();
@@ -205,7 +213,7 @@ describe('GET /api/audio/[...path]', () => {
     mockStatSync.mockReturnValue({ size: 5000 } as fs.Stats);
     mockCreateReadStream.mockReturnValue(Readable.from(['chunk']) as any);
 
-    const res = await GET(makeRequest('bytes=4000-'), { params: { path: PATH } });
+    const res = await GET(makeRequest('bytes=4000-'), { params: Promise.resolve({ path: PATH }) });
 
     expect(res.status).toBe(206);
     expect(res.headers.get('Content-Range')).toBe('bytes 4000-4999/5000');

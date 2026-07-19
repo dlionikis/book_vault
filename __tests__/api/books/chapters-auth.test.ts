@@ -59,7 +59,7 @@ describe('POST /api/books/[id]/chapters authorization', () => {
   });
 
   it('returns 401 for unauthenticated requests', async () => {
-    const response = await POST(makeRequest(), { params: { id: BOOK_ID } });
+    const response = await POST(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
 
     expect(response.status).toBe(401);
   });
@@ -68,7 +68,7 @@ describe('POST /api/books/[id]/chapters authorization', () => {
     mockGetAuthUserFromRequest.mockResolvedValue({ id: 'user-123', username: 'testuser' });
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({ isAdmin: false });
 
-    const response = await POST(makeRequest(), { params: { id: BOOK_ID } });
+    const response = await POST(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
 
     expect(response.status).toBe(403);
     // The handler must not have touched book/chapter data
@@ -80,7 +80,7 @@ describe('POST /api/books/[id]/chapters authorization', () => {
       user: { id: 'user-123', username: 'testuser', isAdmin: false },
     } as any);
 
-    const response = await POST(makeRequest(), { params: { id: BOOK_ID } });
+    const response = await POST(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
 
     expect(response.status).toBe(403);
   });
@@ -91,7 +91,7 @@ describe('POST /api/books/[id]/chapters authorization', () => {
     } as any);
     (prisma.book.findUnique as jest.Mock).mockResolvedValue(null);
 
-    const response = await POST(makeRequest(), { params: { id: BOOK_ID } });
+    const response = await POST(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
 
     expect(response.status).toBe(404);
     expect(prisma.book.findUnique).toHaveBeenCalled();

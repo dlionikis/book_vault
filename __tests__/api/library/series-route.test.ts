@@ -55,7 +55,7 @@ describe('/api/library/series/[seriesId]', () => {
       mockGetAuthUserFromRequest.mockResolvedValue(null);
 
       const response = await POST(makeRequest(VALID_SERIES_ID, 'POST'), {
-        params: { seriesId: VALID_SERIES_ID },
+        params: Promise.resolve({ seriesId: VALID_SERIES_ID }),
       });
 
       expect(response.status).toBe(401);
@@ -65,7 +65,7 @@ describe('/api/library/series/[seriesId]', () => {
   describe('UUID validation', () => {
     it('POST returns 400 for a malformed series ID', async () => {
       const response = await POST(makeRequest('not-a-uuid', 'POST'), {
-        params: { seriesId: 'not-a-uuid' },
+        params: Promise.resolve({ seriesId: 'not-a-uuid' }),
       });
 
       expect(response.status).toBe(400);
@@ -74,7 +74,7 @@ describe('/api/library/series/[seriesId]', () => {
 
     it('DELETE returns 400 for a malformed series ID', async () => {
       const response = await DELETE(makeRequest('not-a-uuid', 'DELETE'), {
-        params: { seriesId: 'not-a-uuid' },
+        params: Promise.resolve({ seriesId: 'not-a-uuid' }),
       });
 
       expect(response.status).toBe(400);
@@ -85,7 +85,7 @@ describe('/api/library/series/[seriesId]', () => {
       (prisma.bookSeries.findMany as jest.Mock).mockResolvedValue([]);
 
       const response = await POST(makeRequest(VALID_SERIES_ID, 'POST'), {
-        params: { seriesId: VALID_SERIES_ID },
+        params: Promise.resolve({ seriesId: VALID_SERIES_ID }),
       });
 
       expect(response.status).toBe(404);

@@ -5,7 +5,8 @@ import { prisma } from '@/lib/db';
 import { normalizeUuid, isValidUuid } from '@/lib/api-utils';
 
 // POST /api/library/series/[seriesId] - Add all books in series to library
-export async function POST(request: NextRequest, { params }: { params: { seriesId: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ seriesId: string }> }) {
+  const params = await props.params;
   try {
     // Check both auth methods
     const auth = await requireUser(request);
@@ -84,7 +85,11 @@ export async function POST(request: NextRequest, { params }: { params: { seriesI
 }
 
 // DELETE /api/library/series/[seriesId] - Remove all books in series from library
-export async function DELETE(request: NextRequest, { params }: { params: { seriesId: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  props: { params: Promise<{ seriesId: string }> }
+) {
+  const params = await props.params;
   try {
     // Check both auth methods
     const auth = await requireUser(request);

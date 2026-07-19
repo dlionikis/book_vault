@@ -25,7 +25,8 @@ async function getBook(id: string): Promise<Book | null> {
   }
 }
 
-export default async function PlayPage({ params }: { params: { id: string } }) {
+export default async function PlayPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const book = await getBook(params.id);
 
   if (!book) {
