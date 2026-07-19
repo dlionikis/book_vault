@@ -109,16 +109,19 @@ final class AudioPlayerManagerRealTests: XCTestCase {
     var mockProgressManager: MockProgressManagerForAudio!
     var mockDownloadManager: MockDownloadManagerForAudio!
     var mockStorageManager: MockStorageManagerForDownloads!
+    var mockAPIClient: MockAPIClient!
 
     override func setUp() async throws {
         mockProgressManager = MockProgressManagerForAudio()
         mockDownloadManager = MockDownloadManagerForAudio()
         mockStorageManager = MockStorageManagerForDownloads()
+        mockAPIClient = MockAPIClient()
 
         sut = AudioPlayerManager(
             progressManager: mockProgressManager,
             downloadManager: mockDownloadManager,
             storageManager: mockStorageManager,
+            apiClient: mockAPIClient, // Avoid real network calls on the streaming path
             skipAudioSetup: true // Skip AVAudioSession setup for unit tests
         )
 
@@ -131,6 +134,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         mockProgressManager = nil
         mockDownloadManager = nil
         mockStorageManager = nil
+        mockAPIClient = nil
     }
 
     // MARK: - Initial State Tests

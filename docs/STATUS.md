@@ -1,6 +1,6 @@
 # Project Status & Roadmap
 
-**Last Updated**: January 4, 2026 _(Recent Merges table reflects PRs through #63; update when new PRs land)_
+**Last Updated**: July 17, 2026 _(Recent Merges table reflects PRs through #87; update when new PRs land)_
 
 ---
 
@@ -15,19 +15,20 @@
 | Backend API | ✅ Complete - OpenAPI spec, contract tests, dual auth         |
 | AWS         | ✅ Live - ECS Fargate, RDS PostgreSQL, S3 (514 GB, 691 books) |
 
-**Known Issues**: See [analysis/architecture-review-2026-07.md](analysis/architecture-review-2026-07.md) (July 2026 review). Notables: unit `npm test` requires the Docker Postgres (downloads suite is a real-DB integration test); contract tests only run via `npm run test:contract`; coverage tooling broken until the `glob` override fix lands ([plans/pre-restore-hardening-plan.md](plans/pre-restore-hardening-plan.md) P0-3).
+**Known Issues**: See [analysis/architecture-review-2026-07.md](analysis/architecture-review-2026-07.md) (July 2026 review). The P0+P1 items from that review are resolved (see [plans/pre-restore-hardening-plan.md](plans/pre-restore-hardening-plan.md)); P2 items remain as backlog. Current notables: a large portion of the S3 library is in the Intelligent-Tiering Archive Access tier and unstreamable until the restore workflow ships (a July 12 HeadObject sample found 5 of 8 audio files archived — [plans/s3-archive-restore-workflow-v2.md](plans/s3-archive-restore-workflow-v2.md)).
 
 ---
 
 ## Recent Merges
 
-| PR  | Description                           | Date   |
-| --- | ------------------------------------- | ------ |
-| #63 | iOS: Remove xcpretty dependency       | Jan 4  |
-| #62 | iOS Background Downloads              | Jan 4  |
-| #61 | OpenAPI Contract Test Coverage - 100% | Jan 4  |
-| #51 | Presigned URLs - S3 media access      | Dec 31 |
-| #50 | AWS Deployment - ECS, RDS, S3, SSL    | Dec 31 |
+| PR     | Description                                                        | Date   |
+| ------ | ------------------------------------------------------------------ | ------ |
+| #87    | iOS Phase 6: Playwright web smoke (E2E)                            | Jul 17 |
+| #86    | iOS Phase 5: AuthenticatedResourceLoader + tests                   | Jul 17 |
+| #83–85 | iOS test coverage: SystemKeychain, `/api/audio`, CoverCacheManager | Jul 16 |
+| #79    | Pre-restore hardening P0+P1 (PRs #76–#78 landed)                   | Jul 14 |
+| #75    | Security P0: auth on images route, admin-gate chapters             | Jul 12 |
+| #72    | Admin dashboard with AWS monitoring                                | Jul 8  |
 
 ---
 
@@ -35,8 +36,8 @@
 
 ### Next Up
 
-- [ ] **Pre-restore hardening (P0+P1)** - Security fixes + test infrastructure ([docs/plans/pre-restore-hardening-plan.md](plans/pre-restore-hardening-plan.md)) — in progress
-- [ ] **S3 archive restore workflow** - Restore pipeline + push notifications ([docs/plans/s3-archive-restore-workflow-v2.md](plans/s3-archive-restore-workflow-v2.md)) — blocked on hardening
+- [x] **Pre-restore hardening (P0+P1)** - Security fixes + test infrastructure ([docs/plans/pre-restore-hardening-plan.md](plans/pre-restore-hardening-plan.md)) — ✅ complete (PRs #75–#79)
+- [ ] **S3 archive restore workflow** - Restore pipeline + push notifications ([docs/plans/s3-archive-restore-workflow-v2.md](plans/s3-archive-restore-workflow-v2.md)) — **in progress** (hardening unblocked; starting Phase 0)
 - [ ] **Remove volume slider (iOS)** - Remove the volume slider from the iOS audio playback view
 - [ ] **Duration remaining (iOS)** - Add remaining time display to the audio playback view
 - [ ] **Dismiss mini-player** - Add ability to close the recent playback mini-player

@@ -629,4 +629,21 @@ class APIClient: APIClientProtocol {
 
         return try await execute(request: request)
     }
+
+    // MARK: - Streaming (Authenticated)
+
+    /// Fetch an on-demand streaming URL for a book.
+    ///
+    /// Phase 0 of the archive/restore workflow: replaces streaming directly from
+    /// `book.audioUrl` (which is being phased out of list responses). A future
+    /// release returns `status == .restoring` when the audio is archived.
+    func getBookStream(bookId: UUID) async throws -> BookStreamResponse {
+        let request = try createRequest(
+            path: "/api/books/\(bookId.uuidString)/stream",
+            method: "GET",
+            requiresAuth: true
+        )
+
+        return try await execute(request: request)
+    }
 }

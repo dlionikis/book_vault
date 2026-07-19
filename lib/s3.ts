@@ -57,9 +57,19 @@ export function getS3Client(): S3Client {
  * Returns true in production when:
  * - AWS_S3_BUCKET is set, AND
  * - Either explicit credentials exist OR running on ECS (has task role)
+ *
+ * Development override: `S3_ENABLED=true` unlocks the S3 code path outside
+ * production (e.g. `next dev`, which pins NODE_ENV=development). This enables
+ * "hybrid mode" — local server + local Postgres + the real production bucket —
+ * used to develop and test the archive/restore workflow against genuine data.
+ * The bucket + credential requirements below still apply.
  */
 export function isS3Enabled(): boolean {
-  if (process.env.NODE_ENV !== 'production' || !S3_BUCKET) {
+  const devOverride = process.env.S3_ENABLED === 'true';
+  if (process.env.NODE_ENV !== 'production' && !devOverride) {
+    return false;
+  }
+  if (!S3_BUCKET) {
     return false;
   }
 
