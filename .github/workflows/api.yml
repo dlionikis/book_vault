@@ -146,6 +146,17 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/book_vault?schema=public
 
+      # Integration suite hits the real Postgres directly via route handlers (no
+      # dev server needed), so run it here — after migrate + generate + seed, and
+      # before the server starts. Previously this suite ran only in the local
+      # validate:full gate and pre-deploy, never on PRs.
+      - name: Run integration tests (real DB)
+        run: npm run test:integration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/book_vault?schema=public
+          NEXTAUTH_SECRET: test-secret-for-ci
+          NEXTAUTH_URL: http://localhost:3000
+
       - name: Build Next.js app
         run: npm run build
 
