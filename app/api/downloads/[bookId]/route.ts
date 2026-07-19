@@ -9,7 +9,8 @@ import { getAbsoluteMediaPath } from '@/lib/media';
 import { statSync } from 'fs';
 import { join } from 'path';
 
-export async function POST(request: NextRequest, { params }: { params: { bookId: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ bookId: string }> }) {
+  const params = await props.params;
   try {
     // Check both auth methods
     const auth = await requireUser(request);

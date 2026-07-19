@@ -68,14 +68,12 @@ async function getSeries(id: string, page?: string): Promise<SeriesWithBooks | n
   }
 }
 
-export default async function SeriesPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
+export default async function SeriesPage(props: {
+  params: Promise<{ id: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
-  const sp = await searchParams;
+  const params = await props.params;
+  const sp = await props.searchParams;
   const series = await getSeries(params.id, sp.page);
 
   if (!series) {

@@ -205,7 +205,9 @@ describe('Download Endpoints', () => {
 
       const request = new NextRequest(`http://localhost:3000/api/downloads/${book.id}/check`);
 
-      const response = await checkEligibility(request, { params: { bookId: book.id } });
+      const response = await checkEligibility(request, {
+        params: Promise.resolve({ bookId: book.id }),
+      });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -220,7 +222,9 @@ describe('Download Endpoints', () => {
 
       const request = new NextRequest('http://localhost:3000/api/downloads/fake-id/check');
 
-      const response = await checkEligibility(request, { params: { bookId: 'fake-id' } });
+      const response = await checkEligibility(request, {
+        params: Promise.resolve({ bookId: 'fake-id' }),
+      });
 
       expect(response.status).toBe(404);
     });
@@ -230,7 +234,9 @@ describe('Download Endpoints', () => {
 
       const request = new NextRequest('http://localhost:3000/api/downloads/book-id/check');
 
-      const response = await checkEligibility(request, { params: { bookId: 'book-id' } });
+      const response = await checkEligibility(request, {
+        params: Promise.resolve({ bookId: 'book-id' }),
+      });
 
       expect(response.status).toBe(401);
     });
@@ -271,7 +277,9 @@ describe('Download Endpoints', () => {
 
       mockGetAuthUserFromRequest.mockResolvedValue({ id: user.id, username: user.username });
 
-      const response = await generateDownloadUrl(request, { params: { bookId: book.id } });
+      const response = await generateDownloadUrl(request, {
+        params: Promise.resolve({ bookId: book.id }),
+      });
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -310,7 +318,9 @@ describe('Download Endpoints', () => {
         body: JSON.stringify({}),
       });
 
-      const response = await generateDownloadUrl(request, { params: { bookId: book.id } });
+      const response = await generateDownloadUrl(request, {
+        params: Promise.resolve({ bookId: book.id }),
+      });
       const data = await response.json();
 
       expect(response.status).toBe(429);
@@ -338,7 +348,9 @@ describe('Download Endpoints', () => {
         body: JSON.stringify({}),
       });
 
-      const response = await generateDownloadUrl(request, { params: { bookId: book.id } });
+      const response = await generateDownloadUrl(request, {
+        params: Promise.resolve({ bookId: book.id }),
+      });
       const data = await response.json();
 
       // In development mode without S3, the route tries to use local filesystem
@@ -369,7 +381,9 @@ describe('Download Endpoints', () => {
         body: JSON.stringify({}),
       });
 
-      const response = await generateDownloadUrl(request, { params: { bookId: book.id } });
+      const response = await generateDownloadUrl(request, {
+        params: Promise.resolve({ bookId: book.id }),
+      });
       const data = await response.json();
 
       expect(response.status).toBe(400);

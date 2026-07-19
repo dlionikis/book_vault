@@ -68,7 +68,7 @@ describe('GET /api/images/[...path]', () => {
   });
 
   it('returns 401 for unauthenticated requests', async () => {
-    const response = await GET(makeRequest(), { params: { path: FIXTURE_PATH } });
+    const response = await GET(makeRequest(), { params: Promise.resolve({ path: FIXTURE_PATH }) });
 
     expect(response.status).toBe(401);
     const data = await response.json();
@@ -78,7 +78,7 @@ describe('GET /api/images/[...path]', () => {
   it('returns 200 with image content for authenticated requests (bearer)', async () => {
     mockGetAuthUserFromRequest.mockResolvedValue(mockUser);
 
-    const response = await GET(makeRequest(), { params: { path: FIXTURE_PATH } });
+    const response = await GET(makeRequest(), { params: Promise.resolve({ path: FIXTURE_PATH }) });
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('image/jpeg');
@@ -87,7 +87,7 @@ describe('GET /api/images/[...path]', () => {
   it('returns 200 for authenticated requests (web session)', async () => {
     mockGetServerSession.mockResolvedValue({ user: mockUser } as any);
 
-    const response = await GET(makeRequest(), { params: { path: FIXTURE_PATH } });
+    const response = await GET(makeRequest(), { params: Promise.resolve({ path: FIXTURE_PATH }) });
 
     expect(response.status).toBe(200);
   });
@@ -95,7 +95,7 @@ describe('GET /api/images/[...path]', () => {
   it('uses private caching so shared caches never store gated content', async () => {
     mockGetAuthUserFromRequest.mockResolvedValue(mockUser);
 
-    const response = await GET(makeRequest(), { params: { path: FIXTURE_PATH } });
+    const response = await GET(makeRequest(), { params: Promise.resolve({ path: FIXTURE_PATH }) });
 
     expect(response.headers.get('Cache-Control')).toContain('private');
     expect(response.headers.get('Cache-Control')).not.toContain('public');
@@ -105,7 +105,7 @@ describe('GET /api/images/[...path]', () => {
     mockGetAuthUserFromRequest.mockResolvedValue(mockUser);
 
     const response = await GET(makeRequest(), {
-      params: { path: [BOOK_DIR, 'audiobook.m4b'] },
+      params: Promise.resolve({ path: [BOOK_DIR, 'audiobook.m4b'] }),
     });
 
     expect(response.status).toBe(404);
@@ -115,7 +115,7 @@ describe('GET /api/images/[...path]', () => {
     mockGetAuthUserFromRequest.mockResolvedValue(mockUser);
 
     const response = await GET(makeRequest(), {
-      params: { path: ['..', '..', 'etc', 'secrets.jpg'] },
+      params: Promise.resolve({ path: ['..', '..', 'etc', 'secrets.jpg'] }),
     });
 
     expect(response.status).toBe(403);
@@ -125,7 +125,7 @@ describe('GET /api/images/[...path]', () => {
     mockGetAuthUserFromRequest.mockResolvedValue(mockUser);
 
     const response = await GET(makeRequest(), {
-      params: { path: ['Nonexistent Book', 'cover.jpg'] },
+      params: Promise.resolve({ path: ['Nonexistent Book', 'cover.jpg'] }),
     });
 
     expect(response.status).toBe(404);

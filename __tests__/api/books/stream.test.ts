@@ -51,7 +51,7 @@ describe('GET /api/books/[id]/stream', () => {
   });
 
   it('returns 401 for unauthenticated requests', async () => {
-    const response = await GET(makeRequest(), { params: { id: BOOK_ID } });
+    const response = await GET(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
 
     expect(response.status).toBe(401);
     expect(prisma.book.findUnique).not.toHaveBeenCalled();
@@ -60,7 +60,7 @@ describe('GET /api/books/[id]/stream', () => {
   it('returns 400 for a malformed book ID', async () => {
     authenticate();
 
-    const response = await GET(makeRequest(), { params: { id: 'not-a-uuid' } });
+    const response = await GET(makeRequest(), { params: Promise.resolve({ id: 'not-a-uuid' }) });
 
     expect(response.status).toBe(400);
     expect(prisma.book.findUnique).not.toHaveBeenCalled();
@@ -70,7 +70,7 @@ describe('GET /api/books/[id]/stream', () => {
     authenticate();
     (prisma.book.findUnique as jest.Mock).mockResolvedValue(null);
 
-    const response = await GET(makeRequest(), { params: { id: BOOK_ID } });
+    const response = await GET(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
 
     expect(response.status).toBe(404);
   });
@@ -79,7 +79,7 @@ describe('GET /api/books/[id]/stream', () => {
     authenticate();
     (prisma.book.findUnique as jest.Mock).mockResolvedValue({ id: BOOK_ID, audioUrl: null });
 
-    const response = await GET(makeRequest(), { params: { id: BOOK_ID } });
+    const response = await GET(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
 
     expect(response.status).toBe(400);
     expect(mockGetAudioUrl).not.toHaveBeenCalled();
@@ -95,7 +95,7 @@ describe('GET /api/books/[id]/stream', () => {
       'http://localhost:3000/api/audio/Book%20Title%20%5BASIN%5D/audio.m4b'
     );
 
-    const response = await GET(makeRequest(), { params: { id: BOOK_ID } });
+    const response = await GET(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -116,7 +116,7 @@ describe('GET /api/books/[id]/stream', () => {
       'https://book-vault-media.s3.amazonaws.com/books/audio.m4b?X-Amz-Signature=abc'
     );
 
-    const response = await GET(makeRequest(), { params: { id: BOOK_ID } });
+    const response = await GET(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -132,7 +132,7 @@ describe('GET /api/books/[id]/stream', () => {
     });
     mockGetAudioUrl.mockResolvedValue('https://example.com/signed');
 
-    const response = await GET(makeRequest(), { params: { id: BOOK_ID } });
+    const response = await GET(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
 
     expect(response.status).toBe(200);
   });
@@ -145,7 +145,7 @@ describe('GET /api/books/[id]/stream', () => {
     });
     mockGetAudioUrl.mockRejectedValue(new Error('S3 signing failed'));
 
-    const response = await GET(makeRequest(), { params: { id: BOOK_ID } });
+    const response = await GET(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
 
     expect(response.status).toBe(500);
   });

@@ -5,7 +5,8 @@ import { prisma } from '@/lib/db';
 import { normalizeUuid } from '@/lib/api-utils';
 
 // PUT /api/library/lists/[id]/reorder - Reorder books in list
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Check both auth methods
     const auth = await requireUser(request);

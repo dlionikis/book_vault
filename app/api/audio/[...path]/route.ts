@@ -6,7 +6,8 @@ import { join } from 'path';
 import { getAbsoluteMediaPath, validateMediaPath } from '@/lib/media';
 import { isS3Enabled, streamS3ObjectWithRange, getS3ObjectMetadata } from '@/lib/s3';
 
-export async function GET(request: NextRequest, { params }: { params: { path: string[] } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ path: string[] }> }) {
+  const params = await props.params;
   try {
     // Authentication check - support both session cookies (web) and Bearer tokens (mobile)
     const auth = await requireUser(request);

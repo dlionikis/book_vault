@@ -5,7 +5,8 @@ import { prisma } from '@/lib/db';
 import { normalizeUuid } from '@/lib/api-utils';
 
 // POST /api/library/lists/[id]/books - Add book to list
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Check both auth methods
     const auth = await requireUser(request);
@@ -69,7 +70,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 }
 
 // DELETE /api/library/lists/[id]/books - Remove book from list
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     // Check both auth methods
     const auth = await requireUser(request);

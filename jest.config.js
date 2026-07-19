@@ -7,10 +7,27 @@ const createJestConfig = nextJest({
 
 // ES modules in node_modules that Jest must transform:
 // - jose is ESM-only (jest.setup and lib/jwt.ts load the real thing — no stub)
-// - @aws-sdk ships `export` statements in its dist-cjs builds since v3.1090
-//   (the page tests import the real book-transformer → lib/s3 → @aws-sdk/client-s3)
-const ESM_ALLOWLIST_PATTERN =
-  'node_modules/(?!((.*/)?jose($|/)|@aws-sdk/|@smithy/|react-markdown|remark-.*|micromark.*|mdast-.*|unist-.*|unified|bail|is-plain-obj|trough|vfile|vfile-message|devlop))';
+// - @aws-sdk / @smithy ship `export` statements in their dist-cjs builds since
+//   v3.1090 (page tests import the real book-transformer → lib/s3 → @aws-sdk)
+// Each entry becomes an alternative inside a negative lookahead, so a match here
+// means "do NOT ignore — transform it".
+const ESM_ALLOWLIST_PACKAGES = [
+  '(.*/)?jose($|/)',
+  '@aws-sdk/',
+  '@smithy/',
+  'react-markdown',
+  'remark-.*',
+  'micromark.*',
+  'mdast-.*',
+  'unist-.*',
+  'unified',
+  'bail',
+  'is-plain-obj',
+  'trough',
+  'vfile',
+  'vfile-message',
+  'devlop',
+];
 
 // Settings shared by every project
 const sharedConfig = {
@@ -21,17 +38,30 @@ const sharedConfig = {
   testPathIgnorePatterns: ['/node_modules/', '/.next/'],
 };
 
-// next/jest unconditionally prepends '/node_modules/' to transformIgnorePatterns,
-// which makes any user-supplied allowlist pattern unreachable (a file is ignored if
-// ANY pattern matches). Replace that entry in the resolved config so ESM packages
-// like jose actually get transformed.
+// next/jest emits transformIgnorePatterns that ignore all of node_modules (a file
+// is ignored if ANY pattern matches), which makes our ESM deps (jose, @aws-sdk)
+// fail to transform. next/jest 16 changed the pattern shape — it's no longer a
+// plain '/node_modules/' string but a complex regex with negative lookaheads for
+// its own packages (geist, next/dist/...). Rather than match an exact string
+// (brittle across Next versions), we inject our allowlist packages into the FIRST
+// pattern that targets node_modules, extending its negative lookahead.
 function allowEsmPackages(project) {
-  return {
-    ...project,
-    transformIgnorePatterns: (project.transformIgnorePatterns ?? []).map((pattern) =>
-      pattern === '/node_modules/' ? ESM_ALLOWLIST_PATTERN : pattern
-    ),
-  };
+  const allowlist = ESM_ALLOWLIST_PACKAGES.join('|');
+  let injected = false;
+  const patterns = (project.transformIgnorePatterns ?? []).map((pattern) => {
+    // Match the first "/node_modules/(?!...)" style pattern and widen its lookahead.
+    if (!injected && typeof pattern === 'string' && pattern.includes('node_modules')) {
+      injected = true;
+      // Prepend one more negative lookahead so our packages are never ignored.
+      return pattern.replace(/node_modules\//, `node_modules/(?!(${allowlist})/?)`);
+    }
+    return pattern;
+  });
+  if (!injected) {
+    // Fallback: no node_modules pattern found — add an explicit allowlist entry.
+    patterns.unshift(`node_modules/(?!(${allowlist})/?)`);
+  }
+  return { ...project, transformIgnorePatterns: patterns };
 }
 
 /**

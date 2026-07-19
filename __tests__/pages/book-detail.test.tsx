@@ -176,7 +176,7 @@ describe('Book Detail Page', () => {
 
     (prisma.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
 
-    const params = { id: 'book-1' };
+    const params = Promise.resolve({ id: 'book-1' });
     const page = await BookDetailPage({ params });
     render(page);
 
@@ -242,7 +242,7 @@ describe('Book Detail Page', () => {
 
     (prisma.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
 
-    const params = { id: 'book-1' };
+    const params = Promise.resolve({ id: 'book-1' });
     const page = await BookDetailPage({ params });
     render(page);
 
@@ -256,7 +256,7 @@ describe('Book Detail Page', () => {
   it('calls notFound when book does not exist', async () => {
     (prisma.book.findUnique as jest.Mock).mockResolvedValue(null);
 
-    const params = { id: 'nonexistent-id' };
+    const params = Promise.resolve({ id: 'nonexistent-id' });
 
     await expect(async () => {
       await BookDetailPage({ params });
@@ -289,7 +289,7 @@ describe('Book Detail Page', () => {
 
     (prisma.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
 
-    const params = { id: 'book-1' };
+    const params = Promise.resolve({ id: 'book-1' });
     const page = await BookDetailPage({ params });
     render(page);
 
@@ -330,7 +330,7 @@ describe('Book Detail Page', () => {
 
     (prisma.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
 
-    const params = { id: 'book-1' };
+    const params = Promise.resolve({ id: 'book-1' });
     const page = await BookDetailPage({ params });
     render(page);
 
@@ -361,7 +361,7 @@ describe('Book Detail Page', () => {
 
     (prisma.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
 
-    const params = { id: 'book-1' };
+    const params = Promise.resolve({ id: 'book-1' });
     const page = await BookDetailPage({ params });
     render(page);
 
@@ -392,7 +392,7 @@ describe('Book Detail Page', () => {
 
     (prisma.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
 
-    const params = { id: 'book-1' };
+    const params = Promise.resolve({ id: 'book-1' });
     const page = await BookDetailPage({ params });
     const { container } = render(page);
 
@@ -425,7 +425,7 @@ describe('Book Detail Page', () => {
 
     (prisma.book.findUnique as jest.Mock).mockResolvedValue(mockBook);
 
-    const params = { id: 'book-1' };
+    const params = Promise.resolve({ id: 'book-1' });
     const page = await BookDetailPage({ params });
     render(page);
 

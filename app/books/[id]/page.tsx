@@ -61,7 +61,8 @@ function formatDate(dateString?: string | Date | null) {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-export default async function BookDetailPage({ params }: { params: { id: string } }) {
+export default async function BookDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const book = await getBook(params.id);
 
   if (!book) {

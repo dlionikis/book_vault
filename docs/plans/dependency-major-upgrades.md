@@ -1,7 +1,7 @@
 # Dependency Major-Version Upgrade Plan
 
 > **Created**: July 19, 2026
-> **Status**: In progress — Phase 1 ✅ done (July 19, 2026); Phases 2–6 planned
+> **Status**: In progress — Phases 1 ✅ & 2 ✅ done (July 19, 2026); Phases 3–6 planned
 > **Context**: The safe, in-semver dependency updates + `npm audit fix` already landed
 > (26 → residual vulnerabilities, all remaining ones require the breaking upgrades below).
 > This plan covers the **major-version** jumps deliberately deferred from that pass.
@@ -29,15 +29,15 @@ Everything here is currently **mitigated or non-exploitable in production**:
 
 ## Residual advisories these upgrades clear
 
-| Advisory                                  | Fixed by                                                               | Surface              |
-| ----------------------------------------- | ---------------------------------------------------------------------- | -------------------- |
-| Next.js Image Optimizer DoS (high)        | `next` 16                                                              | prod (mitigated now) |
-| `postcss` XSS in stringify (moderate)     | `next` 16 (bundled)                                                    | build                |
-| `axios` CSRF / `openapi-validator` (high) | `jest-openapi` 0.14                                                    | test                 |
-| `undici` decompression DoS (moderate)     | `undici` 8 (openapi-typescript 7 alone did **not** clear it — Phase 1) | build/test           |
-| `elliptic`/`crypto-browserify` (low)      | `@storybook/*` 10.5                                                    | dev                  |
-| `uuid` bounds check (moderate)            | `next-auth` (via Next 16 stack)                                        | prod (low)           |
-| OpenTelemetry baggage (moderate)          | `@redocly/cli` 2                                                       | dev (docs)           |
+| Advisory                                  | Fixed by                                                                                                                             | Surface    |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
+| Next.js Image Optimizer DoS (high)        | `next` 16 — ✅ CLEARED (Phase 2)                                                                                                     | prod       |
+| `postcss` XSS in stringify (moderate)     | NOT cleared by Next 16 — fires on postcss **bundled inside** next (`<8.5.10`); our top-level postcss is 8.5.19. Awaits a Next patch. | build      |
+| `axios` CSRF / `openapi-validator` (high) | `jest-openapi` 0.14                                                                                                                  | test       |
+| `undici` decompression DoS (moderate)     | `undici` 8 (openapi-typescript 7 alone did **not** clear it — Phase 1)                                                               | build/test |
+| `elliptic`/`crypto-browserify` (low)      | `@storybook/*` 10.5                                                                                                                  | dev        |
+| `uuid` bounds check (moderate)            | `next-auth` (via Next 16 stack)                                                                                                      | prod (low) |
+| OpenTelemetry baggage (moderate)          | `@redocly/cli` 2                                                                                                                     | dev (docs) |
 
 Re-run `npm audit` after each phase; the goal is **zero high/critical**, moderates as low
 as the toolchain allows.
@@ -75,23 +75,46 @@ Bundle these; none touch shipped code.
 
 **Acceptance**: `validate:full` green; generated types reviewed; contract tests pass.
 
-### Phase 2 — Next.js 14 → 16 + next-auth (highest impact, do alone)
+### Phase 2 — Next.js 14 → 16 (highest impact) — ✅ DONE (July 19, 2026)
 
-The big one. **Clears the prod Image Optimizer high + postcss.**
+Landed in `deps/phase-2-next-16`. **Cleared the prod Image Optimizer high** (GHSA-9g9p-9gw9-jx7f).
 
-- Read the Next 15 **and** 16 upgrade guides (App Router async request APIs: `headers()`,
-  `cookies()`, `params`, `searchParams` became async in 15 — audit every route/page that
-  uses them; our API routes lean on `headers()` heavily).
-- `eslint-config-next` moves in lockstep (15 → 16).
-- `next-auth` v4 → check compatibility with Next 16; may need `@auth/*` (NextAuth v5)
-  migration, which is a substantial auth rewrite — scope separately if so.
-- After upgrade, **once `images.remotePatterns` is on a fixed Next**, the tightened
-  allowlist can stay (defense in depth) — do not revert it.
-- Full regression: web + iOS (the app streams/downloads against these routes), Docker
-  build, and a real deploy to a staging/canary before prod.
+What it took:
 
-**Acceptance**: `validate:full` + Docker build green; manual smoke of auth, streaming,
-downloads, admin dashboard; `npm audit` shows the Image Optimizer high gone.
+- `next` 14.2.35 → **16.2.10**, `eslint-config-next` → 16. **Kept next-auth v4** (compatible
+  with Next 16 / React 18 App Router) and **React 18** — no v5 auth rewrite needed, keeping
+  this phase focused on Next itself.
+- **Async request APIs**: ran `npx @next/codemod next-async-request-api` (20 files). It
+  converted `params`/`searchParams` to `Promise` + `await` correctly in pages and route
+  handlers (including routes that pass `params` into shared helpers). **Two things it got
+  wrong / didn't cover**: (1) it wrote `await searchParams` instead of `await
+props.searchParams` in 4 entity pages — fixed by hand; (2) all test call sites still
+  passed sync `{ params: {...} }` — updated to `Promise.resolve({...})`.
+- `next.config.js`: `experimental.serverActions` → stable top-level `serverActions`.
+- **ESLint**: `eslint-config-next` 16 is flat-config-only; the old `FlatCompat`/`.eslintrc`
+  shim crashed. Rewrote `eslint.config.mjs` to import `eslint-config-next/core-web-vitals`
+  and `eslint-plugin-storybook`'s `flat/recommended` natively. Its new
+  `react-hooks/set-state-in-effect` error flagged 4 known-good SSR patterns (hydration
+  `mounted` guards, one initial fetch) — scoped that rule `off` for those 4 files only
+  (stays an error everywhere else; reviewed each).
+- **Jest**: `next/jest` 16 restructured `transformIgnorePatterns` (no longer a plain
+  `/node_modules/` string), which silently dropped our ESM allowlist and broke jose/@aws-sdk
+  transform. Rewrote `allowEsmPackages` to inject the allowlist into whatever the first
+  node_modules pattern is — now resilient to Next's pattern shape.
+- Next 16 auto-updated `next-env.d.ts` (typed routes) and `tsconfig.json` (`jsx: react-jsx`,
+  `.next/dev/types` include) — kept as generated.
+
+Verified: `validate:full` green — web (unit 369, integration 13, contract 218/218, E2E 1
+passed) + iOS (SwiftLint 0, build + test) — and Docker build clean. E2E exercised the real
+login → search → detail → play → add-to-library flow on Next 16.
+
+**Residual after Phase 2** (all dev/build/Next-internal, mapped to later phases): `postcss`
+XSS advisory now fires on a copy **bundled inside Next 16** (`<8.5.10`); our top-level
+`postcss` is already 8.5.19. `undici`, `axios`/`jest-openapi`/`openapi-validator` unchanged
+(Phase 4 / later).
+
+**Rollout note**: `images.remotePatterns` stays tightened (defense in depth). Do a real
+canary/staging deploy before prod — this is a framework major.
 
 ### Phase 3 — React 18 → 19 (+ @types/react 19, react-dom 19)
 

@@ -21,7 +21,8 @@ const STREAM_URL_EXPIRY = 3600; // 1 hour
  * files. The response schema already carries a `status` discriminator so that
  * addition is non-breaking for clients.
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await requireUser(request);
     if (auth.error) return auth.error;
