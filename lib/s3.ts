@@ -186,6 +186,12 @@ export async function streamS3ObjectWithRange(
 export async function getS3ObjectMetadata(key: string): Promise<{
   size: number;
   contentType: string;
+  /**
+   * S3 Intelligent-Tiering archive tier indicator (e.g. ARCHIVE_ACCESS).
+   * Present only while the object is in the archive tier — absence means the
+   * object is immediately readable. See lib/restore.ts.
+   */
+  archiveStatus?: string;
 }> {
   const client = getS3Client();
   const command = new HeadObjectCommand({
@@ -198,6 +204,7 @@ export async function getS3ObjectMetadata(key: string): Promise<{
   return {
     size: response.ContentLength || 0,
     contentType: response.ContentType || 'application/octet-stream',
+    archiveStatus: response.ArchiveStatus,
   };
 }
 

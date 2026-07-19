@@ -26,6 +26,25 @@ jest.mock('@/lib/db', () => ({
 jest.mock('@/lib/media', () => ({
   getAudioUrl: jest.fn(),
 }));
+jest.mock('@/lib/s3', () => ({
+  isS3Enabled: jest.fn(() => false),
+}));
+jest.mock('@/lib/restore', () => ({
+  ...jest.requireActual('@/lib/restore'),
+  getArchiveState: jest.fn(),
+  initiateRestore: jest.fn(),
+  setBookAvailability: jest.fn(),
+}));
+
+import { isS3Enabled } from '@/lib/s3';
+import { getArchiveState, initiateRestore, setBookAvailability } from '@/lib/restore';
+
+const mockIsS3Enabled = isS3Enabled as jest.MockedFunction<typeof isS3Enabled>;
+const mockGetArchiveState = getArchiveState as jest.MockedFunction<typeof getArchiveState>;
+const mockInitiateRestore = initiateRestore as jest.MockedFunction<typeof initiateRestore>;
+const mockSetBookAvailability = setBookAvailability as jest.MockedFunction<
+  typeof setBookAvailability
+>;
 
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>;
 const mockGetAuthUserFromRequest = getAuthUserFromRequest as jest.MockedFunction<
@@ -148,5 +167,72 @@ describe('GET /api/books/[id]/stream', () => {
     const response = await GET(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
 
     expect(response.status).toBe(500);
+  });
+
+  describe('archive detection (S3 enabled)', () => {
+    const REQUESTED_AT = new Date('2026-07-19T12:00:00.000Z');
+
+    beforeEach(() => {
+      mockIsS3Enabled.mockReturnValue(true);
+      (prisma.book.findUnique as jest.Mock).mockResolvedValue({
+        id: BOOK_ID,
+        audioUrl: 'books/audio.m4b',
+        audioAvailability: 'AVAILABLE',
+      });
+    });
+
+    it('returns 202 restoring and initiates a restore when the file is archived', async () => {
+      authenticate();
+      mockGetArchiveState.mockResolvedValue({ archived: true, restoreOngoing: false });
+      mockInitiateRestore.mockResolvedValue({
+        id: 'req-1',
+        requestedAt: REQUESTED_AT,
+      } as never);
+
+      const response = await GET(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
+      const body = await response.json();
+
+      expect(response.status).toBe(202);
+      expect(body.status).toBe('restoring');
+      expect(body.requestedAt).toBe(REQUESTED_AT.toISOString());
+      // ETA = requestedAt + 5h (single archive tier)
+      expect(body.estimatedCompletion).toBe('2026-07-19T17:00:00.000Z');
+      expect(mockInitiateRestore).toHaveBeenCalledWith(
+        { id: BOOK_ID, audioUrl: 'books/audio.m4b' },
+        'user-123'
+      );
+      // No stream URL is generated for an archived file
+      expect(mockGetAudioUrl).not.toHaveBeenCalled();
+    });
+
+    it('self-heals a stale cached availability when the file is actually available', async () => {
+      authenticate();
+      (prisma.book.findUnique as jest.Mock).mockResolvedValue({
+        id: BOOK_ID,
+        audioUrl: 'books/audio.m4b',
+        audioAvailability: 'ARCHIVED', // stale — HeadObject says available
+      });
+      mockGetArchiveState.mockResolvedValue({ archived: false, restoreOngoing: false });
+      mockGetAudioUrl.mockResolvedValue('https://example.com/signed');
+
+      const response = await GET(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.status).toBe('available');
+      expect(mockSetBookAvailability).toHaveBeenCalledWith(BOOK_ID, 'AVAILABLE');
+      expect(mockInitiateRestore).not.toHaveBeenCalled();
+    });
+
+    it('does not touch the cache when it already says AVAILABLE', async () => {
+      authenticate();
+      mockGetArchiveState.mockResolvedValue({ archived: false, restoreOngoing: false });
+      mockGetAudioUrl.mockResolvedValue('https://example.com/signed');
+
+      const response = await GET(makeRequest(), { params: Promise.resolve({ id: BOOK_ID }) });
+
+      expect(response.status).toBe(200);
+      expect(mockSetBookAvailability).not.toHaveBeenCalled();
+    });
   });
 });

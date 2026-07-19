@@ -121,7 +121,8 @@ components:
           enum: [available, restoring]
           description: |
             - available: streamUrl is ready to play immediately
-            - restoring: audio is archived; a restore was initiated (future)
+            - restoring: audio is in the S3 Intelligent-Tiering Archive Access
+              tier; a restore was initiated (or is already in progress)
         streamUrl:
           type: string
           format: uri
@@ -144,6 +145,82 @@ components:
           type: string
           format: date-time
           description: Estimated restore completion (requestedAt + ~5h). Present when status=restoring.
+
+    RestoreStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [available, archived, restoring]
+          description: |
+            - available: audio is ready to stream
+            - archived: in the Archive Access tier; no restore in flight
+            - restoring: a restore is in progress (~3-5 hours)
+        requestedAt:
+          type: string
+          format: date-time
+          description: When the active restore was requested. Present when status=restoring.
+        estimatedCompletion:
+          type: string
+          format: date-time
+          description: requestedAt + ~5h. Present when status=restoring.
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the most recent restore completed. Present when status=available.
+        lastError:
+          type: string
+          nullable: true
+          description: Error from the most recent failed restore. Present when status=archived.
+
+    RestoreRequestSummary:
+      type: object
+      required: [id, bookId, status, requestedAt, book]
+      properties:
+        id:
+          type: string
+          format: uuid
+        bookId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [in_progress, completed, failed]
+        requestedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        estimatedCompletion:
+          type: string
+          format: date-time
+          nullable: true
+          description: requestedAt + ~5h while in_progress; null otherwise
+        book:
+          type: object
+          required: [id, title]
+          properties:
+            id:
+              type: string
+              format: uuid
+            title:
+              type: string
+            coverUrl:
+              type: string
+              nullable: true
+
+    RestoresListResponse:
+      type: object
+      required: [restores]
+      properties:
+        restores:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestoreRequestSummary'
 
     # Core models (from lib/types.ts)
     Book:
@@ -906,10 +983,11 @@ paths:
         in development). Called at play time instead of eagerly attaching audio
         URLs to list responses.
 
-        The response carries a `status` discriminator. Today it is always
-        `available`. A future release returns 202 with `status=restoring` when
-        the audio file is in the S3 Intelligent-Tiering Archive Access tier and
-        a restore has been initiated.
+        The response carries a `status` discriminator. In production the
+        endpoint does a real-time HeadObject: if the audio file is in the S3
+        Intelligent-Tiering Archive Access tier it initiates a restore
+        (idempotent) and returns 202 with `status=restoring`; otherwise it
+        returns 200 with a fresh `streamUrl`.
       parameters:
         - name: id
           in: path
@@ -945,6 +1023,131 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/books/{id}/restore:
+    post:
+      operationId: restoreBook
+      tags: [Books]
+      summary: Request a restore for an archived audiobook
+      description: |
+        Explicitly initiates an S3 Intelligent-Tiering restore for an archived
+        audio file (the "Request restore" button) without pretending to play.
+        Idempotent: an in-flight restore is reused, never duplicated. If the
+        file turns out not to be archived, responds 200 status=available and
+        self-heals the cached availability.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Book ID
+      responses:
+        '200':
+          description: Nothing to restore — the audio is already available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookStreamResponse'
+        '202':
+          description: Restore initiated or already in progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookStreamResponse'
+        '400':
+          description: Invalid book ID or book has no audio file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/books/{id}/restore-status:
+    get:
+      operationId: getBookRestoreStatus
+      tags: [Books]
+      summary: Get restore progress for a book
+      description: |
+        Reports the book's audio availability from the cached state (kept
+        current by the stream/restore endpoints, the restore poller, and the
+        nightly sync). Used by clients to poll while a restore is in progress.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Book ID
+      responses:
+        '200':
+          description: Current availability / restore progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoreStatus'
+        '400':
+          description: Invalid book ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/books/restores:
+    get:
+      operationId: listRestores
+      tags: [Books]
+      summary: List the user's active and recently completed restores
+      description: |
+        Returns the authenticated user's in-progress restore requests plus
+        those completed in the last 7 days, newest first.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Restore requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoresListResponse'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -2463,6 +2666,16 @@ paths:
                     type: integer
                     minimum: 0
                     description: File size in bytes
+        '202':
+          description: |
+            Audio file is in the S3 Intelligent-Tiering Archive Access tier; a
+            restore was initiated (idempotent). Same shape as the stream
+            endpoint's restoring response — retry the download after the
+            restore completes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookStreamResponse'
         '400':
           description: Book has no audio file
           content:

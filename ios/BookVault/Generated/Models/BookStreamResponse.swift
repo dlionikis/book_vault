@@ -16,7 +16,7 @@ public struct BookStreamResponse: Codable, JSONEncodable, Hashable {
         case available = "available"
         case restoring = "restoring"
     }
-    /** - available: streamUrl is ready to play immediately - restoring: audio is archived; a restore was initiated (future)  */
+    /** - available: streamUrl is ready to play immediately - restoring: audio is in the S3 Intelligent-Tiering Archive Access   tier; a restore was initiated (or is already in progress)  */
     public var status: Status
     /** Presigned S3 URL (or local /api/audio URL). Present when status=available. */
     public var streamUrl: String?

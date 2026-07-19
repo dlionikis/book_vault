@@ -1584,27 +1584,28 @@ describe('POST /api/series/{id}/restore', () => {
 - [ ] **Rollout step 3 — deliberately deferred**: null `audioUrl` in `transformBook()` only after ALL installed iOS builds use the stream endpoint (an old build still streams from `book.audioUrl`)
 - [x] Test playback on web and iOS (dev + production — E2E smoke exercises the play flow)
 
-### Phase 1: Database Schema (1-2 hours)
+### Phase 1: Database Schema — ✅ COMPLETE (July 19, 2026, with Phase 2)
 
-- [ ] Prisma migration: `media_restore_requests` (nullable `requestedByUserId`, SetNull)
-- [ ] Prisma migration: `user_device_tokens`
-- [ ] Add `audioAvailability` + `availabilityCheckedAt` to `Book`
-- [ ] Add relations to `User` and `Book` models
-- [ ] Run migration, verify in Prisma Studio
+- [x] Prisma migration: `media_restore_requests` (nullable `requestedByUserId`, SetNull)
+- [x] Prisma migration: `user_device_tokens`
+- [x] Add `audioAvailability` + `availabilityCheckedAt` to `Book`
+- [x] Add relations to `User` and `Book` models
+- [x] Run migration (`20260719183757_restore_workflow_schema`)
 
-### Phase 2: Backend API (4-5 hours)
+### Phase 2: Backend API — ✅ COMPLETE (July 19, 2026; device-token endpoints moved to Phase 6)
 
-- [ ] Add `aws-sdk-client-mock` dev dependency
-- [ ] Create `lib/restore.ts`: `initiateRestore()` (no `Days`!), `parseRestoreHeader()`, `estimatedCompletion()`
-- [ ] `RESTORE_TIER` env override in `initiateRestore()` (Expedited for fast pipeline testing)
-- [ ] Extend stream endpoint with HeadObject `ArchiveStatus` detection
-- [ ] Create `POST /api/books/{id}/restore`
-- [ ] Create `GET /api/books/{id}/restore-status`
-- [ ] Create `GET /api/books/restores`
-- [ ] Update `POST /api/downloads/{bookId}` with archive detection (202)
-- [ ] Verify chapters endpoint degrades gracefully for archived files
-- [ ] Create `POST`/`DELETE /api/notifications/register`
-- [ ] Update OpenAPI spec (all new endpoints + `RestoreStatus` schema) + regenerate types
+- [x] Add `aws-sdk-client-mock` dev dependency
+- [x] Create `lib/restore.ts`: `initiateRestore()` (no `Days`!), `parseRestoreHeader()`, `getArchiveState()`, `estimatedCompletion()`, `setBookAvailability()`
+- [x] `RESTORE_TIER` env override in `initiateRestore()` (Expedited for fast pipeline testing)
+- [x] Extend stream endpoint with HeadObject `ArchiveStatus` detection (202 + self-heal)
+- [x] Create `POST /api/books/{id}/restore`
+- [x] Create `GET /api/books/{id}/restore-status`
+- [x] Create `GET /api/books/restores`
+- [x] Update `POST /api/downloads/{bookId}` with archive detection (202; HeadObject now precedes presigning)
+- [x] Verify chapters endpoint degrades gracefully for archived files (verified: 200 + empty chapters, no 500)
+- [ ] ~~Create `POST`/`DELETE /api/notifications/register`~~ — **moved to Phase 6**: the endpoint's core is `NotificationService.registerEndpoint` (SNS), which is Phase 6 work; shipping a half-wired registration route earlier serves nothing (no client calls it until Phase 7)
+- [x] Update OpenAPI spec (all new endpoints + `RestoreStatus`/`RestoreRequestSummary`/`RestoresListResponse` schemas) + regenerate TS + Swift types
+- [ ] **⚠️ IAM (deploy prerequisite)**: add `s3:RestoreObject` on `arn:aws:s3:::book-vault-media/*` to the `book-vault-ecs-task` role (e.g. inline policy `S3RestoreAccess`). The role currently has only GetObject/ListBucket — production restores would get AccessDenied. HeadObject is already covered by GetObject.
 
 ### Phase 3: Book Availability Status (2 hours)
 

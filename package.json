@@ -106,6 +106,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/turndown": "^5.0.6",
     "autoprefixer": "^10.4.20",
+    "aws-sdk-client-mock": "^4.1.0",
     "concurrently": "^10.0.3",
     "dotenv": "^17.2.3",
     "eslint": "^9.39.2",
