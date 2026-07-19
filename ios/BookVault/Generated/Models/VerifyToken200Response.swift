@@ -13,9 +13,9 @@ import AnyCodable
 public struct VerifyToken200Response: Codable, JSONEncodable, Hashable {
 
     public var valid: Bool
-    public var user: User?
+    public var user: VerifyToken200ResponseUser?
 
-    public init(valid: Bool, user: User? = nil) {
+    public init(valid: Bool, user: VerifyToken200ResponseUser? = nil) {
         self.valid = valid
         self.user = user
     }

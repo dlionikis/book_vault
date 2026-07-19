@@ -1,7 +1,7 @@
 # Dependency Major-Version Upgrade Plan
 
 > **Created**: July 19, 2026
-> **Status**: Planned (not started)
+> **Status**: In progress — Phase 1 ✅ done (July 19, 2026); Phases 2–6 planned
 > **Context**: The safe, in-semver dependency updates + `npm audit fix` already landed
 > (26 → residual vulnerabilities, all remaining ones require the breaking upgrades below).
 > This plan covers the **major-version** jumps deliberately deferred from that pass.
@@ -29,15 +29,15 @@ Everything here is currently **mitigated or non-exploitable in production**:
 
 ## Residual advisories these upgrades clear
 
-| Advisory                                  | Fixed by                            | Surface              |
-| ----------------------------------------- | ----------------------------------- | -------------------- |
-| Next.js Image Optimizer DoS (high)        | `next` 16                           | prod (mitigated now) |
-| `postcss` XSS in stringify (moderate)     | `next` 16 (bundled)                 | build                |
-| `axios` CSRF / `openapi-validator` (high) | `jest-openapi` 0.14                 | test                 |
-| `undici` decompression DoS (moderate)     | `openapi-typescript` 7 / `undici` 8 | build/test           |
-| `elliptic`/`crypto-browserify` (low)      | `@storybook/*` 10.5                 | dev                  |
-| `uuid` bounds check (moderate)            | `next-auth` (via Next 16 stack)     | prod (low)           |
-| OpenTelemetry baggage (moderate)          | `@redocly/cli` 2                    | dev (docs)           |
+| Advisory                                  | Fixed by                                                               | Surface              |
+| ----------------------------------------- | ---------------------------------------------------------------------- | -------------------- |
+| Next.js Image Optimizer DoS (high)        | `next` 16                                                              | prod (mitigated now) |
+| `postcss` XSS in stringify (moderate)     | `next` 16 (bundled)                                                    | build                |
+| `axios` CSRF / `openapi-validator` (high) | `jest-openapi` 0.14                                                    | test                 |
+| `undici` decompression DoS (moderate)     | `undici` 8 (openapi-typescript 7 alone did **not** clear it — Phase 1) | build/test           |
+| `elliptic`/`crypto-browserify` (low)      | `@storybook/*` 10.5                                                    | dev                  |
+| `uuid` bounds check (moderate)            | `next-auth` (via Next 16 stack)                                        | prod (low)           |
+| OpenTelemetry baggage (moderate)          | `@redocly/cli` 2                                                       | dev (docs)           |
 
 Re-run `npm audit` after each phase; the goal is **zero high/critical**, moderates as low
 as the toolchain allows.
@@ -49,18 +49,29 @@ as the toolchain allows.
 Each phase: branch off `main` → upgrade → follow the migration notes → `npm run validate:full`
 → Docker build → (if iOS touched) on-device smoke → PR. Land one before starting the next.
 
-### Phase 1 — Tooling-only majors (low risk, no runtime impact)
+### Phase 1 — Tooling-only majors (low risk, no runtime impact) — ✅ DONE (July 19, 2026)
+
+Landed in `deps/phase-1-tooling-majors`. Cleared the **OpenTelemetry advisory cluster**
+(via redocly v2). `@types/node` was pinned to **^22** (not 26) to match the Node 20 ECS
+runtime. `openapi-typescript` 7's stricter internal redocly validation forced resolving
+the verify endpoint's nullable `user` field: the `allOf`+`nullable` form was replaced with
+an **inline `type: object` + `nullable: true`** schema — the only 3.0 shape redocly v2,
+openapi-typescript 7, AND jest-openapi's runtime validator all accept (keep it in sync with
+the `User` component). The now-redundant `.redocly.lint-ignore.yaml` was removed.
+Verified: `validate:full` (web 369/13/218 + E2E, iOS build+test) + Docker build all green.
+`undici` did **not** clear here (openapi-typescript 7 still pulls a flagged transitive) —
+reassigned to a later phase.
 
 Bundle these; none touch shipped code.
 
-| Package              | 5.x/current → target            | Notes                                                                                                                |
-| -------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `@redocly/cli`       | 1.34 → 2.x                      | New lint defaults; may need `redocly.yaml` tweaks (we already have one). Clears the OpenTelemetry advisories.        |
-| `openapi-typescript` | 6.7 → 7.x                       | Output format changes — **regenerate `lib/api-types.ts` and eyeball the diff**; run contract tests. Clears `undici`. |
-| `concurrently`       | 8 → 10                          | CLI flags stable; used in `test:contract`.                                                                           |
-| `lint-staged`        | 16 → 17                         | Config format stable.                                                                                                |
-| `wait-on`            | 7 → 9                           | Used in `test:contract:wait`.                                                                                        |
-| `@types/node`        | 22 → 26 (or match Node runtime) | Type-only. Match the ECS Node version.                                                                               |
+| Package              | 5.x/current → target  | Notes                                                                                                                                                                   |
+| -------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@redocly/cli`       | 1.34 → 2.x            | New lint defaults; may need `redocly.yaml` tweaks (we already have one). Clears the OpenTelemetry advisories.                                                           |
+| `openapi-typescript` | 6.7 → 7.x             | Output reformatted (4-space, inline objects) — regenerated + reviewed (semantically identical); forced the verify `user` inline-schema rewrite. Did NOT clear `undici`. |
+| `concurrently`       | 8 → 10                | CLI flags stable; used in `test:contract`.                                                                                                                              |
+| `lint-staged`        | 16 → 17               | Config format stable.                                                                                                                                                   |
+| `wait-on`            | 7 → 9                 | Used in `test:contract:wait`.                                                                                                                                           |
+| `@types/node`        | 22 → **^22 (pinned)** | Type-only. Pinned to ^22 to match the Node 20 ECS runtime — NOT 26 (local is 26).                                                                                       |
 
 **Acceptance**: `validate:full` green; generated types reviewed; contract tests pass.
 
