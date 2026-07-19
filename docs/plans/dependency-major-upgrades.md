@@ -1,7 +1,8 @@
 # Dependency Major-Version Upgrade Plan
 
 > **Created**: July 19, 2026
-> **Status**: In progress — Phases 1 ✅, 2 ✅, 3 ✅ done (July 19, 2026); Phases 4–6 planned
+> **Status**: In progress — Phases 1 ✅, 2 ✅, 3 ✅, 4 ✅ done (July 19, 2026); Phases 5–6 planned.
+> **`npm audit`: 0 high/critical** as of Phase 4.
 > **Context**: The safe, in-semver dependency updates + `npm audit fix` already landed
 > (26 → residual vulnerabilities, all remaining ones require the breaking upgrades below).
 > This plan covers the **major-version** jumps deliberately deferred from that pass.
@@ -29,15 +30,15 @@ Everything here is currently **mitigated or non-exploitable in production**:
 
 ## Residual advisories these upgrades clear
 
-| Advisory                                  | Fixed by                                                                                                                             | Surface    |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------- |
-| Next.js Image Optimizer DoS (high)        | `next` 16 — ✅ CLEARED (Phase 2)                                                                                                     | prod       |
-| `postcss` XSS in stringify (moderate)     | NOT cleared by Next 16 — fires on postcss **bundled inside** next (`<8.5.10`); our top-level postcss is 8.5.19. Awaits a Next patch. | build      |
-| `axios` CSRF / `openapi-validator` (high) | `jest-openapi` 0.14                                                                                                                  | test       |
-| `undici` decompression DoS (moderate)     | `undici` 8 (openapi-typescript 7 alone did **not** clear it — Phase 1)                                                               | build/test |
-| `elliptic`/`crypto-browserify` (low)      | `@storybook/*` 10.5                                                                                                                  | dev        |
-| `uuid` bounds check (moderate)            | `next-auth` (via Next 16 stack)                                                                                                      | prod (low) |
-| OpenTelemetry baggage (moderate)          | `@redocly/cli` 2                                                                                                                     | dev (docs) |
+| Advisory                                  | Fixed by                                                                                                                                                                                                                           | Surface    |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| Next.js Image Optimizer DoS (high)        | `next` 16 — ✅ CLEARED (Phase 2)                                                                                                                                                                                                   | prod       |
+| `postcss` XSS in stringify (moderate)     | NOT cleared by Next 16 — fires on postcss **bundled inside** next (`<8.5.10`); our top-level postcss is 8.5.19. Awaits a Next patch.                                                                                               | build      |
+| `axios` CSRF / `openapi-validator` (high) | **npm `overrides`** (openapi-validator → axios ^1.12) — ✅ CLEARED (Phase 4). `jest-openapi` 0.14.2 is the latest and still pins `openapi-validator` → `axios@0.21`, so a version bump alone did NOT clear it.                     | test       |
+| `undici` decompression DoS (high)         | `undici` **7** — ✅ CLEARED (Phase 4). Direct devDep bump 5→7 (NOT 8 — undici 8 requires Node ≥22.19 and crashes on the Node 20 CI/prod runtime; 7 feature-detects `markAsUncloneable`). Needed a jest.setup Web-Streams polyfill. | build/test |
+| `elliptic`/`crypto-browserify` (low)      | `@storybook/*` 10.5                                                                                                                                                                                                                | dev        |
+| `uuid` bounds check (moderate)            | `next-auth` (via Next 16 stack)                                                                                                                                                                                                    | prod (low) |
+| OpenTelemetry baggage (moderate)          | `@redocly/cli` 2                                                                                                                                                                                                                   | dev (docs) |
 
 Re-run `npm audit` after each phase; the goal is **zero high/critical**, moderates as low
 as the toolchain allows.
@@ -142,19 +143,46 @@ React 19 clears no advisories (expected); none regressed.
 
 **Acceptance**: ✅ all component/page tests green; Storybook builds; app builds & renders.
 
-### Phase 4 — jest-openapi (+ any remaining Storybook/webpack transitive advisories)
+### Phase 4 — Storybook pin + clear the axios & undici highs — ✅ DONE (July 19, 2026)
 
-- **Note**: Storybook is already on **10.5** (Phase 1's in-semver bumps) and builds clean
-  on React 19 (verified in Phase 3), so the "Storybook major" framing is largely moot. What
-  remains is whether any `elliptic`/`crypto-browserify`/`node-polyfill-webpack-plugin`
-  transitive advisories still surface under `@storybook/nextjs` — check `npm audit` and bump
-  only if flagged; a further `@storybook/*` bump may pull those in.
-- `jest-openapi` 0.14 — clears the `axios`/`openapi-validator` high. **Watch out**: the
-  contract suite depends on `toSatisfyApiSpec`; verify the matcher API is unchanged (it drove
-  the verify-endpoint nullable-`user` handling in Phase 1).
+Landed in `deps/phase-4-storybook-jest-openapi`. **Cleared all remaining high advisories —
+`npm audit` now reports 0 high/critical.** This phase turned out different from the original
+framing (recorded here so the reasoning survives):
 
-**Acceptance**: `build-storybook` green; contract tests green; `npm audit` shows the
-axios/openapi-validator highs cleared.
+- **Storybook**: already running **10.5.2**, but `package.json` still pinned `^10.1.10` (the
+  caret had floated up on install). Pinned the four `@storybook/*` + `storybook` +
+  `eslint-plugin-storybook` to `^10.5.2` so the manifest matches reality. This already cleared
+  the `elliptic`/`crypto-browserify` cluster.
+- **axios high — NOT fixable by a version bump.** The plan assumed `jest-openapi` 0.14 clears
+  it; it does not. `jest-openapi@0.14.2` is the **latest** release and still depends on
+  `openapi-validator@^0.14.2`, which pins the ancient `axios@0.21.4` (the vulnerable one).
+  There is no newer jest-openapi. Fixed with a scoped npm **`override`**
+  (`openapi-validator` → `axios: ^1.12.0`), resolving to 1.18.1. Safe because our contract
+  suite calls `jestOpenAPI(localFilePath)` — it never exercises openapi-validator's remote
+  (axios) spec-fetch path. **Consequence**: axios 1.x removed the internal
+  `require('axios/lib/adapters/http')`; two contract test files used it to force the Node
+  adapter under jsdom — switched both to the supported `axios.defaults.adapter = 'http'`.
+- **undici high — pulled forward from "deferred".** `undici` was a direct devDep pinned
+  `^5.29.0` (the last remaining high, `<=6.26.0`). It's only a **test-only Fetch polyfill** in
+  `jest.setup.js` (`Request`/`Response`/`Headers`/`FormData`), so bumped it to **`^7.16.0`**
+  (resolves 7.28.0). **Not 8**: undici 8 requires Node **≥22.19** and calls
+  `webidl.util.markAsUncloneable` unconditionally, which throws on the **Node 20** CI/prod
+  runtime (`TypeError: markAsUncloneable is not a function` — caught by CI, not by local Node
+  26). undici 7 feature-detects that API, so it runs on Node 20 and still clears the advisory
+  (fix range is `<=6.26.0`). Verified undici 7 loading under a real `node:20-alpine` container.
+  undici 8's fetch reads the Web-Streams globals off `global`, which jsdom doesn't define →
+  added a `ReadableStream`/`WritableStream`/`TransformStream` + `MessagePort` polyfill (from
+  `node:stream/web` / `node:worker_threads`) in `jest.setup.js` before requiring undici (undici
+  7 benefits from the same polyfill). **undici 8 becomes available once the Node 20→22 base-image
+  move lands** (see Runtime/infrastructure below).
+
+Verified: contract suite **218/218** with axios 1.18.1; `build-storybook` clean; `validate:web`
+green (unit, integration, contract, E2E smoke); `npm audit` **0 high/critical** (4 moderates
+remain: `next`/`next-auth`/`postcss`/`uuid` — all framework-internal, awaiting Next patches /
+next-auth v5). No iOS files touched.
+
+**Acceptance**: ✅ `build-storybook` green; contract tests green; `npm audit` shows the
+axios/openapi-validator **and** undici highs cleared.
 
 ### Phase 5 — Prisma 5 → 7 (data layer, careful)
 
@@ -186,7 +214,7 @@ Lower urgency; some may not be worth it:
 - `eslint` 9 → 10 — flat-config already in use; check plugin compat.
 - `node-fetch` 2 → 3 (ESM-only) — only if still used; prefer removing in favor of global `fetch`.
 - `sharp` 0.34 → 0.35 — minor within 0.x but native; verify image handling in Docker.
-- `undici` — transitively resolved by Phase 1/2; pin only if still flagged.
+- ~~`undici`~~ — ✅ done in Phase 4 (direct devDep 5→8, test-only Fetch polyfill).
 
 ---
 
