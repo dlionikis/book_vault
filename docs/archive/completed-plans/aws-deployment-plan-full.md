@@ -797,8 +797,8 @@ aws cloudfront create-distribution \
 
 ### Step 4.2: Configure Cache Behaviors
 
-- **Images (_.jpg, _.png)**: Cache for 1 year (images don't change)
-- **Audio (_.mp3, _.m4a, \*.m4b)**: No cache (use S3 directly with range requests)
+- **Images (\_.jpg, \_.png)**: Cache for 1 year (images don't change)
+- **Audio (\_.mp3, \_.m4a, \*.m4b)**: No cache (use S3 directly with range requests)
 
 ---
 
@@ -837,17 +837,19 @@ aws acm describe-certificate \
 Add these CNAME records:
 
 **Record 1: SSL Certificate Validation**
-| Field | Value |
-|-------|-------|
-| Type | CNAME |
-| Name | `_e88945a577d6bdac26d0807c2a1143da.bookvault` |
+
+| Field | Value                                                              |
+| ----- | ------------------------------------------------------------------ |
+| Type  | CNAME                                                              |
+| Name  | `_e88945a577d6bdac26d0807c2a1143da.bookvault`                      |
 | Value | `_71291e2c414bf606296faceaf1d884dc.jkddzztszm.acm-validations.aws` |
 
 **Record 2: Subdomain → ALB**
-| Field | Value |
-|-------|-------|
-| Type | CNAME |
-| Name | `bookvault` |
+
+| Field | Value                                                 |
+| ----- | ----------------------------------------------------- |
+| Type  | CNAME                                                 |
+| Name  | `bookvault`                                           |
 | Value | `book-vault-alb-<RANDOM>.us-east-1.elb.amazonaws.com` |
 
 ### Step 5.4: Wait for Certificate Validation

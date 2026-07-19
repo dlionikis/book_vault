@@ -88,8 +88,7 @@ import { authOptions, getAuthUserFromRequest } from '@/lib/auth';
 export type AuthedUser = { id: string; username: string };
 
 export type RequireUserResult =
-  | { user: AuthedUser; error?: never }
-  | { user?: never; error: NextResponse };
+  { user: AuthedUser; error?: never } | { user?: never; error: NextResponse };
 
 /** Dual auth: web session cookie OR mobile bearer token. */
 export async function requireUser(request: NextRequest): Promise<RequireUserResult> {

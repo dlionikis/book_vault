@@ -5,10 +5,12 @@ const createJestConfig = nextJest({
   dir: './',
 });
 
-// ES modules in node_modules that Jest must transform (jose is ESM-only; jest.setup
-// and lib/jwt.ts load the real thing — no stub)
+// ES modules in node_modules that Jest must transform:
+// - jose is ESM-only (jest.setup and lib/jwt.ts load the real thing — no stub)
+// - @aws-sdk ships `export` statements in its dist-cjs builds since v3.1090
+//   (the page tests import the real book-transformer → lib/s3 → @aws-sdk/client-s3)
 const ESM_ALLOWLIST_PATTERN =
-  'node_modules/(?!((.*/)?jose($|/)|react-markdown|remark-.*|micromark.*|mdast-.*|unist-.*|unified|bail|is-plain-obj|trough|vfile|vfile-message|devlop))';
+  'node_modules/(?!((.*/)?jose($|/)|@aws-sdk/|@smithy/|react-markdown|remark-.*|micromark.*|mdast-.*|unist-.*|unified|bail|is-plain-obj|trough|vfile|vfile-message|devlop))';
 
 // Settings shared by every project
 const sharedConfig = {
