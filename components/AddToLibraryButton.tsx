@@ -18,10 +18,17 @@ export default function AddToLibraryButton({
   showSeriesOption = false,
   onSuccess,
 }: AddToLibraryButtonProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [inLibrary, setInLibrary] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+
+  // NextAuth hydrates the session asynchronously on the client. Until it
+  // resolves, `session?.user` is undefined — and a click in that window would
+  // hit the `!session?.user` branch below and bounce the user to /auth/login
+  // even though they're logged in. Treat the loading window as "not yet
+  // interactive" so the button is disabled until the session is known.
+  const sessionLoading = status === 'loading';
 
   // Check if book is in library
   useEffect(() => {
@@ -145,7 +152,7 @@ export default function AddToLibraryButton({
     <>
       <button
         onClick={handleClick}
-        disabled={loading}
+        disabled={loading || sessionLoading}
         className={`${sizeClasses[size]} ${
           inLibrary
             ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800'

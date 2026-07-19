@@ -130,6 +130,10 @@ test('web smoke: login → search → detail → play → add to library', async
   await page.goto(`/books/${bookId}`);
   const addButton = page.getByRole('button', { name: 'Add to Library' });
   await expect(addButton).toBeVisible();
+  // The button is disabled until NextAuth finishes hydrating the client session
+  // (a click before then would bounce to /auth/login). Wait for it to become
+  // enabled so this step is deterministic rather than racing hydration.
+  await expect(addButton).toBeEnabled();
   await addButton.click();
   await expect(page.getByRole('button', { name: 'In Library' })).toBeVisible();
 
