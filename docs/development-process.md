@@ -309,16 +309,15 @@ not _test cases_).
 Before opening a PR:
 
 - [ ] `npm run validate:full` green (needs `docker-compose up -d`)
-- [ ] `npm run ios:validate` green **if** `ios/**` changed (this is the only place Swift
-      drift + strict SwiftLint run)
+- [ ] `npm run ios:validate` green **if** `ios/**` changed (Swift drift + strict
+      SwiftLint + build/tests; also run by deploy, but CI does not fail on SwiftLint)
 - [ ] New/changed endpoint → spec updated, contract case added, types regenerated (§6)
 - [ ] Invariant sweep clean (§5) if you touched auth, routes, or iOS services
 - [ ] No AI attribution in commit/PR text (see [CLAUDE.md](../CLAUDE.md) §3.5)
 - [ ] Branch off `main`; don't commit generated artifacts by hand — let the hook do it
 
-Before a **deploy** (in addition to the above): `npm run deploy:dry-run` green — it runs
-the deploy's own validation phase, including `swiftlint --strict`, which CI does **not**
-fail on (§8).
+Before a **deploy**: `npm run deploy:dry-run` green — it runs the complete gate
+(web + DB suites + iOS) without deploying (§8).
 
 ---
 
@@ -339,31 +338,43 @@ check the validation phase first; it usually never reached AWS. The log is
 | `npm run deploy:only`    | no         | no         | yes      |
 | `npm run deploy:dry-run` | yes        | yes        | no       |
 
-### ⚠️ Deploy validation ≠ `validate:full`
+### Deploy validation = `validate:full` + iOS (shared source of truth)
 
-They overlap but are **not** the same set — this divergence has bitten us:
+`deploy.sh` and `validate.sh` both source the same step library
+([`scripts/lib/validation-steps.sh`](../scripts/lib/validation-steps.sh)), so their
+validation **cannot diverge**. Deploy runs the **identical web gate + DB suites** as
+`validate:full`, then adds the **iOS gate**:
 
-- **Deploy runs iOS validation** (Swift drift, **`swiftlint --strict`**, iOS build, iOS
-  tests) that `validate:full` does **not**. `swiftlint --strict` is a **hard gate** here,
-  even though CI's `ios-tests.yml` runs SwiftLint as `continue-on-error`. **Result: a
-  lint violation can pass CI green and still block `npm run deploy`.** (This is exactly
-  what happened — an unused-closure-param violation from a merged PR failed deploy while
-  CI was green.)
-- **Deploy does NOT run** integration, contract, or E2E tests (suites 3–5). It runs only
-  format, lint, type-check, api validate/drift/coverage, and `npm test` (unit). So a
-  green deploy does **not** prove contract/E2E health — run `validate:full` separately.
+| Stage                                                      | `validate:full` | `deploy` / `deploy:dry-run` |
+| ---------------------------------------------------------- | --------------- | --------------------------- |
+| Web gate (format, lint, type-check, api\*, unit)           | ✅              | ✅                          |
+| DB suites (integration, contract, E2E)                     | ✅              | ✅                          |
+| iOS gate (Swift drift, `swiftlint --strict`, build, tests) | ❌              | ✅                          |
 
-**Takeaway**: before a real deploy, run **`npm run deploy:dry-run`** to exercise the exact
-validation phase deploy uses (web + iOS), and `npm run validate:full` for the DB-backed
-suites deploy skips. Together they cover everything.
+- `deploy` is therefore a **superset** of `validate:full`. `deploy:web` runs the web
+  gate + DB suites (no iOS); `deploy:only` skips all validation.
+- Because deploy now runs the DB suites, **Postgres must be up** (`docker-compose up -d`)
+  for any deploy that runs web validation — the shared `require_database` step hard-stops
+  with a clear message otherwise.
+- **Why this alignment matters**: `swiftlint --strict` is a **hard gate** in the iOS part,
+  but CI's `ios-tests.yml` runs SwiftLint as `continue-on-error`. So a lint violation can
+  still pass CI green and block `npm run deploy` — which is exactly what happened once (an
+  unused-closure-param from a merged PR). Running the shared gate locally is what catches
+  it. (Making SwiftLint blocking in CI would close this gap entirely — a good follow-up.)
 
-### Deploy validation phase — exact steps
+**Takeaway**: **`npm run deploy:dry-run`** runs the complete gate (web + DB + iOS) without
+deploying — the best single pre-deploy check.
 
-Web (`run_web_validation`): `format:check` → `lint` → `type-check` → `api:validate` →
+### Validation phase — exact steps (from the shared library)
+
+Web gate (`run_web_gate`): `format:check` → `lint` → `type-check` → `api:validate` →
 `api:check-drift` → `api:check-coverage` → `npm test`.
 
-iOS (`run_ios_validation`, only on `npm run deploy` / `deploy:dry-run`):
-`api:check-drift:swift` → `swiftlint --strict` → `xcodebuild build` → `xcodebuild test`.
+DB suites (`run_db_suites`, after `require_database`): `test:integration` →
+`test:contract` → `test:e2e`.
+
+iOS gate (`run_ios_gate`, deploy only): `api:check-drift:swift` → `swiftlint --strict` →
+`xcodebuild build` → `xcodebuild test`.
 
 ### Deploy phase requirements (what the AWS push needs)
 

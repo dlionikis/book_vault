@@ -1,9 +1,13 @@
 #!/bin/bash
 set -eo pipefail
 
-# Web validation script wrapper - runs npm run validate:full with logging
-# Usage: ./scripts/validate.sh
+# Web validation script wrapper - runs npm run validate:full with logging.
+# Runs the web gate + the DB-backed suites (integration/contract/E2E).
+# It does NOT run iOS checks — that's the iOS gate (npm run ios:validate).
+# `npm run deploy` runs this same web gate + DB suites + the iOS gate, from the
+# shared step library below, so the two cannot diverge.
 #
+# Usage: ./scripts/validate.sh
 # Logs are written to: logs/validate.log
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -23,109 +27,15 @@ echo "========================================"
 
 cd "$PROJECT_ROOT"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-NC='\033[0m' # No Color
+# Shared step definitions (colors, CURRENT_STEP, run_* functions, trap installer)
+# shellcheck source=scripts/lib/validation-steps.sh
+source "$SCRIPT_DIR/lib/validation-steps.sh"
+install_step_trap
 
-# Track current step for error reporting
-CURRENT_STEP=""
-
-# Trap to show failed step on error (also write directly to log file)
-trap 'if [ -n "$CURRENT_STEP" ]; then
-  echo ""
-  echo -e "${RED}❌ Failed: $CURRENT_STEP${NC}"
-  echo "See full log: $LOG_FILE"
-  echo "" >> "$LOG_FILE"
-  echo "❌ Failed: $CURRENT_STEP" >> "$LOG_FILE"
-  echo "Timestamp: $(date)" >> "$LOG_FILE"
-fi' ERR
-
-run_format_check() {
-  CURRENT_STEP="Format check (prettier)"
-  echo "🔍 Checking formatting..."
-  npm run format:check
-}
-
-run_lint() {
-  CURRENT_STEP="Lint (eslint)"
-  echo "🔍 Running ESLint..."
-  npm run lint
-}
-
-run_type_check() {
-  CURRENT_STEP="Type check (tsc)"
-  echo "🔍 Running TypeScript check..."
-  npm run type-check
-}
-
-run_api_validate() {
-  CURRENT_STEP="API spec validation (redocly)"
-  echo "🔍 Validating OpenAPI spec..."
-  npm run api:validate
-}
-
-run_api_drift_check() {
-  CURRENT_STEP="TypeScript type drift check"
-  echo "🔄 Checking TypeScript type drift..."
-  npm run api:check-drift
-}
-
-run_api_coverage() {
-  CURRENT_STEP="API endpoint coverage"
-  echo "🔍 Checking API endpoint coverage..."
-  npm run api:check-coverage
-}
-
-run_tests() {
-  CURRENT_STEP="Jest tests (unit)"
-  echo "🧪 Running unit tests..."
-  npm test
-}
-
-require_database() {
-  CURRENT_STEP="Database availability check"
-  if ! (echo > /dev/tcp/localhost/5433) 2>/dev/null; then
-    echo -e "${RED}❌ PostgreSQL is not reachable on port 5433.${NC}"
-    echo "   Integration and contract tests need the database:"
-    echo "   docker-compose up -d"
-    exit 1
-  fi
-}
-
-run_integration_tests() {
-  CURRENT_STEP="Jest tests (integration, real DB)"
-  echo "🧪 Running integration tests..."
-  npm run test:integration
-}
-
-run_contract_tests() {
-  CURRENT_STEP="OpenAPI contract tests (live server)"
-  echo "🔍 Running live contract tests against the spec..."
-  npm run test:contract
-}
-
-run_e2e_smoke() {
-  CURRENT_STEP="Playwright web smoke (E2E, live server)"
-  echo "🎭 Running Playwright web smoke..."
-  # Playwright owns the dev server (webServer in playwright.config.ts) and
-  # globalSetup re-checks the DB + seeds fixtures. The DB was already gated by
-  # require_database above.
-  npm run test:e2e
-}
-
-# Run all validations
-run_format_check
-run_lint
-run_type_check
-run_api_validate
-run_api_drift_check
-run_api_coverage
-run_tests
+# Run the web gate, then the DB-backed suites
+run_web_gate
 require_database
-run_integration_tests
-run_contract_tests
-run_e2e_smoke
+run_db_suites
 
 # Clear step tracking on success
 CURRENT_STEP=""

@@ -35,18 +35,13 @@ log_step() { echo -e "${GREEN}==>${NC} $1"; }
 log_warn() { echo -e "${YELLOW}⚠️  $1${NC}"; }
 log_error() { echo -e "${RED}❌ $1${NC}"; }
 
-# Track current step for error reporting
-CURRENT_STEP=""
-
-# Trap to show failed step on error (also write directly to log file)
-trap 'if [ -n "$CURRENT_STEP" ]; then
-  echo ""
-  log_error "Failed: $CURRENT_STEP"
-  echo "See full log: $LOG_FILE"
-  echo "" >> "$LOG_FILE"
-  echo "❌ Failed: $CURRENT_STEP" >> "$LOG_FILE"
-  echo "Timestamp: $(date)" >> "$LOG_FILE"
-fi' ERR
+# Shared validation steps (same source of truth as scripts/validate.sh, so the
+# deploy gate and validate:full can never diverge in what they run).
+# Provides: run_web_gate, require_database, run_db_suites, run_ios_gate,
+# CURRENT_STEP, install_step_trap.
+# shellcheck source=scripts/lib/validation-steps.sh
+source "$SCRIPT_DIR/lib/validation-steps.sh"
+install_step_trap
 
 # === FUNCTIONS ===
 
@@ -101,68 +96,15 @@ check_git_status() {
 }
 
 run_web_validation() {
-  log_step "Running web validation..."
-
-  CURRENT_STEP="Format check (prettier)"
-  npm run format:check
-
-  CURRENT_STEP="Lint (eslint)"
-  npm run lint
-
-  CURRENT_STEP="Type check (tsc)"
-  npm run type-check
-
-  CURRENT_STEP="API spec validation (redocly)"
-  npm run api:validate
-
-  CURRENT_STEP="TypeScript type drift check"
-  npm run api:check-drift
-
-  CURRENT_STEP="API endpoint coverage"
-  npm run api:check-coverage
-
-  CURRENT_STEP="Jest tests"
-  npm test
+  log_step "Running web validation (same web gate + DB suites as validate:full)..."
+  run_web_gate
+  require_database
+  run_db_suites
 }
 
 run_ios_validation() {
-  log_step "Running iOS validation..."
-  cd "$PROJECT_ROOT/ios"
-
-  CURRENT_STEP="Swift type drift check"
-  cd "$PROJECT_ROOT"
-  npm run api:check-drift:swift
-  cd "$PROJECT_ROOT/ios"
-
-  CURRENT_STEP="SwiftLint"
-  swiftlint lint --config .swiftlint.yml --strict
-
-  CURRENT_STEP="iOS build"
-  xcodebuild build \
-    -scheme BookVault \
-    -destination 'generic/platform=iOS Simulator' \
-    CODE_SIGNING_ALLOWED=NO
-
-  CURRENT_STEP="iOS tests"
-  # Tests need a specific simulator - find the first available iPhone simulator
-  SIMULATOR_DEST=$(xcrun simctl list devices available -j | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for runtime, devices in data.get('devices', {}).items():
-    if 'iOS' in runtime:
-        for d in devices:
-            if 'iPhone' in d['name'] and d['isAvailable']:
-                print(f\"platform=iOS Simulator,id={d['udid']}\")
-                sys.exit(0)
-print('platform=iOS Simulator,name=Any iOS Simulator Device')
-")
-  xcodebuild test \
-    -scheme BookVault \
-    -destination "$SIMULATOR_DEST" \
-    -enableCodeCoverage YES \
-    CODE_SIGNING_ALLOWED=NO
-
-  cd "$PROJECT_ROOT"
+  log_step "Running iOS validation (same iOS gate as ios:validate)..."
+  run_ios_gate
 }
 
 run_deploy() {
