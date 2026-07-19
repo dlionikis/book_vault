@@ -2,6 +2,13 @@ import Link from 'next/link';
 import BackButton from '@/components/BackButton';
 import { prisma } from '@/lib/db';
 
+// This page is DB-backed and must render per-request. Without this, Next tries
+// to statically prerender it during `next build` (where DATABASE_URL is unset),
+// the Prisma query throws, the try/catch swallows it, and the build log fills
+// with PrismaClientInitializationError noise. force-dynamic makes Next render it
+// at request time (as it already does in prod) and keeps the build log clean.
+export const dynamic = 'force-dynamic';
+
 interface CategoryWithCount {
   id: string;
   name: string;

@@ -2,6 +2,11 @@ import Link from 'next/link';
 import BackButton from '@/components/BackButton';
 import { prisma } from '@/lib/db';
 
+// DB-backed page: render per-request instead of static prerender at build time
+// (where DATABASE_URL is unset and the Prisma query would throw). Keeps the
+// build log free of PrismaClientInitializationError noise.
+export const dynamic = 'force-dynamic';
+
 interface AuthorWithCount {
   id: string;
   name: string;
