@@ -1,13 +1,37 @@
 #!/bin/bash
 set -eo pipefail
 
-# Web validation script wrapper - runs npm run validate:full with logging
-# Usage: ./scripts/validate.sh
+# Validation script — runs the project gates from the shared step library.
+# Usage:
+#   ./scripts/validate.sh            (or --all)  Web gate + DB suites + iOS gate — the true "everything"
+#   ./scripts/validate.sh --web                  Web gate + DB suites (no iOS; no Xcode needed)
+#   ./scripts/validate.sh --ios                  iOS gate only (Swift drift + SwiftLint + build + tests)
+#
+# npm mapping: validate:full → (default/all), validate:web → --web, validate:ios → --ios.
+# `npm run deploy` runs the same web+DB+iOS gate (from the same library) then pushes,
+# so validation and deployment cannot diverge.
 #
 # Logs are written to: logs/validate.log
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# === ARGUMENT PARSING ===
+
+RUN_WEB=true
+RUN_IOS=true
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --all)  RUN_WEB=true;  RUN_IOS=true;  shift ;;
+    --web)  RUN_WEB=true;  RUN_IOS=false; shift ;;
+    --ios)  RUN_WEB=false; RUN_IOS=true;  shift ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: $0 [--all|--web|--ios]"
+      exit 1 ;;
+  esac
+done
 
 # Setup logging
 LOG_DIR="$PROJECT_ROOT/logs"
@@ -18,118 +42,32 @@ mkdir -p "$LOG_DIR"
 exec > >(tee -a "$LOG_FILE") 2>&1
 echo ""
 echo "========================================"
-echo "Web validation started: $(date)"
+echo "Validation started: $(date)"
+echo "  web=$RUN_WEB  ios=$RUN_IOS"
 echo "========================================"
 
 cd "$PROJECT_ROOT"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-NC='\033[0m' # No Color
+# Shared step definitions (colors, CURRENT_STEP, run_* functions, trap installer)
+# shellcheck source=scripts/lib/validation-steps.sh
+source "$SCRIPT_DIR/lib/validation-steps.sh"
+install_step_trap
 
-# Track current step for error reporting
-CURRENT_STEP=""
+# Web gate + DB-backed suites
+if [ "$RUN_WEB" = true ]; then
+  run_web_gate
+  require_database
+  run_db_suites
+fi
 
-# Trap to show failed step on error (also write directly to log file)
-trap 'if [ -n "$CURRENT_STEP" ]; then
-  echo ""
-  echo -e "${RED}❌ Failed: $CURRENT_STEP${NC}"
-  echo "See full log: $LOG_FILE"
-  echo "" >> "$LOG_FILE"
-  echo "❌ Failed: $CURRENT_STEP" >> "$LOG_FILE"
-  echo "Timestamp: $(date)" >> "$LOG_FILE"
-fi' ERR
-
-run_format_check() {
-  CURRENT_STEP="Format check (prettier)"
-  echo "🔍 Checking formatting..."
-  npm run format:check
-}
-
-run_lint() {
-  CURRENT_STEP="Lint (eslint)"
-  echo "🔍 Running ESLint..."
-  npm run lint
-}
-
-run_type_check() {
-  CURRENT_STEP="Type check (tsc)"
-  echo "🔍 Running TypeScript check..."
-  npm run type-check
-}
-
-run_api_validate() {
-  CURRENT_STEP="API spec validation (redocly)"
-  echo "🔍 Validating OpenAPI spec..."
-  npm run api:validate
-}
-
-run_api_drift_check() {
-  CURRENT_STEP="TypeScript type drift check"
-  echo "🔄 Checking TypeScript type drift..."
-  npm run api:check-drift
-}
-
-run_api_coverage() {
-  CURRENT_STEP="API endpoint coverage"
-  echo "🔍 Checking API endpoint coverage..."
-  npm run api:check-coverage
-}
-
-run_tests() {
-  CURRENT_STEP="Jest tests (unit)"
-  echo "🧪 Running unit tests..."
-  npm test
-}
-
-require_database() {
-  CURRENT_STEP="Database availability check"
-  if ! (echo > /dev/tcp/localhost/5433) 2>/dev/null; then
-    echo -e "${RED}❌ PostgreSQL is not reachable on port 5433.${NC}"
-    echo "   Integration and contract tests need the database:"
-    echo "   docker-compose up -d"
-    exit 1
-  fi
-}
-
-run_integration_tests() {
-  CURRENT_STEP="Jest tests (integration, real DB)"
-  echo "🧪 Running integration tests..."
-  npm run test:integration
-}
-
-run_contract_tests() {
-  CURRENT_STEP="OpenAPI contract tests (live server)"
-  echo "🔍 Running live contract tests against the spec..."
-  npm run test:contract
-}
-
-run_e2e_smoke() {
-  CURRENT_STEP="Playwright web smoke (E2E, live server)"
-  echo "🎭 Running Playwright web smoke..."
-  # Playwright owns the dev server (webServer in playwright.config.ts) and
-  # globalSetup re-checks the DB + seeds fixtures. The DB was already gated by
-  # require_database above.
-  npm run test:e2e
-}
-
-# Run all validations
-run_format_check
-run_lint
-run_type_check
-run_api_validate
-run_api_drift_check
-run_api_coverage
-run_tests
-require_database
-run_integration_tests
-run_contract_tests
-run_e2e_smoke
+# iOS gate
+if [ "$RUN_IOS" = true ]; then
+  run_ios_gate
+fi
 
 # Clear step tracking on success
 CURRENT_STEP=""
 
 echo ""
-echo -e "${GREEN}✅ Web validation complete${NC}"
+echo -e "${GREEN}✅ Validation complete${NC} (web=$RUN_WEB ios=$RUN_IOS)"
 echo "   Log: $LOG_FILE"

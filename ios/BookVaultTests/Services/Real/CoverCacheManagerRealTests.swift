@@ -152,7 +152,7 @@ final class CoverCacheManagerRealTests: XCTestCase {
         let coverURL = apiBaseURL.appendingPathComponent("/api/images/book/cover.jpg")
 
         var requestCount = 0
-        MockURLProtocol.requestHandler = { request in
+        MockURLProtocol.requestHandler = { _ in
             requestCount += 1
             return (self.okResponse(for: coverURL), self.pngData())
         }
@@ -173,7 +173,7 @@ final class CoverCacheManagerRealTests: XCTestCase {
         let bookId = UUID()
         let coverURL = apiBaseURL.appendingPathComponent("/api/images/book/cover.jpg")
 
-        MockURLProtocol.requestHandler = { request in
+        MockURLProtocol.requestHandler = { _ in
             (self.okResponse(for: coverURL), self.pngData())
         }
 
