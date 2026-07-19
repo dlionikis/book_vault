@@ -53,6 +53,8 @@ npm run deploy                 # Full validation + deploy
 npm run deploy:dry-run         # Validate only
 ```
 
+**Before every PR**: run `npm run validate:full` (the complete web gate — unit + integration + contract + E2E + drift + coverage), and `npm run ios:validate` if `ios/**` changed. `npm test` alone is unit-only and is **not** sufficient. See **[docs/development-process.md](docs/development-process.md)** for the full test inventory, the pre-commit hook, what CI enforces, and the **hardening invariants that must not regress**.
+
 **Full command reference**: See [docs/testing.md](docs/testing.md)
 
 ---
@@ -79,6 +81,8 @@ npm run deploy:dry-run         # Validate only
 4. **Read-Only Libation** - Never modify source audiobook files
 
 5. **No AI attribution in git** - Never mention Claude or AI assistance in commit messages, PR titles, or PR bodies. No `Co-Authored-By: Claude` trailers, no "Generated with Claude Code" footers.
+
+6. **Run the full gate + protect the invariants** - `validate:full` before every PR (not just `npm test`). Never regress the hardening invariants (auth via `requireUser`/`requireAdmin`, no inline `getServerSession`; images route authed; chapter POST admin-only; iOS via `APIClientProtocol` not `URLSession.shared`; `isValidUuid` for id params; test partitioning; coverage ratchet). Full list + manual checks in [docs/development-process.md](docs/development-process.md) §5.
 
 ### File Organization
 
