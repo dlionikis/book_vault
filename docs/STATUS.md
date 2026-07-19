@@ -37,7 +37,7 @@
 ### Next Up
 
 - [x] **Pre-restore hardening (P0+P1)** - Security fixes + test infrastructure ([docs/plans/pre-restore-hardening-plan.md](plans/pre-restore-hardening-plan.md)) — ✅ complete (PRs #75–#79)
-- [ ] **S3 archive restore workflow** - Restore pipeline + push notifications ([docs/plans/s3-archive-restore-workflow-v2.md](plans/s3-archive-restore-workflow-v2.md)) — **in progress** (hardening unblocked; starting Phase 0)
+- [ ] **S3 archive restore workflow** - Restore pipeline + push notifications ([docs/plans/s3-archive-restore-workflow-v2.md](plans/s3-archive-restore-workflow-v2.md)) — **in progress** (Phase 0 ✅ shipped in #88; plan accuracy re-verified July 19; Phases 1–8 next)
 - [ ] **Remove volume slider (iOS)** - Remove the volume slider from the iOS audio playback view
 - [ ] **Duration remaining (iOS)** - Add remaining time display to the audio playback view
 - [ ] **Dismiss mini-player** - Add ability to close the recent playback mini-player

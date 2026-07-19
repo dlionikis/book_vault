@@ -4,6 +4,14 @@ import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { normalizeUuid, isValidUuid } from '@/lib/api-utils';
 import { getAudioUrl } from '@/lib/media';
+import { isS3Enabled } from '@/lib/s3';
+import {
+  getArchiveState,
+  initiateRestore,
+  estimatedCompletion,
+  setBookAvailability,
+  AVAILABILITY,
+} from '@/lib/restore';
 
 /** Presigned URL / local URL lifetime, in seconds. Mirrors downloads route. */
 const STREAM_URL_EXPIRY = 3600; // 1 hour
@@ -15,11 +23,12 @@ const STREAM_URL_EXPIRY = 3600; // 1 hour
  * or a local /api/audio URL (development) only when a client actually plays a
  * book — instead of eagerly attaching audioUrl to every list response.
  *
- * Phase 0 of the S3 archive restore workflow: this endpoint currently only
- * generates URLs. Phase 2 extends the production branch with HeadObject
- * ArchiveStatus detection, returning 202 { status: 'restoring' } for archived
- * files. The response schema already carries a `status` discriminator so that
- * addition is non-breaking for clients.
+ * Production (and S3_ENABLED hybrid mode) does a real-time HeadObject at play
+ * time: if the audio file is in the Intelligent-Tiering Archive Access tier,
+ * a restore is initiated (idempotent) and the response is
+ * 202 { status: 'restoring' } with an ETA. The cached Book.audioAvailability
+ * column is for badges only and self-heals here on every play attempt —
+ * a stale cache can never hand the client a URL that 403s.
  */
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -34,7 +43,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 
     const book = await prisma.book.findUnique({
       where: { id: bookId },
-      select: { id: true, audioUrl: true },
+      select: { id: true, audioUrl: true, audioAvailability: true },
     });
 
     if (!book) {
@@ -43,6 +52,37 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 
     if (!book.audioUrl) {
       return NextResponse.json({ error: 'Book has no audio file' }, { status: 400 });
+    }
+
+    // Real-time archive check (production/hybrid only — local files never
+    // archive). One cheap HeadObject per play tap; never trust the cache here.
+    if (isS3Enabled()) {
+      const { archived } = await getArchiveState(book.audioUrl);
+
+      if (archived) {
+        // Restore may or may not already be in flight — initiateRestore is
+        // idempotent for both cases and records/reuses the DB request.
+        const restoreRequest = await initiateRestore(
+          { id: book.id, audioUrl: book.audioUrl },
+          auth.user.id
+        );
+        return NextResponse.json(
+          {
+            status: 'restoring',
+            message:
+              'This audiobook is being restored from archive. It will be ready in 3-5 hours.',
+            bookId: book.id,
+            requestedAt: restoreRequest.requestedAt.toISOString(),
+            estimatedCompletion: estimatedCompletion(restoreRequest.requestedAt),
+          },
+          { status: 202 }
+        );
+      }
+
+      // Available — self-heal a stale cached state before presigning.
+      if (book.audioAvailability !== AVAILABILITY.AVAILABLE) {
+        await setBookAvailability(book.id, AVAILABILITY.AVAILABLE);
+      }
     }
 
     // getAudioUrl() branches on isS3Enabled(): presigned S3 URL in production

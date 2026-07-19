@@ -19,10 +19,12 @@ model User {
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
 
-  progress      UserProgress[]
-  lists         UserList[]
-  refreshTokens RefreshToken[]
-  downloads     UserDownload[]
+  progress        UserProgress[]
+  lists           UserList[]
+  refreshTokens   RefreshToken[]
+  downloads       UserDownload[]
+  deviceTokens    UserDeviceToken[]
+  restoreRequests MediaRestoreRequest[]
 
   @@map("users")
 }
@@ -42,6 +44,14 @@ model Book {
   createdAt         DateTime    @default(now()) @map("created_at")
   updatedAt         DateTime    @updatedAt @map("updated_at")
 
+  // Cached S3 Intelligent-Tiering availability for list-view badges ONLY.
+  // AVAILABLE | ARCHIVED | RESTORING. Playback/download decisions always do a
+  // real-time HeadObject (stream/restore endpoints) — this column may be up to
+  // ~24h stale (nightly sync) and self-heals on play. See
+  // docs/plans/s3-archive-restore-workflow-v2.md.
+  audioAvailability     String    @default("AVAILABLE") @map("audio_availability")
+  availabilityCheckedAt DateTime? @map("availability_checked_at")
+
   authors           BookAuthor[]
   narrators         BookNarrator[]
   series            BookSeries[]
@@ -50,6 +60,7 @@ model Book {
   progress          UserProgress[]
   listBooks         UserListBook[]
   downloads         UserDownload[]
+  restoreRequests   MediaRestoreRequest[]
 
   @@index([title])
   @@map("books")
@@ -247,4 +258,46 @@ model UserDownload {
   @@index([userId, downloadedAt(sort: Desc)])
   @@index([bookId])
   @@map("user_downloads")
+}
+
+model MediaRestoreRequest {
+  id          String    @id @default(uuid())
+  bookId      String    @map("book_id")
+  s3Key       String    @map("s3_key")
+
+  status      String    @default("in_progress") // in_progress, completed, failed
+  restoreTier String    @default("Standard") @map("restore_tier") // Standard (3-5h); Expedited is a paid test/future option
+
+  requestedAt   DateTime  @default(now()) @map("requested_at")
+  completedAt   DateTime? @map("completed_at")
+  lastCheckedAt DateTime? @map("last_checked_at")
+  errorMessage  String?   @map("error_message")
+
+  // Optional: system-initiated restores have no user; SetNull requires nullable
+  requestedByUserId String? @map("requested_by_user_id")
+
+  book        Book  @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  requestedBy User? @relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, lastCheckedAt])
+  @@index([bookId])
+  @@index([requestedByUserId])
+  @@map("media_restore_requests")
+}
+
+model UserDeviceToken {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  deviceToken    String   @map("device_token")
+  platform       String   @default("ios") // ios, web (future)
+  snsEndpointArn String?  @map("sns_endpoint_arn")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceToken])
+  @@index([userId])
+  @@map("user_device_tokens")
 }

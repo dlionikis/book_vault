@@ -392,6 +392,70 @@ describe('Download Endpoints', () => {
       // Cleanup
       await prisma.book.delete({ where: { id: book.id } });
     });
+    it('archived file: returns 202, records a real restore request, flips book to RESTORING', async () => {
+      // The route's HeadObject-derived metadata says the file is archived.
+      mockIsS3Enabled.mockReturnValue(true);
+      mockCheckDownloadLimit.mockResolvedValue(true);
+      mockGetS3ObjectMetadata.mockResolvedValue({
+        size: 125829120,
+        contentType: 'audio/mpeg',
+        archiveStatus: 'ARCHIVE_ACCESS',
+      });
+      // lib/restore's RestoreObject goes through the (auto-mocked) S3 client —
+      // stub it so the REAL initiateRestore + its REAL $transaction run against
+      // the real database.
+      (s3.getS3Client as jest.Mock).mockReturnValue({
+        send: jest.fn().mockResolvedValue({}),
+      });
+      (s3.getS3Bucket as jest.Mock).mockReturnValue('test-bucket');
+
+      const user = await prisma.user.create({
+        data: { username: 'test-archived-dl', passwordHash: 'hash' },
+      });
+      const book = await prisma.book.create({
+        data: { asin: 'B999888777', title: 'Archived Book', audioUrl: 'archived/audio.m4b' },
+      });
+      mockGetAuthUserFromRequest.mockResolvedValue({ id: user.id, username: user.username });
+
+      const request = new NextRequest(`http://localhost:3000/api/downloads/${book.id}`, {
+        method: 'POST',
+        body: JSON.stringify({ deviceId: 'device-1' }),
+      });
+
+      const response = await generateDownloadUrl(request, {
+        params: Promise.resolve({ bookId: book.id }),
+      });
+      const data = await response.json();
+
+      expect(response.status).toBe(202);
+      expect(data.status).toBe('restoring');
+      expect(data.bookId).toBe(book.id);
+      expect(typeof data.estimatedCompletion).toBe('string');
+      // No presigned URL for an archived file
+      expect(mockGeneratePresignedUrl).not.toHaveBeenCalled();
+
+      // The real $transaction committed: request row + book flipped RESTORING
+      const restoreRow = await prisma.mediaRestoreRequest.findFirst({
+        where: { bookId: book.id },
+      });
+      expect(restoreRow).toMatchObject({
+        status: 'in_progress',
+        s3Key: 'archived/audio.m4b',
+        requestedByUserId: user.id,
+      });
+      const updatedBook = await prisma.book.findUnique({ where: { id: book.id } });
+      expect(updatedBook?.audioAvailability).toBe('RESTORING');
+
+      // No download is recorded for a 202
+      const download = await prisma.userDownload.findFirst({
+        where: { userId: user.id, bookId: book.id },
+      });
+      expect(download).toBeNull();
+
+      // Cleanup (restore request cascades with the book)
+      await prisma.book.delete({ where: { id: book.id } });
+      await prisma.user.delete({ where: { id: user.id } });
+    });
   });
 
   describe('Rate Limiting', () => {

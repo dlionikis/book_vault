@@ -160,12 +160,80 @@ export interface paths {
          *     in development). Called at play time instead of eagerly attaching audio
          *     URLs to list responses.
          *
-         *     The response carries a `status` discriminator. Today it is always
-         *     `available`. A future release returns 202 with `status=restoring` when
-         *     the audio file is in the S3 Intelligent-Tiering Archive Access tier and
-         *     a restore has been initiated.
+         *     The response carries a `status` discriminator. In production the
+         *     endpoint does a real-time HeadObject: if the audio file is in the S3
+         *     Intelligent-Tiering Archive Access tier it initiates a restore
+         *     (idempotent) and returns 202 with `status=restoring`; otherwise it
+         *     returns 200 with a fresh `streamUrl`.
          */
         get: operations["getBookStream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/books/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request a restore for an archived audiobook
+         * @description Explicitly initiates an S3 Intelligent-Tiering restore for an archived
+         *     audio file (the "Request restore" button) without pretending to play.
+         *     Idempotent: an in-flight restore is reused, never duplicated. If the
+         *     file turns out not to be archived, responds 200 status=available and
+         *     self-heals the cached availability.
+         */
+        post: operations["restoreBook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/books/{id}/restore-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get restore progress for a book
+         * @description Reports the book's audio availability from the cached state (kept
+         *     current by the stream/restore endpoints, the restore poller, and the
+         *     nightly sync). Used by clients to poll while a restore is in progress.
+         */
+        get: operations["getBookRestoreStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/books/restores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the user's active and recently completed restores
+         * @description Returns the authenticated user's in-progress restore requests plus
+         *     those completed in the last 7 days, newest first.
+         */
+        get: operations["listRestores"];
         put?: never;
         post?: never;
         delete?: never;
@@ -793,7 +861,8 @@ export interface components {
         BookStreamResponse: {
             /**
              * @description - available: streamUrl is ready to play immediately
-             *     - restoring: audio is archived; a restore was initiated (future)
+             *     - restoring: audio is in the S3 Intelligent-Tiering Archive Access
+             *       tier; a restore was initiated (or is already in progress)
              * @enum {string}
              */
             status: "available" | "restoring";
@@ -821,6 +890,58 @@ export interface components {
              * @description Estimated restore completion (requestedAt + ~5h). Present when status=restoring.
              */
             estimatedCompletion?: string;
+        };
+        RestoreStatus: {
+            /**
+             * @description - available: audio is ready to stream
+             *     - archived: in the Archive Access tier; no restore in flight
+             *     - restoring: a restore is in progress (~3-5 hours)
+             * @enum {string}
+             */
+            status: "available" | "archived" | "restoring";
+            /**
+             * Format: date-time
+             * @description When the active restore was requested. Present when status=restoring.
+             */
+            requestedAt?: string;
+            /**
+             * Format: date-time
+             * @description requestedAt + ~5h. Present when status=restoring.
+             */
+            estimatedCompletion?: string;
+            /**
+             * Format: date-time
+             * @description When the most recent restore completed. Present when status=available.
+             */
+            completedAt?: string | null;
+            /** @description Error from the most recent failed restore. Present when status=archived. */
+            lastError?: string | null;
+        };
+        RestoreRequestSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            bookId: string;
+            /** @enum {string} */
+            status: "in_progress" | "completed" | "failed";
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            completedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description requestedAt + ~5h while in_progress; null otherwise
+             */
+            estimatedCompletion?: string | null;
+            book: {
+                /** Format: uuid */
+                id: string;
+                title: string;
+                coverUrl?: string | null;
+            };
+        };
+        RestoresListResponse: {
+            restores: components["schemas"]["RestoreRequestSummary"][];
         };
         Book: {
             /**
@@ -1517,6 +1638,144 @@ export interface operations {
             };
             /** @description Book not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    restoreBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Book ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Nothing to restore — the audio is already available */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookStreamResponse"];
+                };
+            };
+            /** @description Restore initiated or already in progress */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookStreamResponse"];
+                };
+            };
+            /** @description Invalid book ID or book has no audio file */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Book not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getBookRestoreStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Book ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current availability / restore progress */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestoreStatus"];
+                };
+            };
+            /** @description Invalid book ID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Book not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listRestores: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restore requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestoresListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2863,6 +3122,20 @@ export interface operations {
                         /** @description File size in bytes */
                         fileSize: number;
                     };
+                };
+            };
+            /**
+             * @description Audio file is in the S3 Intelligent-Tiering Archive Access tier; a
+             *     restore was initiated (idempotent). Same shape as the stream
+             *     endpoint's restoring response — retry the download after the
+             *     restore completes.
+             */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookStreamResponse"];
                 };
             };
             /** @description Book has no audio file */

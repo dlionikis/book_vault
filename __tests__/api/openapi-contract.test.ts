@@ -691,6 +691,117 @@ describe('OpenAPI Contract Tests', () => {
         expect(response.data).toHaveProperty('error');
       });
     });
+
+    describe('POST /api/books/{id}/restore', () => {
+      let testBookId: string;
+
+      beforeAll(async () => {
+        const response = await authenticatedRequest(`${BASE_URL}/api/books?limit=1`, {
+          method: 'GET',
+        });
+        if (response.data.books && response.data.books.length > 0) {
+          testBookId = response.data.books[0].id;
+        }
+      });
+
+      testFn('should satisfy OpenAPI spec (available in dev; restoring in prod)', async () => {
+        if (!testBookId) {
+          console.warn('No books in database, skipping test');
+          return;
+        }
+
+        const response = await authenticatedRequest(`${BASE_URL}/api/books/${testBookId}/restore`, {
+          method: 'POST',
+        });
+
+        // Local dev: S3 disabled → 200 status=available. Hybrid/prod against
+        // an archived file → 202 status=restoring. Both must satisfy the spec.
+        expect([200, 202]).toContain(response.status);
+        expect(response).toSatisfyApiSpec();
+        expect(['available', 'restoring']).toContain(response.data.status);
+      });
+
+      testFn('should return 404 for non-existent book', async () => {
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/books/00000000-0000-0000-0000-000000000000/restore`,
+          { method: 'POST' }
+        );
+
+        expect(response.status).toBe(404);
+        expect(response).toSatisfyApiSpec();
+      });
+
+      testFn('should return 401 for unauthenticated request', async () => {
+        const response = await axios.post(
+          `${BASE_URL}/api/books/00000000-0000-0000-0000-000000000000/restore`,
+          undefined,
+          { validateStatus: () => true }
+        );
+
+        expect(response.status).toBe(401);
+        expect(response).toSatisfyApiSpec();
+      });
+    });
+
+    describe('GET /api/books/{id}/restore-status', () => {
+      let testBookId: string;
+
+      beforeAll(async () => {
+        const response = await authenticatedRequest(`${BASE_URL}/api/books?limit=1`, {
+          method: 'GET',
+        });
+        if (response.data.books && response.data.books.length > 0) {
+          testBookId = response.data.books[0].id;
+        }
+      });
+
+      testFn('should satisfy OpenAPI spec', async () => {
+        if (!testBookId) {
+          console.warn('No books in database, skipping test');
+          return;
+        }
+
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/books/${testBookId}/restore-status`,
+          { method: 'GET' }
+        );
+
+        expect(response.status).toBe(200);
+        expect(response).toSatisfyApiSpec();
+        expect(['available', 'archived', 'restoring']).toContain(response.data.status);
+      });
+
+      testFn('should return 404 for non-existent book', async () => {
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/books/00000000-0000-0000-0000-000000000000/restore-status`,
+          { method: 'GET' }
+        );
+
+        expect(response.status).toBe(404);
+        expect(response).toSatisfyApiSpec();
+      });
+    });
+
+    describe('GET /api/books/restores', () => {
+      testFn('should satisfy OpenAPI spec', async () => {
+        const response = await authenticatedRequest(`${BASE_URL}/api/books/restores`, {
+          method: 'GET',
+        });
+
+        expect(response.status).toBe(200);
+        expect(response).toSatisfyApiSpec();
+        expect(Array.isArray(response.data.restores)).toBe(true);
+      });
+
+      testFn('should return 401 for unauthenticated request', async () => {
+        const response = await axios.get(`${BASE_URL}/api/books/restores`, {
+          validateStatus: () => true,
+        });
+
+        expect(response.status).toBe(401);
+        expect(response).toSatisfyApiSpec();
+      });
+    });
   });
 
   describe('Chapters Endpoints', () => {

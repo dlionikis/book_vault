@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { isS3Enabled, generatePresignedUrl, getS3ObjectMetadata } from '@/lib/s3';
+import { initiateRestore, estimatedCompletion } from '@/lib/restore';
 import { checkDownloadLimit } from '@/lib/rate-limit';
 import { normalizeUuid } from '@/lib/api-utils';
 import { getAbsoluteMediaPath } from '@/lib/media';
@@ -55,13 +56,34 @@ export async function POST(request: NextRequest, props: { params: Promise<{ book
     let expiresAt: string;
 
     if (isS3Enabled()) {
-      // Production: Generate pre-signed S3 URL
+      // Production: HeadObject first — an archived file would 403 mid-download
+      // if we handed out a presigned URL. If it's in the Archive Access tier,
+      // initiate a restore (idempotent) and return the same 202 shape as the
+      // stream endpoint; the client retries after the restore completes.
+      const metadata = await getS3ObjectMetadata(book.audioUrl);
+
+      if (metadata.archiveStatus) {
+        const restoreRequest = await initiateRestore(
+          { id: book.id, audioUrl: book.audioUrl },
+          user.id
+        );
+        return NextResponse.json(
+          {
+            status: 'restoring',
+            message:
+              'This audiobook is being restored from archive. It will be ready in 3-5 hours.',
+            bookId: book.id,
+            requestedAt: restoreRequest.requestedAt.toISOString(),
+            estimatedCompletion: estimatedCompletion(restoreRequest.requestedAt),
+          },
+          { status: 202 }
+        );
+      }
+
+      // Available: generate pre-signed S3 URL
       // audioUrl format: "book-folder/filename.mp3" (S3 key)
       const expiresIn = 3600; // 1 hour
       downloadUrl = await generatePresignedUrl(book.audioUrl, expiresIn);
-
-      // Get file size from S3
-      const metadata = await getS3ObjectMetadata(book.audioUrl);
       fileSize = metadata.size;
 
       // Calculate expiry time
