@@ -1,6 +1,12 @@
 # Testing Guide
 
-> **TL;DR**: All testing commands and CI workflows in one place. Run `npm run validate` for quick checks, `npm run validate:full` for full validation, `npm run deploy --dry-run` to test deployment pipeline.
+> **TL;DR**: Commands and how-to for writing/running tests. For the _authoritative_ picture
+> of the gates, what CI enforces, the deploy pipeline, and the hardening invariants that
+> must not regress, see **[development-process.md](development-process.md)** — this guide is
+> the day-to-day cheat-sheet and does not duplicate that detail.
+>
+> Everyday: `npm run validate:web` (web + DB, no Xcode). Full gate: `npm run validate:full`
+> (web + DB + iOS). Pre-deploy: `npm run deploy:dry-run`.
 
 **Jump to**: [Quick Reference](#quick-reference) | [Web Testing](#web-testing-jest--rtl) | [API Contract Testing](#api-contract-testing) | [iOS Testing](#ios-testing-xctest) | [CI/CD Workflows](#cicd-workflows) | [Deployment Validation](#deployment-validation)
 
@@ -8,24 +14,30 @@
 
 ## Quick Reference
 
-| Command                    | Purpose                                                      |
-| -------------------------- | ------------------------------------------------------------ |
-| `npm test`                 | Unit tests only (node + jsdom projects, no DB needed)        |
-| `npm run test:watch`       | Jest watch mode (unit projects)                              |
-| `npm run test:coverage`    | Unit tests with coverage report (threshold enforced)         |
-| `npm run test:integration` | Real-DB tests — requires `docker-compose up -d`              |
-| `npm run test:all`         | Every Jest project including integration                     |
-| `npm run test:contract`    | Run OpenAPI contract tests (auto-starts server, needs DB)    |
-| `npm run validate`         | Format + lint + types + unit tests                           |
-| `npm run validate:full`    | Above + API drift checks + integration + live contract tests |
-| `npm run ios:validate`     | iOS drift check + lint + build + tests                       |
-| `npm run ios:lint`         | SwiftLint only                                               |
-| `npm run ios:build`        | iOS build only                                               |
-| `npm run ios:test`         | iOS tests only                                               |
-| `npm run deploy`           | Full validation (web + iOS) + deploy                         |
-| `npm run deploy:dry-run`   | Full validation only (no deploy)                             |
-| `npm run deploy:web`       | Web validation + deploy                                      |
-| `npm run deploy:only`      | Deploy without checks                                        |
+| Command                    | Purpose                                                        |
+| -------------------------- | -------------------------------------------------------------- |
+| `npm test`                 | Unit tests only (node + jsdom projects, no DB needed)          |
+| `npm run test:watch`       | Jest watch mode (unit projects)                                |
+| `npm run test:coverage`    | Unit tests with coverage report (ratchet enforced)             |
+| `npm run test:integration` | Real-DB tests — requires `docker-compose up -d`                |
+| `npm run test:all`         | Every Jest project including integration                       |
+| `npm run test:contract`    | OpenAPI contract tests (auto-starts server, needs DB)          |
+| `npm run test:e2e`         | Playwright web smoke (auto-starts server + seeds, needs DB)    |
+| `npm run validate`         | Fast inner loop: format + lint + types + unit tests            |
+| `npm run validate:web`     | Web gate + DB suites (integration + contract + E2E). No Xcode. |
+| `npm run validate:ios`     | iOS gate (Swift drift + SwiftLint + build + tests)             |
+| `npm run validate:full`    | Everything: web + DB suites + iOS. Needs Docker **and** Xcode. |
+| `npm run ios:validate`     | Same iOS gate as `validate:ios` (iOS-focused entry point)      |
+| `npm run ios:lint`         | SwiftLint only                                                 |
+| `npm run ios:build`        | iOS build only                                                 |
+| `npm run ios:test`         | iOS tests only                                                 |
+| `npm run deploy`           | `validate:full` + push (web + DB + iOS, then AWS)              |
+| `npm run deploy:dry-run`   | `validate:full` only (no push) — best pre-deploy check         |
+| `npm run deploy:web`       | Web gate + DB suites + push (no iOS)                           |
+| `npm run deploy:only`      | Push without any validation                                    |
+
+> Full detail on what each gate runs and how deploy relates to validate lives in
+> [development-process.md §2 + §8](development-process.md).
 
 ---
 
@@ -178,7 +190,8 @@ npm run api:check-drift
 # Check Swift models
 npm run api:check-drift:swift
 
-# Both are included in validate:full
+# TS drift is in the web gate (validate:web / validate:full).
+# Swift drift is in the iOS gate (validate:ios / validate:full) — NOT validate:web.
 npm run validate:full
 ```
 
@@ -279,21 +292,23 @@ ios/BookVaultTests/
 
 ### Workflow Summary
 
-| Workflow  | File            | Triggers         | Purpose                                          |
-| --------- | --------------- | ---------------- | ------------------------------------------------ |
-| Main      | `main.yml`      | PR, push to main | Format, lint, types, tests                       |
-| API       | `api.yml`       | PR, push to main | OpenAPI validation, drift checks, contract tests |
-| iOS       | `ios-tests.yml` | PR, push to main | SwiftLint, build, tests                          |
-| Storybook | `storybook.yml` | PR, push to main | Storybook build check                            |
+| Workflow  | File            | Triggers                 | Purpose                                           |
+| --------- | --------------- | ------------------------ | ------------------------------------------------- |
+| Main      | `main.yml`      | PR, push to main         | Format, lint, types, tests (live Postgres), audit |
+| API       | `api.yml`       | PR, push to main         | OpenAPI validation, drift checks, contract tests  |
+| E2E       | `e2e.yml`       | PR, push (path-filtered) | Playwright web smoke                              |
+| iOS       | `ios-tests.yml` | PR, push (path-filtered) | SwiftLint, build, tests                           |
+| Storybook | `storybook.yml` | PR, push to main         | Storybook build check                             |
 
 ### What Each Workflow Checks
 
-**main.yml:**
+**main.yml:** (runs against a live Postgres service, so the integration project runs too)
 
 - `npm run format:check`
 - `npm run lint`
 - `npm run type-check`
 - `npm test`
+- `npm audit` — **non-blocking** (`continue-on-error`)
 
 **api.yml:**
 
@@ -301,11 +316,17 @@ ios/BookVaultTests/
 - `npm run api:check-drift` - TypeScript types in sync
 - `npm run api:check-drift:swift` - Swift models in sync
 - `npm run api:check-coverage` - Endpoint coverage
-- `npm run test:contract` - Contract tests (live server)
+- `npm run test:contract` - Contract tests (builds + boots the app)
 
-**ios-tests.yml:**
+**e2e.yml:** (path-filtered to `app/`, `components/`, `lib/`, `e2e/`, `prisma/`, config)
 
-- `swiftlint lint --strict`
+- `npm run test:e2e` - Playwright web smoke (globalSetup seeds fixtures)
+
+**ios-tests.yml:** (path-filtered to `ios/**`)
+
+- `swiftlint lint --strict` — **non-blocking** in CI (`continue-on-error`); the deploy /
+  `validate:ios` gate treats it as a hard failure. See
+  [development-process.md §4](development-process.md).
 - `xcodebuild build`
 - `xcodebuild test`
 
@@ -316,11 +337,12 @@ ios/BookVaultTests/
 | Format         | `npm run format:check`          | `main.yml`      |
 | Lint           | `npm run lint`                  | `main.yml`      |
 | Type check     | `npm run type-check`            | `main.yml`      |
-| Tests          | `npm test`                      | `main.yml`      |
+| Tests (unit)   | `npm test`                      | `main.yml`      |
 | API validate   | `npm run api:validate`          | `api.yml`       |
 | TS drift       | `npm run api:check-drift`       | `api.yml`       |
 | Swift drift    | `npm run api:check-drift:swift` | `api.yml`       |
 | Contract tests | `npm run test:contract`         | `api.yml`       |
+| E2E smoke      | `npm run test:e2e`              | `e2e.yml`       |
 | iOS lint       | `npm run ios:lint`              | `ios-tests.yml` |
 | iOS build      | `npm run ios:build`             | `ios-tests.yml` |
 | iOS tests      | `npm run ios:test`              | `ios-tests.yml` |
@@ -332,35 +354,35 @@ ios/BookVaultTests/
 ### Pre-Deployment Commands
 
 ```bash
-# Full validation (web + iOS) + deploy
+# Full gate (web + DB suites + iOS) + deploy
 npm run deploy
 
-# Web validation + deploy (skip iOS)
+# Web gate + DB suites + deploy (skip iOS)
 npm run deploy:web
 
 # Deploy only (no validation - use cautiously)
 npm run deploy:only
 
-# Dry run (validate without deploying)
+# Dry run: full gate, no deploy — best pre-deploy check
 npm run deploy:dry-run
 ```
 
 ### What Validation Runs
 
-| Command               | Web Checks      | iOS Checks              | Deploy |
-| --------------------- | --------------- | ----------------------- | ------ |
-| `npm run deploy`      | `validate:full` | drift + lint/build/test | Yes    |
-| `npm run deploy:web`  | `validate:full` | None                    | Yes    |
-| `npm run deploy:only` | None            | None                    | Yes    |
+`deploy.sh` and `validate.sh` share one step library, so deploy runs the **same** gates as
+the `validate:*` family (`deploy` = `validate:full` + AWS push). Because it runs the DB
+suites, deploy needs Postgres up (`docker-compose up -d`).
 
-### Deploy Script Options
+| Command                  | Web gate + DB suites | iOS gate | Push |
+| ------------------------ | -------------------- | -------- | ---- |
+| `npm run deploy`         | yes                  | yes      | yes  |
+| `npm run deploy:web`     | yes                  | no       | yes  |
+| `npm run deploy:only`    | no                   | no       | yes  |
+| `npm run deploy:dry-run` | yes                  | yes      | no   |
 
-```bash
-npm run deploy          # Full validation + deploy
-npm run deploy:dry-run  # Validate only, no deploy
-npm run deploy:web      # Web only + deploy
-npm run deploy:only     # Skip all validation
-```
+For the exact step order, the AWS-side requirements (profile, ECR/ECS, buildx, health
+check), and why a green CI can still block deploy, see
+[development-process.md §8](development-process.md).
 
 ### Log Files
 
@@ -437,8 +459,8 @@ git commit -m "chore: regenerate Swift models"
 3. **Avoid testing styling** - Test functional behavior
 4. **Mock external dependencies** - Keep tests isolated
 5. **Write descriptive test names** - Make failures easy to understand
-6. **Run `npm run validate` before committing** - Catch issues early
-7. **Run `npm run deploy --dry-run` before actual deploy** - Verify full pipeline
+6. **Run `npm run validate:full` before opening a PR** - the complete gate (§ dev-process). `npm run validate` is a faster inner-loop check while iterating.
+7. **Run `npm run deploy:dry-run` before an actual deploy** - verifies the full pipeline without pushing
 
 ---
 
