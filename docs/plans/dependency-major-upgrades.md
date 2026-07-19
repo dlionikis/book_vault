@@ -90,7 +90,10 @@ What it took:
   wrong / didn't cover**: (1) it wrote `await searchParams` instead of `await
 props.searchParams` in 4 entity pages — fixed by hand; (2) all test call sites still
   passed sync `{ params: {...} }` — updated to `Promise.resolve({...})`.
-- `next.config.js`: `experimental.serverActions` → stable top-level `serverActions`.
+- `next.config.js`: `serverActions` **stays under `experimental`** in Next 16.
+  (Phase 2 initially moved it to a top-level key; Next 16 rejects that as an
+  unrecognized key and silently drops `bodySizeLimit`. Corrected in the deploy
+  hotfix — see the arm64/deploy section below.)
 - **ESLint**: `eslint-config-next` 16 is flat-config-only; the old `FlatCompat`/`.eslintrc`
   shim crashed. Rewrote `eslint.config.mjs` to import `eslint-config-next/core-web-vitals`
   and `eslint-plugin-storybook`'s `flat/recommended` natively. Its new
@@ -188,6 +191,44 @@ Lower urgency; some may not be worth it:
 ---
 
 ## Runtime / infrastructure (not a package.json dep)
+
+### Deploy build: cross-arch amd64 → native arm64 (Graviton) — ✅ DONE (July 19, 2026)
+
+**Why this changed.** After the Next 16 upgrade (Phase 2) merged, `npm run deploy`
+failed at the Docker build. The build cross-compiled to amd64 via
+`docker buildx build --platform linux/amd64` on the Apple-Silicon build host, and
+Next 16's SWC compiler (a native Rust binary) **segfaults under qemu emulation**:
+
+```
+#20 [builder 6/6] RUN npm run build
+qemu: uncaught target signal 11 (Segmentation fault) - core dumped
+```
+
+Refreshing binfmt + a fresh buildx builder does **not** fix it — qemu itself
+mis-executes the SWC binary. (Verified: reproduced the segfault after a full
+`tonistiigi/binfmt --install all` + new builder.)
+
+**Fix.** Build **natively arm64** (no emulation) and run ECS on **Graviton**:
+
+- [scripts/deploy.sh](../../scripts/deploy.sh) `run_deploy()`: `docker buildx build
+--platform linux/amd64` → plain `docker build` (native arm64), with an arch guard
+  that aborts if the built image isn't arm64.
+- ECS task definition **`book-vault:5`** registered from `:4` with
+  `runtimePlatform={cpuArchitecture: ARM64, operatingSystemFamily: LINUX}`.
+  `update-service` now passes `--task-definition book-vault:5` explicitly (force-new
+  alone keeps the service's current revision, so it's required to move off the old
+  x86_64 `:4`).
+- Fargate **Spot supports ARM64** (since Oct 2024), so both `book-vault-spot` and
+  `book-vault-fallback` run it. Graviton is also ~20% cheaper.
+
+Verified: native `docker build` succeeds in ~50s; the arm64 image boots
+(`process.arch === 'arm64'`, Next 16 "Ready"); all native deps (bcrypt, prisma
+engines, sharp, ffmpeg) work on arm64. The **first** arm64 rollout is a real prod
+cutover — watch the `book-vault-fallback` (on-demand) task come healthy before
+trusting Spot capacity.
+
+**Consequence for the Node bump below:** the base image is now effectively arm64 —
+`node:22-alpine` is multi-arch, so no extra change is needed there.
 
 ### Node 20 → 22 on the Docker base image
 
