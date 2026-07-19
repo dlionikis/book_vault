@@ -115,6 +115,9 @@ export const BookSchema = z.object({
   /** Book title, required */
   title: z.string(),
 
+  /** Audio availability (S3 IT archive state) — required as of restore Phase 3 */
+  archiveStatus: z.enum(['available', 'archived', 'restoring']),
+
   /** Publisher summary in Markdown, optional */
   description: z.string().nullable().optional(),
 

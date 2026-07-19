@@ -16,6 +16,7 @@ extension Book {
         id: UUID(),
         asin: "B000SCREENSHOT",
         title: "The Last Cartographer",
+        archiveStatus: .available,
         publisherSummary: """
         When the world's maps begin to rewrite themselves, retired cartographer Elena Vasquez discovers that the changes mirror an ancient atlas hidden in her grandmother's attic. Racing across continents with a crew of unlikely allies, she must decode the shifting borders before reality itself is redrawn. A sweeping adventure about memory, place, and the stories we tell ourselves about where we belong.
         """,
@@ -44,6 +45,7 @@ extension Book {
         id: UUID(),
         asin: "B08G9PRS1K",
         title: "Project Hail Mary",
+        archiveStatus: .available,
         publisherSummary: """
         **#1 NEW YORK TIMES BESTSELLER** A lone astronaut must save the earth from disaster in this cinematic thriller full of suspense, humor, and fascinating science.
         """,
@@ -70,6 +72,7 @@ extension Book {
         id: UUID(),
         asin: "B002V1A0WE",
         title: "The Way of Kings: Book One of the Stormlight Archive",
+        archiveStatus: .available,
         publisherSummary: "Epic fantasy from Brandon Sanderson.",
         runtimeMinutes: 2735,
         releaseDate: Date(timeIntervalSince1970: 1_283_299_200), // Sept 2010
@@ -96,6 +99,7 @@ extension Book {
         id: UUID(),
         asin: "B001234567",
         title: "Short Book",
+        archiveStatus: .available,
         publisherSummary: nil,
         runtimeMinutes: 120,
         releaseDate: nil,
@@ -115,6 +119,7 @@ extension Book {
         id: UUID(),
         asin: "B07D23CFGR",
         title: "Good Omens",
+        archiveStatus: .available,
         publisherSummary: "A comedy about the birth of the son of Satan and the coming of the End Times.",
         runtimeMinutes: 744,
         releaseDate: Date(timeIntervalSince1970: 642_643_200), // May 1990

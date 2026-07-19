@@ -1607,22 +1607,31 @@ describe('POST /api/series/{id}/restore', () => {
 - [x] Update OpenAPI spec (all new endpoints + `RestoreStatus`/`RestoreRequestSummary`/`RestoresListResponse` schemas) + regenerate TS + Swift types
 - [ ] **⚠️ IAM (deploy prerequisite)**: add `s3:RestoreObject` on `arn:aws:s3:::book-vault-media/*` to the `book-vault-ecs-task` role (e.g. inline policy `S3RestoreAccess`). The role currently has only GetObject/ListBucket — production restores would get AccessDenied. HeadObject is already covered by GetObject.
 
-### Phase 3: Book Availability Status (2 hours)
+### Phase 3: Book Availability Status — ✅ COMPLETE (July 19, 2026, with Phase 4)
 
-- [ ] Add required `archiveStatus` to OpenAPI Book schema
-- [ ] Update `transformBook()` — derive from `audioAvailability`, zero extra queries
-- [ ] Regenerate Swift models
-- [ ] Contract tests pass
+- [x] Add required `archiveStatus` to OpenAPI Book schema (enum available|archived|restoring)
+- [x] Update `transformBook()` — derive from `audioAvailability` via ARCHIVE_STATUS_MAP, zero extra queries
+- [x] Regenerate TS + Swift models (Book/LibraryBook now carry archiveStatus)
+- [x] Contract tests pass (added archiveStatus to the strict-field-check Book map + the zod schema)
 
-### Phase 4: Web Frontend (2-3 hours)
+### Phase 4: Web Frontend — ✅ COMPLETE (July 19, 2026)
 
-- [ ] Create `ArchiveStatusBadge` component (with `dark:` variants)
-- [ ] Update `BookCard` with archive badge
-- [ ] Update book detail page with restore/restoring/play states
-- [ ] Handle 202 from `/stream` inside the player (race case)
-- [ ] Create `RestoringIndicator` with polling
-- [ ] Create `/library/restores` page
-- [ ] Test full web flow
+- [x] Create `ArchiveStatusBadge` component (compact overlay + full label; `dark:` variants)
+- [x] Update `BookCard` with archive badge overlay
+- [x] Update book detail page with restore/restoring/play states (`RestoreButton` / `RestoringIndicator` / Play)
+- [x] Handle 202 from `/stream` inside the player (PlaybackClient shows a restoring state)
+- [x] Create `RestoringIndicator` with 30s polling (router.refresh on completion)
+- [x] Create `/library/restores` page (active + last-7-days, auto-refresh while active)
+- [x] Test full web flow (E2E smoke exercises play; component tests for badge/restore button/transform)
+
+**Also folded in from the July 19 architecture review (D-5):** root `error.tsx` /
+`loading.tsx` / `not-found.tsx` boundaries, and `dark:` variants on the AudioPlayer
+(it previously had none). Restore UI shipped dark-mode-aware from the start.
+
+**E2E note:** Next 16's dev server uses Turbopack; a cold first-compile can push
+client-hydration-gated assertions past the old 10s expect timeout (the add itself
+returns 201 in ~55ms — dev warmup, not app latency). Bumped the Playwright expect
+timeout to 15s; verified green cold (`.next` deleted) and warm.
 
 ### Phase 5: Background Jobs (2-3 hours)
 

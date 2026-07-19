@@ -71,6 +71,7 @@ export const mockBooks: Book[] = [
   {
     id: 'book-1',
     asin: 'B00TEST001',
+    archiveStatus: 'available',
     title: 'The Way of Kings',
     publisherSummary:
       '<p>The first book in the epic Stormlight Archive series. Follow Kaladin, a former soldier turned slave, as he discovers his destiny in a world of magic and political intrigue.</p>',
@@ -88,6 +89,7 @@ export const mockBooks: Book[] = [
   {
     id: 'book-2',
     asin: 'B00TEST002',
+    archiveStatus: 'available',
     title:
       'A Very Long Audiobook Title That Tests Text Wrapping Behavior in Various Component States and Layouts',
     publisherSummary: '<p>A book with an exceptionally long title to test UI edge cases.</p>',
@@ -105,6 +107,7 @@ export const mockBooks: Book[] = [
   {
     id: 'book-3',
     asin: 'B00TEST003',
+    archiveStatus: 'available',
     title: 'The Martian',
     publisherSummary:
       "<p>Six days ago, astronaut Mark Watney became one of the first people to walk on Mars. Now, he's sure he'll be the first person to die there.</p>",
@@ -122,6 +125,7 @@ export const mockBooks: Book[] = [
   {
     id: 'book-4',
     asin: 'B00TEST004',
+    archiveStatus: 'available',
     title: 'Book Without Cover',
     publisherSummary: '<p>This book has no cover image to test fallback behavior.</p>',
     runtimeMinutes: 540, // 9 hours
@@ -138,6 +142,7 @@ export const mockBooks: Book[] = [
   {
     id: 'book-5',
     asin: 'B00TEST005',
+    archiveStatus: 'available',
     title: 'Words of Radiance',
     publisherSummary:
       '<p>The second book in the epic Stormlight Archive series continues the story.</p>',
@@ -155,6 +160,7 @@ export const mockBooks: Book[] = [
   {
     id: 'book-6',
     asin: 'B00TEST006',
+    archiveStatus: 'available',
     title: 'Minimal Data Book',
     publisherSummary: null,
     runtimeMinutes: null,
@@ -171,6 +177,7 @@ export const mockBooks: Book[] = [
   {
     id: 'book-7',
     asin: 'B00TEST007',
+    archiveStatus: 'available',
     title: 'Collaborative Masterpiece',
     publisherSummary: '<p>A book written by multiple authors in collaboration.</p>',
     runtimeMinutes: 720, // 12 hours
@@ -187,6 +194,7 @@ export const mockBooks: Book[] = [
   {
     id: 'book-8',
     asin: 'B00TEST008',
+    archiveStatus: 'available',
     title: 'The Fellowship of the Ring',
     publisherSummary:
       '<p>The first volume in The Lord of the Rings trilogy follows Frodo Baggins as he begins his quest to destroy the One Ring.</p>',
@@ -216,6 +224,7 @@ export function createMockBook(overrides: Partial<Book> = {}): Book {
   return {
     id: 'mock-book-custom',
     asin: 'B00CUSTOM',
+    archiveStatus: 'available',
     title: 'Custom Mock Book',
     publisherSummary: '<p>A customizable mock book for testing.</p>',
     runtimeMinutes: 600,

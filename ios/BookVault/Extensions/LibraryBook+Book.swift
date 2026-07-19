@@ -21,6 +21,8 @@ extension LibraryBook {
             id: id,
             asin: asin,
             title: title,
+            // Same wire values; distinct generated nested enums, so map by rawValue
+            archiveStatus: Book.ArchiveStatus(rawValue: archiveStatus.rawValue) ?? .available,
             publisherSummary: publisherSummary,
             runtimeMinutes: runtimeMinutes,
             releaseDate: releaseDate,

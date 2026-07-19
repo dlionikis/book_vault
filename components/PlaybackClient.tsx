@@ -29,6 +29,10 @@ export default function PlaybackClient({
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
   const [streamUrl, setStreamUrl] = useState<string | undefined>(undefined);
   const [streamError, setStreamError] = useState(false);
+  // Race case: the book was available when the page rendered but got archived
+  // (or a restore is already running) by the time the user hit Play. /stream
+  // returns 202 and auto-initiates the restore; surface that instead of an error.
+  const [restoring, setRestoring] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Fetch user's progress on mount
@@ -56,6 +60,11 @@ export default function PlaybackClient({
     const fetchStreamUrl = async () => {
       try {
         const res = await fetch(`/api/books/${bookId}/stream`);
+        if (res.status === 202) {
+          // Archived → restore auto-initiated; show the restoring state.
+          setRestoring(true);
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
           if (data.status === 'available' && data.streamUrl) {
@@ -93,10 +102,42 @@ export default function PlaybackClient({
     audioRef.current = ref;
   };
 
+  // Archived-since-page-load: /stream returned 202 and started a restore.
+  if (restoring) {
+    return (
+      <div className="rounded-lg bg-white p-8 shadow-lg dark:bg-gray-800">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <svg className="h-8 w-8 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
+          </svg>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Restoring from archive…
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            This audiobook needs to be restored before it can play (about 3–5 hours). You&apos;ll
+            get a notification when it&apos;s ready.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Don't render player until we've loaded progress and resolved the stream URL
   if (isLoadingProgress || !resolvedUrl) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-8">
+      <div className="rounded-lg bg-white p-8 shadow-lg dark:bg-gray-800">
         <div className="flex items-center justify-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -106,8 +147,8 @@ export default function PlaybackClient({
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-lg p-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Chapters</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Chapters</h2>
         <ChapterList
           bookId={bookId}
           currentTime={currentTime}

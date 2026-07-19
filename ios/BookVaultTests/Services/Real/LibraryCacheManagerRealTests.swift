@@ -207,6 +207,7 @@ final class LibraryCacheManagerRealTests: XCTestCase {
             id: UUID(),
             asin: "B0123456789",
             title: "The Great Book",
+            archiveStatus: .available,
             publisherSummary: "A wonderful story",
             runtimeMinutes: 600,
             releaseDate: Date(timeIntervalSince1970: 1_700_000_000),

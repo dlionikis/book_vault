@@ -225,7 +225,7 @@ components:
     # Core models (from lib/types.ts)
     Book:
       type: object
-      required: [id, asin, title, authors]
+      required: [id, asin, title, authors, archiveStatus]
       properties:
         id:
           type: string
@@ -237,6 +237,18 @@ components:
         title:
           type: string
           example: 'The Name of the Wind'
+        archiveStatus:
+          type: string
+          enum: [available, archived, restoring]
+          description: |
+            Availability of the audio file (derived from the cached
+            audio_availability column — synced nightly and self-healed at play
+            time):
+            - available: ready to stream immediately
+            - archived: in the S3 Intelligent-Tiering Archive Access tier;
+              requires a ~3-5 hour restore
+            - restoring: restore in progress
+          example: available
         publisherSummary:
           type: string
           nullable: true

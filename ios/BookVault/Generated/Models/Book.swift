@@ -12,10 +12,17 @@ import AnyCodable
 
 public struct Book: Codable, JSONEncodable, Hashable {
 
+    public enum ArchiveStatus: String, Codable, CaseIterable {
+        case available = "available"
+        case archived = "archived"
+        case restoring = "restoring"
+    }
     public static let runtimeMinutesRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public var id: UUID
     public var asin: String
     public var title: String
+    /** Availability of the audio file (derived from the cached audio_availability column — synced nightly and self-healed at play time): - available: ready to stream immediately - archived: in the S3 Intelligent-Tiering Archive Access tier;   requires a ~3-5 hour restore - restoring: restore in progress  */
+    public var archiveStatus: ArchiveStatus
     public var publisherSummary: String?
     public var runtimeMinutes: Int?
     public var releaseDate: Date?
@@ -27,10 +34,11 @@ public struct Book: Codable, JSONEncodable, Hashable {
     public var series: [SeriesInfo]?
     public var categories: [Category]?
 
-    public init(id: UUID, asin: String, title: String, publisherSummary: String? = nil, runtimeMinutes: Int? = nil, releaseDate: Date? = nil, publisher: String? = nil, coverUrl: String? = nil, audioUrl: String? = nil, authors: [Author], narrators: [Narrator]? = nil, series: [SeriesInfo]? = nil, categories: [Category]? = nil) {
+    public init(id: UUID, asin: String, title: String, archiveStatus: ArchiveStatus, publisherSummary: String? = nil, runtimeMinutes: Int? = nil, releaseDate: Date? = nil, publisher: String? = nil, coverUrl: String? = nil, audioUrl: String? = nil, authors: [Author], narrators: [Narrator]? = nil, series: [SeriesInfo]? = nil, categories: [Category]? = nil) {
         self.id = id
         self.asin = asin
         self.title = title
+        self.archiveStatus = archiveStatus
         self.publisherSummary = publisherSummary
         self.runtimeMinutes = runtimeMinutes
         self.releaseDate = releaseDate
@@ -47,6 +55,7 @@ public struct Book: Codable, JSONEncodable, Hashable {
         case id
         case asin
         case title
+        case archiveStatus
         case publisherSummary
         case runtimeMinutes
         case releaseDate
@@ -66,6 +75,7 @@ public struct Book: Codable, JSONEncodable, Hashable {
         try container.encode(id, forKey: .id)
         try container.encode(asin, forKey: .asin)
         try container.encode(title, forKey: .title)
+        try container.encode(archiveStatus, forKey: .archiveStatus)
         try container.encodeIfPresent(publisherSummary, forKey: .publisherSummary)
         try container.encodeIfPresent(runtimeMinutes, forKey: .runtimeMinutes)
         try container.encodeIfPresent(releaseDate, forKey: .releaseDate)

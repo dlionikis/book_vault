@@ -31,7 +31,13 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   timeout: 60_000,
-  expect: { timeout: 10_000 },
+  // 15s (not the 10s default): against a cold Next 16 + Turbopack dev server,
+  // the first hit to each route compiles on demand, and client-hydration-gated
+  // assertions (e.g. the AddToLibrary button flipping to "In Library" after
+  // useSession hydrates) can exceed 10s on that first compile. The add itself
+  // returns 201 well within budget — this is dev-server warmup latency, not app
+  // slowness. Prod is prebuilt, so this only affects the E2E dev server.
+  expect: { timeout: 15_000 },
 
   use: {
     baseURL: BASE_URL,

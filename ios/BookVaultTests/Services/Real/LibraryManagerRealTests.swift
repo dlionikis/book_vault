@@ -71,6 +71,7 @@ final class LibraryManagerRealTests: XCTestCase {
             id: UUID(),
             asin: "ASIN\(UUID().uuidString.prefix(8))",
             title: title,
+            archiveStatus: .available,
             publisherSummary: "Test description",
             runtimeMinutes: 360,
             releaseDate: Date(),

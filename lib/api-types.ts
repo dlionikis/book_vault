@@ -953,6 +953,18 @@ export interface components {
             asin: string;
             /** @example The Name of the Wind */
             title: string;
+            /**
+             * @description Availability of the audio file (derived from the cached
+             *     audio_availability column — synced nightly and self-healed at play
+             *     time):
+             *     - available: ready to stream immediately
+             *     - archived: in the S3 Intelligent-Tiering Archive Access tier;
+             *       requires a ~3-5 hour restore
+             *     - restoring: restore in progress
+             * @example available
+             * @enum {string}
+             */
+            archiveStatus: "available" | "archived" | "restoring";
             /** @example Told in Kvothe's own voice, this is the tale of the magically gifted young man... */
             publisherSummary?: string | null;
             /** @example 1068 */

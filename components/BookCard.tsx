@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { formatRuntime } from '@/lib/utils/formatRuntime';
 import { Book, Author, Narrator } from '@/lib/types';
+import ArchiveStatusBadge from '@/components/ArchiveStatusBadge';
 
 interface BookCardProps {
   book: Book;
@@ -32,6 +33,7 @@ export default function BookCard({ book }: BookCardProps) {
     >
       {/* Cover Image */}
       <div className="relative aspect-[2/3] bg-gray-200 dark:bg-gray-700">
+        <ArchiveStatusBadge status={book.archiveStatus} compact />
         {book.coverUrl ? (
           <Image
             src={book.coverUrl}

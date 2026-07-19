@@ -674,6 +674,7 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
                 id: UUID(uuidString: bookId) ?? UUID(),
                 asin: "", // Placeholder - not needed for UI
                 title: info.bookTitle,
+                archiveStatus: .available,
                 authors: [placeholderAuthor]
             )
 
