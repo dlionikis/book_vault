@@ -16,13 +16,19 @@
 
 ```bash
 docker-compose up -d          # Postgres on :5433 (once per session)
-npm run validate:full         # the complete web gate (see §2)
-npm run ios:validate          # the complete iOS gate — only if you touched ios/
+npm run validate:full         # EVERYTHING — web gate + DB suites + iOS gate (see §2)
 ```
 
-`validate:full` runs **everything CI runs for the web/backend** plus the DB-dependent
-suites CI splits across jobs. If both pass locally, CI should be green. Do not open a
-PR until they do.
+`validate:full` runs the complete gate: everything CI runs for web/backend, the
+DB-dependent suites CI splits across jobs, **and** the iOS gate. It needs Xcode. If it
+passes, CI should be green. Do not open a PR until it does.
+
+Two narrower variants when you don't need both halves (see §2):
+
+```bash
+npm run validate:web          # web gate + DB suites (no iOS; no Xcode needed)
+npm run validate:ios          # iOS gate only (Swift drift + SwiftLint + build + tests)
+```
 
 > **Never** claim "all tests pass" after running only `npm test`. `npm test` is unit
 > tests **only** — it skips integration, contract, and E2E. See §1 for why the
@@ -74,30 +80,42 @@ real-DB query, or fail an E2E flow. Those are suites 3–5, and they only run un
 
 ---
 
-## 2. `validate:full` — the complete web gate
+## 2. The `validate:*` family — one gate, three scopes
 
-[`scripts/validate.sh`](../scripts/validate.sh) runs, in order, and **stops at the first failure**:
+[`scripts/validate.sh`](../scripts/validate.sh) runs the gates from the shared step
+library ([`scripts/lib/validation-steps.sh`](../scripts/lib/validation-steps.sh)),
+**stopping at the first failure**. Three npm entry points select the scope:
+
+| Command                 | Web gate | DB suites | iOS gate | Needs             |
+| ----------------------- | -------- | --------- | -------- | ----------------- |
+| `npm run validate:web`  | ✅       | ✅        | ❌       | Docker DB         |
+| `npm run validate:ios`  | ❌       | ❌        | ✅       | Xcode             |
+| `npm run validate:full` | ✅       | ✅        | ✅       | Docker DB + Xcode |
+
+Each gate runs its steps in order:
 
 ```
-1.  format:check            10, above
-2.  lint                    11
-3.  type-check              12
-4.  api:validate            6
-5.  api:check-drift         7   (TS types match spec)
-6.  api:check-coverage      9   (every route documented)
-7.  test                    1+2 (+ 3 in CI's live-DB context)
-8.  [require Postgres on :5433]  ← hard stop with a helpful message if DB is down
-9.  test:integration        3
-10. test:contract           4
-11. test:e2e                5
+Web gate (run_web_gate):
+  format:check → lint → type-check → api:validate → api:check-drift
+  → api:check-coverage → npm test (unit)
+DB suites (require_database, then run_db_suites):
+  [hard-stop if Postgres :5433 down] → test:integration → test:contract → test:e2e
+iOS gate (run_ios_gate):
+  api:check-drift:swift → swiftlint --strict → xcodebuild build → xcodebuild test
 ```
 
-Swift drift (#8) is **not** in `validate:full` — it lives in the iOS gate
-(`ios:validate`, which calls `api:check-drift:swift`). If you change `openapi.yaml`,
-run **both** gates, or at minimum `npm run api:check-drift:swift`, before pushing —
-otherwise `api.yml`'s `check-generated-swift` job fails in CI.
+- **`validate:full` is the true "everything"** — it is what `npm run deploy` runs before
+  pushing (§8), from the same library, so validation and deploy cannot diverge.
+- **`validate:web`** is the everyday backend-dev command — no Xcode required, so it also
+  works on CI Linux runners.
+- **`validate:ios`** is the same iOS gate as `npm run ios:validate` (the `ios:*` family —
+  `ios:lint` / `ios:build` / `ios:test` — remains for iOS-focused sub-runs).
+- Note `api:check-drift:swift` (Swift model drift) lives only in the **iOS** gate. If you
+  change `openapi.yaml` but run only `validate:web`, run `npm run validate:ios` (or at
+  least `npm run api:check-drift:swift`) before pushing, or `api.yml`'s
+  `check-generated-swift` job fails in CI.
 
-Logs: `logs/validate.log` (web), `logs/ios-validate.log` (iOS).
+Logs: `logs/validate.log`, `logs/ios-validate.log`.
 
 ---
 
@@ -298,7 +316,7 @@ not _test cases_).
 - The **pre-commit hook** regenerates both TS + Swift and `git add`s them automatically whenever `openapi.yaml` is staged — so in the normal flow you run nothing by hand.
 - Run `npm run api:generate` manually only to typecheck _before_ committing (e.g. to reference a new type in your handler).
 - **CI enforces it regardless** (`api.yml` regenerates + `git diff --exit-code`), so even a `--no-verify` commit can't ship stale types.
-- Swift drift is **not** in `validate:full` — run `npm run api:check-drift:swift` (or the full `ios:validate`) before pushing a spec change.
+- Swift drift lives in the **iOS** gate — covered by `validate:full` and `validate:ios`, but **not** `validate:web`. After a spec change, run `validate:full` (or `validate:ios`, or at least `npm run api:check-drift:swift`) before pushing.
 
 **Contract tests are never regenerated** — hand-edit a case whenever you **add or change an endpoint** (per the 5 steps above). The suite is explicit per-endpoint; a new route with no `describe` block has zero contract coverage even though `api:check-coverage` passes.
 
@@ -308,9 +326,10 @@ not _test cases_).
 
 Before opening a PR:
 
-- [ ] `npm run validate:full` green (needs `docker-compose up -d`)
-- [ ] `npm run ios:validate` green **if** `ios/**` changed (Swift drift + strict
-      SwiftLint + build/tests; also run by deploy, but CI does not fail on SwiftLint)
+- [ ] `npm run validate:full` green — web + DB suites + iOS (needs `docker-compose up -d`
+      **and** Xcode). Backend-only change with no Xcode handy? `npm run validate:web`, but
+      then someone must run `validate:ios` before merge if `ios/**` or `openapi.yaml` changed
+      (SwiftLint + Swift drift live only in the iOS gate, and CI does not fail on SwiftLint).
 - [ ] New/changed endpoint → spec updated, contract case added, types regenerated (§6)
 - [ ] Invariant sweep clean (§5) if you touched auth, routes, or iOS services
 - [ ] No AI attribution in commit/PR text (see [CLAUDE.md](../CLAUDE.md) §3.5)

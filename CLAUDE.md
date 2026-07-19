@@ -53,7 +53,7 @@ npm run deploy                 # Full validation + deploy
 npm run deploy:dry-run         # Validate only
 ```
 
-**Before every PR**: run `npm run validate:full` (the complete web gate — unit + integration + contract + E2E + drift + coverage), and `npm run ios:validate` if `ios/**` changed. `npm test` alone is unit-only and is **not** sufficient. See **[docs/development-process.md](docs/development-process.md)** for the full test inventory, the pre-commit hook, what CI enforces, and the **hardening invariants that must not regress**.
+**Before every PR**: run `npm run validate:full` — the complete gate (web + DB suites + iOS: unit + integration + contract + E2E + drift + coverage + SwiftLint + iOS build/tests; needs Docker + Xcode). Narrower: `validate:web` (no Xcode) / `validate:ios`. `npm test` alone is unit-only and is **not** sufficient. See **[docs/development-process.md](docs/development-process.md)** for the full test inventory, the pre-commit hook, what CI enforces, and the **hardening invariants that must not regress**.
 
 **Full command reference**: See [docs/testing.md](docs/testing.md)
 
