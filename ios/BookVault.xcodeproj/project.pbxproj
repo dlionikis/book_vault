@@ -77,6 +77,7 @@
 		65E0BE288D9BFD8058165017 /* MockOfflineProgressStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B437A7886EAE2C4C5CC0343 /* MockOfflineProgressStore.swift */; };
 		65F8058E4EFDD226DAF83345 /* ListSeries200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63FA221E0EDFA43263495324 /* ListSeries200Response.swift */; };
 		6821523F06577CB226240651 /* ProgressManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097DCB2DF3E60F1C9DA95353 /* ProgressManaging.swift */; };
+		697DD9DB78B67F0290502A3C /* VerifyToken200ResponseUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A42FFE65DDE9AEFE3583950 /* VerifyToken200ResponseUser.swift */; };
 		6B59789EDF756A3EE4D09852 /* CachedCoverImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 212CADA7C0A7037F4F2DB311 /* CachedCoverImage.swift */; };
 		6CA4739B5F1AD577B060884D /* NetworkMonitoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5DA846B1EB6F15D57933802 /* NetworkMonitoring.swift */; };
 		6D9212946C0B423C80DE6D01 /* StorageManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F7234C376BC6F867F9B7FAE /* StorageManagerTests.swift */; };
@@ -237,6 +238,7 @@
 		087976D3661C2C55139EA268 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		097DCB2DF3E60F1C9DA95353 /* ProgressManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressManaging.swift; sourceTree = "<group>"; };
 		098376B472996D34A36D810C /* SyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManager.swift; sourceTree = "<group>"; };
+		0A42FFE65DDE9AEFE3583950 /* VerifyToken200ResponseUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifyToken200ResponseUser.swift; sourceTree = "<group>"; };
 		0AF4570328C83D85798FDFF4 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		0EBC40FF7EC2C18644492E92 /* MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockData.swift; sourceTree = "<group>"; };
 		0F49B915ADAE6FC4D22FF490 /* UserProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProgress.swift; sourceTree = "<group>"; };
@@ -892,6 +894,7 @@
 				224B1150587B17F911A52A29 /* User.swift */,
 				85F4D93A4222E1B6C36FBB11 /* Validation.swift */,
 				B464DE345A8CE05DB8C53AA0 /* VerifyToken200Response.swift */,
+				0A42FFE65DDE9AEFE3583950 /* VerifyToken200ResponseUser.swift */,
 			);
 			name = Models;
 			path = BookVault/Generated/Models;
@@ -1199,6 +1202,7 @@
 				EF0642DD653E7CE0165BC9B9 /* UserProgress.swift in Sources */,
 				91FFD5401B87C68EB6476AEC /* Validation.swift in Sources */,
 				EE610EE5A749D6EDF5863F9E /* VerifyToken200Response.swift in Sources */,
+				697DD9DB78B67F0290502A3C /* VerifyToken200ResponseUser.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

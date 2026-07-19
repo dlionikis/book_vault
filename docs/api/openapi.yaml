@@ -573,18 +573,26 @@ paths:
                   valid:
                     type: boolean
                     example: true
+                  # Inlined copy of the `User` schema (id + username) with
+                  # `nullable: true`. OpenAPI 3.0 can't express a nullable $ref in a
+                  # way every tool agrees on: `type: 'null'` is 3.1-only; `allOf` +
+                  # bare `nullable` trips redocly/openapi-typescript's
+                  # nullable-type-sibling check; `allOf` + `type: object` +
+                  # `nullable` makes jest-openapi's runtime validator reject the real
+                  # `user: null` response. Inlining with an explicit `type: object`
+                  # satisfies redocly, openapi-typescript, AND jest-openapi. Keep in
+                  # sync with the `User` component (2 stable fields).
                   user:
-                    # OpenAPI 3.0 nullable ref. 3.0 forbids `nullable` as a sibling
-                    # of `$ref`, and `type: 'null'` is 3.1-only (this spec is 3.0.0),
-                    # so wrap the ref in allOf and mark the wrapper nullable. We omit
-                    # `type` deliberately: jest-openapi's runtime validator treats
-                    # `type: object` + allOf as "must be object" and rejects null,
-                    # breaking the live contract test. redocly's struct rule wants a
-                    # `type` here, so that one rule is relaxed in redocly.yaml.
-                    # Result: the User object, or null when the token is invalid.
+                    type: object
                     nullable: true
-                    allOf:
-                      - $ref: '#/components/schemas/User'
+                    required: [id, username]
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      username:
+                        type: string
+                        example: 'testuser'
 
   /api/auth/mobile/logout:
     post:
