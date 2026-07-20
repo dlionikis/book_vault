@@ -492,4 +492,45 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         // because there's no player item yet (loadForMiniPlayer scenario)
         XCTAssertTrue(sut.isLoading)
     }
+
+    // MARK: - Archive / Restore Tests
+
+    func testPlayArchivedBookSetsRestoreStateNotError() async throws {
+        // Given — the stream endpoint reports the audio is archived/restoring
+        let book = TestFixtures.makeBook()
+        let eta = Date().addingTimeInterval(5 * 3600)
+        mockStorageManager.downloadedBookIds = [] // force the streaming path
+        mockAPIClient.getBookStreamResult = .success(BookStreamResponse(
+            status: .restoring,
+            message: "Restore in progress",
+            estimatedCompletion: eta
+        ))
+
+        // When
+        sut.play(book: book)
+
+        // Then — restoreState flips to .restoring; no error, loading finishes
+        try await waitUntil { self.sut.restoreState != .idle }
+        XCTAssertEqual(sut.restoreState, .restoring(estimatedCompletion: eta, message: "Restore in progress"))
+        XCTAssertNil(sut.error)
+        XCTAssertFalse(sut.isLoading)
+        XCTAssertFalse(sut.isPlaying)
+    }
+
+    /// Poll a condition on the main actor until it holds or a short timeout
+    /// elapses. `play(book:)` kicks off an async Task, so state settles a beat
+    /// after the synchronous call returns.
+    private func waitUntil(
+        timeout: TimeInterval = 2.0,
+        _ condition: @escaping () -> Bool
+    ) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition() {
+            if Date() > deadline {
+                XCTFail("Condition not met within \(timeout)s")
+                return
+            }
+            try await Task.sleep(nanoseconds: 20_000_000) // 20ms
+        }
+    }
 }

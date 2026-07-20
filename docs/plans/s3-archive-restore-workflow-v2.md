@@ -1675,33 +1675,54 @@ timeout to 15s; verified green cold (`.next` deleted) and warm.
 - [x] Stuck-restore failure handling (24h threshold → status failed, book back to ARCHIVED)
 - [x] Cron routes guarded by `CRON_SECRET` bearer (fail-closed if unset); excluded from OpenAPI coverage
 - [x] Tests: poller + sync (aws-sdk-client-mock) + cron auth (16 tests)
-- [ ] **DEPLOY/INFRA (manual, after this merges + deploys):**
-  - [ ] Add `CRON_SECRET` to ECS env / Secrets Manager
-  - [ ] EventBridge Scheduler → `/api/cron/poll-restores` every 5 min, `/api/cron/sync-availability` nightly ~3 AM (Authorization: Bearer $CRON_SECRET via an EventBridge connection)
-  - [ ] **Run `sync-availability` once right after deploy** — first real survey of how many of the 691 books are archived (also seeds the badges)
-- [ ] Notification on completion is a **guarded no-op until Phase 6** (SNS NotificationService); the poller logs and continues
+- [x] **DEPLOY/INFRA** — ✅ DONE July 20, 2026 (see "Deployed Infrastructure" section):
+      `CRON_SECRET` in Secrets Manager; task def `:6`; classic EventBridge Rules
+      (poller `rate(5 minutes)`, sync `cron(0 8 * * ? *)` UTC); first sync ran →
+      **695/764 archived (~91%)**; scheduled poller firing verified end-to-end.
+- [x] Notification on completion — Phase 6 backend now wired (real
+      `NotificationService`; self-guards / no-ops until push ARNs are configured).
 
-### Phase 6: iOS Push Notifications (4-5 hours)
+### Phase 6 — split: backend ✅ DONE (#110, July 20, 2026) / AWS+Apple setup deferred
 
-- [ ] Create APNs key in Apple Developer Portal
-- [ ] Create SNS Platform Applications (APNS + APNS_SANDBOX)
-- [ ] Add SNS ARNs to env / Secrets Manager; extend ECS task role IAM (CreatePlatformEndpoint, SetEndpointAttributes, Publish)
-- [ ] Implement `NotificationService` (endpoint recovery + re-enable handling)
-- [ ] Test push delivery via SNS console
-- [ ] Wire notification sending into restore poller
+**Backend (done, testable without artifacts):**
 
-### Phase 7: iOS App Updates (4-5 hours)
+- [x] `@aws-sdk/client-sns`; `lib/notification-service.ts` (`registerEndpoint` w/
+      InvalidParameter ARN-recovery + re-enable; `sendRestoreComplete` w/
+      EndpointDisabled handling; `isPushEnabled` self-guard)
+- [x] `POST`/`DELETE /api/notifications/register` (device-token upsert/deactivate)
+- [x] Wire notification sending into the restore poller (replaced the Phase-5 stub)
+- [x] Tests (aws-sdk-client-mock): service + route + poller-notifies
 
-- [ ] Add push notification entitlement to Xcode project (`project.yml` + `xcodegen generate`)
-- [ ] Implement `AppDelegate` with APNs registration
-- [ ] Implement `NotificationRegistrar` service
-- [ ] Implement `DeepLinkManager` for notification taps
-- [ ] Iterate deep-link handling via `xcrun simctl push` (no backend needed)
-- [ ] `archiveStatus` in Swift Book model (via OpenAPI regeneration)
-- [ ] Update `BookDetailView` with restore/restoring states
-- [ ] Handle 202 in `AudioPlayerManager` and `DownloadManager`
-- [ ] Add archive badge to book cards
-- [ ] Test on physical device (push does not work on simulator)
+**AWS + Apple setup (DEFERRED — needs your artifacts + a device):**
+
+- [ ] Create APNs key (`.p8`) in Apple Developer Portal
+- [ ] `aws sns create-platform-application` for APNS + APNS_SANDBOX
+- [ ] Set `AWS_SNS_PLATFORM_APPLICATION_ARN[_SANDBOX]` in task env; extend ECS
+      **task role** IAM (`sns:CreatePlatformEndpoint`, `SetEndpointAttributes`, `Publish`)
+- [ ] Verify push delivery via SNS console, then on a real device
+
+### Phase 7 — split into 7a (archive/restore UI) and 7b (push + deep-link)
+
+**Phase 7a — iOS archive/restore UI (simulator-testable, no device):**
+
+- [ ] `archiveStatus` in Swift Book model ✅ already present (OpenAPI regen); make
+      `execute<T>` 202-aware so restoring is distinguishable from 200
+- [ ] Add `restoreBook` / `getBookRestoreStatus` / `listRestores` to `APIClient`
+      (+ `APIClientProtocol` + `MockAPIClient`)
+- [ ] First-class restore/availability state in `AudioPlayerManager` (today
+      `.restoring` is swallowed as a generic 409 error)
+- [ ] Handle 202 in `DownloadManager` (current `GenerateDownloadUrl200Response`
+      can't decode it)
+- [ ] Archive badge on the shared `BookGridItem` (propagates to 5 list surfaces)
+- [ ] Restore/restoring/play CTA in `BookDetailView`
+
+**Phase 7b — push registration + deep-linking (simctl-testable, no device):**
+
+- [ ] Push-notification entitlement (`project.yml` + `xcodegen generate`)
+- [ ] `AppDelegate` APNs registration (extend the existing background-download AppDelegate)
+- [ ] `NotificationRegistrar` → `POST /api/notifications/register`
+- [ ] `DeepLinkManager` for notification taps (book detail); iterate via `xcrun simctl push`
+- [ ] **Device (DEFERRED):** real APNs registration + delivery on a physical device
 
 ### Phase 8: Series-Level Restore (2-3 hours)
 

@@ -15,6 +15,15 @@ import Combine
 import Foundation
 import MediaPlayer
 
+// MARK: - PlaybackRestoreState
+
+/// Whether the requested audiobook is available or is being restored from S3
+/// cold storage. Drives the player's "restoring…" UI instead of a hard error.
+enum PlaybackRestoreState: Equatable {
+    case idle
+    case restoring(estimatedCompletion: Date?, message: String?)
+}
+
 /// Manages audio playback using AVPlayer
 /// Provides playback controls, progress tracking, and state management
 @MainActor
@@ -31,6 +40,13 @@ class AudioPlayerManager: ObservableObject {
     @Published var volume: Float = 1.0
     @Published var isLoading = false
     @Published var error: Error?
+
+    // Phase 7a: Archive/restore. When playback is attempted on an audiobook whose
+    // audio is archived in S3 cold storage, the backend initiates a restore and
+    // the stream endpoint returns `status == .restoring`. Rather than surface a
+    // generic error, we expose it as first-class state so the player UI can show
+    // a "restoring, ready in ~Xh" message instead of a failure.
+    @Published var restoreState: PlaybackRestoreState = .idle
 
     // Phase 5: Chapter Navigation
     @Published var chapters: [Chapter] = []
@@ -330,6 +346,9 @@ class AudioPlayerManager: ObservableObject {
         // Load new book
         isLoading = true
         currentBook = book
+        // Clear any stale restore/error state from a previous attempt.
+        restoreState = .idle
+        error = nil
 
         // Apply default playback rate from settings for new books
         playbackRate = PlaybackSettings.shared.defaultPlaybackRate
@@ -432,13 +451,24 @@ class AudioPlayerManager: ObservableObject {
         observeDownloadCompletion(for: book)
 
         // Phase 0: fetch the stream URL on demand instead of using book.audioUrl
-        // (which is being phased out of list responses). A future release returns
-        // status == .restoring here when the audio is archived in cold storage.
+        // (which is being phased out of list responses). Phase 7a: when the audio
+        // is archived in S3 cold storage the backend initiates a restore and
+        // returns status == .restoring — surface that as first-class restore
+        // state rather than a generic error.
         let streamUrlString: String
         do {
             let response = try await apiClient.getBookStream(bookId: book.id)
-            guard response.status == .available, let url = response.streamUrl else {
-                DebugLogger.error("Stream not available (status: \(response.status.rawValue))")
+            if response.status == .restoring {
+                DebugLogger.audio("Stream restoring for \(book.title) — audio is archived")
+                self.restoreState = .restoring(
+                    estimatedCompletion: response.estimatedCompletion,
+                    message: response.message
+                )
+                self.isLoading = false
+                return
+            }
+            guard let url = response.streamUrl else {
+                DebugLogger.error("Stream available but no URL returned")
                 self.error = NSError(
                     domain: "AudioPlayerManager",
                     code: 409,

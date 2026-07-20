@@ -386,11 +386,11 @@ final class DownloadManagerRealTests: XCTestCase {
         mockAPIClient.checkDownloadEligibilityResult = .success(
             CheckDownloadEligibility200Response(eligible: true)
         )
-        mockAPIClient.generateDownloadUrlResult = .success(GenerateDownloadUrl200Response(
+        mockAPIClient.generateDownloadUrlResult = .success(.ready(GenerateDownloadUrl200Response(
             downloadUrl: "https://s3.example.com/audiobooks/test.mp3?signature=abc",
             expiresAt: Date().addingTimeInterval(3600),
             fileSize: 1_000_000
-        ))
+        )))
         MockURLProtocol.requestHandler = { request in
             let response = HTTPURLResponse(
                 url: request.url!,
@@ -447,11 +447,11 @@ final class DownloadManagerRealTests: XCTestCase {
         mockAPIClient.checkDownloadEligibilityResult = .success(
             CheckDownloadEligibility200Response(eligible: true)
         )
-        mockAPIClient.generateDownloadUrlResult = .success(GenerateDownloadUrl200Response(
+        mockAPIClient.generateDownloadUrlResult = .success(.ready(GenerateDownloadUrl200Response(
             downloadUrl: "https://s3.example.com/audiobooks/test.mp3",
             expiresAt: Date().addingTimeInterval(3600),
             fileSize: 999_000_000_000
-        ))
+        )))
 
         // When/Then
         do {
@@ -464,6 +464,29 @@ final class DownloadManagerRealTests: XCTestCase {
         }
 
         XCTAssertTrue(sut.activeDownloads.isEmpty)
+    }
+
+    func testStartDownloadArchivedSetsRestoringState() async throws {
+        // Given — the download endpoint returns 202 restoring (audio is archived)
+        let book = TestFixtures.makeBook()
+        let bookId = book.id.uuidString
+        let eta = Date().addingTimeInterval(5 * 3600)
+        mockAPIClient.checkDownloadEligibilityResult = .success(
+            CheckDownloadEligibility200Response(eligible: true)
+        )
+        mockAPIClient.generateDownloadUrlResult = .success(.restoring(BookStreamResponse(
+            status: .restoring,
+            message: "Restore in progress",
+            estimatedCompletion: eta
+        )))
+
+        // When — no throw; a restore is a legitimate deferred outcome, not an error
+        try await sut.startDownload(book: book)
+
+        // Then — the download reflects restoring state and no task was started
+        let download = try XCTUnwrap(sut.activeDownloads[bookId])
+        XCTAssertEqual(download.state, .restoring(estimatedCompletion: eta))
+        XCTAssertNil(download.task)
     }
 
     // MARK: - Cancel Download Tests

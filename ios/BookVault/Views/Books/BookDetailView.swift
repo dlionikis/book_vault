@@ -32,6 +32,12 @@ struct BookDetailView: View {
         networkMonitor.isConnected
     }
 
+    /// The book's audio is archived in cold storage or a restore is in flight
+    /// (absent archiveStatus is treated as available for backward compatibility).
+    private var isArchivedOrRestoring: Bool {
+        book.archiveStatus == .archived || book.archiveStatus == .restoring
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -202,32 +208,41 @@ struct BookDetailView: View {
 
                     // Play and Download buttons (only shown if book is in library)
                     if isInLibrary {
-                        // Play button: show if online OR if book is downloaded for offline playback
-                        if isOnline || isBookDownloaded {
-                            BookPlayButton(
-                                book: book,
-                                chapterManager: chapterManager,
-                                showingNowPlaying: $showingNowPlaying
-                            )
-                            .padding(.top, 8)
+                        // A book already downloaded locally plays regardless of its
+                        // archive status (the file is on-device). Otherwise, when the
+                        // audio is archived / restoring, show the restore CTA in place
+                        // of Play + Download.
+                        if !isBookDownloaded, isOnline, isArchivedOrRestoring {
+                            BookRestoreCTA(book: book)
+                                .padding(.top, 8)
                         } else {
-                            // Offline and not downloaded - show unavailable message
-                            HStack {
-                                Image(systemName: "wifi.slash")
-                                    .foregroundColor(.secondary)
-                                Text("Download to play offline")
-                                    .foregroundColor(.secondary)
+                            // Play button: show if online OR if book is downloaded for offline playback
+                            if isOnline || isBookDownloaded {
+                                BookPlayButton(
+                                    book: book,
+                                    chapterManager: chapterManager,
+                                    showingNowPlaying: $showingNowPlaying
+                                )
+                                .padding(.top, 8)
+                            } else {
+                                // Offline and not downloaded - show unavailable message
+                                HStack {
+                                    Image(systemName: "wifi.slash")
+                                        .foregroundColor(.secondary)
+                                    Text("Download to play offline")
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.gray.opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .padding(.top, 8)
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.gray.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .padding(.top, 8)
-                        }
 
-                        // Download button (Phase 7) - only show when online
-                        if isOnline {
-                            DownloadButton(book: book)
+                            // Download button (Phase 7) - only show when online
+                            if isOnline {
+                                DownloadButton(book: book)
+                            }
                         }
                     } else if isCheckingLibrary {
                         // Show placeholder while checking library status
@@ -729,6 +744,27 @@ struct DownloadButton: View {
                 }
                 .padding()
                 .background(Color.red.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            case let .restoring(estimatedCompletion):
+                // Archived in cold storage — a restore was initiated; downloading
+                // becomes available once it finishes (~3-5h).
+                VStack(spacing: 8) {
+                    HStack {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .foregroundColor(.orange)
+                        Text("Restoring from archive…")
+                            .foregroundColor(.primary)
+                    }
+
+                    Text(ArchiveStatusFormatter.restoringDetail(estimatedCompletion: estimatedCompletion))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.orange.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
