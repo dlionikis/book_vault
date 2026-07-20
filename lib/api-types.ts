@@ -242,6 +242,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notifications/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register an APNs device token for push notifications
+         * @description Registers (or refreshes) the caller's iOS device token so the backend
+         *     can send push notifications (e.g. when a restored audiobook is ready).
+         *     Idempotent per (user, deviceToken): re-registering updates the SNS
+         *     endpoint and re-activates it.
+         */
+        post: operations["registerDeviceToken"];
+        /**
+         * Unregister an APNs device token
+         * @description Deactivates the caller's device token (e.g. on logout).
+         */
+        delete: operations["unregisterDeviceToken"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/progress": {
         parameters: {
             query?: never;
@@ -1788,6 +1815,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RestoresListResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    registerDeviceToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description APNs device token (hex string) */
+                    deviceToken: string;
+                    /**
+                     * @default ios
+                     * @enum {string}
+                     */
+                    platform?: "ios";
+                };
+            };
+        };
+        responses: {
+            /** @description Token registered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+            /** @description deviceToken missing or invalid */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    unregisterDeviceToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    deviceToken: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Token unregistered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
+            };
+            /** @description deviceToken missing */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
             /** @description Unauthorized */

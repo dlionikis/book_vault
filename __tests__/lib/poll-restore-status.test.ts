@@ -21,9 +21,15 @@ jest.mock('@/lib/db', () => ({
     $transaction: jest.fn(async (ops: unknown[]) => Promise.all(ops as Promise<unknown>[])),
   },
 }));
+jest.mock('@/lib/notification-service', () => ({
+  NotificationService: { sendRestoreComplete: jest.fn().mockResolvedValue(undefined) },
+}));
 
 import { pollRestoreStatus } from '@/lib/poll-restore-status';
 import { prisma } from '@/lib/db';
+import { NotificationService } from '@/lib/notification-service';
+
+const mockNotify = NotificationService.sendRestoreComplete as jest.Mock;
 
 const s3Mock = mockClient(S3Client);
 
@@ -103,10 +109,19 @@ describe('pollRestoreStatus', () => {
     );
   });
 
-  it('does not throw when the notification module is absent (Phase 6 not wired)', async () => {
-    // The dynamic import of ./notification-service fails → guarded no-op.
+  it('notifies the requesting user on completion', async () => {
     (prisma.mediaRestoreRequest.findMany as jest.Mock).mockResolvedValue([makeRestore()]);
     s3Mock.on(HeadObjectCommand).resolves({ ContentLength: 1 });
+
+    await pollRestoreStatus();
+
+    expect(mockNotify).toHaveBeenCalledWith('user-1', 'book-1', 'Test Book');
+  });
+
+  it('completes even if the notification throws (guarded)', async () => {
+    (prisma.mediaRestoreRequest.findMany as jest.Mock).mockResolvedValue([makeRestore()]);
+    s3Mock.on(HeadObjectCommand).resolves({ ContentLength: 1 });
+    mockNotify.mockRejectedValueOnce(new Error('sns down'));
 
     await expect(pollRestoreStatus()).resolves.toMatchObject({ completed: 1 });
   });
