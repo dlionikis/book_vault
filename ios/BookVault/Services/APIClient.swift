@@ -82,6 +82,22 @@ enum APIError: LocalizedError {
     }
 }
 
+// MARK: - Restore / archive types
+
+/// Result of requesting a download URL for a book.
+///
+/// The download endpoint returns two different bodies by status code:
+/// `200` (ready) → `GenerateDownloadUrl200Response`, `202` (archived) →
+/// `BookStreamResponse` with `status == .restoring`. This enum lets callers
+/// branch without inspecting HTTP status codes themselves.
+enum DownloadUrlResult {
+    /// The audio is available; a presigned URL was issued.
+    case ready(GenerateDownloadUrl200Response)
+    /// The audio is archived in cold storage; a restore was initiated (or is
+    /// already in flight). Retry the download once the restore completes.
+    case restoring(BookStreamResponse)
+}
+
 // MARK: - APIClient
 
 /// API client for Book Vault backend
@@ -344,6 +360,67 @@ class APIClient: APIClientProtocol {
             throw APIError.notFound
         default:
             let errorMessage = try? decoder.decode([String: String].self, from: data)
+            throw APIError.serverError(httpResponse.statusCode, errorMessage?["error"])
+        }
+    }
+
+    /// Execute a request and return the HTTP status code plus the raw body,
+    /// applying the same 401 → token-refresh → retry handling as `execute<T>`
+    /// but leaving status interpretation and decoding to the caller.
+    ///
+    /// Used by endpoints whose success responses vary by status code (e.g. the
+    /// download endpoint: `200` ready vs `202` restoring — different bodies).
+    /// 401 (after a failed refresh) and 404 still throw the usual `APIError`;
+    /// everything else in `200...299` is returned verbatim.
+    private func executeRaw(request: URLRequest) async throws -> (statusCode: Int, data: Data) {
+        let path = request.url?.path ?? "unknown"
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        DebugLogger.apiResponse(
+            path: request.url?.absoluteString ?? "unknown",
+            statusCode: httpResponse.statusCode,
+            body: Self.truncatedResponseBody(from: data)
+        )
+
+        switch httpResponse.statusCode {
+        case 200 ... 299:
+            return (httpResponse.statusCode, data)
+        case 401:
+            DebugLogger.auth("Received 401 for \(path) - attempting token refresh...")
+            if await attemptTokenRefresh() {
+                var retryRequest = request
+                if let newToken = accessToken {
+                    retryRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
+                }
+                let (data2, response2) = try await session.data(for: retryRequest)
+                guard let httpResponse2 = response2 as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
+                switch httpResponse2.statusCode {
+                case 200 ... 299:
+                    return (httpResponse2.statusCode, data2)
+                case 401:
+                    if accessToken != nil { forceLogoutHandler() }
+                    throw APIError.unauthorized
+                case 404:
+                    throw APIError.notFound
+                default:
+                    let msg = try? decoder.decode([String: String].self, from: data2)
+                    throw APIError.serverError(httpResponse2.statusCode, msg?["error"])
+                }
+            } else {
+                if accessToken != nil { forceLogoutHandler() }
+                throw APIError.unauthorized
+            }
+        case 404:
+            throw APIError.notFound
+        default:
+            let errorMessage = try? decoder.decode([String: String].self, from: data)
+            DebugLogger.error("API request failed: \(path) - status \(httpResponse.statusCode)")
             throw APIError.serverError(httpResponse.statusCode, errorMessage?["error"])
         }
     }
@@ -617,8 +694,12 @@ class APIClient: APIClientProtocol {
         return try await execute(request: request)
     }
 
-    /// Generate a pre-signed download URL for a book
-    func generateDownloadUrl(bookId: UUID, deviceId: String?) async throws -> GenerateDownloadUrl200Response {
+    /// Generate a pre-signed download URL for a book.
+    ///
+    /// Returns `.ready` (200) with a presigned URL, or `.restoring` (202) when
+    /// the audio is archived in cold storage and a restore was initiated. The
+    /// caller decides how to surface the restoring case.
+    func generateDownloadUrl(bookId: UUID, deviceId: String?) async throws -> DownloadUrlResult {
         let requestBody = GenerateDownloadUrlRequest(deviceId: deviceId)
         let request = try createRequest(
             path: "/api/downloads/\(bookId.uuidString)",
@@ -627,7 +708,13 @@ class APIClient: APIClientProtocol {
             requiresAuth: true
         )
 
-        return try await execute(request: request)
+        let (statusCode, data) = try await executeRaw(request: request)
+        if statusCode == 202 {
+            let restoring: BookStreamResponse = try decodeResponse(data: data)
+            return .restoring(restoring)
+        }
+        let ready: GenerateDownloadUrl200Response = try decodeResponse(data: data)
+        return .ready(ready)
     }
 
     // MARK: - Streaming (Authenticated)
@@ -640,6 +727,49 @@ class APIClient: APIClientProtocol {
     func getBookStream(bookId: UUID) async throws -> BookStreamResponse {
         let request = try createRequest(
             path: "/api/books/\(bookId.uuidString)/stream",
+            method: "GET",
+            requiresAuth: true
+        )
+
+        return try await execute(request: request)
+    }
+
+    // MARK: - Restore / Archive (Authenticated)
+
+    /// Explicitly request a restore for an archived audiobook (the "Request
+    /// restore" button) without pretending to play.
+    ///
+    /// Idempotent: an in-flight restore is reused. Returns `status == .available`
+    /// (200) when the file turns out not to be archived, or `.restoring` (202)
+    /// when a restore is initiated/ongoing. Both share `BookStreamResponse`, so
+    /// the caller reads `.status` rather than the HTTP code.
+    func restoreBook(bookId: UUID) async throws -> BookStreamResponse {
+        let request = try createRequest(
+            path: "/api/books/\(bookId.uuidString)/restore",
+            method: "POST",
+            requiresAuth: true
+        )
+
+        return try await execute(request: request)
+    }
+
+    /// Fetch the cached restore/availability state for a book. Used to poll
+    /// while a restore is in progress.
+    func getBookRestoreStatus(bookId: UUID) async throws -> RestoreStatus {
+        let request = try createRequest(
+            path: "/api/books/\(bookId.uuidString)/restore-status",
+            method: "GET",
+            requiresAuth: true
+        )
+
+        return try await execute(request: request)
+    }
+
+    /// List the caller's in-progress restores plus those completed in the last
+    /// 7 days, newest first.
+    func listRestores() async throws -> RestoresListResponse {
+        let request = try createRequest(
+            path: "/api/books/restores",
             method: "GET",
             requiresAuth: true
         )

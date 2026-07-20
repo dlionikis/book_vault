@@ -20,6 +20,9 @@ enum DownloadState: Equatable {
     case paused(progress: Double)
     case completed
     case failed(error: String)
+    /// The audio is archived in S3 cold storage; a restore was initiated and is
+    /// in flight (~3-5h). The download can be retried once it completes.
+    case restoring(estimatedCompletion: Date?)
 }
 
 // MARK: - ActiveDownload
@@ -404,8 +407,23 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
                 throw DownloadError.notEligible
             }
 
-            // Get pre-signed download URL
-            let downloadInfo = try await generateDownloadUrl(bookId: book.id)
+            // Get pre-signed download URL. The audio may be archived in S3 cold
+            // storage, in which case the backend initiates a restore (202) and
+            // there's nothing to download yet — surface a restoring state and stop.
+            let downloadInfo: GenerateDownloadUrl200Response
+            switch try await generateDownloadUrl(bookId: book.id) {
+            case let .ready(info):
+                downloadInfo = info
+            case let .restoring(restore):
+                DebugLogger.download("Download deferred — \(book.title) is archived; restore initiated")
+                activeDownloads[bookId]?.state = .restoring(
+                    estimatedCompletion: restore.estimatedCompletion
+                )
+                // No file to fetch yet; drop the pending-download record so app
+                // relaunch doesn't try to resume a non-existent download.
+                removePendingDownloadInfo(bookId: bookId)
+                return
+            }
 
             // Check storage space
             guard storageManager.canDownload(fileSize: Int64(downloadInfo.fileSize)) else {
@@ -552,7 +570,7 @@ class DownloadManager: NSObject, ObservableObject, DownloadManaging {
         }
     }
 
-    private func generateDownloadUrl(bookId: UUID) async throws -> GenerateDownloadUrl200Response {
+    private func generateDownloadUrl(bookId: UUID) async throws -> DownloadUrlResult {
         let deviceId = UIDevice.current.identifierForVendor?.uuidString
 
         do {

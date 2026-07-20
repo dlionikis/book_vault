@@ -635,10 +635,13 @@ final class APIClientRealTests: XCTestCase {
         }
 
         // When
-        let response = try await sut.generateDownloadUrl(bookId: bookId, deviceId: "test-device-id")
+        let result = try await sut.generateDownloadUrl(bookId: bookId, deviceId: "test-device-id")
 
-        // Then
+        // Then — a 200 decodes to .ready with the presigned URL
         XCTAssertEqual(capturedBody?["deviceId"], "test-device-id")
+        guard case let .ready(response) = result else {
+            return XCTFail("Expected .ready, got \(result)")
+        }
         XCTAssertEqual(response.downloadUrl, "https://s3.example.com/audiobooks/test.mp3?signature=abc")
         XCTAssertEqual(response.fileSize, 12_345_678)
     }
@@ -665,5 +668,113 @@ final class APIClientRealTests: XCTestCase {
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
+    }
+
+    // MARK: - Restore / Archive Tests
+
+    func testGenerateDownloadUrlRestoringDecodes202() async throws {
+        // Given — an archived file returns 202 with a BookStreamResponse body
+        sut.accessToken = "download-token"
+        let eta = Date().addingTimeInterval(5 * 3600)
+        MockURLProtocol.requestHandler = { _ in
+            self.makeJSONResponse(statusCode: 202, object: BookStreamResponse(
+                status: .restoring,
+                bookId: UUID(),
+                message: "Restore in progress",
+                estimatedCompletion: eta
+            ))
+        }
+
+        // When
+        let result = try await sut.generateDownloadUrl(bookId: UUID(), deviceId: nil)
+
+        // Then — the 202 body decodes as .restoring, not a decode failure
+        guard case let .restoring(restore) = result else {
+            return XCTFail("Expected .restoring, got \(result)")
+        }
+        XCTAssertEqual(restore.status, .restoring)
+        XCTAssertEqual(restore.message, "Restore in progress")
+    }
+
+    func testRestoreBookReturnsRestoringOn202() async throws {
+        // Given
+        sut.accessToken = "token"
+        let bookId = UUID()
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, "/api/books/\(bookId.uuidString)/restore")
+            XCTAssertEqual(request.httpMethod, "POST")
+            return self.makeJSONResponse(statusCode: 202, object: BookStreamResponse(
+                status: .restoring,
+                message: "Restore initiated"
+            ))
+        }
+
+        // When
+        let response = try await sut.restoreBook(bookId: bookId)
+
+        // Then
+        XCTAssertEqual(response.status, .restoring)
+    }
+
+    func testRestoreBookReturnsAvailableOn200() async throws {
+        // Given — file wasn't actually archived; endpoint self-heals to 200
+        sut.accessToken = "token"
+        MockURLProtocol.requestHandler = { _ in
+            self.makeJSONResponse(statusCode: 200, object: BookStreamResponse(
+                status: .available,
+                streamUrl: "https://s3.example.com/audio.m4b"
+            ))
+        }
+
+        // When
+        let response = try await sut.restoreBook(bookId: UUID())
+
+        // Then
+        XCTAssertEqual(response.status, .available)
+        XCTAssertNotNil(response.streamUrl)
+    }
+
+    func testGetBookRestoreStatusDecodes() async throws {
+        // Given
+        sut.accessToken = "token"
+        let bookId = UUID()
+        let eta = Date().addingTimeInterval(3 * 3600)
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, "/api/books/\(bookId.uuidString)/restore-status")
+            return self.makeJSONResponse(statusCode: 200, object: RestoreStatus(
+                status: .restoring,
+                estimatedCompletion: eta
+            ))
+        }
+
+        // When
+        let status = try await sut.getBookRestoreStatus(bookId: bookId)
+
+        // Then
+        XCTAssertEqual(status.status, .restoring)
+        XCTAssertNotNil(status.estimatedCompletion)
+    }
+
+    func testListRestoresDecodes() async throws {
+        // Given
+        sut.accessToken = "token"
+        let summary = RestoreRequestSummary(
+            id: UUID(),
+            bookId: UUID(),
+            status: .inProgress,
+            requestedAt: Date(),
+            book: RestoreRequestSummaryBook(id: UUID(), title: "Test Book")
+        )
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, "/api/books/restores")
+            return self.makeJSONResponse(statusCode: 200, object: RestoresListResponse(restores: [summary]))
+        }
+
+        // When
+        let response = try await sut.listRestores()
+
+        // Then
+        XCTAssertEqual(response.restores.count, 1)
+        XCTAssertEqual(response.restores.first?.book.title, "Test Book")
     }
 }

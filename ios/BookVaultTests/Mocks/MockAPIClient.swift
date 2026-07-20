@@ -30,6 +30,9 @@ class MockAPIClient: APIClientProtocol {
     var checkDownloadEligibilityCalls: [UUID] = []
     var generateDownloadUrlCalls: [(bookId: UUID, deviceId: String?)] = []
     var getBookStreamCalls: [UUID] = []
+    var restoreBookCalls: [UUID] = []
+    var getBookRestoreStatusCalls: [UUID] = []
+    var listRestoresCalls: Int = 0
 
     // MARK: - Configurable Results
 
@@ -72,11 +75,20 @@ class MockAPIClient: APIClientProtocol {
     var checkDownloadEligibilityResult: Result<CheckDownloadEligibility200Response, Error> = .failure(
         APIError.networkError(NSError(domain: "Test", code: -1))
     )
-    var generateDownloadUrlResult: Result<GenerateDownloadUrl200Response, Error> = .failure(
+    var generateDownloadUrlResult: Result<DownloadUrlResult, Error> = .failure(
         APIError.networkError(NSError(domain: "Test", code: -1))
     )
     var getBookStreamResult: Result<BookStreamResponse, Error> = .success(
         BookStreamResponse(status: .available, streamUrl: "http://localhost:3000/api/audio/test.m4b")
+    )
+    var restoreBookResult: Result<BookStreamResponse, Error> = .success(
+        BookStreamResponse(status: .restoring, message: "Restore in progress")
+    )
+    var getBookRestoreStatusResult: Result<RestoreStatus, Error> = .success(
+        RestoreStatus(status: .available)
+    )
+    var listRestoresResult: Result<RestoresListResponse, Error> = .success(
+        RestoresListResponse(restores: [])
     )
 
     // MARK: - Reset
@@ -97,6 +109,9 @@ class MockAPIClient: APIClientProtocol {
         checkDownloadEligibilityCalls = []
         generateDownloadUrlCalls = []
         getBookStreamCalls = []
+        restoreBookCalls = []
+        getBookRestoreStatusCalls = []
+        listRestoresCalls = 0
         accessToken = nil
     }
 
@@ -170,7 +185,7 @@ class MockAPIClient: APIClientProtocol {
         return try checkDownloadEligibilityResult.get()
     }
 
-    func generateDownloadUrl(bookId: UUID, deviceId: String?) async throws -> GenerateDownloadUrl200Response {
+    func generateDownloadUrl(bookId: UUID, deviceId: String?) async throws -> DownloadUrlResult {
         generateDownloadUrlCalls.append((bookId, deviceId))
         return try generateDownloadUrlResult.get()
     }
@@ -178,5 +193,20 @@ class MockAPIClient: APIClientProtocol {
     func getBookStream(bookId: UUID) async throws -> BookStreamResponse {
         getBookStreamCalls.append(bookId)
         return try getBookStreamResult.get()
+    }
+
+    func restoreBook(bookId: UUID) async throws -> BookStreamResponse {
+        restoreBookCalls.append(bookId)
+        return try restoreBookResult.get()
+    }
+
+    func getBookRestoreStatus(bookId: UUID) async throws -> RestoreStatus {
+        getBookRestoreStatusCalls.append(bookId)
+        return try getBookRestoreStatusResult.get()
+    }
+
+    func listRestores() async throws -> RestoresListResponse {
+        listRestoresCalls += 1
+        return try listRestoresResult.get()
     }
 }

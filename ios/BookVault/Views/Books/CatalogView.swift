@@ -137,6 +137,10 @@ struct BookGridItem: View {
                     ProgressIndicator(progress: progress, runtimeMinutes: book.runtimeMinutes ?? 0)
                 }
             }
+            // Archive/restore badge (top-trailing); renders nothing when available.
+            .overlay(alignment: .topTrailing) {
+                ArchiveBadge(status: book.archiveStatus)
+            }
             .frame(height: 200)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .shadow(radius: 4)
