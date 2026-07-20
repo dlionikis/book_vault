@@ -147,6 +147,11 @@ final class MockAPIClientForAuth: APIClientProtocol {
     func listRestores() async throws -> RestoresListResponse {
         fatalError("Not implemented for auth tests")
     }
+
+    @discardableResult
+    func registerDeviceToken(deviceToken _: String) async throws -> RegisterDeviceToken200Response {
+        fatalError("Not implemented for auth tests")
+    }
 }
 
 // MARK: - AuthManagerRealTests

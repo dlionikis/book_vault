@@ -1716,13 +1716,22 @@ timeout to 15s; verified green cold (`.next` deleted) and warm.
 - [ ] Archive badge on the shared `BookGridItem` (propagates to 5 list surfaces)
 - [ ] Restore/restoring/play CTA in `BookDetailView`
 
-**Phase 7b — push registration + deep-linking (simctl-testable, no device):**
+**Phase 7b — push registration + deep-linking — ✅ DONE (July 20, 2026):**
 
-- [ ] Push-notification entitlement (`project.yml` + `xcodegen generate`)
-- [ ] `AppDelegate` APNs registration (extend the existing background-download AppDelegate)
-- [ ] `NotificationRegistrar` → `POST /api/notifications/register`
-- [ ] `DeepLinkManager` for notification taps (book detail); iterate via `xcrun simctl push`
-- [ ] **Device (DEFERRED):** real APNs registration + delivery on a physical device
+- [x] Push-notification entitlement (`BookVault/BookVault.entitlements`,
+      `aps-environment=development`) + `remote-notification` background mode
+      wired via `CODE_SIGN_ENTITLEMENTS` in `project.yml`
+- [x] `AppDelegate` APNs registration (extended the background-download
+      AppDelegate: token callbacks + `UNUserNotificationCenterDelegate` taps)
+- [x] `NotificationRegistrar` → `POST /api/notifications/register`
+      (`APIClient.registerDeviceToken`; authorization + hex-token upload,
+      DI-injectable; triggered from `ContentView` once authenticated)
+- [x] `DeepLinkManager` for notification taps → `BookDetailLoader` sheet in
+      `ContentView`; verified delivery with `xcrun simctl push`
+- [x] Tests: 14 new (DeepLinkManager payload parsing/state, NotificationRegistrar
+      authorization + token upload/dedup); full iOS suite 635 green
+- [ ] **Device (DEFERRED — needs APNs `.p8` + SNS platform app + task-role IAM):**
+      real APNs registration + end-to-end push delivery on a physical device
 
 ### Phase 8: Series-Level Restore (2-3 hours)
 

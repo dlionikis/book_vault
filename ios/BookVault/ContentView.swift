@@ -26,9 +26,26 @@ struct ContentView: View {
     @StateObject private var themeManager = ThemeManager.shared
     @StateObject private var networkMonitor = NetworkMonitor.shared
     @ObservedObject private var audioPlayer = AudioPlayerManager.shared
+    @StateObject private var deepLinkManager = DeepLinkManager.shared
     @State private var hasLoadedInitialBook = false
     @State private var selectedTab: Tab = .catalog
     @State private var previousOnlineTab: Tab? // Remember tab when going offline
+
+    /// Identifiable wrapper so a book id can drive `.sheet(item:)`.
+    private struct DeepLinkedBook: Identifiable { let id: String }
+
+    /// The book to present from a push-notification tap (drives the sheet below).
+    private var deepLinkedBook: Binding<DeepLinkedBook?> {
+        Binding(
+            get: {
+                if case let .book(id) = deepLinkManager.pendingDeepLink { return DeepLinkedBook(id: id) }
+                return nil
+            },
+            set: { newValue in
+                if newValue == nil { deepLinkManager.consume() }
+            }
+        )
+    }
 
     var body: some View {
         if authManager.isRestoringSession {
@@ -116,6 +133,23 @@ struct ContentView: View {
             }
             .ignoresSafeArea(.keyboard)
             .preferredColorScheme(themeManager.selectedTheme.colorScheme)
+            // Phase 7b: request push authorization once authenticated so the
+            // backend can notify us when a restore completes.
+            .task {
+                await NotificationRegistrar.shared.requestAuthorizationAndRegister()
+            }
+            // Phase 7b: a restore-complete notification tap opens the book here,
+            // regardless of the current tab.
+            .sheet(item: deepLinkedBook) { boxed in
+                NavigationStack {
+                    BookDetailLoader(bookId: boxed.id)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Done") { deepLinkManager.consume() }
+                            }
+                        }
+                }
+            }
         } else {
             // User is not logged in - show login screen
             LoginView()
