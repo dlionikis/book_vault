@@ -776,4 +776,21 @@ class APIClient: APIClientProtocol {
 
         return try await execute(request: request)
     }
+
+    // MARK: - Notifications (Authenticated)
+
+    /// Register (or refresh) this device's APNs token so the backend can send
+    /// push notifications. Idempotent per (user, token). Phase 7b.
+    @discardableResult
+    func registerDeviceToken(deviceToken: String) async throws -> RegisterDeviceToken200Response {
+        let requestBody = RegisterDeviceTokenRequest(deviceToken: deviceToken, platform: .ios)
+        let request = try createRequest(
+            path: "/api/notifications/register",
+            method: "POST",
+            body: requestBody,
+            requiresAuth: true
+        )
+
+        return try await execute(request: request)
+    }
 }

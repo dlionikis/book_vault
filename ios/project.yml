@@ -45,6 +45,7 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         UIBackgroundModes:
           - audio
+          - remote-notification
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
         NSFaceIDUsageDescription: Book Vault uses Face ID to securely log you in without entering your password.
@@ -52,6 +53,11 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.bookvault.BookVault
+        # Push notifications (Phase 7b). Use the committed entitlements file
+        # rather than xcodegen's `entitlements:` (which would regenerate/overwrite
+        # it). aps-environment=development for Debug; automatic signing rewrites
+        # it to production at archive time.
+        CODE_SIGN_ENTITLEMENTS: BookVault/BookVault.entitlements
         TARGETED_DEVICE_FAMILY: '1,2'
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES

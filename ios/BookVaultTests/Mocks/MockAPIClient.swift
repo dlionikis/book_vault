@@ -33,6 +33,7 @@ class MockAPIClient: APIClientProtocol {
     var restoreBookCalls: [UUID] = []
     var getBookRestoreStatusCalls: [UUID] = []
     var listRestoresCalls: Int = 0
+    var registerDeviceTokenCalls: [String] = []
 
     // MARK: - Configurable Results
 
@@ -90,6 +91,9 @@ class MockAPIClient: APIClientProtocol {
     var listRestoresResult: Result<RestoresListResponse, Error> = .success(
         RestoresListResponse(restores: [])
     )
+    var registerDeviceTokenResult: Result<RegisterDeviceToken200Response, Error> = .success(
+        RegisterDeviceToken200Response(success: true)
+    )
 
     // MARK: - Reset
 
@@ -112,6 +116,7 @@ class MockAPIClient: APIClientProtocol {
         restoreBookCalls = []
         getBookRestoreStatusCalls = []
         listRestoresCalls = 0
+        registerDeviceTokenCalls = []
         accessToken = nil
     }
 
@@ -208,5 +213,11 @@ class MockAPIClient: APIClientProtocol {
     func listRestores() async throws -> RestoresListResponse {
         listRestoresCalls += 1
         return try listRestoresResult.get()
+    }
+
+    @discardableResult
+    func registerDeviceToken(deviceToken: String) async throws -> RegisterDeviceToken200Response {
+        registerDeviceTokenCalls.append(deviceToken)
+        return try registerDeviceTokenResult.get()
     }
 }
