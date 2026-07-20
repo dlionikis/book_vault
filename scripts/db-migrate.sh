@@ -31,6 +31,16 @@ CLUSTER="book-vault"
 SERVICE="book-vault-spot"
 CONTAINER="book-vault"
 
+# The production runtime image ships only @prisma/client, not the `prisma` CLI,
+# so `npx prisma ...` in the container downloads the LATEST CLI — which is a
+# different major (Prisma 7 rejects `url` in the schema; this project is on 6).
+# Pin the CLI to the project's own prisma version so migrate runs on-version.
+PRISMA_VERSION=$(node -p "require('./package.json').devDependencies.prisma.replace(/^[^0-9]*/, '')" 2>/dev/null)
+if [ -z "$PRISMA_VERSION" ]; then
+    log_error "Could not read prisma version from package.json"
+    exit 1
+fi
+
 show_usage() {
     cat << EOF
 Database Migration Script
@@ -109,9 +119,10 @@ run_local_migration() {
         log_info "Running SQL file: $MIGRATION_FILE"
         psql "$DATABASE_URL" -f "$MIGRATION_FILE"
     else
-        # Run prisma migrate deploy
-        log_info "Running: npx prisma migrate deploy"
-        npx prisma migrate deploy
+        # Run prisma migrate deploy (pinned; locally this matches the installed
+        # version anyway, but keep it consistent with the production path).
+        log_info "Running: npx prisma@${PRISMA_VERSION} migrate deploy"
+        npx --yes "prisma@${PRISMA_VERSION}" migrate deploy
     fi
 
     log_success "Migration completed successfully!"
@@ -168,15 +179,32 @@ prisma.\\\$executeRawUnsafe(sql).then(r => {
 \"" \
             --interactive
     else
-        # Run prisma migrate deploy
-        log_info "Running: npx prisma migrate deploy"
+        # Run prisma migrate deploy, pinned to the project's CLI version.
+        log_info "Running: npx prisma@${PRISMA_VERSION} migrate deploy"
 
-        aws ecs execute-command \
+        # ECS Exec's session exit code reflects the *session*, not the remote
+        # command — so a failed migration still exits 0 and would falsely print
+        # "completed". Capture the output (tee so it's still visible live) and
+        # verify Prisma's own success/failure markers before declaring success.
+        local exec_output
+        exec_output=$(aws ecs execute-command \
             --cluster "$CLUSTER" \
             --task "$TASK_ARN" \
             --container "$CONTAINER" \
-            --command "npx prisma migrate deploy" \
-            --interactive
+            --command "npx --yes prisma@${PRISMA_VERSION} migrate deploy" \
+            --interactive 2>&1 | tee /dev/tty)
+
+        # Prisma prints "Error" / "P1012" etc. on failure; on success it prints
+        # either "Applying migration" + "successfully applied" or, when nothing
+        # is pending, "No pending migrations to apply".
+        if echo "$exec_output" | grep -qiE "error|Validation Error|is no longer supported|P[0-9]{4}"; then
+            log_error "Migration FAILED (see Prisma output above)."
+            exit 1
+        fi
+        if ! echo "$exec_output" | grep -qiE "successfully applied|No pending migrations to apply|Database schema is up to date"; then
+            log_error "Could not confirm migration success from Prisma output — treating as failure."
+            exit 1
+        fi
     fi
 
     log_success "Migration completed!"
