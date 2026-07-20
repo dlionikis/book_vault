@@ -16,6 +16,7 @@ import { getS3Client, getS3Bucket, isS3Enabled } from './s3';
 import { prisma } from './db';
 import { logger } from './logger';
 import { AVAILABILITY } from './restore';
+import { NotificationService } from './notification-service';
 
 const STUCK_THRESHOLD_MS = 24 * 3600_000; // 3-5h expected; 24h = something is wrong
 
@@ -28,9 +29,9 @@ export interface PollResult {
 }
 
 /**
- * Notify the requesting user that a restore finished. Phase 6 wires up the
- * SNS-backed NotificationService; until it exists this is a no-op guarded by a
- * dynamic import so the poller is fully functional on its own.
+ * Notify the requesting user that a restore finished. NotificationService
+ * self-guards when push isn't configured (no SNS platform ARN); we additionally
+ * catch here so a notification failure never breaks the poll loop.
  */
 async function notifyRestoreComplete(
   userId: string,
@@ -38,22 +39,8 @@ async function notifyRestoreComplete(
   bookTitle: string
 ): Promise<void> {
   try {
-    // Phase 6 adds lib/notification-service (SNS). Until then the module
-    // doesn't exist; use a computed specifier so this stays a pure runtime
-    // import (no compile-time dependency) and no-ops cleanly when absent.
-    const moduleName = './notification-service';
-    const mod = (await import(/* webpackIgnore: true */ moduleName).catch(() => null)) as {
-      NotificationService?: {
-        sendRestoreComplete?: (u: string, b: string, t: string) => Promise<void>;
-      };
-    } | null;
-    if (mod?.NotificationService?.sendRestoreComplete) {
-      await mod.NotificationService.sendRestoreComplete(userId, bookId, bookTitle);
-    } else {
-      logger.info('Restore complete (notifications not yet wired — Phase 6)', { bookId, userId });
-    }
+    await NotificationService.sendRestoreComplete(userId, bookId, bookTitle);
   } catch (error) {
-    // Never let a notification failure break the poll loop.
     logger.error('Restore-complete notification failed', { bookId, error: String(error) });
   }
 }

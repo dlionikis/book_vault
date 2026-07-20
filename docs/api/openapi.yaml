@@ -1169,6 +1169,99 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/notifications/register:
+    post:
+      operationId: registerDeviceToken
+      tags: [Notifications]
+      summary: Register an APNs device token for push notifications
+      description: |
+        Registers (or refreshes) the caller's iOS device token so the backend
+        can send push notifications (e.g. when a restored audiobook is ready).
+        Idempotent per (user, deviceToken): re-registering updates the SNS
+        endpoint and re-activates it.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceToken]
+              properties:
+                deviceToken:
+                  type: string
+                  description: APNs device token (hex string)
+                platform:
+                  type: string
+                  enum: [ios]
+                  default: ios
+      responses:
+        '200':
+          description: Token registered
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+        '400':
+          description: deviceToken missing or invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: unregisterDeviceToken
+      tags: [Notifications]
+      summary: Unregister an APNs device token
+      description: Deactivates the caller's device token (e.g. on logout).
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceToken]
+              properties:
+                deviceToken:
+                  type: string
+      responses:
+        '200':
+          description: Token unregistered
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+        '400':
+          description: deviceToken missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   # Progress endpoints
   /api/progress:
     get:
