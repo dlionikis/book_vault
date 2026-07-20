@@ -1003,6 +1003,41 @@ export async function GET(req: Request) {
 
 ---
 
+## Deployed Infrastructure (as-built, July 20, 2026)
+
+The Phase 5 jobs are wired up and running in production. **Note: implemented with
+classic EventBridge _Rules_, not EventBridge _Scheduler_** — Scheduler rejected the
+API-destination target ARN (`ValidationException: Provided Arn is not in correct
+format`); classic Rules are the supported path for API-destination targets and match
+the plan's "EventBridge → API destination" intent.
+
+| Resource               | Identifier / value                                                                                                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cron secret            | Secrets Manager `book-vault/cron` (key `CRON_SECRET`); execution role's existing `book-vault/*` grant covers it                                                                       |
+| Task definition        | `book-vault:6` (= `:5` + the `CRON_SECRET` secret ref); both services rolled onto it                                                                                                  |
+| EventBridge connection | `book-vault-cron` — API_KEY auth, header `Authorization: Bearer <CRON_SECRET>`                                                                                                        |
+| API destinations       | `book-vault-poll-restores` → `/api/cron/poll-restores`; `book-vault-sync-availability` → `/api/cron/sync-availability` (both GET)                                                     |
+| Invoke role            | `book-vault-scheduler-cron` (trusts `events.amazonaws.com`; policy `InvokeCronApiDestinations` → `events:InvokeApiDestination` on the two destinations)                               |
+| Rules                  | `book-vault-poll-restores` = `rate(5 minutes)`; `book-vault-sync-availability` = `cron(0 8 * * ? *)` **UTC** (≈ 3 AM Central; classic Rules are UTC-only, so this does not track DST) |
+| S3 restore IAM         | task role `book-vault-ecs-task` inline policy `S3RestoreAccess` → `s3:RestoreObject` on `book-vault-media/*` (HeadObject already covered by GetObject)                                |
+
+**Migration note (P3005):** prod's DB predated Prisma migration tracking — `migrate deploy`
+failed with `P3005` (schema not empty, empty `_prisma_migrations`). Resolved by baselining
+the 3 pre-existing migrations (`migrate resolve --applied <name>` — history rows only, no
+schema SQL) then `migrate deploy` for `20260719183757_restore_workflow_schema`. Prod
+`db-migrate.sh` also had two bugs fixed in #108 (unpinned CLI pulled Prisma 7; false-success
+on ECS-exec).
+
+**First sync result (July 20, 2026):** 764 audio files checked → **695 archived (~91%)**, 69
+available, 0 errors. Confirms the feature's premise: the large majority of the library is in
+the Intelligent-Tiering Archive Access tier.
+
+**Manual re-run / debug:**
+`curl -H "Authorization: Bearer $CRON_SECRET" https://bookvault.lionikis.com/api/cron/sync-availability`
+(secret via `aws secretsmanager get-secret-value --secret-id book-vault/cron`).
+
+---
+
 ## Phase 6: iOS Push Notifications (AWS SNS + APNs)
 
 **Time estimate**: 4-5 hours
