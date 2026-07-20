@@ -15,6 +15,7 @@ enum Tab {
     case search // Keyword search
     case library // User's personal library
     case downloads // Offline downloads (Phase 7)
+    case restores // Archive restore requests
     case settings // Settings and account
     case offline // Offline mode placeholder (Phase 8)
 }
@@ -102,6 +103,14 @@ struct ContentView: View {
                             Label("Downloads", systemImage: "arrow.down.circle")
                         }
                         .tag(Tab.downloads)
+
+                    NavigationStack {
+                        RestoreRequestsView()
+                    }
+                    .tabItem {
+                        Label("Restores", systemImage: "clock.arrow.circlepath")
+                    }
+                    .tag(Tab.restores)
 
                     SettingsView()
                         .tabItem {

@@ -26,9 +26,6 @@ struct SettingsView: View {
     @State private var downloadedBooksCount: Int = 0
     @State private var downloadedBooksSize: Int64 = 0
 
-    // Count of in-progress restores (badge on the Restore Requests row)
-    @State private var activeRestoreCount: Int = 0
-
     var body: some View {
         NavigationView {
             List {
@@ -160,28 +157,6 @@ struct SettingsView: View {
                     Text("Account")
                 }
 
-                // Library Section
-                Section {
-                    NavigationLink(destination: RestoreRequestsView()) {
-                        HStack {
-                            Label("Restore Requests", systemImage: "clock.arrow.circlepath")
-                            Spacer()
-                            if activeRestoreCount > 0 {
-                                Text("\(activeRestoreCount)")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 2)
-                                    .background(Color.blue)
-                                    .clipShape(Capsule())
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Library")
-                }
-
                 // About Section
                 Section {
                     HStack {
@@ -303,9 +278,6 @@ struct SettingsView: View {
             .onAppear {
                 refreshCacheStats()
             }
-            .task {
-                await refreshActiveRestoreCount()
-            }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
             .confirmationDialog("Log Out", isPresented: $showingLogoutConfirmation) {
@@ -371,17 +343,6 @@ struct SettingsView: View {
         let downloadStats = DownloadManager.shared.getStorageStats()
         downloadedBooksCount = downloadStats.count
         downloadedBooksSize = downloadStats.size
-    }
-
-    /// Fetch the number of in-progress restores for the badge. Best-effort;
-    /// leaves the count at 0 (no badge) on failure.
-    private func refreshActiveRestoreCount() async {
-        do {
-            let response = try await APIClient.shared.listRestores()
-            activeRestoreCount = response.restores.filter { $0.status == .inProgress }.count
-        } catch {
-            DebugLogger.verbose("Failed to fetch active restore count: \(error)")
-        }
     }
 
     private func formatBytes(_ bytes: Int64) -> String {
