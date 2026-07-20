@@ -312,7 +312,7 @@ export default function AudioPlayer({
   ]);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg z-50">
       <audio
         ref={audioRef}
         src={audioUrl}
@@ -330,10 +330,10 @@ export default function AudioPlayer({
             max={duration || 0}
             value={currentTime}
             onChange={handleSeek}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-600"
             aria-label="Seek audio"
           />
-          <div className="flex justify-between text-xs text-gray-600 mt-1">
+          <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mt-1">
             <span>{formatTime(currentTime, { forceHours: true })}</span>
             <span>{formatTime(duration, { forceHours: true })}</span>
           </div>
@@ -361,7 +361,7 @@ export default function AudioPlayer({
           <div className="flex gap-2 flex-shrink-0">
             <button
               onClick={() => skip(-15)}
-              className="p-2 text-gray-700 hover:bg-gray-100 rounded transition-colors"
+              className="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
               aria-label="Skip backward 15 seconds"
               title="Skip backward 15 seconds"
             >
@@ -376,7 +376,7 @@ export default function AudioPlayer({
             </button>
             <button
               onClick={() => skip(30)}
-              className="p-2 text-gray-700 hover:bg-gray-100 rounded transition-colors"
+              className="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
               aria-label="Skip forward 30 seconds"
               title="Skip forward 30 seconds"
             >
@@ -393,8 +393,8 @@ export default function AudioPlayer({
 
           {/* Book Info */}
           <div className="flex-1 min-w-0 hidden sm:block">
-            <div className="font-medium text-gray-900 truncate">{title}</div>
-            <div className="text-sm text-gray-600 truncate">{author}</div>
+            <div className="font-medium text-gray-900 dark:text-white truncate">{title}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 truncate">{author}</div>
           </div>
 
           {/* Playback Rate */}
@@ -406,7 +406,7 @@ export default function AudioPlayer({
                 className={`px-2 py-1 text-xs rounded transition-colors ${
                   playbackRate === rate
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
                 aria-label={`Set playback speed to ${rate}x`}
               >
@@ -419,7 +419,7 @@ export default function AudioPlayer({
           <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
             <button
               onClick={toggleMute}
-              className="p-2 text-gray-700 hover:bg-gray-100 rounded transition-colors"
+              className="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
               aria-label={isMuted ? 'Unmute' : 'Mute'}
             >
               {isMuted || volume === 0 ? (
@@ -464,7 +464,7 @@ export default function AudioPlayer({
               step="0.01"
               value={isMuted ? 0 : volume}
               onChange={handleVolumeChange}
-              className="w-20 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              className="w-20 h-1 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-600"
               aria-label="Volume control"
             />
           </div>

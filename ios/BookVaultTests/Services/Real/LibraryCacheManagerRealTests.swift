@@ -24,7 +24,14 @@ final class LibraryCacheManagerRealTests: XCTestCase {
         authorName: String = "Test Author"
     ) -> LibraryBook {
         let author = Author(id: UUID(), name: authorName)
-        return LibraryBook(id: id, asin: "ASIN123", title: title, authors: [author], addedAt: Date())
+        return LibraryBook(
+            id: id,
+            asin: "ASIN123",
+            title: title,
+            archiveStatus: .available,
+            authors: [author],
+            addedAt: Date()
+        )
     }
 
     private func createTestBooks(count: Int) -> [LibraryBook] {
@@ -207,6 +214,7 @@ final class LibraryCacheManagerRealTests: XCTestCase {
             id: UUID(),
             asin: "B0123456789",
             title: "The Great Book",
+            archiveStatus: .available,
             publisherSummary: "A wonderful story",
             runtimeMinutes: 600,
             releaseDate: Date(timeIntervalSince1970: 1_700_000_000),

@@ -25,7 +25,7 @@ final class StorageManagerRealTests: XCTestCase {
         authorName: String = "Test Author"
     ) -> Book {
         let author = Author(id: UUID(), name: authorName)
-        return Book(id: id, asin: "TEST123", title: title, authors: [author])
+        return Book(id: id, asin: "TEST123", title: title, archiveStatus: .available, authors: [author])
     }
 
     private func createTempFile(withData data: Data, named filename: String) -> URL {

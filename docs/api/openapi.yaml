@@ -237,6 +237,22 @@ components:
         title:
           type: string
           example: 'The Name of the Wind'
+        archiveStatus:
+          type: string
+          enum: [available, archived, restoring]
+          description: |
+            Availability of the audio file (derived from the cached
+            audio_availability column — synced nightly and self-healed at play
+            time):
+            - available: ready to stream immediately
+            - archived: in the S3 Intelligent-Tiering Archive Access tier;
+              requires a ~3-5 hour restore
+            - restoring: restore in progress
+
+            Optional (not in `required`) for backward compatibility: a backend
+            deployed before the restore feature omits it, and clients must treat
+            its absence as `available`. The current server always sends it.
+          example: available
         publisherSummary:
           type: string
           nullable: true

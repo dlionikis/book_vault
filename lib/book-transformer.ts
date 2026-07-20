@@ -67,6 +67,17 @@ export type BookWithIncludes = Prisma.BookGetPayload<{
  * @param book - Book from Prisma with standard includes
  * @returns Promise resolving to transformed book matching OpenAPI Book schema
  */
+/**
+ * Book.audioAvailability (DB, SCREAMING_CASE) → API archiveStatus (lowercase).
+ * Derived purely from the row already in hand — zero extra queries (a per-book
+ * lookup here would be an N+1 on every 100-book list page).
+ */
+const ARCHIVE_STATUS_MAP: Record<string, 'available' | 'archived' | 'restoring'> = {
+  AVAILABLE: 'available',
+  ARCHIVED: 'archived',
+  RESTORING: 'restoring',
+};
+
 export async function transformBook(book: BookWithIncludes) {
   // Generate URLs (async in production for presigned S3 URLs)
   const [coverUrl, audioUrl] = await Promise.all([
@@ -78,6 +89,7 @@ export async function transformBook(book: BookWithIncludes) {
     id: book.id,
     asin: book.asin,
     title: book.title,
+    archiveStatus: ARCHIVE_STATUS_MAP[book.audioAvailability] ?? 'available',
     publisherSummary: htmlToMarkdown(book.publisherSummary),
     runtimeMinutes: book.runtimeMinutes,
     releaseDate: book.releaseDate ? book.releaseDate.toISOString().split('T')[0] : null,

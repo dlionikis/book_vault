@@ -5,6 +5,9 @@ import { Book, SeriesInfo, Author, Narrator, Category } from '@/lib/types';
 import BackButton from '@/components/BackButton';
 import AddToLibraryButton from '@/components/AddToLibraryButton';
 import ProgressControls from '@/components/ProgressControls';
+import RestoreButton from '@/components/RestoreButton';
+import RestoringIndicator from '@/components/RestoringIndicator';
+import { estimatedCompletion } from '@/lib/restore';
 import { prisma } from '@/lib/db';
 import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
 import { getServerSession } from 'next-auth';
@@ -67,6 +70,18 @@ export default async function BookDetailPage(props: { params: Promise<{ id: stri
 
   if (!book) {
     notFound();
+  }
+
+  // For the restoring CTA: derive the ETA from the latest in-progress restore
+  // request (no S3 call — cheap, and only when actually restoring).
+  let restoreEstimatedCompletion: string | null = null;
+  if (book.archiveStatus === 'restoring') {
+    const latest = await prisma.mediaRestoreRequest.findFirst({
+      where: { bookId: book.id, status: 'in_progress' },
+      orderBy: { requestedAt: 'desc' },
+      select: { requestedAt: true },
+    });
+    if (latest) restoreEstimatedCompletion = estimatedCompletion(latest.requestedAt);
   }
 
   // Check if book is in user's library and get progress
@@ -452,15 +467,24 @@ export default async function BookDetailPage(props: { params: Promise<{ id: stri
                   </div>
                 </div>
               </div>
-              <Link
-                href={`/books/${book.id}/play`}
-                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors font-medium"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-                Play Book
-              </Link>
+              {book.archiveStatus === 'archived' ? (
+                <RestoreButton bookId={book.id} />
+              ) : book.archiveStatus === 'restoring' ? (
+                <RestoringIndicator
+                  bookId={book.id}
+                  estimatedCompletion={restoreEstimatedCompletion}
+                />
+              ) : (
+                <Link
+                  href={`/books/${book.id}/play`}
+                  className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors font-medium"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  Play Book
+                </Link>
+              )}
             </div>
           </div>
         </div>

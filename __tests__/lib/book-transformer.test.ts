@@ -89,6 +89,7 @@ describe('book-transformer', () => {
       expect(result).toHaveProperty('id');
       expect(result).toHaveProperty('asin');
       expect(result).toHaveProperty('title');
+      expect(result).toHaveProperty('archiveStatus');
       expect(result).toHaveProperty('runtimeMinutes');
       expect(result).toHaveProperty('coverUrl');
       expect(result).toHaveProperty('audioUrl');
@@ -101,6 +102,22 @@ describe('book-transformer', () => {
       expect(result).toHaveProperty('narrators');
       expect(result).toHaveProperty('series');
       expect(result).toHaveProperty('categories');
+    });
+
+    it('maps audioAvailability to the lowercase archiveStatus enum', async () => {
+      expect(
+        (await transformBook({ ...mockBook, audioAvailability: 'AVAILABLE' })).archiveStatus
+      ).toBe('available');
+      expect(
+        (await transformBook({ ...mockBook, audioAvailability: 'ARCHIVED' })).archiveStatus
+      ).toBe('archived');
+      expect(
+        (await transformBook({ ...mockBook, audioAvailability: 'RESTORING' })).archiveStatus
+      ).toBe('restoring');
+      // Defensive default for an unexpected DB value
+      expect(
+        (await transformBook({ ...mockBook, audioAvailability: 'WEIRD' as never })).archiveStatus
+      ).toBe('available');
     });
 
     it('should transform all fields correctly', async () => {

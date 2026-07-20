@@ -7,6 +7,7 @@ describe('BookCard', () => {
     id: '1',
     title: 'Test Book',
     asin: 'TEST123',
+    archiveStatus: 'available' as const,
     authors: [{ id: 'author1', name: 'Test Author', asin: 'AUTH123' }],
     narrators: [{ id: 'narrator1', name: 'Test Narrator', asin: 'NARR123' }],
     series: [{ id: 'series1', title: 'Test Series', sequence: 1, asin: 'SERIES123' }],

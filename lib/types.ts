@@ -99,6 +99,15 @@ export interface Book {
   /** Book title as it appears on cover */
   title: string;
 
+  /**
+   * Audio availability (S3 Intelligent-Tiering):
+   * available = streamable now; archived = needs a ~3-5h restore;
+   * restoring = restore in progress. Drives list badges + detail-page CTA.
+   * Optional for backward compatibility with pre-restore backends — treat
+   * absent as 'available'.
+   */
+  archiveStatus?: 'available' | 'archived' | 'restoring';
+
   /** Publisher's marketing description in Markdown format (converted from HTML) */
   publisherSummary?: string | null;
 
