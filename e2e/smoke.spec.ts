@@ -95,8 +95,15 @@ test('web smoke: login → search → detail → play → add to library', async
   await login(page);
 
   // 2. Search for the seeded fixture book from the home page.
-  await page.getByPlaceholder('Search books, authors, narrators, series...').fill(E2E_BOOK.title);
-  await page.getByRole('button', { name: 'Search' }).click();
+  // Scope to .first(): against a cold Next 16 + Turbopack dev server, the
+  // server-rendered SearchBar and the hydrating client copy can momentarily
+  // both be in the DOM, so an unscoped placeholder/role match trips Playwright's
+  // strict mode ("resolved to 2 elements"). There is only one SearchBar in the
+  // app; targeting the first match is correct and race-free.
+  const searchBox = page.getByPlaceholder('Search books, authors, narrators, series...').first();
+  await expect(searchBox).toBeVisible();
+  await searchBox.fill(E2E_BOOK.title);
+  await page.getByRole('button', { name: 'Search' }).first().click();
   await page.waitForURL('**/search**');
   await expect(page.getByRole('heading', { name: /Search results for/ })).toBeVisible();
 
