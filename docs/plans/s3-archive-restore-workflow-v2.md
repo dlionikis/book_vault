@@ -1633,14 +1633,18 @@ client-hydration-gated assertions past the old 10s expect timeout (the add itsel
 returns 201 in ~55ms — dev warmup, not app latency). Bumped the Playwright expect
 timeout to 15s; verified green cold (`.next` deleted) and warm.
 
-### Phase 5: Background Jobs (2-3 hours)
+### Phase 5: Background Jobs — ⚙️ CODE COMPLETE (July 19, 2026); infra pending
 
-- [ ] Create `sync-availability` script + cron route — **run once immediately to survey archived books**
-- [ ] Create `poll-restore-status` script + cron route (completion = `ArchiveStatus` absent)
-- [ ] Add `CRON_SECRET` to environment/Secrets Manager
-- [ ] Set up EventBridge Scheduler: poller every 5 min, sync nightly 3 AM
-- [ ] Stuck-restore failure handling (24h threshold)
-- [ ] Test poller against a real in-progress restore
+- [x] Create `sync-availability` (lib + `scripts/sync-availability.ts` + `/api/cron/sync-availability`)
+- [x] Create `poll-restore-status` (lib + script + `/api/cron/poll-restores`; completion = `ArchiveStatus` absent)
+- [x] Stuck-restore failure handling (24h threshold → status failed, book back to ARCHIVED)
+- [x] Cron routes guarded by `CRON_SECRET` bearer (fail-closed if unset); excluded from OpenAPI coverage
+- [x] Tests: poller + sync (aws-sdk-client-mock) + cron auth (16 tests)
+- [ ] **DEPLOY/INFRA (manual, after this merges + deploys):**
+  - [ ] Add `CRON_SECRET` to ECS env / Secrets Manager
+  - [ ] EventBridge Scheduler → `/api/cron/poll-restores` every 5 min, `/api/cron/sync-availability` nightly ~3 AM (Authorization: Bearer $CRON_SECRET via an EventBridge connection)
+  - [ ] **Run `sync-availability` once right after deploy** — first real survey of how many of the 691 books are archived (also seeds the badges)
+- [ ] Notification on completion is a **guarded no-op until Phase 6** (SNS NotificationService); the poller logs and continues
 
 ### Phase 6: iOS Push Notifications (4-5 hours)
 
