@@ -1032,6 +1032,38 @@ on ECS-exec).
 available, 0 errors. Confirms the feature's premise: the large majority of the library is in
 the Intelligent-Tiering Archive Access tier.
 
+### Push notifications (SNS → APNs) — as-built, July 20, 2026
+
+Validated end-to-end on a real device (banner delivered + CloudWatch delivery
+receipt `statusCode 200 SUCCESS` + notification-tap deep-link into book detail).
+
+| Resource                | Identifier / value                                                                                                                                                                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| APNs auth key           | Token-based `.p8`, Key ID `UND6ZT94K8`, Team ID `N2EH33DR7Z`, bundle `com.bookvault.BookVault` (key file kept out of repo)                                                                               |
+| SNS platform apps       | `app/APNS/book-vault-apns` (**production**) and `app/APNS_SANDBOX/book-vault-apns-sandbox` (both created with the same `.p8`)                                                                            |
+| Task role IAM           | `book-vault-ecs-task` inline policy `SNSPushAccess` → `sns:CreatePlatformEndpoint`/`SetEndpointAttributes`/`GetEndpointAttributes`/`Publish`                                                             |
+| Task definition         | `book-vault:9` = `:7` + `AWS_SNS_PLATFORM_APPLICATION_ARN` → the **production** app (`:7` added the ARN over `:6`; `:8` briefly pointed at sandbox)                                                      |
+| Delivery-status logging | IAM role `book-vault-sns-delivery-logging` (trusts `sns.amazonaws.com`, writes CloudWatch Logs); attached to both apps at 100% success sampling → log groups `sns/us-east-1/<acct>/app/APNS[_SANDBOX]/…` |
+
+**⚠️ Environment decision — DO NOT "fix" the prod ARN to look production-consistent:**
+distribution is **ad-hoc** (`.ipa` installed directly on devices, not App Store/
+TestFlight). Ad-hoc signs with `aps-environment=production` → **production** APNs
+tokens, so the backend deliberately points at the **production** SNS app even
+though we ship outside the store. **Consequence:** builds run directly from Xcode
+sign as `development` → **sandbox** tokens, which this config will NOT deliver to
+(silent drop). That's accepted for now (push isn't needed while debugging from
+Xcode). To make both build types work, build the **per-device environment
+selector** (client sends its env via `#if DEBUG`; backend stores it on
+`UserDeviceToken` and picks APNS vs APNS_SANDBOX per token) — deferred.
+
+**Debugging gotchas learned here:** SNS `Publish` returning a MessageId + the
+endpoint staying `Enabled:true` does **not** prove delivery — APNs disables
+endpoints only lazily. The reliable signal is the **delivery-status CloudWatch
+log** (the `sns/…/app/APNS/…` group, created on first logged delivery). A **stale
+device token** reused across reinstalls is silently dropped; a clean
+delete+reinstall issues a fresh token that matches the current build's
+`aps-environment`.
+
 **Manual re-run / debug:**
 `curl -H "Authorization: Bearer $CRON_SECRET" https://bookvault.lionikis.com/api/cron/sync-availability`
 (secret via `aws secretsmanager get-secret-value --secret-id book-vault/cron`).
