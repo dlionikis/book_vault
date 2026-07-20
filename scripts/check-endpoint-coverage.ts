@@ -127,8 +127,14 @@ function compareEndpoints(
 
   // Find undocumented endpoints (in implementation but not in spec)
   for (const [path, methods] of implEndpoints) {
-    // Skip special Next.js routes
-    if (path.includes('[...nextauth]') || path.includes('[...path]')) {
+    // Skip special Next.js routes and internal (non-public-API) routes.
+    // /api/cron/* is triggered by EventBridge with a CRON_SECRET bearer, never
+    // by app clients, so it is intentionally not in the OpenAPI spec.
+    if (
+      path.includes('[...nextauth]') ||
+      path.includes('[...path]') ||
+      path.startsWith('/api/cron/')
+    ) {
       continue;
     }
 
