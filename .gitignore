@@ -186,3 +186,6 @@ ios/build/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# iOS ad-hoc export output (per-build, timestamped dirs; not source)
+ios/BookVault-Production */
