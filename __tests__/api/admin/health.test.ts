@@ -125,19 +125,37 @@ describe('GET /api/admin/health', () => {
     expect(eb.detail).toContain('DEAUTHORIZED');
   });
 
-  it('flags the poller as error when active restores have never been polled', async () => {
+  it('flags the poller as error when an OLD restore has never been polled', async () => {
     mockAllHealthy();
-    mockRestoreFindMany.mockResolvedValue([{ lastCheckedAt: null }]);
+    // Requested 10m ago, never polled → past the 6m grace window.
+    mockRestoreFindMany.mockResolvedValue([
+      { requestedAt: new Date(Date.now() - 10 * 60 * 1000), lastCheckedAt: null },
+    ]);
 
     const res = await GET(req());
     const data = await res.json();
     expect(byName(data, 'Restore poller').status).toBe('error');
   });
 
+  it('stays ok for a just-requested restore not yet polled (grace period)', async () => {
+    mockAllHealthy();
+    // Requested 1m ago, never polled → within the grace window; not an alarm.
+    mockRestoreFindMany.mockResolvedValue([
+      { requestedAt: new Date(Date.now() - 1 * 60 * 1000), lastCheckedAt: null },
+    ]);
+
+    const res = await GET(req());
+    const data = await res.json();
+    expect(byName(data, 'Restore poller').status).toBe('ok');
+    expect(byName(data, 'Restore poller').detail).toContain('awaiting first poll');
+  });
+
   it('flags the poller as error when the last poll is stale', async () => {
     mockAllHealthy();
     const stale = new Date(Date.now() - 30 * 60 * 1000); // 30m ago
-    mockRestoreFindMany.mockResolvedValue([{ lastCheckedAt: stale }]);
+    mockRestoreFindMany.mockResolvedValue([
+      { requestedAt: new Date(Date.now() - 60 * 60 * 1000), lastCheckedAt: stale },
+    ]);
 
     const res = await GET(req());
     const data = await res.json();

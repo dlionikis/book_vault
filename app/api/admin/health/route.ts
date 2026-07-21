@@ -48,6 +48,10 @@ const CRON_RULES = (
 // The poller runs every 5 min; flag if the newest in-progress restore hasn't
 // been checked within this window (a dead poller reveals itself here).
 const POLLER_STALE_MS = 15 * 60 * 1000;
+// A just-requested restore hasn't hit its first 5-min poll yet, so don't call
+// the poller "down" for a never-polled restore until it's older than one cycle
+// plus slack. Prevents a false alarm right after requesting a (series) restore.
+const POLLER_GRACE_MS = 6 * 60 * 1000;
 // Standard-tier restores finish in 3-5h; anything in-progress past this is stuck.
 const STUCK_RESTORE_MS = 6 * 60 * 60 * 1000;
 
@@ -113,24 +117,42 @@ async function checkPush(): Promise<HealthCheck> {
 async function checkPollerFreshness(): Promise<HealthCheck> {
   const active = await prisma.mediaRestoreRequest.findMany({
     where: { status: 'in_progress' },
-    orderBy: { lastCheckedAt: 'desc' },
-    take: 1,
-    select: { lastCheckedAt: true },
+    select: { requestedAt: true, lastCheckedAt: true },
   });
   if (active.length === 0) {
     return { name: 'Restore poller', status: 'ok', detail: 'No active restores to poll' };
   }
-  const lastChecked = active[0].lastCheckedAt;
-  if (!lastChecked) {
+
+  const now = Date.now();
+  const checkedTimes = active
+    .map((r) => r.lastCheckedAt)
+    .filter((t): t is Date => t != null)
+    .map((t) => new Date(t).getTime());
+
+  // If nothing has been polled yet, only alarm once a never-polled restore has
+  // outlived the grace window (one poll cycle + slack). Freshly-requested
+  // restores are expected to be unpolled for a few minutes.
+  if (checkedTimes.length === 0) {
+    const oldestRequestedMs = Math.min(...active.map((r) => new Date(r.requestedAt).getTime()));
+    if (now - oldestRequestedMs > POLLER_GRACE_MS) {
+      return {
+        name: 'Restore poller',
+        status: 'error',
+        detail: 'Active restores exist but none have been polled (poller not running?)',
+      };
+    }
     return {
       name: 'Restore poller',
-      status: 'error',
-      detail: 'Active restores exist but none have ever been polled (poller not running?)',
+      status: 'ok',
+      detail: `${active.length} active restore${active.length === 1 ? '' : 's'} awaiting first poll`,
     };
   }
-  const ageMs = Date.now() - new Date(lastChecked).getTime();
-  const ageMin = Math.round(ageMs / 60000);
-  if (ageMs > POLLER_STALE_MS) {
+
+  // At least one restore has been polled → the poller is running. Judge freshness
+  // by the most recent poll across all active restores.
+  const lastChecked = Math.max(...checkedTimes);
+  const ageMin = Math.round((now - lastChecked) / 60000);
+  if (now - lastChecked > POLLER_STALE_MS) {
     return {
       name: 'Restore poller',
       status: 'error',
