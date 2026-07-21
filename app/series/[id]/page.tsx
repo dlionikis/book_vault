@@ -3,11 +3,15 @@ import { Book, Series } from '@/lib/types';
 import BookGrid from '@/components/BookGrid';
 import BackButton from '@/components/BackButton';
 import Pagination from '@/components/Pagination';
+import RestoreSeriesButton from '@/components/RestoreSeriesButton';
 import { prisma } from '@/lib/db';
 import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
+import { AVAILABILITY } from '@/lib/restore';
 
 interface SeriesWithBooks extends Series {
   books: Book[];
+  /** Series-wide count of archived books (not just the current page). */
+  archivedCount: number;
   pagination: {
     page: number;
     limit: number;
@@ -30,7 +34,7 @@ async function getSeries(id: string, page?: string): Promise<SeriesWithBooks | n
       return null;
     }
 
-    const [bookSeriesEntries, total] = await Promise.all([
+    const [bookSeriesEntries, total, archivedCount] = await Promise.all([
       prisma.bookSeries.findMany({
         where: { seriesId: id },
         skip,
@@ -47,6 +51,11 @@ async function getSeries(id: string, page?: string): Promise<SeriesWithBooks | n
       prisma.bookSeries.count({
         where: { seriesId: id },
       }),
+      // Series-wide archived count (the button restores the whole series, not
+      // just the visible page, so the count must span all pages).
+      prisma.bookSeries.count({
+        where: { seriesId: id, book: { audioAvailability: AVAILABILITY.ARCHIVED } },
+      }),
     ]);
 
     // Transform books using centralized transformer
@@ -55,6 +64,7 @@ async function getSeries(id: string, page?: string): Promise<SeriesWithBooks | n
     return {
       ...series,
       books,
+      archivedCount,
       pagination: {
         page: pageNum,
         limit,
@@ -91,8 +101,12 @@ export default async function SeriesPage(props: {
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">{series.title}</h1>
 
           <div className="text-gray-600 dark:text-gray-400 text-lg">
-            {series.books.length} {series.books.length === 1 ? 'book' : 'books'} in this series
+            {series.pagination.total} {series.pagination.total === 1 ? 'book' : 'books'} in this
+            series
           </div>
+
+          {/* Restore all archived books in the series (renders nothing if none). */}
+          <RestoreSeriesButton seriesId={series.id} archivedCount={series.archivedCount} />
         </div>
 
         {/* Books in Series */}

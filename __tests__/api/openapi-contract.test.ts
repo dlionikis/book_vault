@@ -1306,6 +1306,60 @@ describe('OpenAPI Contract Tests', () => {
       });
     });
 
+    describe('POST /api/series/{id}/restore', () => {
+      let testSeriesId: string;
+
+      beforeAll(async () => {
+        const response = await authenticatedRequest(`${BASE_URL}/api/browse/series?limit=1`, {
+          method: 'GET',
+        });
+        if (response.data.results && response.data.results.length > 0) {
+          testSeriesId = response.data.results[0].id;
+        }
+      });
+
+      testFn('should satisfy OpenAPI spec (total 0 in dev; per-book results in prod)', async () => {
+        if (!testSeriesId) {
+          console.warn('No series in database, skipping test');
+          return;
+        }
+
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/series/${testSeriesId}/restore`,
+          { method: 'POST' }
+        );
+
+        // Local dev: S3 disabled → total 0, empty results. Prod against archived
+        // books → per-book results. Both are 200 and must satisfy the spec.
+        expect(response.status).toBe(200);
+        expect(response).toSatisfyApiSpec();
+        expect(response.data).toHaveProperty('message');
+        expect(typeof response.data.total).toBe('number');
+        expect(Array.isArray(response.data.results)).toBe(true);
+      });
+
+      testFn('should return 404 for non-existent series', async () => {
+        const response = await authenticatedRequest(
+          `${BASE_URL}/api/series/00000000-0000-0000-0000-000000000000/restore`,
+          { method: 'POST' }
+        );
+
+        expect(response.status).toBe(404);
+        expect(response).toSatisfyApiSpec();
+      });
+
+      testFn('should return 401 for unauthenticated request', async () => {
+        const response = await axios.post(
+          `${BASE_URL}/api/series/00000000-0000-0000-0000-000000000000/restore`,
+          undefined,
+          { validateStatus: () => true }
+        );
+
+        expect(response.status).toBe(401);
+        expect(response).toSatisfyApiSpec();
+      });
+    });
+
     describe('GET /api/narrators/{id}', () => {
       let testNarratorId: string;
 
