@@ -777,4 +777,33 @@ final class APIClientRealTests: XCTestCase {
         XCTAssertEqual(response.restores.count, 1)
         XCTAssertEqual(response.restores.first?.book.title, "Test Book")
     }
+
+    func testRestoreSeriesDecodes() async throws {
+        // Given
+        sut.accessToken = "token"
+        let seriesId = UUID()
+        let result = RestoreSeries200ResponseResultsInner(
+            bookId: UUID(),
+            title: "Book One",
+            status: .initiated
+        )
+        MockURLProtocol.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, "/api/series/\(seriesId.uuidString)/restore")
+            XCTAssertEqual(request.httpMethod, "POST")
+            return self.makeJSONResponse(statusCode: 200, object: RestoreSeries200Response(
+                message: "Restore initiated for 1 book",
+                total: 1,
+                results: [result]
+            ))
+        }
+
+        // When
+        let response = try await sut.restoreSeries(seriesId: seriesId)
+
+        // Then
+        XCTAssertEqual(response.total, 1)
+        XCTAssertEqual(response.results.count, 1)
+        XCTAssertEqual(response.results.first?.status, .initiated)
+        XCTAssertEqual(response.results.first?.title, "Book One")
+    }
 }

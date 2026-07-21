@@ -777,6 +777,19 @@ class APIClient: APIClientProtocol {
         return try await execute(request: request)
     }
 
+    /// Batch-restore every archived audiobook in a series (the "Restore All
+    /// Archived" button). Idempotent per book; already-available books are
+    /// skipped. Returns a per-book result list. Phase 8.
+    func restoreSeries(seriesId: UUID) async throws -> RestoreSeries200Response {
+        let request = try createRequest(
+            path: "/api/series/\(seriesId.uuidString)/restore",
+            method: "POST",
+            requiresAuth: true
+        )
+
+        return try await execute(request: request)
+    }
+
     // MARK: - Notifications (Authenticated)
 
     /// Register (or refresh) this device's APNs token so the backend can send
