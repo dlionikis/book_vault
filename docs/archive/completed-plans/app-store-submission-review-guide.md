@@ -2,6 +2,8 @@
 
 ## Comprehensive Analysis and Fix Guide
 
+> **Status**: ✅ **Complete / historical.** One-off pre-submission analysis; the critical issues it flagged were fixed (see the ✅ markers throughout). Archived for reference — re-read before a future App Store submission.
+
 ---
 
 ## 🚨 CRITICAL ISSUES - Must Fix Before Submission

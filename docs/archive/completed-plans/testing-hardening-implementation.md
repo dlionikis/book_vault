@@ -1,6 +1,7 @@
 # Testing Hardening — Implementation Plan
 
 > **Date**: July 13, 2026
+> **Status**: ✅ **Substantially complete (July 2026)** — Phases 0, 2, 4, 6 done; Phase 3 intentionally reverted; Phase 1 (iOS placeholder cleanup) folded into ongoing iOS test coverage. **One deliberate open item:** Phase 5's real-device AVFoundation playback smoke (unit tests + refactor are green in CI via PR #86; only the on-device shim check remains — do it on the next device pass). Archived for reference with that caveat.
 > **Source**: [testing-coverage-review.md](testing-coverage-review.md) (findings + annotated re-prioritization)
 > **Ordering rationale**: single-user app, manual release process, owner-QA on every TestFlight build. Cheap security-adjacent unit work first, Playwright web smoke second (before the S3 restore feature adds UI states), XCUITest demoted to P2.
 

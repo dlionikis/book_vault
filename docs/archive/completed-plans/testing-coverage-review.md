@@ -1,5 +1,6 @@
 # Testing Coverage Review — Book Vault (iOS + Web)
 
+> **Status**: ✅ **Superseded / historical (July 2026).** A point-in-time review whose recommendations were executed in [testing-hardening-implementation.md](testing-hardening-implementation.md); several findings were already resolved when it ran (see the inline `⚠️ Annotation` notes). Archived for reference.
 > **Date**: July 13, 2026
 > **Validated against**: `main` @ `e6f9764` (Security P0, #75)
 > **Method**: Full web Jest run with coverage, Xcode test-plan enumeration, and a diff of merged PRs against the prior review baseline (`dd9bb2b`).

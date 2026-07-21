@@ -1,8 +1,8 @@
 # Pre-Restore Hardening Plan (P0 + P1)
 
 > **Created**: July 12, 2026
-> **Status**: Planned
-> **Source**: [analysis/architecture-review-2026-07.md](../analysis/architecture-review-2026-07.md) — this plan turns that review's P0/P1 items into executable specs. P2 items remain as backlog in the review doc.
+> **Status**: ✅ **COMPLETE (July 2026)** — all P0+P1 items landed via PRs #75–#79 (see docs/STATUS.md "Recent Merges"). Archived for historical reference.
+> **Source**: [analysis/architecture-review-2026-07.md](../../analysis/architecture-review-2026-07.md) — this plan turns that review's P0/P1 items into executable specs. P2 items remain as backlog in the review doc.
 > **Sequencing**: Complete before Phase 0 of [s3-archive-restore-workflow-v2.md](./s3-archive-restore-workflow-v2.md). The restore feature adds ~6 authenticated routes, extends the downloads endpoint/iOS DownloadManager, and adds S3-mocked tests — every item here reduces its cost or risk.
 > **Estimated effort**: P0 ≈ half a day, P1 ≈ 1.5 days. Suggested as 4 PRs (see [PR breakdown](#pr-breakdown)).
 
@@ -70,7 +70,7 @@
 
 ### P0-4: Truth in STATUS.md
 
-Update [docs/STATUS.md](../STATUS.md): remove/correct "All tests passing" (unit suite requires Docker DB today; coverage was unmeasurable), link the architecture review, and list this plan + the restore plan under Next Up. Keep it to a handful of lines.
+Update [docs/STATUS.md](../../STATUS.md): remove/correct "All tests passing" (unit suite requires Docker DB today; coverage was unmeasurable), link the architecture review, and list this plan + the restore plan under Next Up. Keep it to a handful of lines.
 
 ---
 

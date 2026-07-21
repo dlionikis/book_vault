@@ -111,12 +111,12 @@
 
 ## Plans (In Progress)
 
-| File                                                                                     | Purpose                                                    |
-| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| [plans/s3-archive-restore-workflow-v2.md](plans/s3-archive-restore-workflow-v2.md)       | S3 cold storage restore feature plan                       |
-| [plans/dependency-major-upgrades.md](plans/dependency-major-upgrades.md)                 | Phased major dep upgrades (Next 16, React 19, Prisma 7, …) |
-| [plans/audible-download-plan.md](plans/audible-download-plan.md)                         | Audible download integration plan                          |
-| [plans/app-store-submission-review-guide.md](plans/app-store-submission-review-guide.md) | App Store submission guide                                 |
+| File                                                                                                                         | Purpose                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [archive/completed-plans/s3-archive-restore-workflow-v2.md](archive/completed-plans/s3-archive-restore-workflow-v2.md)       | S3 cold storage restore feature plan (✅ complete, Phases 0–8) |
+| [plans/dependency-major-upgrades.md](plans/dependency-major-upgrades.md)                                                     | Phased major dep upgrades (Next 16, React 19, Prisma 7, …)     |
+| [plans/audible-download-plan.md](plans/audible-download-plan.md)                                                             | Audible download integration plan                              |
+| [archive/completed-plans/app-store-submission-review-guide.md](archive/completed-plans/app-store-submission-review-guide.md) | App Store submission guide (historical)                        |
 
 ---
 

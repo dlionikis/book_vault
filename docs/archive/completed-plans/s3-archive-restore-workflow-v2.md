@@ -1,8 +1,8 @@
 # S3 Archive Restore Workflow - Updated Implementation Plan
 
 > **Created**: January 2, 2026
-> **Updated**: July 12, 2026 (revised for verified S3 Intelligent-Tiering semantics; added development & testing workflow); **July 19, 2026** (accuracy re-verified against current code — see the accuracy-review section below; Phase 0 marked complete)
-> **Status**: **Phase 0 ✅ complete** (PR #88, deployed); Phases 1–8 not started
+> **Updated**: July 12, 2026 (revised for verified S3 Intelligent-Tiering semantics; added development & testing workflow); **July 19, 2026** (accuracy re-verified against current code — see the accuracy-review section below; Phase 0 marked complete); **July 21, 2026** (all phases shipped — archived)
+> **Status**: ✅ **COMPLETE (Phases 0–8), July 2026.** Backend + web + iOS all shipped and deployed: on-demand stream endpoint, archive detection + restore, web restore UI, 5-min poller + nightly sync (EventBridge), SNS→APNs push (validated on-device), iOS archive/restore UI + push registration + deep-linking + Restore Requests tab, and series-level restore (`POST /api/series/{id}/restore`). PRs #88, #98–#101, #104–#121. See the per-phase checklists and "Deployed Infrastructure" section below for as-built detail. **Deferred (non-blocking):** batched same-series completion notifications; a per-device APNs env selector so Xcode-debug (sandbox) builds also receive push (ad-hoc/production works today).
 > **Priority**: High — a HeadObject sample on July 12, 2026 showed **5 of 8 audio files already in ARCHIVE_ACCESS**. A large portion of the library is currently unstreamable in production.
 > **Dependencies**: S3 Intelligent-Tiering with Archive Access tier (already enabled — verified)
 
@@ -1796,8 +1796,8 @@ timeout to 15s; verified green cold (`.next` deleted) and warm.
 
 ## Related Documents
 
-- [docs/archive/s3-archive-restore-workflow.md](../archive/s3-archive-restore-workflow.md) - Original v1 plan (superseded)
-- [media-configuration.md](../media-configuration.md) - S3 and media handling
-- [API_SECURITY.md](../API_SECURITY.md) - Authentication patterns
-- [mobile/architecture.md](../mobile/architecture.md) - iOS app architecture
-- [data-validation-layers.md](../data-validation-layers.md) - OpenAPI-first workflow
+- [docs/archive/s3-archive-restore-workflow.md](../s3-archive-restore-workflow.md) - Original v1 plan (superseded)
+- [media-configuration.md](../../media-configuration.md) - S3 and media handling
+- [API_SECURITY.md](../../API_SECURITY.md) - Authentication patterns
+- [mobile/architecture.md](../../mobile/architecture.md) - iOS app architecture
+- [data-validation-layers.md](../../data-validation-layers.md) - OpenAPI-first workflow

@@ -8,7 +8,7 @@
 > **Read this** before starting any change, and again before opening a PR.
 >
 > **Last Updated**: July 19, 2026
-> **Related**: [testing.md](testing.md) (command cheat-sheet), [plans/pre-restore-hardening-plan.md](plans/pre-restore-hardening-plan.md) (what the invariants below come from), [CLAUDE.md](../CLAUDE.md)
+> **Related**: [testing.md](testing.md) (command cheat-sheet), [archive/completed-plans/pre-restore-hardening-plan.md](archive/completed-plans/pre-restore-hardening-plan.md) (what the invariants below come from), [CLAUDE.md](../CLAUDE.md)
 
 ---
 
@@ -173,7 +173,7 @@ Five workflows run on PRs to `main`:
 
 ## 5. Hardening invariants — MUST NOT regress
 
-These came out of the [pre-restore hardening plan](plans/pre-restore-hardening-plan.md)
+These came out of the [pre-restore hardening plan](archive/completed-plans/pre-restore-hardening-plan.md)
 (PRs #75–#79) and the [July 2026 architecture review](analysis/architecture-review-2026-07.md).
 They are load-bearing security and test-infrastructure properties. Each has a **guard**
 (what keeps it true) and a **manual check** (how to verify by hand). When you add code,
