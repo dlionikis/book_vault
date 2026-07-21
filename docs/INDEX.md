@@ -118,12 +118,3 @@
 
 Completed plans (S3 restore, hardening, testing, App Store review) live in
 `archive/completed-plans/` — see below.
-
----
-
-## Archived Documentation
-
-Historical plans in `archive/` - read only for investigating past decisions:
-
-- `archive/completed-plans/` - Completed implementation plans
-- `archive/ios-phases/` - iOS phase completion summaries
