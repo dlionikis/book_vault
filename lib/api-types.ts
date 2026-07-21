@@ -3873,9 +3873,6 @@ export interface operations {
                             /** @enum {string} */
                             status: "ok" | "warn" | "error";
                             detail: string;
-                            meta?: {
-                                [key: string]: unknown;
-                            };
                         }[];
                         /** Format: date-time */
                         generatedAt: string;

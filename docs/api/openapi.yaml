@@ -3410,9 +3410,11 @@ paths:
                           enum: [ok, warn, error]
                         detail:
                           type: string
-                        meta:
-                          type: object
-                          additionalProperties: true
+                        # `meta` is intentionally omitted from the spec: it's
+                        # free-form diagnostic detail the UI doesn't render, and
+                        # an `additionalProperties: true` object makes the Swift
+                        # generator emit AnyCodable (not bundled → build break).
+                        # The route may still include it; it's just untyped.
                   generatedAt:
                     type: string
                     format: date-time

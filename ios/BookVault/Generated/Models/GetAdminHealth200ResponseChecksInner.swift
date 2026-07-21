@@ -20,20 +20,17 @@ public struct GetAdminHealth200ResponseChecksInner: Codable, JSONEncodable, Hash
     public var name: String
     public var status: Status
     public var detail: String
-    public var meta: [String: AnyCodable]?
 
-    public init(name: String, status: Status, detail: String, meta: [String: AnyCodable]? = nil) {
+    public init(name: String, status: Status, detail: String) {
         self.name = name
         self.status = status
         self.detail = detail
-        self.meta = meta
     }
 
     public enum CodingKeys: String, CodingKey, CaseIterable {
         case name
         case status
         case detail
-        case meta
     }
 
     // Encodable protocol methods
@@ -43,7 +40,6 @@ public struct GetAdminHealth200ResponseChecksInner: Codable, JSONEncodable, Hash
         try container.encode(name, forKey: .name)
         try container.encode(status, forKey: .status)
         try container.encode(detail, forKey: .detail)
-        try container.encodeIfPresent(meta, forKey: .meta)
     }
 }
 
