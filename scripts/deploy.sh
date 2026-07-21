@@ -116,7 +116,15 @@ run_deploy() {
   # Silicon (`next build` -> "qemu: uncaught target signal 11"), which is what
   # broke the deploy. Native arm64 build + Graviton Fargate avoids emulation
   # entirely (Fargate Spot supports ARM64 since Oct 2024) and is ~20% cheaper.
-  TASK_DEF="book-vault:5"
+  #
+  # IMPORTANT: this pins the exact revision the service runs, so it must be the
+  # LATEST revision that carries all required env/secrets. Since :5 it has grown:
+  #   :6  + CRON_SECRET (restore poller/sync auth)
+  #   :7  + AWS_SNS_PLATFORM_APPLICATION_ARN (push notifications)
+  #   :9  = current (SNS ARN → production APNS app, CRON_SECRET)
+  # Bumping to an older revision silently un-configures push + the cron poller.
+  # When you register a new revision (env/secret change), update this constant.
+  TASK_DEF="book-vault:9"
 
   CURRENT_STEP="Docker build (native arm64)"
   log_step "Building Docker image (native arm64)..."
