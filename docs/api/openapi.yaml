@@ -3276,7 +3276,7 @@ paths:
                           type: integer
                   tasks:
                     type: object
-                    required: [running, desired, pending, recentlyStopped]
+                    required: [running, desired, pending, runningTasks, recentlyStopped]
                     properties:
                       running:
                         type: integer
@@ -3284,6 +3284,34 @@ paths:
                         type: integer
                       pending:
                         type: integer
+                      runningTasks:
+                        type: array
+                        description: Currently-running tasks with start times
+                        items:
+                          type: object
+                          properties:
+                            taskId:
+                              type: string
+                            service:
+                              type: string
+                            startedAt:
+                              type: string
+                              nullable: true
+                            lastStatus:
+                              type: string
+                              nullable: true
+                            healthStatus:
+                              type: string
+                              nullable: true
+                            taskDefinition:
+                              type: string
+                              nullable: true
+                            cpu:
+                              type: string
+                              nullable: true
+                            memory:
+                              type: string
+                              nullable: true
                       recentlyStopped:
                         type: array
                         items:
@@ -3291,6 +3319,11 @@ paths:
                           properties:
                             taskId:
                               type: string
+                            service:
+                              type: string
+                            startedAt:
+                              type: string
+                              nullable: true
                             stoppedAt:
                               type: string
                               nullable: true
@@ -3329,6 +3362,160 @@ paths:
                         type: integer
                       deploymentStops:
                         type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/admin/health:
+    get:
+      operationId: getAdminHealth
+      tags: [Admin]
+      summary: Infrastructure health snapshot
+      description: |
+        Runs read-only health checks over the always-on infra the restore
+        workflow depends on (DB, S3, SNS push, EventBridge poller/sync). Each
+        check is isolated so one failure degrades to an error card rather than
+        failing the whole response. Requires admin privileges.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Health check results
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [checks, generatedAt]
+                properties:
+                  checks:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, status, detail]
+                      properties:
+                        name:
+                          type: string
+                        status:
+                          type: string
+                          enum: [ok, warn, error]
+                        detail:
+                          type: string
+                        # `meta` is intentionally omitted from the spec: it's
+                        # free-form diagnostic detail the UI doesn't render, and
+                        # an `additionalProperties: true` object makes the Swift
+                        # generator emit AnyCodable (not bundled → build break).
+                        # The route may still include it; it's just untyped.
+                  generatedAt:
+                    type: string
+                    format: date-time
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/admin/restores:
+    get:
+      operationId: getAdminRestores
+      tags: [Admin]
+      summary: Restore-request observability
+      description: |
+        Restore-request lifecycle (in-progress + recently completed/failed) with
+        all timestamps, a status summary, and DB-derived push health. Requires
+        admin privileges.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Restore observability data
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [summary, requests, push, generatedAt]
+                properties:
+                  summary:
+                    type: object
+                    required: [inProgress, completedLast7d, failedLast7d, stuck, lastPolledAt]
+                    properties:
+                      inProgress:
+                        type: integer
+                      completedLast7d:
+                        type: integer
+                      failedLast7d:
+                        type: integer
+                      stuck:
+                        type: integer
+                        description: In-progress restores past the 3-5h SLA
+                      lastPolledAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                  requests:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, bookId, bookTitle, status, requestedAt]
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        bookId:
+                          type: string
+                          format: uuid
+                        bookTitle:
+                          type: string
+                        status:
+                          type: string
+                          enum: [in_progress, completed, failed]
+                        requestedByUsername:
+                          type: string
+                          nullable: true
+                        errorMessage:
+                          type: string
+                          nullable: true
+                        requestedAt:
+                          type: string
+                          format: date-time
+                        lastCheckedAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        completedAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+                  push:
+                    type: object
+                    required: [configured, activeTokens, inactiveTokens]
+                    properties:
+                      configured:
+                        type: boolean
+                      activeTokens:
+                        type: integer
+                      inactiveTokens:
+                        type: integer
+                  generatedAt:
+                    type: string
+                    format: date-time
         '401':
           description: Unauthorized
           content:

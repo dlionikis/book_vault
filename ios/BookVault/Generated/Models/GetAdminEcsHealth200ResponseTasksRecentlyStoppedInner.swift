@@ -13,13 +13,17 @@ import AnyCodable
 public struct GetAdminEcsHealth200ResponseTasksRecentlyStoppedInner: Codable, JSONEncodable, Hashable {
 
     public var taskId: String?
+    public var service: String?
+    public var startedAt: String?
     public var stoppedAt: String?
     public var durationMinutes: Int?
     public var stopCode: String?
     public var stoppedReason: String?
 
-    public init(taskId: String? = nil, stoppedAt: String? = nil, durationMinutes: Int? = nil, stopCode: String? = nil, stoppedReason: String? = nil) {
+    public init(taskId: String? = nil, service: String? = nil, startedAt: String? = nil, stoppedAt: String? = nil, durationMinutes: Int? = nil, stopCode: String? = nil, stoppedReason: String? = nil) {
         self.taskId = taskId
+        self.service = service
+        self.startedAt = startedAt
         self.stoppedAt = stoppedAt
         self.durationMinutes = durationMinutes
         self.stopCode = stopCode
@@ -28,6 +32,8 @@ public struct GetAdminEcsHealth200ResponseTasksRecentlyStoppedInner: Codable, JS
 
     public enum CodingKeys: String, CodingKey, CaseIterable {
         case taskId
+        case service
+        case startedAt
         case stoppedAt
         case durationMinutes
         case stopCode
@@ -39,6 +45,8 @@ public struct GetAdminEcsHealth200ResponseTasksRecentlyStoppedInner: Codable, JS
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(taskId, forKey: .taskId)
+        try container.encodeIfPresent(service, forKey: .service)
+        try container.encodeIfPresent(startedAt, forKey: .startedAt)
         try container.encodeIfPresent(stoppedAt, forKey: .stoppedAt)
         try container.encodeIfPresent(durationMinutes, forKey: .durationMinutes)
         try container.encodeIfPresent(stopCode, forKey: .stopCode)

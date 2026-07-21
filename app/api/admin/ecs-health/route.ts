@@ -24,10 +24,22 @@ const ALLOWED_HOURS = [24, 48, 168];
 interface TaskInfo {
   taskId: string;
   service: string;
+  startedAt: string | null;
   stoppedAt: string | null;
   durationMinutes: number | null;
   stopCode: string | null;
   stoppedReason: string | null;
+}
+
+interface RunningTaskInfo {
+  taskId: string;
+  service: string;
+  startedAt: string | null;
+  lastStatus: string | null;
+  healthStatus: string | null;
+  taskDefinition: string | null; // family:revision
+  cpu: string | null;
+  memory: string | null;
 }
 
 interface ServiceStatus {
@@ -44,6 +56,7 @@ interface EcsHealthResponse {
     running: number;
     desired: number;
     pending: number;
+    runningTasks: RunningTaskInfo[];
     recentlyStopped: TaskInfo[];
   };
   metrics: {
@@ -72,17 +85,31 @@ export const GET = withLogging(async (request: NextRequest) => {
   }
 
   try {
-    // Fetch all services info + stopped tasks for each service in parallel
-    const [serviceResult, ...stoppedTaskResults] = await Promise.all([
+    // Fetch service info + stopped tasks + running tasks per service in parallel.
+    const [serviceResult, stoppedTaskResults, runningTaskResults] = await Promise.all([
       ecsClient.send(new DescribeServicesCommand({ cluster: CLUSTER, services: SERVICES })),
-      ...SERVICES.map((svc) =>
-        ecsClient.send(
-          new ListTasksCommand({
-            cluster: CLUSTER,
-            serviceName: svc,
-            desiredStatus: 'STOPPED',
-            maxResults: 10,
-          })
+      Promise.all(
+        SERVICES.map((svc) =>
+          ecsClient.send(
+            new ListTasksCommand({
+              cluster: CLUSTER,
+              serviceName: svc,
+              desiredStatus: 'STOPPED',
+              maxResults: 10,
+            })
+          )
+        )
+      ),
+      Promise.all(
+        SERVICES.map((svc) =>
+          ecsClient.send(
+            new ListTasksCommand({
+              cluster: CLUSTER,
+              serviceName: svc,
+              desiredStatus: 'RUNNING',
+              maxResults: 10,
+            })
+          )
         )
       ),
     ]);
@@ -139,12 +166,38 @@ export const GET = withLogging(async (request: NextRequest) => {
         return {
           taskId: task.taskArn?.split('/').pop() || '',
           service: serviceName,
+          startedAt: task.startedAt?.toISOString() || null,
           stoppedAt: task.stoppedAt?.toISOString() || null,
           durationMinutes,
           stopCode,
           stoppedReason: reason,
         };
       });
+    }
+
+    // Describe currently-running tasks (live task + start times).
+    const allRunningArns = runningTaskResults.flatMap((r) => r.taskArns || []);
+    let runningTasks: RunningTaskInfo[] = [];
+    if (allRunningArns.length) {
+      const describedRunning = await ecsClient.send(
+        new DescribeTasksCommand({ cluster: CLUSTER, tasks: allRunningArns })
+      );
+      runningTasks = (describedRunning.tasks || []).map((task) => {
+        // taskDefinitionArn ".../book-vault:9" → "book-vault:9"
+        const taskDef = task.taskDefinitionArn?.split('/').pop() || null;
+        return {
+          taskId: task.taskArn?.split('/').pop() || '',
+          service: task.group?.replace('service:', '') || '',
+          startedAt: task.startedAt?.toISOString() || null,
+          lastStatus: task.lastStatus || null,
+          healthStatus: task.healthStatus || null,
+          taskDefinition: taskDef,
+          cpu: task.cpu || null,
+          memory: task.memory || null,
+        };
+      });
+      // Newest first.
+      runningTasks.sort((a, b) => (b.startedAt || '').localeCompare(a.startedAt || ''));
     }
 
     // Fetch CloudWatch metrics for the primary service (book-vault-spot)
@@ -201,6 +254,7 @@ export const GET = withLogging(async (request: NextRequest) => {
         running: totalRunning,
         desired: totalDesired,
         pending: totalPending,
+        runningTasks,
         recentlyStopped: stoppedTasks,
       },
       metrics: {

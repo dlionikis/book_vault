@@ -48,11 +48,14 @@
 		2CA1290BDE161F2F56311BBB /* URLSessionImplementations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 776F4F3700514648A3E18FF7 /* URLSessionImplementations.swift */; };
 		2CA8D61AF54F64FE80C5D5A3 /* KeychainStoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC56DCFD2E00A90B6B7E15B0 /* KeychainStoring.swift */; };
 		310FC0A01F3A4A0BE6FA7D3B /* SyncManagerRealTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3ED8030A548C4725119E56 /* SyncManagerRealTests.swift */; };
+		3225CC5420E7801EEA9EFC5F /* GetAdminHealth200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = D50C8B938F622B6559B5455E /* GetAdminHealth200Response.swift */; };
 		33203DE2EE959D8E2BD7C6CE /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 712CF1A84DB85382C6A13D59 /* Preview Assets.xcassets */; };
 		33D4C9D72A4F8B6E8D87EBB9 /* GetAuthor200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3552381AA7BE459870EA5C74 /* GetAuthor200Response.swift */; };
 		3471536D04E70571BE5F8A24 /* BatchUpdateProgressRequestUpdatesInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2321C95A0EA096A5AA188A24 /* BatchUpdateProgressRequestUpdatesInner.swift */; };
+		34BC6CA758968BB73FDD0FFF /* GetAdminRestores200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 434B380152FB3CF7CD94790C /* GetAdminRestores200Response.swift */; };
 		378864C828D3C15E71F16202 /* GetAdminS3Storage200ResponseTrends.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B6F4C782BCCE5E2913F9A5 /* GetAdminS3Storage200ResponseTrends.swift */; };
 		38E68EA6471E52C58E579297 /* SynchronizedDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDD143DB3CD6F742DF0012ED /* SynchronizedDictionary.swift */; };
+		3D0AA12151E4EEF13B96B965 /* GetAdminRestores200ResponsePush.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23A025DE62C06462E1099DA2 /* GetAdminRestores200ResponsePush.swift */; };
 		3FB0C2B58C8E878E0E683217 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96F563AC9D176CA88974776D /* BrowseView.swift */; };
 		41333DC3A6B4A182E037D2D5 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30EB210CC802D6C40312FBF3 /* APIClientTests.swift */; };
 		435AC307300FA2C7304D1EA6 /* GetUserLists200ResponseListsInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D0EC39D508AD58A9D3C933 /* GetUserLists200ResponseListsInner.swift */; };
@@ -76,6 +79,7 @@
 		5E02A80786244F61985331AA /* RestoreRequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35A4C100D3423296E999D52E /* RestoreRequestsView.swift */; };
 		5E263B0D9C52DF4125E92148 /* RegisterDeviceToken200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EFEDF8C49F13F40985F0EC2 /* RegisterDeviceToken200Response.swift */; };
 		5F1927D04AB804405BD2E8A3 /* MockAudioPlayerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548515B6EDD104F54E0B747C /* MockAudioPlayerManager.swift */; };
+		6082996499F3A4894A76C7E5 /* GetAdminHealth200ResponseChecksInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = E681FEA31C8F8EE2D90C7C86 /* GetAdminHealth200ResponseChecksInner.swift */; };
 		6139D38CC7E0BCCB97129B9E /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6EF7AF2710026AA9AD8152E /* SearchView.swift */; };
 		63022FE1CDE28F195CEB2BCB /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E37891EF3008D51D12702BD /* SettingsView.swift */; };
 		634CD6D77632468D08A9D2CF /* ReorderList200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9820C054F18CE5AD8818988C /* ReorderList200Response.swift */; };
@@ -106,6 +110,7 @@
 		83E9329C6C27699418770C24 /* SeriesWithBookCount.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1DE8B349CB473C77FC08C98 /* SeriesWithBookCount.swift */; };
 		83FBA4EB518106B855919653 /* ChapterManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35A41D938656BA710F410348 /* ChapterManager.swift */; };
 		842665D8DF2E8F51931FCA9D /* GetUserLists200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EF7E9C4198781AD4DC0AE71 /* GetUserLists200Response.swift */; };
+		85DE780E5156346481A9F862 /* GetAdminRestores200ResponseRequestsInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B34ED682507A75ACC99A0C8 /* GetAdminRestores200ResponseRequestsInner.swift */; };
 		871FCB74E42D542E82B67125 /* StorageManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 966F49AD747990F45F500AAF /* StorageManaging.swift */; };
 		882216D12E3B9537B0EEB2F7 /* UpdateProgress200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16ACA1F44FB4601CFCAE0ACD /* UpdateProgress200Response.swift */; };
 		88D7CF1015FE72651A147C41 /* MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EBC40FF7EC2C18644492E92 /* MockData.swift */; };
@@ -161,6 +166,7 @@
 		C0C56A4048E28163A30C9425 /* StorageManagerRealTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA51F8AE3B0CC7675DC78EB7 /* StorageManagerRealTests.swift */; };
 		C1ECF22492705E105F15B5EE /* AuthorWithBookCount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E9AF054D6E542B441C1C0E8 /* AuthorWithBookCount.swift */; };
 		C29A32FC9A4A9FC9D4EEA2B3 /* Pagination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B446056E1E646D23AC5A386 /* Pagination.swift */; };
+		C2A58762ED0A342921ED54C5 /* GetAdminEcsHealth200ResponseTasksRunningTasksInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07515EBFFB82ABA59AE7B1BC /* GetAdminEcsHealth200ResponseTasksRunningTasksInner.swift */; };
 		C2BFB5CFC64DD6AA39DE27A9 /* MockLibraryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF5F9505F3C47E3AA6EC456 /* MockLibraryManager.swift */; };
 		C449BF319191ACDE61D6C94C /* MockProgressManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A094F9A10815C55FE15615D5 /* MockProgressManager.swift */; };
 		C46F1634541CA90D85EFCEA9 /* SeriesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF09608235054F81E929DEE3 /* SeriesListView.swift */; };
@@ -191,6 +197,7 @@
 		D4F49E49743662C90FF83B86 /* LibraryCacheManagerRealTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 255ABE20652EA7C49D4319DB /* LibraryCacheManagerRealTests.swift */; };
 		D55AD7D71A7F09842F46A301 /* APIClientRealTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B18435B7450F7DC70E08E4 /* APIClientRealTests.swift */; };
 		D56AE7065B0D72EAF53CC001 /* CatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5FD8C5DC287A182B13EC696 /* CatalogView.swift */; };
+		D666B63B6C872873EA9250AA /* GetAdminRestores200ResponseSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23B26FEFED8D4497C895EFB2 /* GetAdminRestores200ResponseSummary.swift */; };
 		D87F6B1D3E53AB9BE6190CDE /* SearchAll200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFD79F799C012860F9795B2 /* SearchAll200Response.swift */; };
 		DB3C1016C5AC00F490B72DF7 /* AuthManagerRealTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5104F762AF9B3A1CEB8447 /* AuthManagerRealTests.swift */; };
 		DD9D1D03BADB7139C127E7A4 /* DownloadManagerRealTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FA26D0447C892A0DC0D15E3 /* DownloadManagerRealTests.swift */; };
@@ -250,6 +257,7 @@
 		04B917912D62371FBC19BBA7 /* ReExtractChapters200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReExtractChapters200Response.swift; sourceTree = "<group>"; };
 		057BB056D4C72AB45F6BD3C3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		07066B5D8307687A6ABC47D6 /* AddToLibraryRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddToLibraryRequest.swift; sourceTree = "<group>"; };
+		07515EBFFB82ABA59AE7B1BC /* GetAdminEcsHealth200ResponseTasksRunningTasksInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetAdminEcsHealth200ResponseTasksRunningTasksInner.swift; sourceTree = "<group>"; };
 		087976D3661C2C55139EA268 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 		097DCB2DF3E60F1C9DA95353 /* ProgressManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressManaging.swift; sourceTree = "<group>"; };
 		098376B472996D34A36D810C /* SyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManager.swift; sourceTree = "<group>"; };
@@ -278,6 +286,8 @@
 		22D438EF4C403C46FB8E9EF9 /* ModelError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelError.swift; sourceTree = "<group>"; };
 		2321C95A0EA096A5AA188A24 /* BatchUpdateProgressRequestUpdatesInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchUpdateProgressRequestUpdatesInner.swift; sourceTree = "<group>"; };
 		237C777F16E32C849BB9BAEA /* GenerateDownloadUrlRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateDownloadUrlRequest.swift; sourceTree = "<group>"; };
+		23A025DE62C06462E1099DA2 /* GetAdminRestores200ResponsePush.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetAdminRestores200ResponsePush.swift; sourceTree = "<group>"; };
+		23B26FEFED8D4497C895EFB2 /* GetAdminRestores200ResponseSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetAdminRestores200ResponseSummary.swift; sourceTree = "<group>"; };
 		2410CA8DD90ADA200E3EFD62 /* CheckDownloadEligibility200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckDownloadEligibility200Response.swift; sourceTree = "<group>"; };
 		255ABE20652EA7C49D4319DB /* LibraryCacheManagerRealTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryCacheManagerRealTests.swift; sourceTree = "<group>"; };
 		25CF782C7941A830B3E5CFB2 /* GetSearchSuggestions200ResponseBooksInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetSearchSuggestions200ResponseBooksInner.swift; sourceTree = "<group>"; };
@@ -308,6 +318,7 @@
 		41C5A77DAC8580B34DF605D0 /* AuthorListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorListView.swift; sourceTree = "<group>"; };
 		4258DBBBEA33992BD07FD667 /* GetLibrary200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetLibrary200Response.swift; sourceTree = "<group>"; };
 		42D22F63F28F3E2D2914DC79 /* RestoreRequestsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreRequestsViewModelTests.swift; sourceTree = "<group>"; };
+		434B380152FB3CF7CD94790C /* GetAdminRestores200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetAdminRestores200Response.swift; sourceTree = "<group>"; };
 		436676032CDE11B8B4D483A0 /* GetAdminEcsHealth200ResponseServicesInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetAdminEcsHealth200ResponseServicesInner.swift; sourceTree = "<group>"; };
 		4464ECD53B6B3F122500F8C6 /* RefreshToken200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshToken200Response.swift; sourceTree = "<group>"; };
 		44DF90F8F5FA8E114228744E /* GetAdminEcsHealth200ResponseTasksRecentlyStoppedInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetAdminEcsHealth200ResponseTasksRecentlyStoppedInner.swift; sourceTree = "<group>"; };
@@ -315,6 +326,7 @@
 		477BE0F7E5EC6EC2EB84D73E /* DeepLinkManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkManagerTests.swift; sourceTree = "<group>"; };
 		47AEBEBC4D844385E66D4BA7 /* BatchUpdateProgress200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchUpdateProgress200Response.swift; sourceTree = "<group>"; };
 		47FF0F950876A2860DE33542 /* StorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManager.swift; sourceTree = "<group>"; };
+		4B34ED682507A75ACC99A0C8 /* GetAdminRestores200ResponseRequestsInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetAdminRestores200ResponseRequestsInner.swift; sourceTree = "<group>"; };
 		4B437A7886EAE2C4C5CC0343 /* MockOfflineProgressStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockOfflineProgressStore.swift; sourceTree = "<group>"; };
 		4C02367EECE6B0A1B8E620CC /* GenerateDownloadUrl200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateDownloadUrl200Response.swift; sourceTree = "<group>"; };
 		4D6AC418D58BE333197F6883 /* AddSeriesToLibrary200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddSeriesToLibrary200Response.swift; sourceTree = "<group>"; };
@@ -437,6 +449,7 @@
 		D254EB2F45F4EC1390469104 /* AudioPlayerManaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerManaging.swift; sourceTree = "<group>"; };
 		D2691AC8DCAEC877FE3A76AB /* RegisterUser201Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterUser201Response.swift; sourceTree = "<group>"; };
 		D3366D62DA03081FF3D4C19C /* GetSearchSuggestions200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetSearchSuggestions200Response.swift; sourceTree = "<group>"; };
+		D50C8B938F622B6559B5455E /* GetAdminHealth200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetAdminHealth200Response.swift; sourceTree = "<group>"; };
 		D54A81E199A6A514F0DA5904 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		D62857F70449A2020C6486CB /* GetAdminBudgets200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetAdminBudgets200Response.swift; sourceTree = "<group>"; };
 		D71CB719A9962A71E6BD13DE /* AudioPlayerManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerManagerTests.swift; sourceTree = "<group>"; };
@@ -454,6 +467,7 @@
 		E3310547D9A52A2EE522848B /* RestoreRequestSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreRequestSummary.swift; sourceTree = "<group>"; };
 		E3B920B956758DE5C4BFE7F4 /* UpdateProgressRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateProgressRequest.swift; sourceTree = "<group>"; };
 		E5FD8C5DC287A182B13EC696 /* CatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogView.swift; sourceTree = "<group>"; };
+		E681FEA31C8F8EE2D90C7C86 /* GetAdminHealth200ResponseChecksInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetAdminHealth200ResponseChecksInner.swift; sourceTree = "<group>"; };
 		E77F939BBACEC89FB5EA35A9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		E97D72A47A1DC0A37C5FDA27 /* RestoreSeries200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreSeries200Response.swift; sourceTree = "<group>"; };
 		EA91F367B33AABEE76B0C879 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -875,6 +889,13 @@
 				68786C92FD5B5C5A7CDFE09C /* GetAdminEcsHealth200ResponseSummary.swift */,
 				401D853EEAB68BBDDC671A9F /* GetAdminEcsHealth200ResponseTasks.swift */,
 				44DF90F8F5FA8E114228744E /* GetAdminEcsHealth200ResponseTasksRecentlyStoppedInner.swift */,
+				07515EBFFB82ABA59AE7B1BC /* GetAdminEcsHealth200ResponseTasksRunningTasksInner.swift */,
+				D50C8B938F622B6559B5455E /* GetAdminHealth200Response.swift */,
+				E681FEA31C8F8EE2D90C7C86 /* GetAdminHealth200ResponseChecksInner.swift */,
+				434B380152FB3CF7CD94790C /* GetAdminRestores200Response.swift */,
+				23A025DE62C06462E1099DA2 /* GetAdminRestores200ResponsePush.swift */,
+				4B34ED682507A75ACC99A0C8 /* GetAdminRestores200ResponseRequestsInner.swift */,
+				23B26FEFED8D4497C895EFB2 /* GetAdminRestores200ResponseSummary.swift */,
 				C91C204A409F1146D5E2EEEC /* GetAdminS3Storage200Response.swift */,
 				695C0E42BC9E7D5B191D750C /* GetAdminS3Storage200ResponseCurrent.swift */,
 				02B6F4C782BCCE5E2913F9A5 /* GetAdminS3Storage200ResponseTrends.swift */,
@@ -1162,6 +1183,13 @@
 				493EF45FBBEF633F62E09C3B /* GetAdminEcsHealth200ResponseSummary.swift in Sources */,
 				FC375BDF8588D1BF7E2A9859 /* GetAdminEcsHealth200ResponseTasks.swift in Sources */,
 				A40CC0099F8B239885C3F8AF /* GetAdminEcsHealth200ResponseTasksRecentlyStoppedInner.swift in Sources */,
+				C2A58762ED0A342921ED54C5 /* GetAdminEcsHealth200ResponseTasksRunningTasksInner.swift in Sources */,
+				3225CC5420E7801EEA9EFC5F /* GetAdminHealth200Response.swift in Sources */,
+				6082996499F3A4894A76C7E5 /* GetAdminHealth200ResponseChecksInner.swift in Sources */,
+				34BC6CA758968BB73FDD0FFF /* GetAdminRestores200Response.swift in Sources */,
+				3D0AA12151E4EEF13B96B965 /* GetAdminRestores200ResponsePush.swift in Sources */,
+				85DE780E5156346481A9F862 /* GetAdminRestores200ResponseRequestsInner.swift in Sources */,
+				D666B63B6C872873EA9250AA /* GetAdminRestores200ResponseSummary.swift in Sources */,
 				D16AF8FADAD17801EFA1AC5A /* GetAdminS3Storage200Response.swift in Sources */,
 				7FD97C6CB810177317193621 /* GetAdminS3Storage200ResponseCurrent.swift in Sources */,
 				378864C828D3C15E71F16202 /* GetAdminS3Storage200ResponseTrends.swift in Sources */,

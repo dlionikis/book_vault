@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import BudgetBar from './components/BudgetBar';
+import HealthTab from './tabs/HealthTab';
 import CostsTab from './tabs/CostsTab';
 import EcsHealthTab from './tabs/EcsHealthTab';
 import S3StorageTab from './tabs/S3StorageTab';
+import RestoresTab from './tabs/RestoresTab';
 
-const TABS = ['Costs', 'ECS Health', 'S3 Storage'] as const;
+const TABS = ['Health', 'Costs', 'ECS Health', 'S3 Storage', 'Restores'] as const;
 type Tab = (typeof TABS)[number];
 
 interface BudgetInfo {
@@ -18,7 +20,7 @@ interface BudgetInfo {
 }
 
 export default function DashboardClient() {
-  const [activeTab, setActiveTab] = useState<Tab>('Costs');
+  const [activeTab, setActiveTab] = useState<Tab>('Health');
   const [budgets, setBudgets] = useState<BudgetInfo[]>([]);
   const [budgetLoading, setBudgetLoading] = useState(true);
   const [budgetError, setBudgetError] = useState<string | null>(null);
@@ -78,9 +80,11 @@ export default function DashboardClient() {
       </div>
 
       {/* Tab Content */}
+      {activeTab === 'Health' && <HealthTab />}
       {activeTab === 'Costs' && <CostsTab />}
       {activeTab === 'ECS Health' && <EcsHealthTab />}
       {activeTab === 'S3 Storage' && <S3StorageTab />}
+      {activeTab === 'Restores' && <RestoresTab />}
     </div>
   );
 }

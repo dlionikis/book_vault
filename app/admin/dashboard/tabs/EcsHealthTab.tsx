@@ -15,10 +15,22 @@ import {
 interface TaskInfo {
   taskId: string;
   service: string;
+  startedAt: string | null;
   stoppedAt: string | null;
   durationMinutes: number | null;
   stopCode: string | null;
   stoppedReason: string | null;
+}
+
+interface RunningTaskInfo {
+  taskId: string;
+  service: string;
+  startedAt: string | null;
+  lastStatus: string | null;
+  healthStatus: string | null;
+  taskDefinition: string | null;
+  cpu: string | null;
+  memory: string | null;
 }
 
 interface ServiceStatus {
@@ -35,6 +47,7 @@ interface EcsHealthData {
     running: number;
     desired: number;
     pending: number;
+    runningTasks: RunningTaskInfo[];
     recentlyStopped: TaskInfo[];
   };
   metrics: {
@@ -201,6 +214,76 @@ export default function EcsHealthTab() {
               <Line type="monotone" dataKey="Memory" stroke="#8b5cf6" dot={false} />
             </LineChart>
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Running Tasks Table */}
+      {data.tasks.runningTasks && data.tasks.runningTasks.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            Running Tasks ({data.tasks.runningTasks.length})
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-700">
+                  <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">
+                    Task ID
+                  </th>
+                  <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">
+                    Service
+                  </th>
+                  <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">
+                    Started At
+                  </th>
+                  <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">
+                    Status
+                  </th>
+                  <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">
+                    Task Def
+                  </th>
+                  <th className="text-right px-4 py-2 text-gray-600 dark:text-gray-400 font-medium">
+                    CPU·Mem
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.tasks.runningTasks.map((task) => (
+                  <tr key={task.taskId} className="border-t border-gray-100 dark:border-gray-700">
+                    <td className="px-4 py-2 text-gray-800 dark:text-gray-200 font-mono text-xs">
+                      {task.taskId.slice(0, 8)}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400 text-xs">
+                      {task.service}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
+                      {task.startedAt ? new Date(task.startedAt).toLocaleString() : '—'}
+                    </td>
+                    <td className="px-4 py-2">
+                      <span
+                        className={`inline-flex items-center gap-1 ${
+                          task.lastStatus === 'RUNNING'
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
+                        {task.lastStatus || '—'}
+                        {task.healthStatus && task.healthStatus !== 'UNKNOWN'
+                          ? ` (${task.healthStatus})`
+                          : ''}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-gray-600 dark:text-gray-400 font-mono text-xs">
+                      {task.taskDefinition || '—'}
+                    </td>
+                    <td className="px-4 py-2 text-right text-gray-600 dark:text-gray-400 text-xs">
+                      {task.cpu && task.memory ? `${task.cpu}·${task.memory}` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

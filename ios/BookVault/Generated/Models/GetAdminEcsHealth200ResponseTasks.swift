@@ -15,12 +15,15 @@ public struct GetAdminEcsHealth200ResponseTasks: Codable, JSONEncodable, Hashabl
     public var running: Int
     public var desired: Int
     public var pending: Int
+    /** Currently-running tasks with start times */
+    public var runningTasks: [GetAdminEcsHealth200ResponseTasksRunningTasksInner]
     public var recentlyStopped: [GetAdminEcsHealth200ResponseTasksRecentlyStoppedInner]
 
-    public init(running: Int, desired: Int, pending: Int, recentlyStopped: [GetAdminEcsHealth200ResponseTasksRecentlyStoppedInner]) {
+    public init(running: Int, desired: Int, pending: Int, runningTasks: [GetAdminEcsHealth200ResponseTasksRunningTasksInner], recentlyStopped: [GetAdminEcsHealth200ResponseTasksRecentlyStoppedInner]) {
         self.running = running
         self.desired = desired
         self.pending = pending
+        self.runningTasks = runningTasks
         self.recentlyStopped = recentlyStopped
     }
 
@@ -28,6 +31,7 @@ public struct GetAdminEcsHealth200ResponseTasks: Codable, JSONEncodable, Hashabl
         case running
         case desired
         case pending
+        case runningTasks
         case recentlyStopped
     }
 
@@ -38,6 +42,7 @@ public struct GetAdminEcsHealth200ResponseTasks: Codable, JSONEncodable, Hashabl
         try container.encode(running, forKey: .running)
         try container.encode(desired, forKey: .desired)
         try container.encode(pending, forKey: .pending)
+        try container.encode(runningTasks, forKey: .runningTasks)
         try container.encode(recentlyStopped, forKey: .recentlyStopped)
     }
 }
