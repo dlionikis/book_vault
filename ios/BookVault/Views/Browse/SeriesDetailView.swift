@@ -22,6 +22,10 @@ struct SeriesDetailView: View {
     @State private var showingSuccessMessage = false
     @State private var booksInLibrary: Set<String> = []
     @State private var isCheckingLibrary = false
+    // Phase 8: series-level restore
+    @State private var isRestoringSeries = false
+    @State private var didRequestSeriesRestore = false
+    @State private var restoreErrorMessage: String?
 
     private let columns = [
         GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
@@ -169,6 +173,12 @@ struct SeriesDetailView: View {
                                     .disabled(isAddingToLibrary || showingSuccessMessage)
                                     .padding(.horizontal)
                                     .padding(.bottom, 8)
+                                }
+
+                                // Restore All Archived (Phase 8) — only when the
+                                // series has archived books on this page.
+                                if archivedCount > 0 {
+                                    restoreSeriesButton
                                 }
 
                                 Text("Books in Series Order")
@@ -341,6 +351,74 @@ struct SeriesDetailView: View {
     private func refreshSeriesDetail() async {
         searchManager.clearAllCaches()
         await loadSeriesDetail()
+    }
+
+    // MARK: - Series Restore (Phase 8)
+
+    /// Count of archived books currently loaded for the series. The backend
+    /// restores the whole series regardless; this drives the button's
+    /// visibility and label.
+    private var archivedCount: Int {
+        seriesDetail?.books.filter { $0.archiveStatus == .archived }.count ?? 0
+    }
+
+    @ViewBuilder private var restoreSeriesButton: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Button {
+                Task { await restoreSeries() }
+            } label: {
+                HStack {
+                    if isRestoringSeries {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: didRequestSeriesRestore
+                            ? "checkmark.circle.fill"
+                            : "arrow.clockwise.icloud")
+                    }
+                    Text(didRequestSeriesRestore
+                        ? "Restore Requested"
+                        : "Restore All Archived (\(archivedCount))")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(didRequestSeriesRestore ? Color.green : Color.orange)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+            }
+            .disabled(isRestoringSeries || didRequestSeriesRestore)
+
+            if let restoreErrorMessage {
+                Text(restoreErrorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red)
+            } else {
+                Text("Restoring takes about 3–5 hours. We'll notify you when books are ready.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 8)
+    }
+
+    private func restoreSeries() async {
+        guard let seriesUuid = UUID(uuidString: seriesId) else { return }
+        isRestoringSeries = true
+        restoreErrorMessage = nil
+        defer { isRestoringSeries = false }
+        do {
+            let response = try await APIClient.shared.restoreSeries(seriesId: seriesUuid)
+            didRequestSeriesRestore = true
+            DebugLogger.info("Series restore requested: \(response.message)")
+            // Re-fetch so each book's archive badge reflects its new state.
+            await refreshSeriesDetail()
+        } catch {
+            DebugLogger.error("Series restore failed", error: error)
+            restoreErrorMessage = "Couldn't start the restore. Please try again."
+        }
     }
 }
 

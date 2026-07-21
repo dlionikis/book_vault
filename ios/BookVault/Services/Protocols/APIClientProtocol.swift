@@ -44,6 +44,7 @@ protocol APIClientProtocol {
     func restoreBook(bookId: UUID) async throws -> BookStreamResponse
     func getBookRestoreStatus(bookId: UUID) async throws -> RestoreStatus
     func listRestores() async throws -> RestoresListResponse
+    func restoreSeries(seriesId: UUID) async throws -> RestoreSeries200Response
 
     // Notifications
     @discardableResult
