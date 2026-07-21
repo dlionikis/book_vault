@@ -2,7 +2,7 @@
 
 > Quick navigation for Book Vault documentation
 
-**Last Updated**: January 4, 2026
+**Last Updated**: July 21, 2026
 
 ---
 
@@ -109,14 +109,15 @@
 
 ---
 
-## Plans (In Progress)
+## Plans (Active)
 
-| File                                                                                                                         | Purpose                                                        |
-| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| [archive/completed-plans/s3-archive-restore-workflow-v2.md](archive/completed-plans/s3-archive-restore-workflow-v2.md)       | S3 cold storage restore feature plan (✅ complete, Phases 0–8) |
-| [plans/dependency-major-upgrades.md](plans/dependency-major-upgrades.md)                                                     | Phased major dep upgrades (Next 16, React 19, Prisma 7, …)     |
-| [plans/audible-download-plan.md](plans/audible-download-plan.md)                                                             | Audible download integration plan                              |
-| [archive/completed-plans/app-store-submission-review-guide.md](archive/completed-plans/app-store-submission-review-guide.md) | App Store submission guide (historical)                        |
+| File                                                                     | Purpose                                          |
+| ------------------------------------------------------------------------ | ------------------------------------------------ |
+| [plans/dependency-major-upgrades.md](plans/dependency-major-upgrades.md) | Phased major dep upgrades (Prisma 6→7 remaining) |
+| [plans/audible-download-plan.md](plans/audible-download-plan.md)         | Audible download integration plan (planned)      |
+
+Completed plans (S3 restore, hardening, testing, App Store review) live in
+`archive/completed-plans/` — see below.
 
 ---
 
