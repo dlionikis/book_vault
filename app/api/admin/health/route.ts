@@ -48,10 +48,11 @@ const CRON_RULES = (
 // The poller runs every 5 min; flag if the newest in-progress restore hasn't
 // been checked within this window (a dead poller reveals itself here).
 const POLLER_STALE_MS = 15 * 60 * 1000;
-// A just-requested restore hasn't hit its first 5-min poll yet, so don't call
-// the poller "down" for a never-polled restore until it's older than one cycle
-// plus slack. Prevents a false alarm right after requesting a (series) restore.
-const POLLER_GRACE_MS = 6 * 60 * 1000;
+// A restore only becomes "ripe" for judging the poller once it's had a chance to
+// be polled — i.e. older than one 5-min poll cycle. A restore requested more
+// recently than this hasn't been polled yet by design, so it isn't evidence of a
+// down poller.
+const POLLER_RIPE_MS = 5 * 60 * 1000;
 // Standard-tier restores finish in 3-5h; anything in-progress past this is stuck.
 const STUCK_RESTORE_MS = 6 * 60 * 60 * 1000;
 
@@ -118,53 +119,57 @@ async function checkPollerFreshness(): Promise<HealthCheck> {
   const active = await prisma.mediaRestoreRequest.findMany({
     where: { status: 'in_progress' },
     select: { requestedAt: true, lastCheckedAt: true },
+    orderBy: { requestedAt: 'desc' },
   });
   if (active.length === 0) {
     return { name: 'Restore poller', status: 'ok', detail: 'No active restores to poll' };
   }
 
   const now = Date.now();
+
+  // Primary signal: the most recent restore that's had time to be polled (older
+  // than one 5-min cycle). If it's still never been polled, the poller isn't
+  // running. Restores newer than that are expected to be unpolled — not evidence.
+  const ripe = active.filter((r) => now - new Date(r.requestedAt).getTime() > POLLER_RIPE_MS);
+  if (ripe.length > 0 && ripe[0].lastCheckedAt == null) {
+    return {
+      name: 'Restore poller',
+      status: 'error',
+      detail: 'Latest restore (>5m old) has never been polled — poller not running?',
+    };
+  }
+
+  // Staleness floor: catches a poller that died AFTER polling — old restores keep
+  // their stale lastCheckedAt while new ones pile up. Judge by the freshest poll
+  // across all active restores.
   const checkedTimes = active
     .map((r) => r.lastCheckedAt)
     .filter((t): t is Date => t != null)
     .map((t) => new Date(t).getTime());
-
-  // If nothing has been polled yet, only alarm once a never-polled restore has
-  // outlived the grace window (one poll cycle + slack). Freshly-requested
-  // restores are expected to be unpolled for a few minutes.
-  if (checkedTimes.length === 0) {
-    const oldestRequestedMs = Math.min(...active.map((r) => new Date(r.requestedAt).getTime()));
-    if (now - oldestRequestedMs > POLLER_GRACE_MS) {
+  if (checkedTimes.length > 0) {
+    const lastChecked = Math.max(...checkedTimes);
+    const ageMin = Math.round((now - lastChecked) / 60000);
+    if (now - lastChecked > POLLER_STALE_MS) {
       return {
         name: 'Restore poller',
         status: 'error',
-        detail: 'Active restores exist but none have been polled (poller not running?)',
+        detail: `Last poll ${ageMin}m ago — poller may be down (expected every 5m)`,
+        meta: { lastCheckedAt: new Date(lastChecked).toISOString() },
       };
     }
     return {
       name: 'Restore poller',
       status: 'ok',
-      detail: `${active.length} active restore${active.length === 1 ? '' : 's'} awaiting first poll`,
-    };
-  }
-
-  // At least one restore has been polled → the poller is running. Judge freshness
-  // by the most recent poll across all active restores.
-  const lastChecked = Math.max(...checkedTimes);
-  const ageMin = Math.round((now - lastChecked) / 60000);
-  if (now - lastChecked > POLLER_STALE_MS) {
-    return {
-      name: 'Restore poller',
-      status: 'error',
-      detail: `Last poll ${ageMin}m ago — poller may be down (expected every 5m)`,
+      detail: `Last poll ${ageMin}m ago`,
       meta: { lastCheckedAt: new Date(lastChecked).toISOString() },
     };
   }
+
+  // Nothing ripe yet and nothing polled → all restores were just requested.
   return {
     name: 'Restore poller',
     status: 'ok',
-    detail: `Last poll ${ageMin}m ago`,
-    meta: { lastCheckedAt: new Date(lastChecked).toISOString() },
+    detail: `${active.length} active restore${active.length === 1 ? '' : 's'} awaiting first poll`,
   };
 }
 
