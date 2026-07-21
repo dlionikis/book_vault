@@ -57,11 +57,12 @@ describe('GET /api/admin/ecs-health', () => {
     return new NextRequest(url, { method: 'GET' });
   }
 
-  // Helper to mock a successful response with no stopped tasks
+  // Helper to mock a successful response with no stopped or running tasks.
+  // Call order (Promise.all): DescribeServices, ListTasks(stopped)×2,
+  // ListTasks(running)×2. No DescribeTasks calls when all task lists are empty.
   function mockBasicEcsResponse(
     services: { running: number; desired: number; pending: number; name: string }[]
   ) {
-    // DescribeServices (1 call) + ListTasks for each service (2 calls for spot + fallback)
     mockEcsSend
       .mockResolvedValueOnce({
         services: services.map((s) => ({
@@ -71,8 +72,10 @@ describe('GET /api/admin/ecs-health', () => {
           pendingCount: s.pending,
         })),
       })
-      .mockResolvedValueOnce({ taskArns: [] }) // stopped tasks for service 1
-      .mockResolvedValueOnce({ taskArns: [] }); // stopped tasks for service 2
+      .mockResolvedValueOnce({ taskArns: [] }) // stopped tasks, service 1
+      .mockResolvedValueOnce({ taskArns: [] }) // stopped tasks, service 2
+      .mockResolvedValueOnce({ taskArns: [] }) // running tasks, service 1
+      .mockResolvedValueOnce({ taskArns: [] }); // running tasks, service 2
   }
 
   it('returns 401 for unauthenticated requests', async () => {
@@ -137,17 +140,20 @@ describe('GET /api/admin/ecs-health', () => {
       ],
     });
 
-    // ListTasks for spot service - has stopped tasks
+    // ListTasks(stopped) for spot service - has stopped tasks
     mockEcsSend.mockResolvedValueOnce({
       taskArns: [
         'arn:aws:ecs:us-east-1:123:task/book-vault/abc123',
         'arn:aws:ecs:us-east-1:123:task/book-vault/def456',
       ],
     });
-    // ListTasks for fallback service - no stopped tasks
+    // ListTasks(stopped) for fallback service - none
+    mockEcsSend.mockResolvedValueOnce({ taskArns: [] });
+    // ListTasks(running) for both services - none
+    mockEcsSend.mockResolvedValueOnce({ taskArns: [] });
     mockEcsSend.mockResolvedValueOnce({ taskArns: [] });
 
-    // DescribeTasks
+    // DescribeTasks (stopped)
     mockEcsSend.mockResolvedValueOnce({
       tasks: [
         {
@@ -196,8 +202,10 @@ describe('GET /api/admin/ecs-health', () => {
     });
     mockEcsSend.mockResolvedValueOnce({
       taskArns: ['arn:aws:ecs:us-east-1:123:task/book-vault/deploy123'],
-    });
-    mockEcsSend.mockResolvedValueOnce({ taskArns: [] });
+    }); // stopped, spot
+    mockEcsSend.mockResolvedValueOnce({ taskArns: [] }); // stopped, fallback
+    mockEcsSend.mockResolvedValueOnce({ taskArns: [] }); // running, spot
+    mockEcsSend.mockResolvedValueOnce({ taskArns: [] }); // running, fallback
 
     mockEcsSend.mockResolvedValueOnce({
       tasks: [
@@ -259,6 +267,60 @@ describe('GET /api/admin/ecs-health', () => {
     const data = await response.json();
     expect(data.error).toBe('Failed to fetch ECS health data');
     expect(JSON.stringify(data)).not.toContain('credentials');
+  });
+
+  it('returns currently-running tasks with start times', async () => {
+    mockRequireAdmin.mockResolvedValue({ user: adminUser, error: null });
+
+    const startedAt = new Date('2026-07-20T10:00:00Z');
+
+    // DescribeServices
+    mockEcsSend.mockResolvedValueOnce({
+      services: [
+        { serviceName: 'book-vault-spot', runningCount: 2, desiredCount: 2, pendingCount: 0 },
+        { serviceName: 'book-vault-fallback', runningCount: 0, desiredCount: 0, pendingCount: 0 },
+      ],
+    });
+    // ListTasks(stopped) ×2 — none
+    mockEcsSend.mockResolvedValueOnce({ taskArns: [] });
+    mockEcsSend.mockResolvedValueOnce({ taskArns: [] });
+    // ListTasks(running): spot has one, fallback none
+    mockEcsSend.mockResolvedValueOnce({
+      taskArns: ['arn:aws:ecs:us-east-1:123:task/book-vault/run123'],
+    });
+    mockEcsSend.mockResolvedValueOnce({ taskArns: [] });
+    // DescribeTasks(running)
+    mockEcsSend.mockResolvedValueOnce({
+      tasks: [
+        {
+          taskArn: 'arn:aws:ecs:us-east-1:123:task/book-vault/run123',
+          group: 'service:book-vault-spot',
+          startedAt,
+          lastStatus: 'RUNNING',
+          healthStatus: 'HEALTHY',
+          taskDefinitionArn: 'arn:aws:ecs:us-east-1:123:task-definition/book-vault:9',
+          cpu: '512',
+          memory: '1024',
+        },
+      ],
+    });
+
+    mockCwSend.mockResolvedValue({ MetricDataResults: [] });
+
+    const response = await GET(makeRequest());
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.tasks.runningTasks).toHaveLength(1);
+    const rt = data.tasks.runningTasks[0];
+    expect(rt.taskId).toBe('run123');
+    expect(rt.service).toBe('book-vault-spot');
+    expect(rt.startedAt).toBe(startedAt.toISOString());
+    expect(rt.lastStatus).toBe('RUNNING');
+    expect(rt.healthStatus).toBe('HEALTHY');
+    expect(rt.taskDefinition).toBe('book-vault:9');
+    expect(rt.cpu).toBe('512');
+    expect(rt.memory).toBe('1024');
   });
 
   it('handles null MetricDataResults', async () => {

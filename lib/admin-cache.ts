@@ -6,6 +6,7 @@ interface CacheEntry<T> {
 const MAX_CACHE_SIZE = 50;
 const cache = new Map<string, CacheEntry<unknown>>();
 
+export const CACHE_1M = 60 * 1000;
 export const CACHE_5M = 5 * 60 * 1000;
 export const CACHE_1H = 60 * 60 * 1000;
 export const CACHE_24H = 24 * 60 * 60 * 1000;

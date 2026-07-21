@@ -865,6 +865,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Infrastructure health snapshot
+         * @description Runs read-only health checks over the always-on infra the restore
+         *     workflow depends on (DB, S3, SNS push, EventBridge poller/sync). Each
+         *     check is isolated so one failure degrades to an error card rather than
+         *     failing the whole response. Requires admin privileges.
+         */
+        get: operations["getAdminHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/restores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Restore-request observability
+         * @description Restore-request lifecycle (in-progress + recently completed/failed) with
+         *     all timestamps, a status summary, and DB-derived push health. Requires
+         *     admin privileges.
+         */
+        get: operations["getAdminRestores"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/s3-storage": {
         parameters: {
             query?: never;
@@ -3753,8 +3798,21 @@ export interface operations {
                             running: number;
                             desired: number;
                             pending: number;
+                            /** @description Currently-running tasks with start times */
+                            runningTasks: {
+                                taskId?: string;
+                                service?: string;
+                                startedAt?: string | null;
+                                lastStatus?: string | null;
+                                healthStatus?: string | null;
+                                taskDefinition?: string | null;
+                                cpu?: string | null;
+                                memory?: string | null;
+                            }[];
                             recentlyStopped: {
                                 taskId?: string;
+                                service?: string;
+                                startedAt?: string | null;
                                 stoppedAt?: string | null;
                                 durationMinutes?: number | null;
                                 stopCode?: string | null;
@@ -3771,6 +3829,128 @@ export interface operations {
                             crashes: number;
                             deploymentStops: number;
                         };
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden - admin access required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAdminHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Health check results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        checks: {
+                            name: string;
+                            /** @enum {string} */
+                            status: "ok" | "warn" | "error";
+                            detail: string;
+                            meta?: {
+                                [key: string]: unknown;
+                            };
+                        }[];
+                        /** Format: date-time */
+                        generatedAt: string;
+                    };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden - admin access required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getAdminRestores: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restore observability data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        summary: {
+                            inProgress: number;
+                            completedLast7d: number;
+                            failedLast7d: number;
+                            /** @description In-progress restores past the 3-5h SLA */
+                            stuck: number;
+                            /** Format: date-time */
+                            lastPolledAt: string | null;
+                        };
+                        requests: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            bookId: string;
+                            bookTitle: string;
+                            /** @enum {string} */
+                            status: "in_progress" | "completed" | "failed";
+                            requestedByUsername?: string | null;
+                            errorMessage?: string | null;
+                            /** Format: date-time */
+                            requestedAt: string;
+                            /** Format: date-time */
+                            lastCheckedAt?: string | null;
+                            /** Format: date-time */
+                            completedAt?: string | null;
+                        }[];
+                        push: {
+                            configured: boolean;
+                            activeTokens: number;
+                            inactiveTokens: number;
+                        };
+                        /** Format: date-time */
+                        generatedAt: string;
                     };
                 };
             };
