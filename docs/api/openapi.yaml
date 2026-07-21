@@ -1811,6 +1811,80 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/series/{id}/restore:
+    post:
+      operationId: restoreSeries
+      tags: [Books]
+      summary: Restore all archived books in a series
+      description: |
+        Batch-initiates an S3 Intelligent-Tiering restore for every archived
+        audiobook in the series (the "Restore All Archived" button), so a user
+        doesn't have to request them one at a time. Idempotent per book: a
+        book with an in-flight restore is reused, never duplicated. Books that
+        are already available are skipped. Returns a per-book result list.
+      security:
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Series ID
+      responses:
+        '200':
+          description: Restore initiated (or nothing archived to restore)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, total, results]
+                properties:
+                  message:
+                    type: string
+                    description: Human-readable summary
+                  total:
+                    type: integer
+                    minimum: 0
+                    description: Number of archived books a restore was attempted for
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [bookId, title, status]
+                      properties:
+                        bookId:
+                          type: string
+                          format: uuid
+                        title:
+                          type: string
+                        status:
+                          type: string
+                          enum: [initiated, failed]
+                        error:
+                          type: string
+                          description: Present when status=failed
+        '400':
+          description: Invalid series ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Series not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/narrators/{id}:
     get:
       operationId: getNarrator

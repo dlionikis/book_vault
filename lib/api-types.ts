@@ -412,6 +412,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/series/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore all archived books in a series
+         * @description Batch-initiates an S3 Intelligent-Tiering restore for every archived
+         *     audiobook in the series (the "Restore All Archived" button), so a user
+         *     doesn't have to request them one at a time. Idempotent per book: a
+         *     book with an in-flight restore is reused, never duplicated. Books that
+         *     are already available are skipped. Returns a per-book result list.
+         */
+        post: operations["restoreSeries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/narrators/{id}": {
         parameters: {
             query?: never;
@@ -2381,6 +2405,70 @@ export interface operations {
                         books: components["schemas"]["Book"][];
                         pagination: components["schemas"]["Pagination"];
                     };
+                };
+            };
+            /** @description Series not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    restoreSeries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Series ID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Restore initiated (or nothing archived to restore) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description Human-readable summary */
+                        message: string;
+                        /** @description Number of archived books a restore was attempted for */
+                        total: number;
+                        results: {
+                            /** Format: uuid */
+                            bookId: string;
+                            title: string;
+                            /** @enum {string} */
+                            status: "initiated" | "failed";
+                            /** @description Present when status=failed */
+                            error?: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description Invalid series ID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
             /** @description Series not found */
