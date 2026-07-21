@@ -125,23 +125,62 @@ describe('GET /api/admin/health', () => {
     expect(eb.detail).toContain('DEAUTHORIZED');
   });
 
-  it('flags the poller as error when active restores have never been polled', async () => {
+  const min = (n: number) => new Date(Date.now() - n * 60 * 1000);
+
+  it('errors when the latest ripe (>5m old) restore has never been polled', async () => {
     mockAllHealthy();
-    mockRestoreFindMany.mockResolvedValue([{ lastCheckedAt: null }]);
+    // findMany is ordered requestedAt desc; newest first. Newest is 10m old + unpolled.
+    mockRestoreFindMany.mockResolvedValue([
+      { requestedAt: min(10), lastCheckedAt: null },
+      { requestedAt: min(40), lastCheckedAt: null },
+    ]);
 
     const res = await GET(req());
     const data = await res.json();
     expect(byName(data, 'Restore poller').status).toBe('error');
+    expect(byName(data, 'Restore poller').detail).toContain('never been polled');
   });
 
-  it('flags the poller as error when the last poll is stale', async () => {
+  it('stays ok for just-requested restores not yet ripe (all <5m old)', async () => {
     mockAllHealthy();
-    const stale = new Date(Date.now() - 30 * 60 * 1000); // 30m ago
-    mockRestoreFindMany.mockResolvedValue([{ lastCheckedAt: stale }]);
+    mockRestoreFindMany.mockResolvedValue([
+      { requestedAt: min(1), lastCheckedAt: null },
+      { requestedAt: min(2), lastCheckedAt: null },
+    ]);
+
+    const res = await GET(req());
+    const data = await res.json();
+    expect(byName(data, 'Restore poller').status).toBe('ok');
+    expect(byName(data, 'Restore poller').detail).toContain('awaiting first poll');
+  });
+
+  it('stays ok when the latest ripe restore has been polled recently', async () => {
+    mockAllHealthy();
+    mockRestoreFindMany.mockResolvedValue([
+      { requestedAt: min(1), lastCheckedAt: null }, // fresh, not ripe — ignored
+      { requestedAt: min(20), lastCheckedAt: min(2) }, // ripe + recently polled
+    ]);
+
+    const res = await GET(req());
+    const data = await res.json();
+    expect(byName(data, 'Restore poller').status).toBe('ok');
+    expect(byName(data, 'Restore poller').detail).toContain('Last poll');
+  });
+
+  it('errors (staleness floor) when the poller died after polling and new restores pile up', async () => {
+    mockAllHealthy();
+    // Newest ripe restore WAS polled long ago; a brand-new one arrived since.
+    // Your primary rule alone would pass (newest-ripe has non-null lastCheckedAt),
+    // but the freshest poll across all is 40m stale → still caught.
+    mockRestoreFindMany.mockResolvedValue([
+      { requestedAt: min(2), lastCheckedAt: null }, // new, not ripe
+      { requestedAt: min(90), lastCheckedAt: min(40) }, // ripe, but last poll 40m ago
+    ]);
 
     const res = await GET(req());
     const data = await res.json();
     expect(byName(data, 'Restore poller').status).toBe('error');
+    expect(byName(data, 'Restore poller').detail).toContain('Last poll');
   });
 
   it('degrades a failing check to an error card without 500-ing the panel', async () => {

@@ -48,6 +48,11 @@ const CRON_RULES = (
 // The poller runs every 5 min; flag if the newest in-progress restore hasn't
 // been checked within this window (a dead poller reveals itself here).
 const POLLER_STALE_MS = 15 * 60 * 1000;
+// A restore only becomes "ripe" for judging the poller once it's had a chance to
+// be polled — i.e. older than one 5-min poll cycle. A restore requested more
+// recently than this hasn't been polled yet by design, so it isn't evidence of a
+// down poller.
+const POLLER_RIPE_MS = 5 * 60 * 1000;
 // Standard-tier restores finish in 3-5h; anything in-progress past this is stuck.
 const STUCK_RESTORE_MS = 6 * 60 * 60 * 1000;
 
@@ -113,36 +118,58 @@ async function checkPush(): Promise<HealthCheck> {
 async function checkPollerFreshness(): Promise<HealthCheck> {
   const active = await prisma.mediaRestoreRequest.findMany({
     where: { status: 'in_progress' },
-    orderBy: { lastCheckedAt: 'desc' },
-    take: 1,
-    select: { lastCheckedAt: true },
+    select: { requestedAt: true, lastCheckedAt: true },
+    orderBy: { requestedAt: 'desc' },
   });
   if (active.length === 0) {
     return { name: 'Restore poller', status: 'ok', detail: 'No active restores to poll' };
   }
-  const lastChecked = active[0].lastCheckedAt;
-  if (!lastChecked) {
+
+  const now = Date.now();
+
+  // Primary signal: the most recent restore that's had time to be polled (older
+  // than one 5-min cycle). If it's still never been polled, the poller isn't
+  // running. Restores newer than that are expected to be unpolled — not evidence.
+  const ripe = active.filter((r) => now - new Date(r.requestedAt).getTime() > POLLER_RIPE_MS);
+  if (ripe.length > 0 && ripe[0].lastCheckedAt == null) {
     return {
       name: 'Restore poller',
       status: 'error',
-      detail: 'Active restores exist but none have ever been polled (poller not running?)',
+      detail: 'Latest restore (>5m old) has never been polled — poller not running?',
     };
   }
-  const ageMs = Date.now() - new Date(lastChecked).getTime();
-  const ageMin = Math.round(ageMs / 60000);
-  if (ageMs > POLLER_STALE_MS) {
+
+  // Staleness floor: catches a poller that died AFTER polling — old restores keep
+  // their stale lastCheckedAt while new ones pile up. Judge by the freshest poll
+  // across all active restores.
+  const checkedTimes = active
+    .map((r) => r.lastCheckedAt)
+    .filter((t): t is Date => t != null)
+    .map((t) => new Date(t).getTime());
+  if (checkedTimes.length > 0) {
+    const lastChecked = Math.max(...checkedTimes);
+    const ageMin = Math.round((now - lastChecked) / 60000);
+    if (now - lastChecked > POLLER_STALE_MS) {
+      return {
+        name: 'Restore poller',
+        status: 'error',
+        detail: `Last poll ${ageMin}m ago — poller may be down (expected every 5m)`,
+        meta: { lastCheckedAt: new Date(lastChecked).toISOString() },
+      };
+    }
     return {
       name: 'Restore poller',
-      status: 'error',
-      detail: `Last poll ${ageMin}m ago — poller may be down (expected every 5m)`,
+      status: 'ok',
+      detail: `Last poll ${ageMin}m ago`,
       meta: { lastCheckedAt: new Date(lastChecked).toISOString() },
     };
   }
+
+  // Nothing ripe yet and nothing polled → all restores were just requested.
   return {
     name: 'Restore poller',
     status: 'ok',
-    detail: `Last poll ${ageMin}m ago`,
-    meta: { lastCheckedAt: new Date(lastChecked).toISOString() },
+    detail: `${active.length} active restore${active.length === 1 ? '' : 's'} awaiting first poll`,
   };
 }
 
