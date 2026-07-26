@@ -97,6 +97,14 @@ final class MockAPIClientForAuth: APIClientProtocol {
         fatalError("Not implemented for auth tests")
     }
 
+    func fetchCatalogSeriesView(page _: Int, limit _: Int) async throws -> GetCatalogSeriesView200Response {
+        fatalError("Not implemented for auth tests")
+    }
+
+    func fetchLibrarySeriesView(page _: Int, limit _: Int) async throws -> GetLibrarySeriesView200Response {
+        fatalError("Not implemented for auth tests")
+    }
+
     func fetchProgress(bookId _: UUID) async throws -> GetProgress200Response {
         fatalError("Not implemented for auth tests")
     }

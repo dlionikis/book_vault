@@ -19,6 +19,8 @@ class MockAPIClient: APIClientProtocol {
     var refreshTokenCalls: [UUID] = []
     var logoutCalls: [UUID] = []
     var fetchBooksCalls: [(page: Int, limit: Int, sortBy: String?)] = []
+    var fetchCatalogSeriesViewCalls: [(page: Int, limit: Int)] = []
+    var fetchLibrarySeriesViewCalls: [(page: Int, limit: Int)] = []
     var fetchBookCalls: [UUID] = []
     var fetchBookChaptersCalls: [UUID] = []
     var fetchProgressCalls: [UUID] = []
@@ -51,6 +53,12 @@ class MockAPIClient: APIClientProtocol {
         domain: "Test",
         code: -1
     )))
+    var fetchCatalogSeriesViewResult: Result<GetCatalogSeriesView200Response, Error> = .failure(
+        APIError.networkError(NSError(domain: "Test", code: -1))
+    )
+    var fetchLibrarySeriesViewResult: Result<GetLibrarySeriesView200Response, Error> = .failure(
+        APIError.networkError(NSError(domain: "Test", code: -1))
+    )
     var fetchBookResult: Result<Book, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
     var fetchBookChaptersResult: Result<[Chapter], Error> = .success([])
     var fetchProgressResult: Result<GetProgress200Response, Error> = .failure(APIError.networkError(NSError(
@@ -106,6 +114,8 @@ class MockAPIClient: APIClientProtocol {
         refreshTokenCalls = []
         logoutCalls = []
         fetchBooksCalls = []
+        fetchCatalogSeriesViewCalls = []
+        fetchLibrarySeriesViewCalls = []
         fetchBookCalls = []
         fetchBookChaptersCalls = []
         fetchProgressCalls = []
@@ -145,6 +155,16 @@ class MockAPIClient: APIClientProtocol {
     func fetchBooks(page: Int, limit: Int, sortBy: String?) async throws -> ListBooks200Response {
         fetchBooksCalls.append((page, limit, sortBy))
         return try fetchBooksResult.get()
+    }
+
+    func fetchCatalogSeriesView(page: Int, limit: Int) async throws -> GetCatalogSeriesView200Response {
+        fetchCatalogSeriesViewCalls.append((page, limit))
+        return try fetchCatalogSeriesViewResult.get()
+    }
+
+    func fetchLibrarySeriesView(page: Int, limit: Int) async throws -> GetLibrarySeriesView200Response {
+        fetchLibrarySeriesViewCalls.append((page, limit))
+        return try fetchLibrarySeriesViewResult.get()
     }
 
     func fetchBook(id: UUID) async throws -> Book {
