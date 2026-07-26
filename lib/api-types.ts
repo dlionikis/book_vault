@@ -344,6 +344,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/browse/catalog-series-view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Series + standalone books, interleaved alphabetically by title
+         * @description Combined feed backing "Series mode" for the full-catalog browse: every series (with book count + derived cover) and every book not in any series, merged into one alphabetically-sorted, paginated list.
+         */
+        get: operations["getCatalogSeriesView"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/browse/library-series-view": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Owned series + standalone owned books, interleaved alphabetically by title
+         * @description Combined feed backing "Series mode" for the Library view: every series with at least one book in the requesting user's library (with owned count, total book count, and derived cover), plus every standalone book the user owns, merged into one alphabetically-sorted, paginated list.
+         */
+        get: operations["getLibrarySeriesView"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/browse/narrators": {
         parameters: {
             query?: never;
@@ -1208,6 +1248,30 @@ export interface components {
             asin?: string | null;
             /** @example 3 */
             bookCount: number;
+            /**
+             * Format: uri
+             * @description Derived, not stored — the coverUrl of the lowest-sequence book in this series that has a non-null coverUrl. Null if the series has no books with cover art.
+             * @example https://book-vault-media.s3.amazonaws.com/covers/B002V5D1CG.jpg
+             */
+            coverUrl?: string | null;
+            /**
+             * @description Number of this series' books present in the requesting user's library. Present only on Library-scoped responses.
+             * @example 2
+             */
+            ownedCount?: number;
+        };
+        /** @description Exactly one of `series`/`book` is present per item — never both, never neither. Not enforced by the schema; enforced by server-side construction and covered by unit tests. */
+        CatalogSeriesViewItem: {
+            series?: components["schemas"]["SeriesWithBookCount"];
+            book?: components["schemas"]["Book"];
+        };
+        GetCatalogSeriesView200Response: {
+            results: components["schemas"]["CatalogSeriesViewItem"][];
+            pagination: components["schemas"]["Pagination"];
+        };
+        GetLibrarySeriesView200Response: {
+            results: components["schemas"]["CatalogSeriesViewItem"][];
+            pagination: components["schemas"]["Pagination"];
         };
         NarratorWithBookCount: {
             /** Format: uuid */
@@ -2284,6 +2348,70 @@ export interface operations {
                             pages: number;
                         };
                     };
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getCatalogSeriesView: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated, interleaved list of series and standalone books */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetCatalogSeriesView200Response"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getLibrarySeriesView: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated, interleaved list of owned series and standalone owned books */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetLibrarySeriesView200Response"];
                 };
             };
             /** @description Unauthorized */

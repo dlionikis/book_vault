@@ -24,6 +24,7 @@
 		0B25EEDECE41D618FBDF1400 /* GetAdminCosts200ResponseMonthsInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B7F73FB9B16A02B3AEAC1B0 /* GetAdminCosts200ResponseMonthsInner.swift */; };
 		0B5050055D963A0991D28E8D /* DownloadManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5947295C8B2508B0EB786DA4 /* DownloadManaging.swift */; };
 		0B55C9F5B90D77F34DFB6D96 /* NetworkMonitorRealTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8B02023E14078674647834D /* NetworkMonitorRealTests.swift */; };
+		0E37AB313D4EA4D3DA81D4DC /* GetCatalogSeriesView200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AA313D2CA147D954C26874C /* GetCatalogSeriesView200Response.swift */; };
 		0E7138857BA3D0245879E7FF /* GenerateDownloadUrl200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C02367EECE6B0A1B8E620CC /* GenerateDownloadUrl200Response.swift */; };
 		0F11144AA7FE9B8D89AB75CE /* ProgressManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A6AEFAEB77241AC4F30C4C7 /* ProgressManager.swift */; };
 		11ADB7E205B89F020783515D /* GetSearchSuggestions200ResponseBooksInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25CF782C7941A830B3E5CFB2 /* GetSearchSuggestions200ResponseBooksInner.swift */; };
@@ -55,6 +56,7 @@
 		34BC6CA758968BB73FDD0FFF /* GetAdminRestores200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 434B380152FB3CF7CD94790C /* GetAdminRestores200Response.swift */; };
 		378864C828D3C15E71F16202 /* GetAdminS3Storage200ResponseTrends.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B6F4C782BCCE5E2913F9A5 /* GetAdminS3Storage200ResponseTrends.swift */; };
 		38E68EA6471E52C58E579297 /* SynchronizedDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDD143DB3CD6F742DF0012ED /* SynchronizedDictionary.swift */; };
+		3B16D8E4EF0AD94CABC6CFFD /* GetLibrarySeriesView200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE89312721FCD5E9B17AC9DF /* GetLibrarySeriesView200Response.swift */; };
 		3D0AA12151E4EEF13B96B965 /* GetAdminRestores200ResponsePush.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23A025DE62C06462E1099DA2 /* GetAdminRestores200ResponsePush.swift */; };
 		3FB0C2B58C8E878E0E683217 /* BrowseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96F563AC9D176CA88974776D /* BrowseView.swift */; };
 		41333DC3A6B4A182E037D2D5 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30EB210CC802D6C40312FBF3 /* APIClientTests.swift */; };
@@ -152,6 +154,7 @@
 		AF6E0E42E388EEEEAE2FC088 /* Chapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 587BBF1432034EF20D6F0978 /* Chapter.swift */; };
 		B0C54D44776BD2715A4F9004 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC21293CAC5761CB0960EF96 /* LoginView.swift */; };
 		B14CB221BD94544E47AFA5C8 /* RestoreRequestsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D22F63F28F3E2D2914DC79 /* RestoreRequestsViewModelTests.swift */; };
+		B345153120119C48D84CCE54 /* CatalogSeriesViewItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE1DA153975546017961DD4B /* CatalogSeriesViewItem.swift */; };
 		B39018E22B58F26ADD1155B1 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02D73ACD887085B903CDBCA2 /* Extensions.swift */; };
 		B3B4D0272E95C89DD672F3A8 /* GetBookChapters200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = B01DA9D637484B54621208C0 /* GetBookChapters200Response.swift */; };
 		B448DC46A4F1C10752C4ACB1 /* JSONDataEncoding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A71044E002B39A8D1958A94 /* JSONDataEncoding.swift */; };
@@ -404,6 +407,7 @@
 		975FC8E395E44C586407103B /* MockSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockSyncManager.swift; sourceTree = "<group>"; };
 		979EE877CF17BDB68A318383 /* SyncManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManagerTests.swift; sourceTree = "<group>"; };
 		9820C054F18CE5AD8818988C /* ReorderList200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReorderList200Response.swift; sourceTree = "<group>"; };
+		9AA313D2CA147D954C26874C /* GetCatalogSeriesView200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetCatalogSeriesView200Response.swift; sourceTree = "<group>"; };
 		9B2036AC1AC6FCC2E3C628C4 /* UpdatePasswordRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdatePasswordRequest.swift; sourceTree = "<group>"; };
 		9B632504F1EFF890E8E4A3D0 /* GetDownloadHistory200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetDownloadHistory200Response.swift; sourceTree = "<group>"; };
 		9F7234C376BC6F867F9B7FAE /* StorageManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageManagerTests.swift; sourceTree = "<group>"; };
@@ -485,6 +489,8 @@
 		FC21293CAC5761CB0960EF96 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		FD87363780646D678A13C4F5 /* ListAuthors200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListAuthors200Response.swift; sourceTree = "<group>"; };
 		FDD143DB3CD6F742DF0012ED /* SynchronizedDictionary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynchronizedDictionary.swift; sourceTree = "<group>"; };
+		FE1DA153975546017961DD4B /* CatalogSeriesViewItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogSeriesViewItem.swift; sourceTree = "<group>"; };
+		FE89312721FCD5E9B17AC9DF /* GetLibrarySeriesView200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetLibrarySeriesView200Response.swift; sourceTree = "<group>"; };
 		FEF5F9505F3C47E3AA6EC456 /* MockLibraryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLibraryManager.swift; sourceTree = "<group>"; };
 		FF1E641E72C554FEC3B6D648 /* GetSearchSuggestions200ResponseAuthorsInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetSearchSuggestions200ResponseAuthorsInner.swift; sourceTree = "<group>"; };
 		FF98F19BE6B2F204343FD983 /* PlaybackFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackFlowTests.swift; sourceTree = "<group>"; };
@@ -867,6 +873,7 @@
 				2321C95A0EA096A5AA188A24 /* BatchUpdateProgressRequestUpdatesInner.swift */,
 				8D02B5FF2DF4BBC98EADBF8C /* Book.swift */,
 				BC1456D071AF0F36CD0761B0 /* BookStreamResponse.swift */,
+				FE1DA153975546017961DD4B /* CatalogSeriesViewItem.swift */,
 				1F81E9584E20CF16F786CBC5 /* Category.swift */,
 				EE124ECDE4162E1DCA86A304 /* CategoryWithBookCount.swift */,
 				587BBF1432034EF20D6F0978 /* Chapter.swift */,
@@ -902,10 +909,12 @@
 				473FD201DB58E953FB2E0C88 /* GetAdminS3Storage200ResponseTrendsTotalSize.swift */,
 				3552381AA7BE459870EA5C74 /* GetAuthor200Response.swift */,
 				B01DA9D637484B54621208C0 /* GetBookChapters200Response.swift */,
+				9AA313D2CA147D954C26874C /* GetCatalogSeriesView200Response.swift */,
 				738DFFEAFA91F30C27AEC39D /* GetCategory200Response.swift */,
 				9B632504F1EFF890E8E4A3D0 /* GetDownloadHistory200Response.swift */,
 				1EDB24398E1701B28E5F6566 /* GetDownloadHistory200ResponseDownloadsInner.swift */,
 				4258DBBBEA33992BD07FD667 /* GetLibrary200Response.swift */,
+				FE89312721FCD5E9B17AC9DF /* GetLibrarySeriesView200Response.swift */,
 				540EFCAC1C2B474541105F9E /* GetProgress200Response.swift */,
 				D3366D62DA03081FF3D4C19C /* GetSearchSuggestions200Response.swift */,
 				FF1E641E72C554FEC3B6D648 /* GetSearchSuggestions200ResponseAuthorsInner.swift */,
@@ -1147,6 +1156,7 @@
 				A1786235CB8353766F483273 /* BrowseProtocols.swift in Sources */,
 				3FB0C2B58C8E878E0E683217 /* BrowseView.swift in Sources */,
 				6B59789EDF756A3EE4D09852 /* CachedCoverImage.swift in Sources */,
+				B345153120119C48D84CCE54 /* CatalogSeriesViewItem.swift in Sources */,
 				D56AE7065B0D72EAF53CC001 /* CatalogView.swift in Sources */,
 				DFE63B52B26C132AD9B366CA /* Category.swift in Sources */,
 				F07617771BDF120D38CA3471 /* CategoryDetailView.swift in Sources */,
@@ -1196,10 +1206,12 @@
 				BEAFB6999BE6D8CAE6A688D7 /* GetAdminS3Storage200ResponseTrendsTotalSize.swift in Sources */,
 				33D4C9D72A4F8B6E8D87EBB9 /* GetAuthor200Response.swift in Sources */,
 				B3B4D0272E95C89DD672F3A8 /* GetBookChapters200Response.swift in Sources */,
+				0E37AB313D4EA4D3DA81D4DC /* GetCatalogSeriesView200Response.swift in Sources */,
 				001B28B0515D8361249C6642 /* GetCategory200Response.swift in Sources */,
 				B846397FC99055F451AB5A89 /* GetDownloadHistory200Response.swift in Sources */,
 				F4FFC15CC56C5EE69C5C5EF9 /* GetDownloadHistory200ResponseDownloadsInner.swift in Sources */,
 				C872A7153E801C18742FE42F /* GetLibrary200Response.swift in Sources */,
+				3B16D8E4EF0AD94CABC6CFFD /* GetLibrarySeriesView200Response.swift in Sources */,
 				7FFD7652D1EC1984B96D98DE /* GetProgress200Response.swift in Sources */,
 				F86CC371B8F59FFA75A86256 /* GetSearchSuggestions200Response.swift in Sources */,
 				8B5B541C2B1F7ECE14FD8907 /* GetSearchSuggestions200ResponseAuthorsInner.swift in Sources */,
