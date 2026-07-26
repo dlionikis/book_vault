@@ -5,6 +5,8 @@ import SortDropdown from '@/components/SortDropdown';
 import Pagination from '@/components/Pagination';
 import ContinueListening from '@/components/ContinueListening';
 import ContinueListeningButton from '@/components/ContinueListeningButton';
+import SeriesModeSection from '@/components/SeriesModeSection';
+import { CATALOG_VIEW_MODE_KEY } from '@/components/ViewModeToggle';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
@@ -150,24 +152,31 @@ export default async function Home({
       {/* Continue Listening Section */}
       <ContinueListening />
 
-      {/* Books Grid */}
+      {/* Books / Series Grid */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            All Books
-            <span className="ml-2 text-sm font-normal text-gray-600 dark:text-gray-400">
-              ({data.pagination.total} books)
-            </span>
-          </h2>
-          <SortDropdown />
-        </div>
-        <BookGrid books={data.books} />
-        <Pagination
-          currentPage={data.pagination.page}
-          totalPages={data.pagination.pages}
-          total={data.pagination.total}
-          itemName="books"
-        />
+        <SeriesModeSection
+          storageKey={CATALOG_VIEW_MODE_KEY}
+          endpoint="/api/browse/catalog-series-view"
+          booksModeControls={<SortDropdown />}
+          booksHeading={
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              All Books
+              <span className="ml-2 text-sm font-normal text-gray-600 dark:text-gray-400">
+                ({data.pagination.total} books)
+              </span>
+            </h2>
+          }
+          seriesHeadingTitle="All Series"
+          seriesCountTemplate="({count} series)"
+        >
+          <BookGrid books={data.books} />
+          <Pagination
+            currentPage={data.pagination.page}
+            totalPages={data.pagination.pages}
+            total={data.pagination.total}
+            itemName="books"
+          />
+        </SeriesModeSection>
       </main>
     </div>
   );
