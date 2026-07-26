@@ -1,7 +1,7 @@
 # Series View Toggle — Implementation Plan
 
 > **Created**: July 25, 2026
-> **Status**: Fully specced (schema, pagination algorithm, component fields, test tasks) — ready to begin Phase 1
+> **Status**: ✅ **Complete** — all phases shipped (#123, #124, #125, #126, #127, #128, #129) and validated July 26, 2026
 > **Requirements**: [series-view-toggle-plan.md](series-view-toggle-plan.md) (read that first — this doc assumes its resolved decisions)
 > **Platforms**: Web + iOS
 
@@ -279,12 +279,22 @@ Each phase lands as its own PR, in order, with `npm run validate:full` passing b
 
 ### Phase 6 — Validation
 
-- [ ] `npm run validate:full` (web + DB suites + iOS unit/integration/contract/E2E + drift + coverage + SwiftLint + iOS build/tests).
-- [ ] Manual pass: toggle persists correctly per-device/per-view on both platforms across app restarts.
-- [ ] Manual pass: a series with partial library ownership shows correct "N of M" on Library/Series mode, on both platforms.
-- [ ] Manual pass: standalone books appear correctly interleaved alphabetically alongside series tiles, on both platforms, in both Catalog and Library.
-- [ ] Manual pass: tapping any tile (series or standalone book) in Series mode navigates correctly.
-- [ ] Confirm iOS `SeriesListView`/Browse-tab series entry point is fully gone with no dead navigation links left behind.
+**Status: complete** (PR #129).
+
+- [x] `npm run validate:full` — passes: 525 web unit + 18 integration + 286 contract + 1 Playwright E2E, 679 iOS tests, SwiftLint `--strict` 0 violations, TS + Swift drift checks, endpoint coverage all clean.
+- [x] Manual pass: toggle persistence per-view. **Web**: verified across fresh navigation _and_ a brand-new browser session with restored storage (a real restart). **iOS**: verified by seeding `catalogViewMode=Series` / `libraryViewMode=Books` into the app's `UserDefaults` and relaunching, which also proves the two keys are read independently.
+- [x] Manual pass: partial ownership. Fixture put 1 of 3 books of "A Darker Shade of Magic" in the library; web rendered **"1 of 3 in your library"** while fully-owned series rendered a plain count. The iOS `library-series-view` payload was confirmed to carry `ownedCount=1, bookCount=3`, which `SeriesGridItem.bookCountLabel` maps to the same string (unit-tested).
+- [x] Manual pass: alphabetical interleaving verified on both platforms, both scopes — Catalog: `A Darker Shade of Magic → Accidental Champion → Aether's Revival → Artorian's Archives → Red Mage → Scholomance → Unbound → Zephyr Protocol`, with the standalone book landing in its correct alphabetical slot rather than being appended.
+- [x] Manual pass: navigation. Series tiles → series detail (renders its books in sequence order), standalone book tiles → book detail, from both Catalog and Library.
+- [x] iOS `SeriesListView` fully gone: no references in `ios/` outside one explanatory doc comment, no `.series()` config, no dead deep links, and `BrowseListView` still correctly serves Authors/Narrators/Categories.
+
+**Bug found and fixed during this phase** (the reason the phase was worth doing):
+
+Phase 4 set `LibraryViewModel.seriesViewPageSize = 500`, with a comment claiming a single large page covers any realistic library. Hitting the live endpoint revealed the server **clamps `limit` to 100** (`parsePagination` in `lib/api-utils.ts`). Because Library's Series mode has no load-more control, any library with more than 100 series-mode items would have silently shown only the first 100 with **no way to reach the rest** — and both the unit tests and the full gate passed, because the mock returned whatever it was handed and the dev library is far under the cap.
+
+Fixed by paging internally (`fetchAllSeriesViewItems`): request `limit: 100`, follow `pagination.pages`, stop early on a short/empty page, with a 50-page stop-loss. A mid-paging failure surfaces as an error rather than presenting a truncated feed as complete. Six new tests cover multi-page fetch, the cap, early stop, refresh-follows-paging, and the partial-failure case; all six fail against the old single-page code.
+
+**Note for future work**: web's Series mode is unaffected — it paginates through the URL like the rest of the site, so it never needed a large `limit`.
 
 ---
 
