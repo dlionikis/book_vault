@@ -7,6 +7,8 @@ import BackButton from '@/components/BackButton';
 import AddToLibraryButton from '@/components/AddToLibraryButton';
 import ProgressStatus from '@/components/ProgressStatus';
 import BookGrid from '@/components/BookGrid';
+import SeriesModeSection from '@/components/SeriesModeSection';
+import { LIBRARY_VIEW_MODE_KEY } from '@/components/ViewModeToggle';
 import { BOOK_INCLUDE, transformLibraryBook } from '@/lib/book-transformer';
 
 interface LibraryBookProgress {
@@ -92,9 +94,6 @@ export default async function LibraryPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Library</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {books.length} {books.length === 1 ? 'book' : 'books'} in your library
-          </p>
         </div>
 
         {books.length === 0 ? (
@@ -126,32 +125,46 @@ export default async function LibraryPage() {
             </Link>
           </div>
         ) : (
-          <BookGrid
-            books={books}
-            renderFooter={(book) => {
-              const progress = progressByBookId.get(book.id);
-              return (
-                <>
-                  <ProgressStatus
-                    bookId={book.id}
-                    initialProgress={{
-                      positionSeconds: progress?.positionSeconds ?? 0,
-                      completed: progress?.completed ?? false,
-                      totalSeconds: book.runtimeMinutes ? book.runtimeMinutes * 60 : undefined,
-                    }}
-                  />
-                  <div className="mt-3">
-                    <AddToLibraryButton
+          <SeriesModeSection
+            storageKey={LIBRARY_VIEW_MODE_KEY}
+            endpoint="/api/browse/library-series-view"
+            booksHeading={
+              <p className="text-gray-600 dark:text-gray-400">
+                {books.length} {books.length === 1 ? 'book' : 'books'} in your library
+              </p>
+            }
+            seriesHeadingTitle=""
+            seriesCountTemplate="{count} series in your library"
+            seriesHeadingAs="p"
+            seriesHeadingClassName="text-gray-600 dark:text-gray-400"
+          >
+            <BookGrid
+              books={books}
+              renderFooter={(book) => {
+                const progress = progressByBookId.get(book.id);
+                return (
+                  <>
+                    <ProgressStatus
                       bookId={book.id}
-                      seriesId={book.series[0]?.id}
-                      showSeriesOption={book.series.length > 0}
-                      size="small"
+                      initialProgress={{
+                        positionSeconds: progress?.positionSeconds ?? 0,
+                        completed: progress?.completed ?? false,
+                        totalSeconds: book.runtimeMinutes ? book.runtimeMinutes * 60 : undefined,
+                      }}
                     />
-                  </div>
-                </>
-              );
-            }}
-          />
+                    <div className="mt-3">
+                      <AddToLibraryButton
+                        bookId={book.id}
+                        seriesId={book.series[0]?.id}
+                        showSeriesOption={book.series.length > 0}
+                        size="small"
+                      />
+                    </div>
+                  </>
+                );
+              }}
+            />
+          </SeriesModeSection>
         )}
       </main>
     </div>

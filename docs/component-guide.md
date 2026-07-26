@@ -16,6 +16,32 @@
   - Only if user has progress on this book
   - ContinueListeningButton handles routing to playback
 
+## "I need to show series" → Which component?
+
+- **Single series card** → `SeriesTile` (the Series-mode counterpart to `BookCard`)
+  - Props: `series: SeriesTileSeries` (`id`, `title`, `bookCount`, `coverUrl?`, `ownedCount?`)
+  - Cover is **derived**, not stored — the lowest-sequence book in the series with cover art
+  - Pass `ownedCount` in Library scope to get "N of M in your library"; omit it in Catalog scope to get "N books"
+
+- **Combined series + standalone-book grid** → `SeriesViewGrid`
+  - Props: `items: SeriesViewItem[]` (each carries exactly one of `series`/`book`), `loading?: boolean`
+  - Renders `SeriesTile` for series items and reuses `BookCard` unchanged for standalone books
+  - Mirrors `BookGrid`'s responsive columns, skeleton, and empty state
+
+- **A page's Books/Series toggle** → `SeriesModeSection` (client component)
+  - Props: `storageKey`, `endpoint`, `renderHeading`, `booksModeControls?`, `children`
+  - Books mode renders `children` (the server-rendered grid) untouched; Series mode fetches
+    `endpoint` client-side and renders `SeriesViewGrid`
+  - The mode lives in `localStorage` (per-page key), which is why the fetch is client-side —
+    the server can't know which mode to render
+  - Use `CATALOG_VIEW_MODE_KEY` with `/api/browse/catalog-series-view`, and
+    `LIBRARY_VIEW_MODE_KEY` with `/api/browse/library-series-view`
+  - `booksModeControls` is hidden in Series mode — Series mode is always alphabetical, so
+    `SortDropdown` doesn't apply
+
+- **Just the toggle control** → `ViewModeToggle` + the `useViewMode(storageKey)` hook
+  - Only needed if you're building a new Series-mode surface; otherwise use `SeriesModeSection`
+
 ## "I need audio playback"
 
 - **Full playback page** → `PlaybackClient` (full-featured player)
@@ -57,11 +83,13 @@
 - `AudioPlayer`, `PlaybackClient`, `SearchBar`, `ThemeToggle`
 - `AddToLibraryButton`, `ContinueListeningButton`, `UserMenu`
 - `SessionProvider`, `ThemeProvider`
+- `SeriesModeSection`, `ViewModeToggle`
 
 **Can be either** (no interactivity):
 
 - `BookCard`, `BookGrid`, `Pagination`, `ProgressBadge`
 - `BackButton`, `ChapterList`, `SortDropdown`
+- `SeriesTile`, `SeriesViewGrid`
 
 **Rule**: Only add 'use client' if component uses hooks (useState, useEffect, useRouter, etc.)
 
