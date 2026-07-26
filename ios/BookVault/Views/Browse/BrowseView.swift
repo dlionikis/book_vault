@@ -9,12 +9,14 @@ import SwiftUI
 
 // MARK: - BrowseView
 
-/// Main browse screen with four category tiles
+/// Main browse screen with a row per metadata category.
+///
+/// Series is deliberately absent: browsing all series lives on the Catalog's
+/// Books/Series toggle instead (requirements Q6).
 struct BrowseView: View {
     @StateObject private var searchManager = SearchManager.shared
 
     @State private var authorsCount: Int = 0
-    @State private var seriesCount: Int = 0
     @State private var narratorsCount: Int = 0
     @State private var categoriesCount: Int = 0
     @State private var isLoading = true
@@ -59,13 +61,6 @@ struct BrowseView: View {
                         )
 
                         BrowseCategoryRow(
-                            title: "Series",
-                            icon: "books.vertical.fill",
-                            count: seriesCount,
-                            destination: AnyView(SeriesListView())
-                        )
-
-                        BrowseCategoryRow(
                             title: "Narrators",
                             icon: "mic.fill",
                             count: narratorsCount,
@@ -101,25 +96,22 @@ struct BrowseView: View {
         do {
             // Fetch first page of each category to get total counts
             async let authorsResponse = searchManager.fetchAuthors(page: 1, limit: 1)
-            async let seriesResponse = searchManager.fetchSeries(page: 1, limit: 1)
             async let narratorsResponse = searchManager.fetchNarrators(page: 1, limit: 1)
             async let categoriesResponse = searchManager.fetchCategories(page: 1, limit: 1)
 
-            let (authors, series, narrators, categories) = try await (
+            let (authors, narrators, categories) = try await (
                 authorsResponse,
-                seriesResponse,
                 narratorsResponse,
                 categoriesResponse
             )
 
             authorsCount = authors.pagination.total
-            seriesCount = series.pagination.total
             narratorsCount = narrators.pagination.total
             categoriesCount = categories.pagination.total
 
             DebugLogger
                 .info(
-                    "Browse counts loaded - Authors: \(authorsCount), Series: \(seriesCount), Narrators: \(narratorsCount), Categories: \(categoriesCount)"
+                    "Browse counts loaded - Authors: \(authorsCount), Narrators: \(narratorsCount), Categories: \(categoriesCount)"
                 )
         } catch {
             DebugLogger.error("Failed to load browse counts", error: error)

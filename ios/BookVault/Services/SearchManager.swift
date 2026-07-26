@@ -275,6 +275,13 @@ class SearchManager: ObservableObject {
     }
 
     /// Fetches list of series with book counts
+    ///
+    /// Currently unused by the iOS UI: `SeriesListView` was retired in favor of
+    /// the Catalog's Books/Series toggle (requirements Q6), which uses
+    /// `fetchCatalogSeriesView` instead. Kept as the wrapper for the still-live,
+    /// still-spec'd `/api/browse/series` endpoint (web's Browse Series page uses it),
+    /// and for parity with the sibling browse-list methods.
+    ///
     /// - Parameters:
     ///   - page: Page number (default: 1)
     ///   - limit: Results per page (default: 20)

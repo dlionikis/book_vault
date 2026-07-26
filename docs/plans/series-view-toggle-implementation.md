@@ -221,14 +221,23 @@ Each phase lands as its own PR, in order, with `npm run validate:full` passing b
 > (PR #126), since both methods were cheap to add at once. What remains here is iOS UI
 > only: the Library toggle and retiring `SeriesListView`.
 
-- [ ] Remove `SeriesListView` as a `BrowseView` entry point (`BrowseView.swift:65`); remove the now-unused `BrowseListConfiguration.series()` factory and any dead code in `BrowseProtocols.swift` that existed solely to support it (confirm nothing else depends on this configuration before deleting).
+**Status: complete** (PR #128).
+
+- [x] Remove `SeriesListView` as a Browse entry point; remove the now-unused `BrowseListConfiguration.series()` factory. **Scope note**: the plan assumed one entry point, but there were **two** — `BrowseView.swift` _and_ the Search empty-state shortcuts (`SearchView.swift`). Both removed per requirements Q6 (confirmed with the user, since Series sat in a four-item set alongside Authors/Narrators/Categories in both places). Also removed the now-orphaned `seriesCount` state and its `fetchSeries` count query from `BrowseView`.
 - [x] ~~Add `GET /api/browse/library-series-view`~~ — **done in Phase 2** (PR #125), same shared query function with `{ scope: 'library', userId }`.
 - [x] ~~iOS `fetchLibrarySeriesView` on `APIClient`/`APIClientProtocol`/`MockAPIClient`~~ — **done in Phase 3** (PR #126).
-- [ ] Since iOS Library already fetches the full library client-side (finding #8), the simplest-consistent approach is: fetch the new Library-Series-mode payload in full (request `limit` large enough to cover a full library in one call, or loop pages internally — no user-visible server-side pagination needed) and reuse the same client-side "paginate for display over `paginationThreshold`" logic already in `LibraryViewModel`.
-- [ ] Add the Books/Series toggle to `LibraryView`, independent `UserDefaults` key from Catalog's.
-- [ ] `SeriesGridItem` (from Phase 3) reused here — its ownership-badge branch (spec'd in Phase 3/Technical Spec) now gets real `ownedCount < bookCount` data from this endpoint.
-- [ ] Tapping a series tile in either mode/screen navigates to existing `SeriesDetailView(seriesId:)` — confirm no changes needed there (per requirements doc, out of scope) — should just work since it's driven by `seriesId`, not by which screen navigated to it.
-- [ ] Write the iOS unit tests specified in the Technical Spec's "Test coverage tasks" for this phase (Library-mode-specific: partial vs. full ownership rendering).
+- [x] Fetch the Library Series-mode payload in one large page (`limit: 500`) rather than paginating — matches how Books mode already pulls the whole library, and library sizes are personal-scale.
+- [x] Add the Books/Series toggle to `LibraryView`, with `LibraryViewModel.modeDefaultsKey = "libraryViewMode"` — independent of Catalog's `"catalogViewMode"`.
+- [x] `SeriesGridItem` (from Phase 3) reused here; its ownership branch now gets real `ownedCount < bookCount` data.
+- [x] Series tiles navigate to the existing `SeriesDetailView(seriesId:)` via the reused `CatalogSeriesViewItemCell` — no changes needed there, as expected.
+- [x] Write the iOS unit tests for this phase (22 new: mode persistence/independence, mode branching, Series-mode load/refresh/error, and partial-vs-full ownership labels).
+
+**Implementation notes**:
+
+- `SearchManager.fetchSeries` is now **unused by the iOS UI** but deliberately kept — `/api/browse/series` is still live and spec'd (web's Browse Series page uses it), and the method is the parity wrapper for it. Marked with a doc comment explaining why, so it doesn't read as an oversight.
+- Both grid branches were extracted into `LibraryBooksGrid`/`LibrarySeriesGrid` **up front**, rather than nesting a mode conditional inside `LazyVGrid` — that's the exact shape that tripped the Swift type-checker in Phase 3.
+- The `libraryVersion` observer now calls `reloadCurrentMode()`, which force-refreshes Series mode rather than reusing the "already loaded this session" cache — adding or removing a book changes ownership counts, so stale tiles would otherwise show wrong "N of M" values.
+- Library's Series mode has **no offline-cache path** (unlike Books mode, which goes through `LibraryManager`), so the offline-no-cache empty state is gated to Books mode.
 
 ### Phase 5 — Web: Catalog + Library Series-mode UI
 

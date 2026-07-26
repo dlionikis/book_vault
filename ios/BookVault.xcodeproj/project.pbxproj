@@ -91,6 +91,7 @@
 		65E0BE288D9BFD8058165017 /* MockOfflineProgressStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B437A7886EAE2C4C5CC0343 /* MockOfflineProgressStore.swift */; };
 		65F8058E4EFDD226DAF83345 /* ListSeries200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63FA221E0EDFA43263495324 /* ListSeries200Response.swift */; };
 		663FA59E44440CD0E1EE1799 /* RestoresListResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 346E187399E3BFB1561ABE49 /* RestoresListResponse.swift */; };
+		67C3E6443ECF213267A7963F /* LibraryViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DDDE13953C61114B7E272BD /* LibraryViewModelTests.swift */; };
 		6821523F06577CB226240651 /* ProgressManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097DCB2DF3E60F1C9DA95353 /* ProgressManaging.swift */; };
 		697DD9DB78B67F0290502A3C /* VerifyToken200ResponseUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A42FFE65DDE9AEFE3583950 /* VerifyToken200ResponseUser.swift */; };
 		6B59789EDF756A3EE4D09852 /* CachedCoverImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 212CADA7C0A7037F4F2DB311 /* CachedCoverImage.swift */; };
@@ -173,7 +174,6 @@
 		C2A58762ED0A342921ED54C5 /* GetAdminEcsHealth200ResponseTasksRunningTasksInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07515EBFFB82ABA59AE7B1BC /* GetAdminEcsHealth200ResponseTasksRunningTasksInner.swift */; };
 		C2BFB5CFC64DD6AA39DE27A9 /* MockLibraryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF5F9505F3C47E3AA6EC456 /* MockLibraryManager.swift */; };
 		C449BF319191ACDE61D6C94C /* MockProgressManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A094F9A10815C55FE15615D5 /* MockProgressManager.swift */; };
-		C46F1634541CA90D85EFCEA9 /* SeriesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF09608235054F81E929DEE3 /* SeriesListView.swift */; };
 		C55FCE9C2643A7D3ABF8D9AB /* MockNetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73D9A7E1B3A1D2F65AAF0EBD /* MockNetworkMonitor.swift */; };
 		C596537B461098A2BAD2B473 /* Author.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CCA3952507448577D85CEC4 /* Author.swift */; };
 		C64230C8E44E94883A1864F7 /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 098376B472996D34A36D810C /* SyncManager.swift */; };
@@ -368,6 +368,7 @@
 		6A71044E002B39A8D1958A94 /* JSONDataEncoding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONDataEncoding.swift; sourceTree = "<group>"; };
 		6B3C40109028B7B64ACA213F /* CoverCacheManagerRealTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverCacheManagerRealTests.swift; sourceTree = "<group>"; };
 		6D283F1DF51C8CECC93128BC /* AppIconManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIconManager.swift; sourceTree = "<group>"; };
+		6DDDE13953C61114B7E272BD /* LibraryViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryViewModelTests.swift; sourceTree = "<group>"; };
 		6E80A48BD555C8E1C0EDD782 /* APIHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIHelper.swift; sourceTree = "<group>"; };
 		6ED36DF67725DBD3FB27532B /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLogger.swift; sourceTree = "<group>"; };
 		6EFEDF8C49F13F40985F0EC2 /* RegisterDeviceToken200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterDeviceToken200Response.swift; sourceTree = "<group>"; };
@@ -483,7 +484,6 @@
 		ED0906D1D9C6A5EC51E73D37 /* NarratorListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NarratorListView.swift; sourceTree = "<group>"; };
 		EE1148557DD578DFC4481AEC /* DeepLinkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkManager.swift; sourceTree = "<group>"; };
 		EE124ECDE4162E1DCA86A304 /* CategoryWithBookCount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryWithBookCount.swift; sourceTree = "<group>"; };
-		EF09608235054F81E929DEE3 /* SeriesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesListView.swift; sourceTree = "<group>"; };
 		F2184500BE12A6F0E2CDFB23 /* GetAdminEcsHealth200ResponseMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetAdminEcsHealth200ResponseMetrics.swift; sourceTree = "<group>"; };
 		F303FF8BB5FE585C98AAC256 /* MockAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockAPIClient.swift; sourceTree = "<group>"; };
 		F44A639BC865B1287EEF1BA6 /* BatchUpdateProgress200ResponseDetailsInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchUpdateProgress200ResponseDetailsInner.swift; sourceTree = "<group>"; };
@@ -546,6 +546,7 @@
 				477BE0F7E5EC6EC2EB84D73E /* DeepLinkManagerTests.swift */,
 				838C2DF91502C78FE7780948 /* DownloadManagerTests.swift */,
 				D0B032F462065A0958E8FB73 /* LibraryCacheManagerTests.swift */,
+				6DDDE13953C61114B7E272BD /* LibraryViewModelTests.swift */,
 				C390D6703147CD203E1B7A96 /* NetworkMonitorTests.swift */,
 				CB3CDB9F49A70A633813376D /* NotificationRegistrarTests.swift */,
 				36E6F574C489D6E0A820ACC4 /* OfflineProgressStoreTests.swift */,
@@ -754,7 +755,6 @@
 				E1C6824D44C911BCE20C05A8 /* NarratorDetailView.swift */,
 				ED0906D1D9C6A5EC51E73D37 /* NarratorListView.swift */,
 				53E3876F75EF8F1E25C8BB38 /* SeriesDetailView.swift */,
-				EF09608235054F81E929DEE3 /* SeriesListView.swift */,
 			);
 			path = Browse;
 			sourceTree = "<group>";
@@ -1093,6 +1093,7 @@
 				D4F49E49743662C90FF83B86 /* LibraryCacheManagerRealTests.swift in Sources */,
 				965C41D18F9BF9B297880668 /* LibraryCacheManagerTests.swift in Sources */,
 				FB64686EFCE2E39ADE17C964 /* LibraryManagerRealTests.swift in Sources */,
+				67C3E6443ECF213267A7963F /* LibraryViewModelTests.swift in Sources */,
 				2062ED761294BD6AD593464D /* MockAPIClient.swift in Sources */,
 				5F1927D04AB804405BD2E8A3 /* MockAudioPlayerManager.swift in Sources */,
 				E2E4E08925A41398B2C02732 /* MockCoverCacheManager.swift in Sources */,
@@ -1291,7 +1292,6 @@
 				6DB3805BCD468B567A5254DA /* SeriesDetailView.swift in Sources */,
 				D30988E927A241B2CE9B0B56 /* SeriesGridItem.swift in Sources */,
 				D09804227E9F7211882BCA9E /* SeriesInfo.swift in Sources */,
-				C46F1634541CA90D85EFCEA9 /* SeriesListView.swift in Sources */,
 				83E9329C6C27699418770C24 /* SeriesWithBookCount.swift in Sources */,
 				455757CD89F2F2B0136F5994 /* SetProgressStatusRequest.swift in Sources */,
 				63022FE1CDE28F195CEB2BCB /* SettingsView.swift in Sources */,

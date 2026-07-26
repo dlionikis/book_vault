@@ -24,7 +24,9 @@ extension CatalogSeriesViewItem: Identifiable {
 struct SeriesGridItem: View {
     let series: SeriesWithBookCount
 
-    private var bookCountLabel: String {
+    /// Internal rather than private so the ownership phrasing can be unit-tested
+    /// directly (see `SeriesGridItemOwnershipTests`).
+    var bookCountLabel: String {
         if let ownedCount = series.ownedCount, ownedCount < series.bookCount {
             return "\(ownedCount) of \(series.bookCount) in your library"
         }
