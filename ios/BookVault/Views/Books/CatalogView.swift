@@ -8,6 +8,13 @@
 
 import SwiftUI
 
+// MARK: - CatalogMode
+
+enum CatalogMode: String {
+    case books = "Books"
+    case series = "Series"
+}
+
 // MARK: - CatalogView
 
 struct CatalogView: View {
@@ -18,12 +25,28 @@ struct CatalogView: View {
         GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
     ]
 
+    private var isLoading: Bool {
+        viewModel.mode == .books ? viewModel.isLoading : viewModel.isLoadingSeriesView
+    }
+
+    private var isEmpty: Bool {
+        viewModel.mode == .books ? viewModel.books.isEmpty : viewModel.seriesViewItems.isEmpty
+    }
+
+    private var errorMessage: String? {
+        viewModel.mode == .books ? viewModel.errorMessage : viewModel.seriesViewErrorMessage
+    }
+
+    private var hasMorePages: Bool {
+        viewModel.mode == .books ? viewModel.hasMorePages : viewModel.hasMoreSeriesViewPages
+    }
+
     var body: some View {
         // swiftlint:disable:next redundant_discardable_let
-        let _ = DebugLogger.info("🎨 CatalogView.body EVALUATED - isLoading: \(viewModel.isLoading), booksCount: \(viewModel.books.count)")
+        let _ = DebugLogger.info("🎨 CatalogView.body EVALUATED - isLoading: \(isLoading), booksCount: \(viewModel.books.count)")
         NavigationView {
             ScrollView {
-                if viewModel.isLoading, viewModel.books.isEmpty {
+                if isLoading, isEmpty {
                     // Initial loading state
                     VStack(spacing: 12) {
                         ProgressView()
@@ -32,7 +55,7 @@ struct CatalogView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.top, 100)
-                } else if let error = viewModel.errorMessage {
+                } else if let error = errorMessage {
                     // Error state
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
@@ -46,13 +69,13 @@ struct CatalogView: View {
                             .multilineTextAlignment(.center)
                         Button("Try Again") {
                             Task {
-                                await viewModel.loadBooks()
+                                await viewModel.loadCurrentMode()
                             }
                         }
                         .buttonStyle(.borderedProminent)
                     }
                     .padding()
-                } else if viewModel.books.isEmpty {
+                } else if isEmpty {
                     // Empty state
                     VStack(spacing: 16) {
                         Image(systemName: "books.vertical")
@@ -67,55 +90,109 @@ struct CatalogView: View {
                     .padding()
                 } else {
                     VStack(alignment: .leading, spacing: 20) {
-                        // All Books grid
                         VStack(alignment: .leading, spacing: 12) {
                             Text("All Books")
                                 .font(.title2)
                                 .fontWeight(.bold)
                                 .padding(.horizontal)
 
-                            LazyVGrid(columns: columns, spacing: 20) {
-                                ForEach(viewModel.books, id: \.id) { book in
-                                    NavigationLink(destination: BookDetailView(book: book)) {
-                                        BookGridItem(book: book)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-
-                                // Load more indicator
-                                if viewModel.hasMorePages {
-                                    ProgressView()
-                                        .gridCellColumns(columns.count)
-                                        .onAppear {
-                                            Task {
-                                                await viewModel.loadMoreBooks()
-                                            }
+                            if viewModel.mode == .books {
+                                LazyVGrid(columns: columns, spacing: 20) {
+                                    ForEach(viewModel.books, id: \.id) { book in
+                                        NavigationLink(destination: BookDetailView(book: book)) {
+                                            BookGridItem(book: book)
                                         }
+                                        .buttonStyle(.plain)
+                                    }
+
+                                    if viewModel.hasMorePages {
+                                        ProgressView()
+                                            .gridCellColumns(columns.count)
+                                            .onAppear {
+                                                Task {
+                                                    await viewModel.loadMoreBooks()
+                                                }
+                                            }
+                                    }
                                 }
+                                .padding(.horizontal)
+                            } else {
+                                LazyVGrid(columns: columns, spacing: 20) {
+                                    ForEach(viewModel.seriesViewItems) { item in
+                                        CatalogSeriesViewItemCell(item: item)
+                                    }
+
+                                    if viewModel.hasMoreSeriesViewPages {
+                                        ProgressView()
+                                            .gridCellColumns(columns.count)
+                                            .onAppear {
+                                                Task {
+                                                    await viewModel.loadMoreSeriesView()
+                                                }
+                                            }
+                                    }
+                                }
+                                .padding(.horizontal)
                             }
-                            .padding(.horizontal)
                         }
                     }
                     .padding(.vertical)
                 }
             }
             .navigationTitle("Catalog")
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Picker("Mode", selection: $viewModel.mode) {
+                        Text(CatalogMode.books.rawValue).tag(CatalogMode.books)
+                        Text(CatalogMode.series.rawValue).tag(CatalogMode.series)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 180)
+                }
+            }
             .refreshable {
-                DebugLogger.info("🔄 CatalogView .refreshable TRIGGERED - isLoading: \(viewModel.isLoading)")
+                DebugLogger.info("🔄 CatalogView .refreshable TRIGGERED - isLoading: \(isLoading)")
                 if Task.isCancelled {
                     DebugLogger.error("🔄 CatalogView .refreshable - Task ALREADY CANCELLED at start!")
                 }
-                await viewModel.refreshBooks()
+                await viewModel.refreshCurrentMode()
                 DebugLogger.info("🔄 CatalogView .refreshable COMPLETED")
             }
         }
         .task {
             DebugLogger.info("🚀 CatalogView .task TRIGGERED")
-            await viewModel.loadBooks()
+            await viewModel.loadCurrentMode()
             DebugLogger.info("🚀 CatalogView .task COMPLETED")
+        }
+        .onChange(of: viewModel.mode) {
+            Task {
+                await viewModel.loadCurrentMode()
+            }
         }
         .onDisappear {
             DebugLogger.info("👋 CatalogView onDisappear")
+        }
+    }
+}
+
+// MARK: - CatalogSeriesViewItemCell
+
+/// Renders one row of the combined Series-mode feed: a series tile or a
+/// standalone book tile, depending on which field is populated.
+struct CatalogSeriesViewItemCell: View {
+    let item: CatalogSeriesViewItem
+
+    var body: some View {
+        if let series = item.series {
+            NavigationLink(destination: SeriesDetailView(seriesId: series.id.uuidString)) {
+                SeriesGridItem(series: series)
+            }
+            .buttonStyle(.plain)
+        } else if let book = item.book {
+            NavigationLink(destination: BookDetailView(book: book)) {
+                BookGridItem(book: book)
+            }
+            .buttonStyle(.plain)
         }
     }
 }
@@ -217,22 +294,117 @@ private struct CatalogCache {
 
 @MainActor
 class CatalogViewModel: ObservableObject {
+    static let modeDefaultsKey = "catalogViewMode"
+
     @Published var books: [Book] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var hasMorePages = true
 
-    private let apiClient = APIClient.shared
+    /// Books/Series toggle state, persisted per-device (independent of Library's own toggle key).
+    @Published var mode: CatalogMode = CatalogMode(
+        rawValue: UserDefaults.standard.string(forKey: CatalogViewModel.modeDefaultsKey) ?? ""
+    ) ?? .books {
+        didSet {
+            UserDefaults.standard.set(mode.rawValue, forKey: Self.modeDefaultsKey)
+        }
+    }
+
+    @Published var seriesViewItems: [CatalogSeriesViewItem] = []
+    @Published var isLoadingSeriesView = false
+    @Published var seriesViewErrorMessage: String?
+    @Published var hasMoreSeriesViewPages = true
+
+    private let apiClient: any APIClientProtocol
     private var currentPage = 1
     private let pageSize = 20
     private var totalPages = 1
     private let instanceId = UUID().uuidString.prefix(8)
 
+    private var seriesViewCurrentPage = 1
+    private var seriesViewTotalPages = 1
+
     /// In-memory cache shared across all CatalogViewModel instances
     private static var cache = CatalogCache()
 
-    init() {
+    init(apiClient: any APIClientProtocol = APIClient.shared) {
+        self.apiClient = apiClient
         DebugLogger.info("🆕 CatalogViewModel INIT - instance: \(instanceId)")
+    }
+
+    /// Loads whichever mode (Books/Series) is currently active — call on
+    /// first appearance and whenever `mode` changes.
+    func loadCurrentMode() async {
+        switch mode {
+        case .books:
+            await loadBooks()
+        case .series:
+            await loadSeriesView()
+        }
+    }
+
+    /// Refreshes whichever mode (Books/Series) is currently active — for pull-to-refresh.
+    func refreshCurrentMode() async {
+        switch mode {
+        case .books:
+            await refreshBooks()
+        case .series:
+            await refreshSeriesView()
+        }
+    }
+
+    func loadSeriesView() async {
+        guard !isLoadingSeriesView else { return }
+        guard seriesViewItems.isEmpty else { return } // already loaded this session
+
+        isLoadingSeriesView = true
+        seriesViewErrorMessage = nil
+        seriesViewCurrentPage = 1
+
+        do {
+            let response = try await apiClient.fetchCatalogSeriesView(page: seriesViewCurrentPage, limit: pageSize)
+            self.seriesViewItems = response.results
+            self.seriesViewTotalPages = response.pagination.pages
+            self.hasMoreSeriesViewPages = seriesViewCurrentPage < seriesViewTotalPages
+            isLoadingSeriesView = false
+        } catch {
+            isLoadingSeriesView = false
+            seriesViewErrorMessage = error.localizedDescription
+        }
+    }
+
+    func loadMoreSeriesView() async {
+        guard !isLoadingSeriesView, hasMoreSeriesViewPages else { return }
+
+        let nextPage = seriesViewCurrentPage + 1
+        isLoadingSeriesView = true
+        seriesViewCurrentPage = nextPage
+
+        do {
+            let response = try await apiClient.fetchCatalogSeriesView(page: seriesViewCurrentPage, limit: pageSize)
+            self.seriesViewItems.append(contentsOf: response.results)
+            self.seriesViewTotalPages = response.pagination.pages
+            self.hasMoreSeriesViewPages = seriesViewCurrentPage < seriesViewTotalPages
+            isLoadingSeriesView = false
+        } catch {
+            isLoadingSeriesView = false
+            seriesViewErrorMessage = error.localizedDescription
+        }
+    }
+
+    func refreshSeriesView() async {
+        do {
+            let response = try await apiClient.fetchCatalogSeriesView(page: 1, limit: pageSize)
+            self.seriesViewItems = response.results
+            self.seriesViewTotalPages = response.pagination.pages
+            self.seriesViewCurrentPage = 1
+            self.hasMoreSeriesViewPages = seriesViewCurrentPage < seriesViewTotalPages
+        } catch {
+            let nsError = error as NSError
+            if nsError.domain != NSURLErrorDomain || nsError.code != NSURLErrorCancelled {
+                seriesViewErrorMessage = error.localizedDescription
+            }
+        }
     }
 
     deinit {
@@ -275,7 +447,7 @@ class CatalogViewModel: ObservableObject {
         }
 
         do {
-            let response = try await apiClient.fetchBooks(page: currentPage, limit: pageSize)
+            let response = try await apiClient.fetchBooks(page: currentPage, limit: pageSize, sortBy: nil)
             DebugLogger.info("📚 loadBooks() API SUCCESS - got \(response.books.count) books")
             self.books = response.books
             self.totalPages = response.pagination.pages
@@ -314,7 +486,7 @@ class CatalogViewModel: ObservableObject {
         currentPage = nextPage
 
         do {
-            let response = try await apiClient.fetchBooks(page: currentPage, limit: pageSize)
+            let response = try await apiClient.fetchBooks(page: currentPage, limit: pageSize, sortBy: nil)
             self.books.append(contentsOf: response.books)
             self.totalPages = response.pagination.pages
             self.hasMorePages = currentPage < totalPages
@@ -340,7 +512,7 @@ class CatalogViewModel: ObservableObject {
         Self.cache.invalidate()
 
         do {
-            let response = try await apiClient.fetchBooks(page: 1, limit: pageSize)
+            let response = try await apiClient.fetchBooks(page: 1, limit: pageSize, sortBy: nil)
 
             // Only update @Published properties AFTER the network call succeeds
             self.books = response.books

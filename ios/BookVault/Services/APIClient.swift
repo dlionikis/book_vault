@@ -576,6 +576,40 @@ class APIClient: APIClientProtocol {
         return try await execute(request: request)
     }
 
+    /// Fetch the combined Series-mode feed for Catalog (series + standalone books, interleaved alphabetically).
+    func fetchCatalogSeriesView(page: Int = 1, limit: Int = 20) async throws -> GetCatalogSeriesView200Response {
+        var components = URLComponents(string: "/api/browse/catalog-series-view")!
+        components.queryItems = [
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "limit", value: "\(limit)")
+        ]
+
+        let request = try createRequest(
+            path: components.url!.absoluteString,
+            method: "GET",
+            requiresAuth: true
+        )
+
+        return try await execute(request: request)
+    }
+
+    /// Fetch the combined Series-mode feed for Library (owned series + standalone owned books).
+    func fetchLibrarySeriesView(page: Int = 1, limit: Int = 20) async throws -> GetLibrarySeriesView200Response {
+        var components = URLComponents(string: "/api/browse/library-series-view")!
+        components.queryItems = [
+            URLQueryItem(name: "page", value: "\(page)"),
+            URLQueryItem(name: "limit", value: "\(limit)")
+        ]
+
+        let request = try createRequest(
+            path: components.url!.absoluteString,
+            method: "GET",
+            requiresAuth: true
+        )
+
+        return try await execute(request: request)
+    }
+
     /// Fetch a specific book by ID
     func fetchBook(id: UUID) async throws -> Book {
         let request = try createRequest(

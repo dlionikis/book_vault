@@ -22,6 +22,10 @@ protocol APIClientProtocol {
     func fetchBook(id: UUID) async throws -> Book
     func fetchBookChapters(bookId: UUID) async throws -> [Chapter]
 
+    // Series view (Books/Series toggle)
+    func fetchCatalogSeriesView(page: Int, limit: Int) async throws -> GetCatalogSeriesView200Response
+    func fetchLibrarySeriesView(page: Int, limit: Int) async throws -> GetLibrarySeriesView200Response
+
     // Progress
     func fetchProgress(bookId: UUID) async throws -> GetProgress200Response
     func updateProgress(bookId: UUID, positionSeconds: Double) async throws -> UpdateProgress200Response
