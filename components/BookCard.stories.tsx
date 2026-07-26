@@ -70,3 +70,14 @@ export const MinimalData: Story = {
     book: mockBookMinimalData,
   },
 };
+
+export const WithFooter: Story = {
+  args: {
+    book: mockBookDefault,
+    footer: (
+      <button className="w-full px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md font-medium">
+        Remove from Library
+      </button>
+    ),
+  },
+};

@@ -54,7 +54,18 @@ describe('BookCard', () => {
 
   it('links to book detail page', () => {
     render(<BookCard book={mockBook} />);
-    const link = screen.getByRole('link');
-    expect(link).toHaveAttribute('href', '/books/1');
+    const links = screen.getAllByRole('link');
+    expect(links.length).toBeGreaterThan(0);
+    links.forEach((link) => expect(link).toHaveAttribute('href', '/books/1'));
+  });
+
+  it('renders footer content when provided', () => {
+    render(<BookCard book={mockBook} footer={<button>Remove</button>} />);
+    expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument();
+  });
+
+  it('renders no footer content when not provided', () => {
+    render(<BookCard book={mockBook} />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });

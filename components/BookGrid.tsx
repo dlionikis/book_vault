@@ -1,9 +1,12 @@
+import { ReactNode } from 'react';
 import { Book } from '@/lib/types';
 import BookCard from './BookCard';
 
 interface BookGridProps {
   books: Book[];
   loading?: boolean;
+  /** Per-book extra content rendered below each card's built-in info (e.g. progress, remove button). */
+  renderFooter?: (book: Book) => ReactNode;
 }
 
 /**
@@ -20,7 +23,7 @@ interface BookGridProps {
  * @example
  * <BookGrid books={searchResults} loading={isSearching} />
  */
-export default function BookGrid({ books, loading }: BookGridProps) {
+export default function BookGrid({ books, loading, renderFooter }: BookGridProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -60,7 +63,7 @@ export default function BookGrid({ books, loading }: BookGridProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {books.map((book) => (
-        <BookCard key={book.id} book={book} />
+        <BookCard key={book.id} book={book} footer={renderFooter?.(book)} />
       ))}
     </div>
   );
