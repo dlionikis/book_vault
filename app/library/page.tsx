@@ -2,40 +2,19 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
-import Image from 'next/image';
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
 import AddToLibraryButton from '@/components/AddToLibraryButton';
 import ProgressStatus from '@/components/ProgressStatus';
-import { formatRuntime } from '@/lib/utils/formatRuntime';
+import BookGrid from '@/components/BookGrid';
+import { BOOK_INCLUDE, transformLibraryBook } from '@/lib/book-transformer';
 
-interface LibraryBook {
-  id: string;
-  asin: string;
-  title: string;
-  coverUrl: string | null;
-  runtimeMinutes: number | null;
-  authors: Array<{
-    id: string;
-    name: string;
-  }>;
-  narrators: Array<{
-    id: string;
-    name: string;
-  }>;
-  series: Array<{
-    id: string;
-    title: string;
-    sequence: number | null;
-  }>;
-  addedAt: string;
-  progress: {
-    positionSeconds: number;
-    completed: boolean;
-  };
+interface LibraryBookProgress {
+  positionSeconds: number;
+  completed: boolean;
 }
 
-async function getLibraryBooks(userId: string): Promise<LibraryBook[]> {
+async function getLibraryBooks(userId: string) {
   try {
     // Get user's library
     const library = await prisma.userList.findFirst({
@@ -46,7 +25,7 @@ async function getLibraryBooks(userId: string): Promise<LibraryBook[]> {
     });
 
     if (!library) {
-      return [];
+      return { books: [], progressByBookId: new Map() };
     }
 
     // Get books in library with full details
@@ -56,23 +35,7 @@ async function getLibraryBooks(userId: string): Promise<LibraryBook[]> {
       },
       include: {
         book: {
-          include: {
-            authors: {
-              include: {
-                author: true,
-              },
-            },
-            narrators: {
-              include: {
-                narrator: true,
-              },
-            },
-            series: {
-              include: {
-                series: true,
-              },
-            },
-          },
+          include: BOOK_INCLUDE,
         },
       },
       orderBy: {
@@ -91,40 +54,19 @@ async function getLibraryBooks(userId: string): Promise<LibraryBook[]> {
       },
     });
 
-    // Create a map for quick lookup
-    const progressMap = new Map(progressRecords.map((p) => [p.bookId, p]));
+    const progressByBookId = new Map(
+      progressRecords.map((p) => [
+        p.bookId,
+        { positionSeconds: p.positionSeconds, completed: p.completed },
+      ])
+    );
 
-    return libraryBooks.map((lb) => {
-      const progress = progressMap.get(lb.book.id);
-      return {
-        id: lb.book.id,
-        asin: lb.book.asin,
-        title: lb.book.title,
-        coverUrl: lb.book.coverUrl,
-        runtimeMinutes: lb.book.runtimeMinutes,
-        authors: lb.book.authors.map((a) => ({
-          id: a.author.id,
-          name: a.author.name,
-        })),
-        narrators: lb.book.narrators.map((n) => ({
-          id: n.narrator.id,
-          name: n.narrator.name,
-        })),
-        series: lb.book.series.map((s) => ({
-          id: s.series.id,
-          title: s.series.title,
-          sequence: s.sequence,
-        })),
-        addedAt: lb.addedAt.toISOString(),
-        progress: {
-          positionSeconds: progress?.positionSeconds ?? 0,
-          completed: progress?.completed ?? false,
-        },
-      };
-    });
+    const books = await Promise.all(libraryBooks.map(transformLibraryBook));
+
+    return { books, progressByBookId };
   } catch (error) {
     console.error('Error fetching library:', error);
-    return [];
+    return { books: [], progressByBookId: new Map() };
   }
 }
 
@@ -135,7 +77,7 @@ export default async function LibraryPage() {
     redirect('/auth/login');
   }
 
-  const books = await getLibraryBooks(session.user.id);
+  const { books, progressByBookId } = await getLibraryBooks(session.user.id);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -184,95 +126,32 @@ export default async function LibraryPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {books.map((book) => (
-              <div
-                key={book.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden group"
-              >
-                <Link href={`/books/${book.id}`} className="block">
-                  {/* Cover Image */}
-                  <div className="relative aspect-[2/3] w-full bg-gray-200 dark:bg-gray-700">
-                    {book.coverUrl ? (
-                      <Image
-                        src={`/api/images/${book.coverUrl}`}
-                        alt={`Cover of ${book.title}`}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-200"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400 dark:text-gray-500">
-                        <svg
-                          className="w-16 h-16"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                          />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                </Link>
-
-                {/* Book Info */}
-                <div className="p-4">
-                  <Link href={`/books/${book.id}`}>
-                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2 hover:text-blue-600 dark:hover:text-blue-400">
-                      {book.title}
-                    </h3>
-                  </Link>
-
-                  {/* Series */}
-                  {book.series.length > 0 && (
-                    <p className="text-sm text-blue-600 dark:text-blue-400 mb-1 line-clamp-1">
-                      {book.series[0].title}
-                      {book.series[0].sequence && ` #${book.series[0].sequence}`}
-                    </p>
-                  )}
-
-                  {/* Authors */}
-                  {book.authors.length > 0 && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1 line-clamp-1">
-                      {book.authors.map((a) => a.name).join(', ')}
-                    </p>
-                  )}
-
-                  {/* Runtime */}
-                  {book.runtimeMinutes && (
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">
-                      {formatRuntime(book.runtimeMinutes)}
-                    </p>
-                  )}
-
-                  {/* Progress Status */}
-                  <div className="mb-3">
-                    <ProgressStatus
+          <BookGrid
+            books={books}
+            renderFooter={(book) => {
+              const progress = progressByBookId.get(book.id);
+              return (
+                <>
+                  <ProgressStatus
+                    bookId={book.id}
+                    initialProgress={{
+                      positionSeconds: progress?.positionSeconds ?? 0,
+                      completed: progress?.completed ?? false,
+                      totalSeconds: book.runtimeMinutes ? book.runtimeMinutes * 60 : undefined,
+                    }}
+                  />
+                  <div className="mt-3">
+                    <AddToLibraryButton
                       bookId={book.id}
-                      initialProgress={{
-                        positionSeconds: book.progress.positionSeconds,
-                        completed: book.progress.completed,
-                        totalSeconds: book.runtimeMinutes ? book.runtimeMinutes * 60 : undefined,
-                      }}
+                      seriesId={book.series[0]?.id}
+                      showSeriesOption={book.series.length > 0}
+                      size="small"
                     />
                   </div>
-
-                  {/* Remove Button */}
-                  <AddToLibraryButton
-                    bookId={book.id}
-                    seriesId={book.series[0]?.id}
-                    showSeriesOption={book.series.length > 0}
-                    size="small"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+                </>
+              );
+            }}
+          />
         )}
       </main>
     </div>

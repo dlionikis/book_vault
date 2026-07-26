@@ -58,7 +58,15 @@ describe('BookGrid', () => {
 
   it('renders correct number of book cards', () => {
     const { container } = render(<BookGrid books={mockBooks} />);
-    const cards = container.querySelectorAll('a[href^="/books/"]');
-    expect(cards).toHaveLength(2);
+    const cards = container.querySelectorAll('a[href="/books/1"], a[href="/books/2"]');
+    expect(cards).toHaveLength(4); // cover image + title link per card
+  });
+
+  it('renders per-book footer content via renderFooter', () => {
+    render(
+      <BookGrid books={mockBooks} renderFooter={(book) => <button>Remove {book.title}</button>} />
+    );
+    expect(screen.getByRole('button', { name: 'Remove Book One' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove Book Two' })).toBeInTheDocument();
   });
 });
