@@ -78,26 +78,6 @@ extension BrowseListConfiguration where Item == NarratorWithBookCount, Response 
     }
 }
 
-extension BrowseListConfiguration where Item == SeriesWithBookCount, Response == ListSeries200Response {
-    static func series() -> Self {
-        BrowseListConfiguration(
-            navigationTitle: "Series",
-            loadingMessage: "Loading series...",
-            errorTitle: "Failed to Load Series",
-            searchPrompt: "Filter series",
-            emptyIcon: "books.vertical.fill",
-            emptyMessage: "There are no series in your library",
-            rowIcon: "books.vertical.fill",
-            useCircleIcon: false,
-            accessibilityHint: "Tap to view books in this series",
-            fetch: { manager, page, limit in
-                try await manager.fetchSeries(page: page, limit: limit)
-            },
-            destination: { id in AnyView(SeriesDetailView(seriesId: id)) }
-        )
-    }
-}
-
 extension BrowseListConfiguration where Item == CategoryWithBookCount, Response == ListCategories200Response {
     static func categories() -> Self {
         BrowseListConfiguration(

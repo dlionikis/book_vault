@@ -292,10 +292,6 @@ struct SearchView: View {
                     browseShortcut(icon: "person.fill", title: "Authors")
                 }
 
-                NavigationLink(destination: SeriesListView()) {
-                    browseShortcut(icon: "books.vertical.fill", title: "Series")
-                }
-
                 NavigationLink(destination: NarratorListView()) {
                     browseShortcut(icon: "mic.fill", title: "Narrators")
                 }

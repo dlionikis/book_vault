@@ -22,10 +22,22 @@ struct LibraryView: View {
         GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
     ]
 
+    private var isLoading: Bool {
+        viewModel.mode == .books ? viewModel.isLoading : viewModel.isLoadingSeriesView
+    }
+
+    private var isEmpty: Bool {
+        viewModel.mode == .books ? viewModel.books.isEmpty : viewModel.seriesViewItems.isEmpty
+    }
+
+    private var errorMessage: String? {
+        viewModel.mode == .books ? viewModel.errorMessage : viewModel.seriesViewErrorMessage
+    }
+
     var body: some View {
         NavigationView {
             ScrollView {
-                if viewModel.isLoading, viewModel.books.isEmpty {
+                if isLoading, isEmpty {
                     // Initial loading state
                     VStack(spacing: 12) {
                         ProgressView()
@@ -34,9 +46,10 @@ struct LibraryView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.top, 100)
-                } else if let error = viewModel.errorMessage {
+                } else if let error = errorMessage {
                     // Error state - check if it's offline-no-cache
-                    if viewModel.isOfflineNoCache {
+                    // (Books mode only; the series feed has no offline cache.)
+                    if viewModel.isOfflineNoCache, viewModel.mode == .books {
                         // Special offline state with no cache
                         VStack(spacing: 20) {
                             Image(systemName: "wifi.slash")
@@ -89,14 +102,14 @@ struct LibraryView: View {
                                 .multilineTextAlignment(.center)
                             Button("Try Again") {
                                 Task {
-                                    await viewModel.loadLibrary()
+                                    await viewModel.refreshCurrentMode()
                                 }
                             }
                             .buttonStyle(.borderedProminent)
                         }
                         .padding()
                     }
-                } else if viewModel.books.isEmpty {
+                } else if isEmpty {
                     // Empty state
                     VStack(spacing: 20) {
                         Image(systemName: "books.vertical")
@@ -155,26 +168,15 @@ struct LibraryView: View {
                             }
                             .padding(.horizontal)
 
-                            LazyVGrid(columns: columns, spacing: 20) {
-                                ForEach(viewModel.books, id: \.id) { libraryBook in
-                                    NavigationLink(destination: BookDetailView(book: libraryBook.asBook)) {
-                                        BookGridItem(book: libraryBook.asBook)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-
-                                // Load more indicator (only if pagination is enabled)
-                                if viewModel.shouldPaginate, viewModel.hasMorePages {
-                                    ProgressView()
-                                        .gridCellColumns(columns.count)
-                                        .onAppear {
-                                            Task {
-                                                await viewModel.loadMoreBooks()
-                                            }
-                                        }
-                                }
+                            // Extracted into their own views: nesting both
+                            // branches inline here trips the Swift type-checker
+                            // ("unable to type-check this expression in
+                            // reasonable time") the same way CatalogView did.
+                            if viewModel.mode == .books {
+                                LibraryBooksGrid(viewModel: viewModel, columns: columns)
+                            } else {
+                                LibrarySeriesGrid(viewModel: viewModel, columns: columns)
                             }
-                            .padding(.horizontal)
                         }
                     }
                     .padding(.vertical)
@@ -184,10 +186,19 @@ struct LibraryView: View {
             .refreshable {
                 // Only allow refresh when online
                 if networkMonitor.isConnected {
-                    await viewModel.refreshLibrary()
+                    await viewModel.refreshCurrentMode()
                 }
             }
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Picker("Mode", selection: $viewModel.mode) {
+                        Text(CatalogMode.books.rawValue).tag(CatalogMode.books)
+                        Text(CatalogMode.series.rawValue).tag(CatalogMode.series)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 180)
+                }
+
                 // Show offline indicator in toolbar when offline
                 if !networkMonitor.isConnected {
                     ToolbarItem(placement: .navigationBarTrailing) {
@@ -203,8 +214,62 @@ struct LibraryView: View {
             }
         }
         .task {
-            await viewModel.loadLibrary()
+            await viewModel.loadCurrentMode()
         }
+        .onChange(of: viewModel.mode) {
+            Task {
+                await viewModel.loadCurrentMode()
+            }
+        }
+    }
+}
+
+// MARK: - LibraryBooksGrid
+
+/// Books mode: the user's library books, with the existing client-side pagination.
+private struct LibraryBooksGrid: View {
+    @ObservedObject var viewModel: LibraryViewModel
+    let columns: [GridItem]
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 20) {
+            ForEach(viewModel.books, id: \.id) { libraryBook in
+                NavigationLink(destination: BookDetailView(book: libraryBook.asBook)) {
+                    BookGridItem(book: libraryBook.asBook)
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Load more indicator (only if pagination is enabled)
+            if viewModel.shouldPaginate, viewModel.hasMorePages {
+                ProgressView()
+                    .gridCellColumns(columns.count)
+                    .onAppear {
+                        Task {
+                            await viewModel.loadMoreBooks()
+                        }
+                    }
+            }
+        }
+        .padding(.horizontal)
+    }
+}
+
+// MARK: - LibrarySeriesGrid
+
+/// Series mode: owned series (with "N of M" ownership) interleaved with owned
+/// standalone books. Fetched in one page, so there's no load-more indicator.
+private struct LibrarySeriesGrid: View {
+    @ObservedObject var viewModel: LibraryViewModel
+    let columns: [GridItem]
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 20) {
+            ForEach(viewModel.seriesViewItems) { item in
+                CatalogSeriesViewItemCell(item: item)
+            }
+        }
+        .padding(.horizontal)
     }
 }
 
@@ -212,6 +277,10 @@ struct LibraryView: View {
 
 @MainActor
 class LibraryViewModel: ObservableObject {
+    /// Separate from `CatalogViewModel.modeDefaultsKey` — the two toggles are
+    /// remembered independently, per requirements Q1.
+    static let modeDefaultsKey = "libraryViewMode"
+
     @Published var books: [LibraryBook] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -219,7 +288,21 @@ class LibraryViewModel: ObservableObject {
     @Published var shouldPaginate = false
     @Published var isOfflineNoCache = false // Track if error is due to offline with no cache
 
+    /// Books/Series toggle state, persisted per-device.
+    @Published var mode: CatalogMode = CatalogMode(
+        rawValue: UserDefaults.standard.string(forKey: LibraryViewModel.modeDefaultsKey) ?? ""
+    ) ?? .books {
+        didSet {
+            UserDefaults.standard.set(mode.rawValue, forKey: Self.modeDefaultsKey)
+        }
+    }
+
+    @Published var seriesViewItems: [CatalogSeriesViewItem] = []
+    @Published var isLoadingSeriesView = false
+    @Published var seriesViewErrorMessage: String?
+
     private let libraryManager = LibraryManager.shared
+    private let apiClient: any APIClientProtocol
     private var totalBooks = 0
     private var currentPage = 1
     private let pageSize = 20
@@ -227,7 +310,14 @@ class LibraryViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var lastKnownVersion = 0
 
-    init() {
+    /// Library-scoped series feeds are personal-scale, so a single large page
+    /// covers any realistic library — no user-visible pagination in Series mode
+    /// (mirrors how Books mode already fetches the whole library at once).
+    private let seriesViewPageSize = 500
+
+    init(apiClient: any APIClientProtocol = APIClient.shared) {
+        self.apiClient = apiClient
+
         // Observe library changes and auto-reload when library is modified
         libraryManager.$libraryVersion
             .dropFirst() // Skip initial value
@@ -239,11 +329,78 @@ class LibraryViewModel: ObservableObject {
                     self.lastKnownVersion = newVersion
                     DebugLogger.database("Library version changed to \(newVersion), reloading...")
                     Task {
-                        await self.loadLibrary()
+                        // Adding/removing a book can change which series appear
+                        // and their owned counts, so refresh whichever mode is showing.
+                        await self.reloadCurrentMode()
                     }
                 }
             }
             .store(in: &cancellables)
+    }
+
+    /// Loads whichever mode (Books/Series) is currently active — call on first
+    /// appearance and whenever `mode` changes.
+    func loadCurrentMode() async {
+        switch mode {
+        case .books:
+            await loadLibrary()
+        case .series:
+            await loadSeriesView()
+        }
+    }
+
+    /// Refreshes whichever mode is active — for pull-to-refresh.
+    func refreshCurrentMode() async {
+        switch mode {
+        case .books:
+            await refreshLibrary()
+        case .series:
+            await refreshSeriesView()
+        }
+    }
+
+    /// Reloads the active mode after an external library change, discarding any
+    /// cached Series-mode results so ownership counts can't go stale.
+    private func reloadCurrentMode() async {
+        switch mode {
+        case .books:
+            await loadLibrary()
+        case .series:
+            await refreshSeriesView()
+        }
+    }
+
+    func loadSeriesView() async {
+        guard !isLoadingSeriesView else { return }
+        guard seriesViewItems.isEmpty else { return } // already loaded this session
+
+        isLoadingSeriesView = true
+        seriesViewErrorMessage = nil
+
+        do {
+            let response = try await apiClient.fetchLibrarySeriesView(page: 1, limit: seriesViewPageSize)
+            self.seriesViewItems = response.results
+            isLoadingSeriesView = false
+        } catch {
+            isLoadingSeriesView = false
+            seriesViewErrorMessage = error.localizedDescription
+            DebugLogger.error("Failed to load library series view", error: error)
+        }
+    }
+
+    func refreshSeriesView() async {
+        // Mirrors refreshLibrary: don't touch @Published state before the network
+        // call, since SwiftUI view re-evaluation during .refreshable can cancel the task.
+        do {
+            let response = try await apiClient.fetchLibrarySeriesView(page: 1, limit: seriesViewPageSize)
+            self.seriesViewItems = response.results
+            self.seriesViewErrorMessage = nil
+        } catch {
+            let nsError = error as NSError
+            if nsError.domain != NSURLErrorDomain || nsError.code != NSURLErrorCancelled {
+                seriesViewErrorMessage = error.localizedDescription
+            }
+        }
     }
 
     func loadLibrary() async {
