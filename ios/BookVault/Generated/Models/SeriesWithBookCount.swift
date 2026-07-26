@@ -13,16 +13,23 @@ import AnyCodable
 public struct SeriesWithBookCount: Codable, JSONEncodable, Hashable {
 
     public static let bookCountRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
+    public static let ownedCountRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public var id: UUID
     public var title: String
     public var asin: String?
     public var bookCount: Int
+    /** Derived, not stored — the coverUrl of the lowest-sequence book in this series that has a non-null coverUrl. Null if the series has no books with cover art.  */
+    public var coverUrl: String?
+    /** Number of this series' books present in the requesting user's library. Present only on Library-scoped responses.  */
+    public var ownedCount: Int?
 
-    public init(id: UUID, title: String, asin: String? = nil, bookCount: Int) {
+    public init(id: UUID, title: String, asin: String? = nil, bookCount: Int, coverUrl: String? = nil, ownedCount: Int? = nil) {
         self.id = id
         self.title = title
         self.asin = asin
         self.bookCount = bookCount
+        self.coverUrl = coverUrl
+        self.ownedCount = ownedCount
     }
 
     public enum CodingKeys: String, CodingKey, CaseIterable {
@@ -30,6 +37,8 @@ public struct SeriesWithBookCount: Codable, JSONEncodable, Hashable {
         case title
         case asin
         case bookCount
+        case coverUrl
+        case ownedCount
     }
 
     // Encodable protocol methods
@@ -40,6 +49,8 @@ public struct SeriesWithBookCount: Codable, JSONEncodable, Hashable {
         try container.encode(title, forKey: .title)
         try container.encodeIfPresent(asin, forKey: .asin)
         try container.encode(bookCount, forKey: .bookCount)
+        try container.encodeIfPresent(coverUrl, forKey: .coverUrl)
+        try container.encodeIfPresent(ownedCount, forKey: .ownedCount)
     }
 }
 

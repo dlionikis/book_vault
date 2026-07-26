@@ -491,6 +491,56 @@ components:
           type: integer
           minimum: 0
           example: 3
+        coverUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: >
+            Derived, not stored — the coverUrl of the lowest-sequence book in
+            this series that has a non-null coverUrl. Null if the series has
+            no books with cover art.
+          example: 'https://book-vault-media.s3.amazonaws.com/covers/B002V5D1CG.jpg'
+        ownedCount:
+          type: integer
+          minimum: 0
+          description: >
+            Number of this series' books present in the requesting user's
+            library. Present only on Library-scoped responses.
+          example: 2
+
+    CatalogSeriesViewItem:
+      type: object
+      description: >
+        Exactly one of `series`/`book` is present per item — never both,
+        never neither. Not enforced by the schema; enforced by server-side
+        construction and covered by unit tests.
+      properties:
+        series:
+          $ref: '#/components/schemas/SeriesWithBookCount'
+        book:
+          $ref: '#/components/schemas/Book'
+
+    GetCatalogSeriesView200Response:
+      type: object
+      required: [results, pagination]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogSeriesViewItem'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    GetLibrarySeriesView200Response:
+      type: object
+      required: [results, pagination]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogSeriesViewItem'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
 
     NarratorWithBookCount:
       type: object
@@ -1587,6 +1637,82 @@ paths:
                         type: integer
                       pages:
                         type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/browse/catalog-series-view:
+    get:
+      operationId: getCatalogSeriesView
+      tags: [Browse]
+      summary: Series + standalone books, interleaved alphabetically by title
+      description: >
+        Combined feed backing "Series mode" for the full-catalog browse: every
+        series (with book count + derived cover) and every book not in any
+        series, merged into one alphabetically-sorted, paginated list.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated, interleaved list of series and standalone books
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCatalogSeriesView200Response'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/browse/library-series-view:
+    get:
+      operationId: getLibrarySeriesView
+      tags: [Browse]
+      summary: Owned series + standalone owned books, interleaved alphabetically by title
+      description: >
+        Combined feed backing "Series mode" for the Library view: every series
+        with at least one book in the requesting user's library (with owned
+        count, total book count, and derived cover), plus every standalone
+        book the user owns, merged into one alphabetically-sorted, paginated
+        list.
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated, interleaved list of owned series and standalone owned books
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetLibrarySeriesView200Response'
         '401':
           description: Unauthorized
           content:
