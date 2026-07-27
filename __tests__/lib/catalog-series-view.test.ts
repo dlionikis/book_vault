@@ -1,6 +1,6 @@
 /**
  * Unit tests for the shared merge/pagination algorithm behind the Series-mode
- * combined feed (docs/plans/series-view-toggle-implementation.md, "Pagination
+ * combined feed (docs/archive/completed-plans/series-view-toggle-implementation.md, "Pagination
  * algorithm"). Mocks Prisma directly to pin the 7-step algorithm — interleave
  * ordering, page-boundary slicing, cover derivation, and library scoping —
  * without needing a real database.

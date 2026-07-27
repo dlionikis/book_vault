@@ -10,7 +10,7 @@ import { join } from 'path';
  *
  * Component unit tests can't catch this — they render entirely on the client,
  * where function props work fine. Only a real request (E2E) or this source-level
- * check will. See docs/plans/series-view-toggle-implementation.md, Phase 5.
+ * check will. See docs/archive/completed-plans/series-view-toggle-implementation.md, Phase 5.
  */
 describe('SeriesModeSection server/client boundary', () => {
   const PAGES = [
