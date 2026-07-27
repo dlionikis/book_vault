@@ -59,6 +59,10 @@ class MockAPIClient: APIClientProtocol {
     var fetchLibrarySeriesViewResult: Result<GetLibrarySeriesView200Response, Error> = .failure(
         APIError.networkError(NSError(domain: "Test", code: -1))
     )
+    /// Optional per-page responses, keyed by requested page — for testing the
+    /// Library's internal multi-page fetch. Falls back to
+    /// `fetchLibrarySeriesViewResult` for any page not listed here.
+    var fetchLibrarySeriesViewResultsByPage: [Int: Result<GetLibrarySeriesView200Response, Error>] = [:]
     var fetchBookResult: Result<Book, Error> = .failure(APIError.networkError(NSError(domain: "Test", code: -1)))
     var fetchBookChaptersResult: Result<[Chapter], Error> = .success([])
     var fetchProgressResult: Result<GetProgress200Response, Error> = .failure(APIError.networkError(NSError(
@@ -116,6 +120,7 @@ class MockAPIClient: APIClientProtocol {
         fetchBooksCalls = []
         fetchCatalogSeriesViewCalls = []
         fetchLibrarySeriesViewCalls = []
+        fetchLibrarySeriesViewResultsByPage = [:]
         fetchBookCalls = []
         fetchBookChaptersCalls = []
         fetchProgressCalls = []
@@ -164,6 +169,11 @@ class MockAPIClient: APIClientProtocol {
 
     func fetchLibrarySeriesView(page: Int, limit: Int) async throws -> GetLibrarySeriesView200Response {
         fetchLibrarySeriesViewCalls.append((page, limit))
+        // Per-page responses take precedence when set, so tests can exercise
+        // multi-page fetching; otherwise fall back to the single result.
+        if let paged = fetchLibrarySeriesViewResultsByPage[page] {
+            return try paged.get()
+        }
         return try fetchLibrarySeriesViewResult.get()
     }
 

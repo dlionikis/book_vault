@@ -50,10 +50,15 @@ final class LibraryViewModelTests: XCTestCase {
         ))
     }
 
-    private func seriesResponse(_ results: [CatalogSeriesViewItem]) -> GetLibrarySeriesView200Response {
+    private func seriesResponse(
+        _ results: [CatalogSeriesViewItem],
+        page: Int = 1,
+        pages: Int = 1,
+        total: Int? = nil
+    ) -> GetLibrarySeriesView200Response {
         GetLibrarySeriesView200Response(
             results: results,
-            pagination: Pagination(page: 1, limit: 500, total: results.count, pages: 1)
+            pagination: Pagination(page: page, limit: 100, total: total ?? results.count, pages: pages)
         )
     }
 
@@ -147,16 +152,87 @@ final class LibraryViewModelTests: XCTestCase {
         XCTAssertNil(sut.seriesViewErrorMessage)
     }
 
-    /// Library scope fetches the whole feed in one page — there's no
-    /// user-visible pagination in Series mode.
-    func testLoadSeriesViewRequestsASingleLargePage() async {
+    /// The server clamps `limit` to 100 (`parsePagination`), so requesting more
+    /// would silently return 100 and — with no load-more UI in Series mode —
+    /// make the remainder unreachable.
+    func testLoadSeriesViewNeverRequestsMoreThanTheServerCap() async {
         mockAPIClient.fetchLibrarySeriesViewResult = .success(seriesResponse([]))
         let sut = LibraryViewModel(apiClient: mockAPIClient)
 
         await sut.loadSeriesView()
 
         XCTAssertEqual(mockAPIClient.fetchLibrarySeriesViewCalls.first?.page, 1)
-        XCTAssertGreaterThan(mockAPIClient.fetchLibrarySeriesViewCalls.first?.limit ?? 0, 100)
+        XCTAssertLessThanOrEqual(mockAPIClient.fetchLibrarySeriesViewCalls.first?.limit ?? .max, 100)
+    }
+
+    /// Series mode shows the whole feed with no load-more control, so a library
+    /// spanning multiple server pages must be fetched in full up front.
+    func testLoadSeriesViewFollowsPaginationAcrossMultiplePages() async {
+        mockAPIClient.fetchLibrarySeriesViewResultsByPage = [
+            1: .success(seriesResponse([makeSeriesItem(title: "Page 1")], page: 1, pages: 3, total: 3)),
+            2: .success(seriesResponse([makeSeriesItem(title: "Page 2")], page: 2, pages: 3, total: 3)),
+            3: .success(seriesResponse([makeSeriesItem(title: "Page 3")], page: 3, pages: 3, total: 3))
+        ]
+        let sut = LibraryViewModel(apiClient: mockAPIClient)
+
+        await sut.loadSeriesView()
+
+        XCTAssertEqual(mockAPIClient.fetchLibrarySeriesViewCalls.map(\.page), [1, 2, 3])
+        XCTAssertEqual(sut.seriesViewItems.count, 3)
+        XCTAssertEqual(sut.seriesViewItems.compactMap(\.series?.title), ["Page 1", "Page 2", "Page 3"])
+    }
+
+    func testLoadSeriesViewStopsAfterASinglePageWhenThereIsOnlyOne() async {
+        mockAPIClient.fetchLibrarySeriesViewResult = .success(
+            seriesResponse([makeSeriesItem(title: "Only")], page: 1, pages: 1)
+        )
+        let sut = LibraryViewModel(apiClient: mockAPIClient)
+
+        await sut.loadSeriesView()
+
+        XCTAssertEqual(mockAPIClient.fetchLibrarySeriesViewCalls.count, 1)
+    }
+
+    /// A server that over-reports `pages` shouldn't cause endless requests.
+    func testLoadSeriesViewStopsOnAnEmptyPageEvenIfMorePagesAreClaimed() async {
+        mockAPIClient.fetchLibrarySeriesViewResultsByPage = [
+            1: .success(seriesResponse([makeSeriesItem(title: "Page 1")], page: 1, pages: 99, total: 99)),
+            2: .success(seriesResponse([], page: 2, pages: 99, total: 99))
+        ]
+        let sut = LibraryViewModel(apiClient: mockAPIClient)
+
+        await sut.loadSeriesView()
+
+        XCTAssertEqual(mockAPIClient.fetchLibrarySeriesViewCalls.map(\.page), [1, 2])
+        XCTAssertEqual(sut.seriesViewItems.count, 1)
+    }
+
+    func testRefreshSeriesViewAlsoFollowsPagination() async {
+        mockAPIClient.fetchLibrarySeriesViewResultsByPage = [
+            1: .success(seriesResponse([makeSeriesItem(title: "A")], page: 1, pages: 2, total: 2)),
+            2: .success(seriesResponse([makeSeriesItem(title: "B")], page: 2, pages: 2, total: 2))
+        ]
+        let sut = LibraryViewModel(apiClient: mockAPIClient)
+
+        await sut.refreshSeriesView()
+
+        XCTAssertEqual(sut.seriesViewItems.count, 2)
+        XCTAssertEqual(mockAPIClient.fetchLibrarySeriesViewCalls.map(\.page), [1, 2])
+    }
+
+    /// A failure partway through paging must surface as an error, not as a
+    /// silently-truncated feed presented as complete.
+    func testLoadSeriesViewSurfacesAFailureOnALaterPage() async {
+        mockAPIClient.fetchLibrarySeriesViewResultsByPage = [
+            1: .success(seriesResponse([makeSeriesItem(title: "Page 1")], page: 1, pages: 2, total: 2)),
+            2: .failure(APIError.serverError(500, nil))
+        ]
+        let sut = LibraryViewModel(apiClient: mockAPIClient)
+
+        await sut.loadSeriesView()
+
+        XCTAssertNotNil(sut.seriesViewErrorMessage)
+        XCTAssertTrue(sut.seriesViewItems.isEmpty, "a partial feed must not be shown as if complete")
     }
 
     func testLoadSeriesViewDoesNotRefetchIfAlreadyLoaded() async {

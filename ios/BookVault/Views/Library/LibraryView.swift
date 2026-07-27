@@ -310,10 +310,18 @@ class LibraryViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var lastKnownVersion = 0
 
-    /// Library-scoped series feeds are personal-scale, so a single large page
-    /// covers any realistic library — no user-visible pagination in Series mode
-    /// (mirrors how Books mode already fetches the whole library at once).
-    private let seriesViewPageSize = 500
+    /// Series mode has no user-visible pagination (mirroring Books mode, which
+    /// fetches the whole library at once), so it pages through the feed
+    /// internally instead.
+    ///
+    /// This must not exceed the server's cap — `parsePagination` clamps `limit`
+    /// to 100, so asking for more silently returns 100 and everything past it
+    /// would be unreachable.
+    private let seriesViewPageSize = 100
+
+    /// Stop-loss on the internal paging loop, so a server that always reports
+    /// another page can't spin forever.
+    private let seriesViewMaxPages = 50
 
     init(apiClient: any APIClientProtocol = APIClient.shared) {
         self.apiClient = apiClient
@@ -370,6 +378,37 @@ class LibraryViewModel: ObservableObject {
         }
     }
 
+    /// Fetches the entire library series feed, following pagination internally.
+    ///
+    /// The server caps `limit` at 100, so a library with more series-mode items
+    /// than that needs multiple requests — Series mode has no load-more UI, so
+    /// anything not fetched here would be permanently unreachable.
+    private func fetchAllSeriesViewItems() async throws -> [CatalogSeriesViewItem] {
+        var items: [CatalogSeriesViewItem] = []
+        var page = 1
+
+        while page <= seriesViewMaxPages {
+            let response = try await apiClient.fetchLibrarySeriesView(page: page, limit: seriesViewPageSize)
+            items.append(contentsOf: response.results)
+
+            // Trust the reported page count, but stop early on a short/empty
+            // page so a bad `pages` value can't cause pointless extra requests.
+            if page >= response.pagination.pages || response.results.isEmpty {
+                break
+            }
+            page += 1
+        }
+
+        if page > seriesViewMaxPages {
+            DebugLogger.error(
+                "Library series view hit the \(seriesViewMaxPages)-page safety cap; feed may be truncated",
+                error: nil
+            )
+        }
+
+        return items
+    }
+
     func loadSeriesView() async {
         guard !isLoadingSeriesView else { return }
         guard seriesViewItems.isEmpty else { return } // already loaded this session
@@ -378,8 +417,7 @@ class LibraryViewModel: ObservableObject {
         seriesViewErrorMessage = nil
 
         do {
-            let response = try await apiClient.fetchLibrarySeriesView(page: 1, limit: seriesViewPageSize)
-            self.seriesViewItems = response.results
+            self.seriesViewItems = try await fetchAllSeriesViewItems()
             isLoadingSeriesView = false
         } catch {
             isLoadingSeriesView = false
@@ -392,8 +430,8 @@ class LibraryViewModel: ObservableObject {
         // Mirrors refreshLibrary: don't touch @Published state before the network
         // call, since SwiftUI view re-evaluation during .refreshable can cancel the task.
         do {
-            let response = try await apiClient.fetchLibrarySeriesView(page: 1, limit: seriesViewPageSize)
-            self.seriesViewItems = response.results
+            let items = try await fetchAllSeriesViewItems()
+            self.seriesViewItems = items
             self.seriesViewErrorMessage = nil
         } catch {
             let nsError = error as NSError
