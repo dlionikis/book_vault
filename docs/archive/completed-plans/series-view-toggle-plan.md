@@ -1,13 +1,15 @@
 # Series View Toggle — Requirements
 
 > **Created**: July 25, 2026
-> **Status**: Requirements finalized — ready to scope into implementation tasks
-> **Priority**: TBD
+> **Status**: ✅ **Shipped** — every requirement below was implemented and verified (PRs #123–#129, July 26, 2026). Archived for historical reference.
+> **Implementation**: [series-view-toggle-implementation.md](series-view-toggle-implementation.md) (phased plan, technical spec, and Phase 6 validation results)
 > **Platforms**: Web + iOS
 
 ---
 
 ## Background
+
+> **Reading this after the fact**: the survey below describes the codebase as it was _before_ this work. Most notably, `SeriesListView.swift` no longer exists — it was retired per Decision 6.
 
 A prior investigation (July 2026) confirmed the "series" concept is **already fully built** in Book Vault — this is not a greenfield feature:
 
@@ -64,12 +66,12 @@ The original assumption was that Series mode could reuse `/api/browse/series` as
 
 ## Acceptance Criteria
 
-- [ ] Catalog view has a visible, discoverable toggle between "Books" and "Series" display modes, on web and iOS.
-- [ ] Library view has the same toggle, tracked independently of Catalog's toggle state, both persisted per-device (`localStorage` / `UserDefaults`).
-- [ ] Series mode shows series and standalone books interleaved in one alphabetically-sorted grid, on both Catalog and Library.
-- [ ] Library's Series mode shows an owned/total count per partially-owned series (e.g., "2 of 5").
-- [ ] Active filters (author, narrator, search) apply consistently in both Books and Series modes.
-- [ ] Tapping a series tile navigates to the existing series detail page/screen; tapping a standalone book tile navigates to that book's existing detail page.
-- [ ] iOS: `SeriesListView` standalone entry point removed from Browse; Catalog's Series-mode toggle is the sole path to browsing all series.
-- [ ] Dark mode variants included (web) per project convention.
-- [ ] `docs/api/openapi.yaml` updated first for any new/modified endpoint (combined Catalog series+standalone feed; library-scoped series+ownership feed), followed by `npm run api:generate:ts` and `npm run api:generate:swift`, per the project's OpenAPI-first rule.
+- [x] Catalog view has a visible, discoverable toggle between "Books" and "Series" display modes, on web and iOS.
+- [x] Library view has the same toggle, tracked independently of Catalog's toggle state, both persisted per-device (`localStorage` / `UserDefaults`).
+- [x] Series mode shows series and standalone books interleaved in one alphabetically-sorted grid, on both Catalog and Library.
+- [x] Library's Series mode shows an owned/total count per partially-owned series (e.g., "2 of 5").
+- [x] Active filters (author, narrator, search) apply consistently in both Books and Series modes. — _Narrower in practice than written: implementation found **no** author/narrator/search filters exist on Catalog or Library (only a `sort` param on web Catalog). Resolved per Decision B by hiding `SortDropdown` in Series mode, since Series mode is always alphabetical. If real filters are added later, they must be applied to the series-view endpoints too._
+- [x] Tapping a series tile navigates to the existing series detail page/screen; tapping a standalone book tile navigates to that book's existing detail page.
+- [x] iOS: `SeriesListView` standalone entry point removed from Browse; Catalog's Series-mode toggle is the sole path to browsing all series.
+- [x] Dark mode variants included (web) per project convention.
+- [x] `docs/api/openapi.yaml` updated first for any new/modified endpoint (combined Catalog series+standalone feed; library-scoped series+ownership feed), followed by `npm run api:generate:ts` and `npm run api:generate:swift`, per the project's OpenAPI-first rule.

@@ -4,7 +4,7 @@
 //
 //  Library Books/Series toggle: mode persistence, mode-branching, and
 //  Series-mode loading with ownership data
-//  (docs/plans/series-view-toggle-implementation.md, Phase 4).
+//  (docs/archive/completed-plans/series-view-toggle-implementation.md, Phase 4).
 //
 
 import XCTest

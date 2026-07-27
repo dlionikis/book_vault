@@ -40,7 +40,7 @@
 
 - [x] **Pre-restore hardening (P0+P1)** - Security fixes + test infrastructure ([archive/completed-plans/pre-restore-hardening-plan.md](archive/completed-plans/pre-restore-hardening-plan.md)) — ✅ complete (PRs #75–#79)
 - [x] **S3 archive restore workflow** - Restore pipeline + push notifications ([archive/completed-plans/s3-archive-restore-workflow-v2.md](archive/completed-plans/s3-archive-restore-workflow-v2.md)) — ✅ **complete (Phases 0–8, July 2026)**: backend + web + iOS, SNS→APNs push (validated on-device), series-level restore, and the admin Health/Restores dashboard tabs (PRs #88, #98–#121)
-- [x] **Series view toggle (web + iOS)** - Books/Series toggle on Catalog and Library, with series tiles, derived covers, and "N of M in your library" ownership ([plans/series-view-toggle-implementation.md](plans/series-view-toggle-implementation.md)) — ✅ **complete (all phases, July 26, 2026)**, PRs #123–#129. iOS `SeriesListView` retired in favor of the Catalog toggle.
+- [x] **Series view toggle (web + iOS)** - Books/Series toggle on Catalog and Library, with series tiles, derived covers, and "N of M in your library" ownership ([archive/completed-plans/series-view-toggle-implementation.md](archive/completed-plans/series-view-toggle-implementation.md)) — ✅ **complete (all phases, July 26, 2026)**, PRs #123–#129. iOS `SeriesListView` retired in favor of the Catalog toggle.
 - [ ] **Remove volume slider (iOS)** - Remove the volume slider from the iOS audio playback view
 - [ ] **Duration remaining (iOS)** - Add remaining time display to the audio playback view
 - [ ] **Dismiss mini-player** - Add ability to close the recent playback mini-player

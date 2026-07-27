@@ -4,7 +4,7 @@
  * alphabetically-sorted, paginated list. Backs the Books/Series toggle on
  * both the Catalog ("All Books") and Library pages/screens.
  *
- * See docs/plans/series-view-toggle-implementation.md for the full spec —
+ * See docs/archive/completed-plans/series-view-toggle-implementation.md for the full spec —
  * this implements the "Pagination algorithm" section verbatim.
  */
 

@@ -4,7 +4,7 @@
 //
 //  Series-mode grid tile for Catalog/Library — the series counterpart to
 //  BookGridItem (CatalogView.swift). See
-//  docs/plans/series-view-toggle-implementation.md, "SeriesGridItem (iOS)".
+//  docs/archive/completed-plans/series-view-toggle-implementation.md, "SeriesGridItem (iOS)".
 //
 
 import SwiftUI

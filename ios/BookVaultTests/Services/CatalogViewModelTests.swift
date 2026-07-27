@@ -3,7 +3,7 @@
 //  BookVaultTests
 //
 //  Books/Series toggle mode-branching + Series-mode data loading
-//  (docs/plans/series-view-toggle-implementation.md, Phase 3).
+//  (docs/archive/completed-plans/series-view-toggle-implementation.md, Phase 3).
 //
 
 import XCTest
