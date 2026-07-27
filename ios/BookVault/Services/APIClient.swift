@@ -7,49 +7,6 @@
 
 import Foundation
 
-// MARK: - TokenRefreshCoordinator
-
-/// Actor to coordinate token refresh across concurrent requests (Swift 6 async-safe)
-/// Ensures only one refresh happens at a time; other callers wait for the result
-private actor TokenRefreshCoordinator {
-    private var isRefreshing = false
-    private var waiters: [CheckedContinuation<Bool, Never>] = []
-
-    /// Attempt to start a refresh. Returns nil if we should proceed with refresh,
-    /// or a continuation to await if refresh is already in progress.
-    func beginRefresh() -> CheckedContinuation<Bool, Never>? {
-        if isRefreshing {
-            // Already refreshing - caller should wait
-            return nil // Signal that caller needs to create a continuation
-        }
-        isRefreshing = true
-        return nil
-    }
-
-    /// Check if refresh is in progress
-    func isRefreshInProgress() -> Bool {
-        isRefreshing
-    }
-
-    /// Add a waiter continuation to be resumed when refresh completes
-    func addWaiter(_ continuation: CheckedContinuation<Bool, Never>) {
-        waiters.append(continuation)
-    }
-
-    /// Complete the refresh and resume all waiting continuations
-    func completeRefresh(success: Bool) -> [CheckedContinuation<Bool, Never>] {
-        let currentWaiters = waiters
-        waiters.removeAll()
-        isRefreshing = false
-        return currentWaiters
-    }
-
-    /// Mark refresh as started (called after checking isRefreshInProgress)
-    func markRefreshStarted() {
-        isRefreshing = true
-    }
-}
-
 // MARK: - APIError
 
 /// Errors that can occur during API operations
@@ -128,8 +85,14 @@ class APIClient: APIClientProtocol {
         await AuthManager.shared.refreshAccessToken()
     }
 
-    // Token refresh coordinator (actor-based for Swift 6 async safety)
-    private let refreshCoordinator = TokenRefreshCoordinator()
+    /// Single-flight refresh coordination. Shared with the AVPlayer streaming
+    /// path (see `AudioPlayerManager`) so both 401 paths join one refresh
+    /// instead of racing and double-consuming the rotated refresh token.
+    let refreshCoordinator: TokenRefreshCoordinator
+
+    /// Collapses the N concurrent "force logout" calls a single refresh failure
+    /// would otherwise produce into one. Re-armed on successful login.
+    private let logoutGate = OneShotGate()
 
     // Production singleton init - reads API URL from Info.plist (set via xcconfig)
     private convenience init() {
@@ -147,13 +110,17 @@ class APIClient: APIClientProtocol {
         configuration.timeoutIntervalForRequest = 30
         configuration.timeoutIntervalForResource = 300
         let session = URLSession(configuration: configuration)
-        self.init(baseURL: URL(string: urlString)!, session: session)
+        // Share the app-wide coordinator with the AVPlayer streaming path.
+        self.init(baseURL: URL(string: urlString)!, session: session, refreshCoordinator: .shared)
     }
 
-    // Testable initializer - accepts custom URLSession for URLProtocol interception
-    init(baseURL: URL, session: URLSession) {
+    // Testable initializer - accepts custom URLSession for URLProtocol interception.
+    // `refreshCoordinator` defaults to a fresh instance; production passes the
+    // app-wide one so the streaming path shares it.
+    init(baseURL: URL, session: URLSession, refreshCoordinator: TokenRefreshCoordinator = TokenRefreshCoordinator()) {
         self.baseURL = baseURL
         self.session = session
+        self.refreshCoordinator = refreshCoordinator
 
         DebugLogger.network("APIClient initialized with base URL: \(baseURL.absoluteString)")
 
@@ -316,7 +283,7 @@ class APIClient: APIClientProtocol {
                 // Refresh failed - force logout (only if not already logged out)
                 DebugLogger.error("Token refresh failed - cannot recover, forcing logout")
                 if accessToken != nil {
-                    forceLogoutHandler()
+                    await forceLogoutOnce()
                 }
                 throw APIError.unauthorized
             }
@@ -353,7 +320,7 @@ class APIClient: APIClientProtocol {
             // Second 401 after refresh - definitely log out (only if not already logged out)
             DebugLogger.auth("Second 401 after token refresh - forcing logout")
             if accessToken != nil {
-                forceLogoutHandler()
+                await forceLogoutOnce()
             }
             throw APIError.unauthorized
         case 404:
@@ -404,7 +371,7 @@ class APIClient: APIClientProtocol {
                 case 200 ... 299:
                     return (httpResponse2.statusCode, data2)
                 case 401:
-                    if accessToken != nil { forceLogoutHandler() }
+                    if accessToken != nil { await forceLogoutOnce() }
                     throw APIError.unauthorized
                 case 404:
                     throw APIError.notFound
@@ -413,7 +380,7 @@ class APIClient: APIClientProtocol {
                     throw APIError.serverError(httpResponse2.statusCode, msg?["error"])
                 }
             } else {
-                if accessToken != nil { forceLogoutHandler() }
+                if accessToken != nil { await forceLogoutOnce() }
                 throw APIError.unauthorized
             }
         case 404:
@@ -453,37 +420,29 @@ class APIClient: APIClientProtocol {
     }
 
     /// Attempt to refresh the access token
-    /// Returns true if refresh succeeded, false otherwise
-    /// If refresh is already in progress, waits for it to complete and returns the same result
+    /// Returns true if refresh succeeded. If one is already in progress —
+    /// started here or by the streaming path — waits for it and returns its result.
     private func attemptTokenRefresh() async -> Bool {
-        // Check if refresh is already in progress (actor-isolated, async-safe)
-        if await refreshCoordinator.isRefreshInProgress() {
-            DebugLogger.auth("Token refresh already in progress - waiting for result...")
+        // Claim-or-join is a single atomic step inside the actor, so concurrent
+        // 401s produce exactly one refresh. The coordinator is shared with the
+        // AVPlayer streaming path, so a streaming refresh and an API refresh
+        // can never run at once and double-consume the rotated refresh token.
+        let handler = tokenRefreshHandler
+        return await refreshCoordinator.refresh(using: handler)
+    }
 
-            // Create a continuation and register as a waiter
-            return await withCheckedContinuation { continuation in
-                Task {
-                    await refreshCoordinator.addWaiter(continuation)
-                }
-            }
+    /// Force a logout exactly once per session teardown.
+    ///
+    /// Every in-flight request that 401s independently reaches a logout path,
+    /// so without this guard a single refresh failure fires N logouts for N
+    /// concurrent requests. Collapsing them keeps one failure from tearing the
+    /// session down N times over.
+    private func forceLogoutOnce() async {
+        guard await logoutGate.claim() else {
+            DebugLogger.auth("Force logout already performed for this session - skipping duplicate")
+            return
         }
-
-        // We're the first - mark refresh as started
-        await refreshCoordinator.markRefreshStarted()
-
-        // Perform the actual refresh
-        let success = await tokenRefreshHandler()
-
-        // Complete refresh and get all waiting continuations
-        let waiters = await refreshCoordinator.completeRefresh(success: success)
-
-        DebugLogger.auth("Token refresh completed (success: \(success)) - resuming \(waiters.count) waiting requests")
-
-        for waiter in waiters {
-            waiter.resume(returning: success)
-        }
-
-        return success
+        forceLogoutHandler()
     }
 
     // MARK: - Authentication
@@ -502,6 +461,10 @@ class APIClient: APIClientProtocol {
 
         // Store the access token
         self.accessToken = response.accessToken
+
+        // Re-arm the logout gate: this is a new session, and it must be able to
+        // force a logout of its own if its credentials later go bad.
+        await logoutGate.reset()
 
         return response
     }

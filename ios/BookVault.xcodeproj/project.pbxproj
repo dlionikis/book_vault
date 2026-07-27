@@ -69,6 +69,7 @@
 		4713295415C9B391820F099A /* SyncManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F2378E84C9D4AC4F1C9A06D /* SyncManaging.swift */; };
 		48D46521FF9F299B297556EF /* CodableHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80426BFEB1D0A891C16DE064 /* CodableHelper.swift */; };
 		493EF45FBBEF633F62E09C3B /* GetAdminEcsHealth200ResponseSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68786C92FD5B5C5A7CDFE09C /* GetAdminEcsHealth200ResponseSummary.swift */; };
+		49BA1E1DA89DB212836742D5 /* TokenRefreshCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E4DEB50A2C1A96020BF5358 /* TokenRefreshCoordinator.swift */; };
 		4BAAC6C305C1CA3113712D16 /* ReorderListRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = F61F337F0C84B120B0DE356A /* ReorderListRequest.swift */; };
 		4BDB6A0563EA7946D81E1318 /* AudioPlayerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A973EE511EEC0C57149BFEBE /* AudioPlayerManager.swift */; };
 		4E2EEAC6E81AA118B67B62A7 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ED36DF67725DBD3FB27532B /* DebugLogger.swift */; };
@@ -173,6 +174,7 @@
 		C29A32FC9A4A9FC9D4EEA2B3 /* Pagination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B446056E1E646D23AC5A386 /* Pagination.swift */; };
 		C2A58762ED0A342921ED54C5 /* GetAdminEcsHealth200ResponseTasksRunningTasksInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07515EBFFB82ABA59AE7B1BC /* GetAdminEcsHealth200ResponseTasksRunningTasksInner.swift */; };
 		C2BFB5CFC64DD6AA39DE27A9 /* MockLibraryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF5F9505F3C47E3AA6EC456 /* MockLibraryManager.swift */; };
+		C40A110AED3FE9792FAD9BCC /* TokenRefreshConcurrencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99964529AA1594880669274E /* TokenRefreshConcurrencyTests.swift */; };
 		C449BF319191ACDE61D6C94C /* MockProgressManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A094F9A10815C55FE15615D5 /* MockProgressManager.swift */; };
 		C55FCE9C2643A7D3ABF8D9AB /* MockNetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73D9A7E1B3A1D2F65AAF0EBD /* MockNetworkMonitor.swift */; };
 		C596537B461098A2BAD2B473 /* Author.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CCA3952507448577D85CEC4 /* Author.swift */; };
@@ -318,6 +320,7 @@
 		3D5C8D1B24627E61879A3123 /* LibraryCaching.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryCaching.swift; sourceTree = "<group>"; };
 		3D86E0A972888251E5B711BA /* SearchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchManager.swift; sourceTree = "<group>"; };
 		3DBC5E95ADDCFEC9711D042E /* LibraryManagerRealTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryManagerRealTests.swift; sourceTree = "<group>"; };
+		3E4DEB50A2C1A96020BF5358 /* TokenRefreshCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenRefreshCoordinator.swift; sourceTree = "<group>"; };
 		3EC939F1D7424F11C5EA821C /* BrowseConfigurations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseConfigurations.swift; sourceTree = "<group>"; };
 		401D853EEAB68BBDDC671A9F /* GetAdminEcsHealth200ResponseTasks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetAdminEcsHealth200ResponseTasks.swift; sourceTree = "<group>"; };
 		41C5A77DAC8580B34DF605D0 /* AuthorListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorListView.swift; sourceTree = "<group>"; };
@@ -411,6 +414,7 @@
 		975FC8E395E44C586407103B /* MockSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockSyncManager.swift; sourceTree = "<group>"; };
 		979EE877CF17BDB68A318383 /* SyncManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManagerTests.swift; sourceTree = "<group>"; };
 		9820C054F18CE5AD8818988C /* ReorderList200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReorderList200Response.swift; sourceTree = "<group>"; };
+		99964529AA1594880669274E /* TokenRefreshConcurrencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenRefreshConcurrencyTests.swift; sourceTree = "<group>"; };
 		9AA313D2CA147D954C26874C /* GetCatalogSeriesView200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetCatalogSeriesView200Response.swift; sourceTree = "<group>"; };
 		9B2036AC1AC6FCC2E3C628C4 /* UpdatePasswordRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdatePasswordRequest.swift; sourceTree = "<group>"; };
 		9B632504F1EFF890E8E4A3D0 /* GetDownloadHistory200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetDownloadHistory200Response.swift; sourceTree = "<group>"; };
@@ -644,6 +648,7 @@
 				098376B472996D34A36D810C /* SyncManager.swift */,
 				D8A345C0E84FF3442DEA01F4 /* SystemKeychain.swift */,
 				DA52C6B411D3F957152715B2 /* ThemeManager.swift */,
+				3E4DEB50A2C1A96020BF5358 /* TokenRefreshCoordinator.swift */,
 				978B14E2EB9FBBF92564FE27 /* Protocols */,
 			);
 			path = Services;
@@ -786,6 +791,7 @@
 				DA51F8AE3B0CC7675DC78EB7 /* StorageManagerRealTests.swift */,
 				5C3ED8030A548C4725119E56 /* SyncManagerRealTests.swift */,
 				59912876B1D10E089809F0CC /* ThemeManagerRealTests.swift */,
+				99964529AA1594880669274E /* TokenRefreshConcurrencyTests.swift */,
 			);
 			path = Real;
 			sourceTree = "<group>";
@@ -1121,6 +1127,7 @@
 				D3D51466D9CF91F295FB6205 /* SyncManagerTests.swift in Sources */,
 				8EAECB7504F472C1E0D6F294 /* TestFixtures.swift in Sources */,
 				F409C3317D3B084990B695FE /* ThemeManagerRealTests.swift in Sources */,
+				C40A110AED3FE9792FAD9BCC /* TokenRefreshConcurrencyTests.swift in Sources */,
 				00B38F2DE521352C11992363 /* XCTestCase+Async.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1302,6 +1309,7 @@
 				38E68EA6471E52C58E579297 /* SynchronizedDictionary.swift in Sources */,
 				CCDB983A343EDD14EFCCE5C5 /* SystemKeychain.swift in Sources */,
 				2C0E14BEBD7393DF4B6F778E /* ThemeManager.swift in Sources */,
+				49BA1E1DA89DB212836742D5 /* TokenRefreshCoordinator.swift in Sources */,
 				2CA1290BDE161F2F56311BBB /* URLSessionImplementations.swift in Sources */,
 				807BFAB7DFD078BE77B3B10B /* UnregisterDeviceTokenRequest.swift in Sources */,
 				CB87D3DFF6837EA3AA26EF80 /* UpdateListRequest.swift in Sources */,

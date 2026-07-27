@@ -61,25 +61,23 @@ struct ResourceContentInformation {
 
 /// Core, AVFoundation-free implementation of the authenticated resource loader.
 ///
-/// Mirrors the previous delegate behavior exactly, including the single-flight
-/// refresh lock: the first 401 triggers a refresh; a concurrent 401 that arrives
-/// *while* a refresh is in flight does not refresh again — it waits briefly and
-/// reuses whatever token `tokenProvider` then returns.
+/// On 401 the loader refreshes the access token and retries once. Refreshes are
+/// coordinated through a shared `TokenRefreshCoordinator`, so a concurrent 401 —
+/// from another stream request *or* from the JSON API path — joins the in-flight
+/// refresh and resumes when it genuinely completes, then retries with the new
+/// token.
 final class AuthenticatedResourceLoader {
     private let tokenProvider: () -> String?
     private let tokenRefreshHandler: () async -> Bool
     private let session: URLSession
 
-    /// Delay a concurrent (non-refreshing) request waits for the in-flight
-    /// refresh to complete before reusing the refreshed token. Injectable so
-    /// tests need not sleep the real 0.5s.
-    private let concurrentRefreshWait: UInt64
+    /// Single-flight refresh coordination, shared with `APIClient` so a
+    /// streaming 401 and an API 401 join the same refresh rather than each
+    /// starting one and double-consuming the rotated refresh token.
+    private let refreshCoordinator: TokenRefreshCoordinator
 
     private var loadingTasks: [String: URLSessionDataTask] = [:]
     private let tasksLock = NSLock()
-
-    private var isRefreshing = false
-    private let refreshLock = NSLock()
 
     /// Domain used for the NSErrors this loader emits. Kept identical to the
     /// original delegate so existing error handling / logging is unaffected.
@@ -89,12 +87,12 @@ final class AuthenticatedResourceLoader {
         tokenProvider: @escaping () -> String?,
         tokenRefreshHandler: @escaping () async -> Bool,
         session: URLSession,
-        concurrentRefreshWaitNanoseconds: UInt64 = 500_000_000
+        refreshCoordinator: TokenRefreshCoordinator = TokenRefreshCoordinator()
     ) {
         self.tokenProvider = tokenProvider
         self.tokenRefreshHandler = tokenRefreshHandler
         self.session = session
-        concurrentRefreshWait = concurrentRefreshWaitNanoseconds
+        self.refreshCoordinator = refreshCoordinator
     }
 
     // MARK: - Entry point
@@ -258,39 +256,24 @@ final class AuthenticatedResourceLoader {
         loadingRequest: ResourceLoadingRequesting,
         originalURL: URL
     ) {
-        // Single-flight: only the first request through here refreshes.
-        refreshLock.lock()
-        let shouldRefresh = !isRefreshing
-        if shouldRefresh {
-            isRefreshing = true
-        }
-        refreshLock.unlock()
-
         Task {
-            var refreshSucceeded = false
-
-            if shouldRefresh {
-                refreshSucceeded = await tokenRefreshHandler()
-
-                refreshLock.lock()
-                isRefreshing = false
-                refreshLock.unlock()
-
-                if refreshSucceeded {
-                    DebugLogger.auth("Resource loader: Token refresh succeeded - retrying request")
-                } else {
-                    DebugLogger.error("Resource loader: Token refresh failed")
-                }
-            } else {
-                // Another request is already refreshing; wait, then reuse the token it obtained.
-                try? await Task.sleep(nanoseconds: concurrentRefreshWait)
-                refreshSucceeded = tokenProvider() != nil
-                DebugLogger.auth("Resource loader: Waited for concurrent refresh, token available: \(refreshSucceeded)")
-            }
+            // Await the refresh itself, whether we start it or join one already
+            // running — including one started by the JSON API path, since the
+            // coordinator is shared app-wide.
+            //
+            // This previously slept a fixed interval and then checked only that
+            // *a* token existed. When a refresh outran that timer (routine on
+            // cellular), the request retried with the STALE token, took a second
+            // 401, and tore down playback. That was the "audio stops every ~2
+            // hours" bug. Waiting on completion is what actually fixes it.
+            let handler = tokenRefreshHandler
+            let refreshSucceeded = await refreshCoordinator.refresh(using: handler)
 
             if refreshSucceeded {
+                DebugLogger.auth("Resource loader: Token refresh succeeded - retrying request")
                 executeRequest(actualURL: actualURL, loadingRequest: loadingRequest, originalURL: originalURL, isRetry: true)
             } else {
+                DebugLogger.error("Resource loader: Token refresh failed")
                 loadingRequest.complete(with: NSError(
                     domain: Self.errorDomain,
                     code: 401,
