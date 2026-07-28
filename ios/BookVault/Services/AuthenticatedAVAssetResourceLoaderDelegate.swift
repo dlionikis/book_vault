@@ -22,7 +22,16 @@ import Foundation
 class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoaderDelegate {
     private let loader: AuthenticatedResourceLoader
 
-    init(tokenProvider: @escaping () -> String?, tokenRefreshHandler: @escaping () async -> Bool) {
+    /// - Parameter refreshCoordinator: the app-wide refresh coordinator. A new
+    ///   delegate is built for each playback, so this must be passed in rather
+    ///   than created per-instance — otherwise the streaming path would refresh
+    ///   independently of the JSON API path, which is the bug this shares state
+    ///   to avoid.
+    init(
+        tokenProvider: @escaping () -> String?,
+        tokenRefreshHandler: @escaping () async -> Bool,
+        refreshCoordinator: TokenRefreshCoordinator
+    ) {
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 30
         configuration.timeoutIntervalForResource = 300
@@ -31,7 +40,8 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
         loader = AuthenticatedResourceLoader(
             tokenProvider: tokenProvider,
             tokenRefreshHandler: tokenRefreshHandler,
-            session: session
+            session: session,
+            refreshCoordinator: refreshCoordinator
         )
 
         super.init()

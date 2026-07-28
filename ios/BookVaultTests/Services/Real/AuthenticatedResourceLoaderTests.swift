@@ -87,10 +87,7 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
         AuthenticatedResourceLoader(
             tokenProvider: tokenProvider ?? { token },
             tokenRefreshHandler: refresh,
-            session: mockSession,
-            // Keep the concurrent-wait tiny so the "loser" of the single-flight
-            // race doesn't stall the test for the production 0.5s.
-            concurrentRefreshWaitNanoseconds: 20_000_000
+            session: mockSession
         )
     }
 
@@ -282,8 +279,7 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
                 refreshExpectation.fulfill()
                 return true
             },
-            session: mockSession,
-            concurrentRefreshWaitNanoseconds: 20_000_000
+            session: mockSession
         )
 
         let request = MockResourceLoadingRequest(url: URL(string: "bookvaults://example.com/a.m4b")!)
@@ -352,10 +348,7 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
                 try? await Task.sleep(nanoseconds: 200_000_000)
                 return true
             },
-            session: mockSession,
-            // Loser waits longer than the refresh above so it reuses the token
-            // after the refresh completes, rather than racing it.
-            concurrentRefreshWaitNanoseconds: 400_000_000
+            session: mockSession
         )
 
         let firstAttempt = AtomicCounter()

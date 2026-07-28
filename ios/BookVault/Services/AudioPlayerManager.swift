@@ -544,7 +544,8 @@ class AudioPlayerManager: ObservableObject {
             // This allows the delegate to get fresh tokens after refresh and handle 401s
             self.resourceLoaderDelegate = AuthenticatedAVAssetResourceLoaderDelegate(
                 tokenProvider: authTokenProvider,
-                tokenRefreshHandler: tokenRefreshHandler
+                tokenRefreshHandler: tokenRefreshHandler,
+                refreshCoordinator: .shared
             )
 
             // Create AVAsset with resource loader
