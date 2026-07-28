@@ -133,11 +133,23 @@ Tests 1–3 stay in the suite as regression guards even though they pass: they p
 
 ### Tier 2 — Compressed on-device repro (~5 minutes, not 2 hours)
 
-Set `JWT_ACCESS_TOKEN_EXPIRY=60` in the local `.env`, point the app at the dev server, and start playback. A refresh cycle every 60 s compresses ~2 hours of exposure into a few minutes, and — unlike Tier 1 — exercises the real AVPlayer + progress-sync overlap where the concurrency window actually opens. Highest-value verification step.
+A refresh cycle every 60 s compresses ~2 hours of exposure into a few minutes, and — unlike Tier 1 — exercises the real AVPlayer + progress-sync overlap where the concurrency window actually opens. Highest-value verification step.
 
-Capture with `log stream` filtered to the app; the `DebugLogger.auth` lines already trace refresh start/completion/waiter counts.
+**`JWT_ACCESS_TOKEN_EXPIRY` is server-side only** ([`lib/jwt.ts`](../../lib/jwt.ts) reads it when minting the token). iOS consumes whatever expiry it is handed, so **no app rebuild is needed** to change it and there is no iOS-side setting for it.
 
-Vary across runs: foreground vs. backgrounded/locked, and a wifi↔cellular switch mid-playback.
+**Recommended setup — local server + physical device on the LAN.** Real device, real AVPlayer, zero production impact, instant rollback.
+
+1. `JWT_ACCESS_TOKEN_EXPIRY="60"` in `.env.local`, then restart `npm run dev`.
+2. Point the Debug build at the Mac's LAN IP instead of `localhost` — a device cannot reach `localhost`. Edit `API_BASE_URL` in [`ios/Config/Debug.xcconfig`](../../ios/Config/Debug.xcconfig) (note the `$()` escaping used to keep `//` from being read as a comment), then `cd ios && xcodegen generate` and rebuild.
+3. No ATS change required: `NSAllowsArbitraryLoads` is already set in [`Info.plist`](../../ios/BookVault/Info.plist), so cleartext HTTP to a LAN IP is permitted.
+
+Capture with `log stream` filtered to the app. The `DebugLogger.auth` lines already trace refresh start/completion/waiter counts, and after this fix also log `"Token already refreshed since this request began - skipping redundant refresh"` — seeing that line is positive confirmation the Defect 5 guard is firing on real traffic.
+
+**What to look for:** exactly one refresh per expiry cycle, no `forceLogout`, and playback continuing across several cycles. More than one refresh per cycle means a surplus rotated-token consumption survived.
+
+Vary across runs: foreground vs. backgrounded/locked, and a wifi↔cellular switch mid-playback (the latter is what makes refresh latency exceed the old fixed timer).
+
+**Alternative — prod at 60 s.** More realistic but higher blast radius: `JWT_ACCESS_TOKEN_EXPIRY` is baked into the ECS **task definition** (`book-vault:9`), which is immutable, so changing it means registering a new revision and pointing the service at it — infra-only, no image rebuild, ~2–3 min to roll. Rollback is re-pointing at `:9`. Every live session gets 60 s tokens while set (web is unaffected; NextAuth is separate). Only meaningful **after** this PR is merged and deployed — against current prod code it just reproduces the bug faster.
 
 ### Tier 3 — Full soak, once, as final confirmation
 
