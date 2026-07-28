@@ -62,16 +62,44 @@ actor TokenRefreshCoordinator {
     /// Whether a refresh is currently in flight.
     private var isRefreshing = false
 
-    /// Perform a token refresh, or join the one already in progress.
+    /// Incremented on every successful refresh. Callers capture this before
+    /// issuing a request and pass it back if that request 401s; a value that has
+    /// moved on means the token was already replaced while the request was in
+    /// flight, so there is nothing left to refresh.
+    private var generation: UInt64 = 0
+
+    /// The current token generation. Capture this *before* issuing a request.
+    func currentGeneration() -> UInt64 {
+        generation
+    }
+
+    /// Perform a token refresh, join the one in progress, or skip it entirely if
+    /// the token has already been replaced since `observedGeneration`.
     ///
     /// Exactly one caller runs `operation`; all others suspend until it
     /// finishes and then receive its result. Safe to call from any task.
     ///
-    /// - Parameter operation: performs the actual refresh. Only invoked for the
-    ///   caller that wins the claim.
-    /// - Returns: whether the refresh succeeded — the same value for the
-    ///   winning caller and every joiner.
-    func refresh(using operation: @Sendable () async -> Bool) async -> Bool {
+    /// - Parameters:
+    ///   - observedGeneration: the generation captured before the request that
+    ///     just 401'd. Pass `nil` to force a refresh attempt regardless.
+    ///   - operation: performs the actual refresh. Only invoked for the caller
+    ///     that wins the claim.
+    /// - Returns: whether a valid token is now available — `true` both for a
+    ///   successful refresh and for a caller whose token was already renewed.
+    func refresh(
+        observedGeneration: UInt64? = nil,
+        using operation: @Sendable () async -> Bool
+    ) async -> Bool {
+        // A request issued before some *completed* refresh can still 401 (it was
+        // already in flight when the token was swapped). Its 401 is stale
+        // information: the token is fresh now, so refreshing again would burn a
+        // rotated refresh token for nothing — the very failure this type exists
+        // to prevent. Tell the caller to just retry.
+        if let observedGeneration, observedGeneration < generation {
+            DebugLogger.auth("Token already refreshed since this request began - skipping redundant refresh")
+            return true
+        }
+
         // Claim-or-join is atomic: this runs to the first suspension point
         // without interleaving, so exactly one caller can observe
         // `isRefreshing == false` and flip it.
@@ -90,6 +118,12 @@ actor TokenRefreshCoordinator {
         isRefreshing = true
 
         let success = await operation()
+
+        // Bump before releasing the flag, so any caller that observed the
+        // pre-refresh generation is correctly told to retry rather than refresh.
+        if success {
+            generation &+= 1
+        }
 
         // Take the waiters and reset state before resuming anyone, so a caller
         // that arrives during resumption starts a fresh refresh rather than

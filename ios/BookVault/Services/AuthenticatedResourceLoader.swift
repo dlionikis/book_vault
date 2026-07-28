@@ -116,7 +116,20 @@ final class AuthenticatedResourceLoader {
 
         DebugLogger.verbose("Resource loader: Actual URL = \(actualURL.absoluteString)")
 
-        executeRequest(actualURL: actualURL, loadingRequest: request, originalURL: url, isRetry: false)
+        // Read the token generation before dispatching, so a 401 caused by a
+        // refresh that landed mid-flight is recognized as stale and retried
+        // rather than triggering a second, redundant refresh. `startLoading` must
+        // stay synchronous for AVFoundation, so the capture happens in a Task.
+        Task {
+            let generation = await refreshCoordinator.currentGeneration()
+            executeRequest(
+                actualURL: actualURL,
+                loadingRequest: request,
+                originalURL: url,
+                isRetry: false,
+                observedGeneration: generation
+            )
+        }
         return true
     }
 
@@ -172,11 +185,16 @@ final class AuthenticatedResourceLoader {
 
     // MARK: - Execution
 
+    /// - Parameter observedGeneration: token generation captured before this
+    ///   request was issued, or `nil` if not yet known (the first attempt, which
+    ///   reads it lazily on 401). Used to detect a 401 that is stale because a
+    ///   refresh completed while the request was in flight.
     private func executeRequest(
         actualURL: URL,
         loadingRequest: ResourceLoadingRequesting,
         originalURL: URL,
-        isRetry: Bool
+        isRetry: Bool,
+        observedGeneration: UInt64? = nil
     ) {
         guard let request = makeAuthenticatedRequest(url: actualURL, for: loadingRequest) else {
             loadingRequest.complete(with: NSError(
@@ -215,7 +233,12 @@ final class AuthenticatedResourceLoader {
             // 401 → refresh token and retry (only once).
             if httpResponse.statusCode == 401, !isRetry {
                 DebugLogger.auth("Resource loader: Received 401 - attempting token refresh...")
-                self.handleUnauthorized(actualURL: actualURL, loadingRequest: loadingRequest, originalURL: originalURL)
+                self.handleUnauthorized(
+                    actualURL: actualURL,
+                    loadingRequest: loadingRequest,
+                    originalURL: originalURL,
+                    observedGeneration: observedGeneration
+                )
                 return
             }
 
@@ -254,7 +277,8 @@ final class AuthenticatedResourceLoader {
     private func handleUnauthorized(
         actualURL: URL,
         loadingRequest: ResourceLoadingRequesting,
-        originalURL: URL
+        originalURL: URL,
+        observedGeneration: UInt64?
     ) {
         Task {
             // Await the refresh itself, whether we start it or join one already
@@ -267,7 +291,10 @@ final class AuthenticatedResourceLoader {
             // 401, and tore down playback. That was the "audio stops every ~2
             // hours" bug. Waiting on completion is what actually fixes it.
             let handler = tokenRefreshHandler
-            let refreshSucceeded = await refreshCoordinator.refresh(using: handler)
+            let refreshSucceeded = await refreshCoordinator.refresh(
+                observedGeneration: observedGeneration,
+                using: handler
+            )
 
             if refreshSucceeded {
                 DebugLogger.auth("Resource loader: Token refresh succeeded - retrying request")

@@ -1,8 +1,8 @@
 # iOS: Logout + Audio Stops Every ~2 Hours — Requirements
 
 > **Created**: July 25, 2026
-> **Updated**: July 27, 2026 — root cause confirmed by test; fix implemented, all 4 defects closed
-> **Status**: **Fix implemented and green** (690 iOS tests, 0 failures). Awaiting Tier 2 on-device verification.
+> **Updated**: July 28, 2026 — CI caught an incomplete first fix (Defect 5); generation guard added
+> **Status**: **Fix implemented and green** (691 iOS tests, 0 failures; CI green). Awaiting Tier 2 on-device verification.
 > **Priority**: TBD
 > **Platform**: iOS only (confirmed not observed on web)
 
@@ -176,9 +176,25 @@ All four defects closed. The central change is that **one coordinator now serves
 - [`AuthenticatedResourceLoader.swift`](../../ios/BookVault/Services/AuthenticatedResourceLoader.swift) — **the core fix.** Replaced the `NSLock` + fixed-`Task.sleep` scheme with an await on the shared coordinator. The `concurrentRefreshWaitNanoseconds` parameter is gone: waiting is now on the refresh genuinely completing, so there is no timer to out-run. Also removes an `NSLock`-in-async-context warning that was slated to become a Swift 6 error.
 - [`AuthenticatedAVAssetResourceLoaderDelegate.swift`](../../ios/BookVault/Services/AuthenticatedAVAssetResourceLoaderDelegate.swift) / [`AudioPlayerManager.swift`](../../ios/BookVault/Services/AudioPlayerManager.swift) — the coordinator is injected rather than created per-delegate. A delegate is built for each playback, so constructing one per instance would have silently restored the two-coordinator bug.
 
-**Tests:** 6 in [`TokenRefreshConcurrencyTests.swift`](../../ios/BookVaultTests/Services/Real/TokenRefreshConcurrencyTests.swift), all green; full iOS suite 690 passing, SwiftLint clean on every touched file.
+**Tests:** 7 in [`TokenRefreshConcurrencyTests.swift`](../../ios/BookVaultTests/Services/Real/TokenRefreshConcurrencyTests.swift), all green; full iOS suite 691 passing, SwiftLint clean on every touched file.
 
-The sixth test, `testStreamingAndAPIPathsShareOneRefresh`, is the one that matters most — it drives an API 401 and a streaming 401 concurrently and asserts a single refresh. **Verified to genuinely fail (2 refreshes) when the coordinator is un-shared**, so it will catch any future regression that reintroduces a second refresh mechanism. That is precisely the gap that survived both PR #56 and PR #66.
+`testStreamingAndAPIPathsShareOneRefresh` is the one that matters most — it drives an API 401 and a streaming 401 concurrently and asserts a single refresh. **Verified to genuinely fail (2 refreshes) when the coordinator is un-shared**, so it will catch any future regression that reintroduces a second refresh mechanism. That is precisely the gap that survived both PR #56 and PR #66.
+
+### Defect 5 — stale 401 triggers a redundant refresh (caught by CI, not local)
+
+**The first version of this fix was incomplete.** CI failed `testConcurrentUnauthorizedRequestsTriggerExactlyOneRefresh` with **"got 2"** — two refreshes on 8 concurrent 401s — while the same test passed 5/5 locally at 0.07 s. CI took 0.911 s, ~13× slower, which opened a window a fast machine never hit.
+
+The mechanism is not a race in the coordinator; it is a **stale 401**. Requests do not all 401 at the same instant. A request already in flight when a refresh completes is still answered `401` — the server decided that before the token was swapped. By the time that late 401 surfaces, the coordinator is idle, so there is nothing to join and the caller starts a **second, sequential** refresh. The token was already fresh, so in production that surplus refresh **consumes a rotated refresh token for nothing** — the exact failure this work set out to eliminate.
+
+Fix: a **generation counter** in the coordinator, incremented on each successful refresh. Callers capture the generation _before_ issuing a request and pass it back if that request 401s; if the generation has advanced, the 401 is stale and the caller is told to retry instead of refreshing again.
+
+- `TokenRefreshCoordinator.currentGeneration()` plus a `observedGeneration:` parameter on `refresh(...)`.
+- `APIClient.execute` / `executeRaw` capture the generation before `session.data(for:)`.
+- `AuthenticatedResourceLoader.startLoading` captures it before dispatching, threading it through `executeRequest` → `handleUnauthorized`. (`startLoading` must stay synchronous for AVFoundation, so the capture happens in a `Task`.)
+
+Guarded by `testLateArriving401DoesNotTriggerSecondRefresh`, which sequences on **explicit signals rather than timing**, so it behaves identically on a fast laptop and a slow runner (0.008 s, no sleeps).
+
+**Process note worth keeping.** My first attempt at that test passed even with the fix disabled — it was vacuous, because a blocking `XCTWaiter` in the URLProtocol handler meant the intended interleaving never occurred. It was rewritten and then **verified to fail with "got 2"** when the generation guard is disabled, matching CI exactly. Any new concurrency test here should be confirmed to fail against the unfixed code before being trusted; a passing test is not evidence until then.
 
 ### Remaining risk
 

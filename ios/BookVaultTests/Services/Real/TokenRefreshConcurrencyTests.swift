@@ -178,6 +178,66 @@ final class TokenRefreshConcurrencyTests: XCTestCase {
         )
     }
 
+    /// A request already in flight when a refresh completes still comes back 401
+    /// — its response was decided by the server before the token was swapped.
+    /// That 401 is stale information and must NOT start a second refresh.
+    ///
+    /// Guards Defect 5, which CI caught and a fast local machine did not: the
+    /// original fix produced 2 refreshes here because the coordinator was empty
+    /// by the time the late 401 arrived, so there was nothing to join. In
+    /// production each surplus refresh burns a rotated refresh token.
+    ///
+    /// The stagger is forced rather than left to scheduling luck, so this is
+    /// deterministic on any machine speed.
+    func testLateArriving401DoesNotTriggerSecondRefresh() async {
+        let refreshCount = AtomicCounter()
+
+        // Sequencing is explicit rather than time-based, so the interleaving is
+        // identical on a fast laptop and a slow CI runner.
+        let refreshHasCompleted = XCTestExpectation(description: "refresh completed")
+
+        // Every request 401s. The token value is irrelevant here: the point is
+        // that a request issued BEFORE the refresh can still be answered 401 by
+        // the server, and that late 401 must not start another refresh.
+        MockURLProtocol.requestHandler = { [self] request in
+            (response(401, for: request), Data("{}".utf8))
+        }
+
+        sut.tokenRefreshHandler = { [self] in
+            _ = refreshCount.increment()
+            sut.accessToken = "fresh-token"
+            refreshHasCompleted.fulfill()
+            return true
+        }
+
+        // Drive one legitimate refresh to completion. This request ends up
+        // throwing (the retry also 401s), which is fine — we only need the
+        // refresh to have happened and the generation to have advanced.
+        _ = try? await sut.fetchBooks()
+        await fulfillment(of: [refreshHasCompleted], timeout: 2.0)
+
+        XCTAssertEqual(refreshCount.current, 1, "Setup should have produced exactly one refresh")
+
+        // Now simulate a request that was issued BEFORE that refresh and whose
+        // 401 arrives only now: it carries the pre-refresh generation.
+        let staleGeneration: UInt64 = 0
+        let recovered = await sut.refreshForTesting(observedGeneration: staleGeneration)
+
+        XCTAssertTrue(
+            recovered,
+            "A caller whose token was already refreshed should be told to retry, not fail"
+        )
+        XCTAssertEqual(
+            refreshCount.current,
+            1,
+            """
+            Expected still exactly one refresh, got \(refreshCount.current). A 401 that \
+            arrived after the token was already refreshed triggered a redundant refresh, \
+            consuming a rotated refresh token for nothing (Defect 5).
+            """
+        )
+    }
+
     /// The rotation consequence stated directly: a refresh token must never be
     /// submitted to the refresh endpoint twice.
     ///

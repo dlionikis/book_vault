@@ -237,6 +237,11 @@ class APIClient: APIClientProtocol {
             DebugLogger.error("🚫 Task already cancelled BEFORE request: \(path)")
         }
 
+        // Capture the token generation BEFORE issuing the request. If a refresh
+        // completes while this is in flight, the 401 we may get back is stale
+        // information and must not trigger another refresh.
+        let generationAtSend = await refreshCoordinator.currentGeneration()
+
         DebugLogger.info("🌐 URLSession.data starting for: \(path)")
         let (data, response): (Data, URLResponse)
         do {
@@ -271,7 +276,7 @@ class APIClient: APIClientProtocol {
         case 401:
             // Attempt token refresh before forcing logout
             DebugLogger.auth("Received 401 Unauthorized for \(path) - access token expired, attempting refresh...")
-            if await attemptTokenRefresh() {
+            if await attemptTokenRefresh(observedGeneration: generationAtSend) {
                 // Retry the original request with new token
                 DebugLogger.auth("Token refresh succeeded - retrying original request to \(path)")
                 var retryRequest = request
@@ -341,6 +346,8 @@ class APIClient: APIClientProtocol {
     /// everything else in `200...299` is returned verbatim.
     private func executeRaw(request: URLRequest) async throws -> (statusCode: Int, data: Data) {
         let path = request.url?.path ?? "unknown"
+        // Captured before the request; see `execute` for why.
+        let generationAtSend = await refreshCoordinator.currentGeneration()
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -358,7 +365,7 @@ class APIClient: APIClientProtocol {
             return (httpResponse.statusCode, data)
         case 401:
             DebugLogger.auth("Received 401 for \(path) - attempting token refresh...")
-            if await attemptTokenRefresh() {
+            if await attemptTokenRefresh(observedGeneration: generationAtSend) {
                 var retryRequest = request
                 if let newToken = accessToken {
                     retryRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
@@ -420,15 +427,27 @@ class APIClient: APIClientProtocol {
     }
 
     /// Attempt to refresh the access token
-    /// Returns true if refresh succeeded. If one is already in progress —
-    /// started here or by the streaming path — waits for it and returns its result.
-    private func attemptTokenRefresh() async -> Bool {
+    /// Returns true if a valid token is now available. If a refresh is already in
+    /// progress — started here or by the streaming path — waits for it and returns
+    /// its result. If the token was already replaced since `observedGeneration`,
+    /// returns true immediately without refreshing again.
+    ///
+    /// - Parameter observedGeneration: the token generation captured *before* the
+    ///   request that 401'd was issued.
+    private func attemptTokenRefresh(observedGeneration: UInt64?) async -> Bool {
         // Claim-or-join is a single atomic step inside the actor, so concurrent
         // 401s produce exactly one refresh. The coordinator is shared with the
         // AVPlayer streaming path, so a streaming refresh and an API refresh
         // can never run at once and double-consume the rotated refresh token.
         let handler = tokenRefreshHandler
-        return await refreshCoordinator.refresh(using: handler)
+        return await refreshCoordinator.refresh(observedGeneration: observedGeneration, using: handler)
+    }
+
+    /// Test seam: drive the refresh path with an explicit observed generation,
+    /// simulating a request that was issued before a refresh completed and whose
+    /// 401 only arrives afterwards. Not used in production code.
+    func refreshForTesting(observedGeneration: UInt64?) async -> Bool {
+        await attemptTokenRefresh(observedGeneration: observedGeneration)
     }
 
     /// Force a logout exactly once per session teardown.
