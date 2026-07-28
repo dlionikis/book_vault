@@ -12,8 +12,8 @@ import SwiftUI
 
 /// Main downloads management screen
 struct DownloadsView: View {
-    @StateObject private var downloadManager = DownloadManager.shared
-    @StateObject private var storageManager = StorageManager.shared
+    @ObservedObject private var downloadManager = DownloadManager.shared
+    @ObservedObject private var storageManager = StorageManager.shared
     @State private var showingDeleteAllConfirmation = false
     @State private var showingSettings = false
 
@@ -183,7 +183,7 @@ struct StorageSummaryRow: View {
 
 struct ActiveDownloadRow: View {
     let download: ActiveDownload
-    @StateObject private var downloadManager = DownloadManager.shared
+    @ObservedObject private var downloadManager = DownloadManager.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -285,7 +285,7 @@ struct ActiveDownloadRow: View {
 struct DownloadedBookRow: View {
     let download: DownloadedBook
     @State private var showingDeleteConfirmation = false
-    @StateObject private var storageManager = StorageManager.shared
+    @ObservedObject private var storageManager = StorageManager.shared
 
     var body: some View {
         HStack(spacing: 12) {

@@ -15,7 +15,7 @@ struct BrowseDetailView<Detail: BrowseDetailResponse>: View {
     let itemId: String
     let configuration: BrowseDetailConfiguration<Detail>
 
-    @StateObject private var searchManager = SearchManager.shared
+    @ObservedObject private var searchManager = SearchManager.shared
     @State private var detail: Detail?
     @State private var isLoading = true
     @State private var errorMessage: String?

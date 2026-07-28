@@ -12,9 +12,9 @@ import SwiftUI
 struct BookDetailView: View {
     let book: Book
     @StateObject private var chapterManager = ChapterManager()
-    @StateObject private var libraryManager = LibraryManager.shared
-    @StateObject private var networkMonitor = NetworkMonitor.shared
-    @StateObject private var storageManager = StorageManager.shared
+    @ObservedObject private var libraryManager = LibraryManager.shared
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
+    @ObservedObject private var storageManager = StorageManager.shared
     @State private var showingNowPlaying = false
     @State private var isInLibrary = false
     @State private var isCheckingLibrary = false
@@ -405,7 +405,7 @@ struct LibraryButton: View {
     @Binding var noticeMessage: String?
     let onLibraryStatusChanged: () -> Void
 
-    @StateObject private var libraryManager = LibraryManager.shared
+    @ObservedObject private var libraryManager = LibraryManager.shared
 
     private var hasSeries: Bool {
         book.series?.isEmpty == false
@@ -563,8 +563,8 @@ struct MetadataRow: View {
 /// Download management button component
 struct DownloadButton: View {
     let book: Book
-    @StateObject private var downloadManager = DownloadManager.shared
-    @StateObject private var storageManager = StorageManager.shared
+    @ObservedObject private var downloadManager = DownloadManager.shared
+    @ObservedObject private var storageManager = StorageManager.shared
     @State private var showingDeleteConfirmation = false
     @State private var downloadError: String?
     @State private var showingError = false

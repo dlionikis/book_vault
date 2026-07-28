@@ -8,9 +8,9 @@
 import SwiftUI
 
 struct LoginView: View {
-    @StateObject private var authManager = AuthManager.shared
-    @StateObject private var biometricManager = BiometricAuthManager.shared
-    @StateObject private var networkMonitor = NetworkMonitor.shared
+    @ObservedObject private var authManager = AuthManager.shared
+    @ObservedObject private var biometricManager = BiometricAuthManager.shared
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
 
     @State private var username = ""
     @State private var password = ""

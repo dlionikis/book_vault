@@ -12,11 +12,12 @@ import Foundation
 /// Manages user progress sync with backend API
 /// This is a lightweight wrapper around APIClient for progress-related operations
 /// Phase 8: Now supports local-first saving with offline sync
+@MainActor
 class ProgressManager: ObservableObject, ProgressManaging {
     static let shared = ProgressManager()
 
-    @MainActor @Published var isLoading = false
-    @MainActor @Published var error: Error?
+    @Published var isLoading = false
+    @Published var error: Error?
 
     private let apiClient: any APIClientProtocol
     private let offlineProgressStore: any OfflineStoring
@@ -45,7 +46,6 @@ class ProgressManager: ObservableObject, ProgressManaging {
     ///   - apiClient: API client for server communication
     ///   - offlineStore: Offline progress storage
     ///   - networkMonitor: Network connectivity monitor
-    @MainActor
     init(
         apiClient: any APIClientProtocol,
         offlineStore: any OfflineStoring,
@@ -62,7 +62,6 @@ class ProgressManager: ObservableObject, ProgressManaging {
     /// Uses in-memory cache to avoid repeated API calls on tab switches
     /// - Parameter bookId: The book's UUID string
     /// - Returns: UserProgress with position and completion status
-    @MainActor
     func fetchProgress(for bookId: String) async throws -> UserProgress {
         // Check in-memory cache first (avoids API calls on tab switches)
         if let cached = progressCache[bookId],
@@ -153,7 +152,6 @@ class ProgressManager: ObservableObject, ProgressManaging {
     ///   - timestamp: Optional timestamp for conflict resolution (not currently used by APIClient)
     /// - Returns: SaveProgressResponse with updated status
     @discardableResult
-    @MainActor
     func saveProgress(
         for bookId: String,
         positionSeconds: Double,
@@ -225,7 +223,6 @@ class ProgressManager: ObservableObject, ProgressManaging {
 
     /// Mark a book as completed
     /// - Parameter bookId: The book's UUID string
-    @MainActor
     func markCompleted(bookId: String) async throws {
         // Invalidate cache so next fetch gets fresh data
         progressCache.removeValue(forKey: bookId)
@@ -243,7 +240,6 @@ class ProgressManager: ObservableObject, ProgressManaging {
 
     /// Reset a book's progress (mark as not started)
     /// - Parameter bookId: The book's UUID string
-    @MainActor
     func resetProgress(bookId: String) async throws {
         // Invalidate cache so next fetch gets fresh data
         progressCache.removeValue(forKey: bookId)
@@ -260,7 +256,6 @@ class ProgressManager: ObservableObject, ProgressManaging {
     }
 
     /// Clear all cached progress (call on logout)
-    @MainActor
     func clearCache() {
         progressCache.removeAll()
     }

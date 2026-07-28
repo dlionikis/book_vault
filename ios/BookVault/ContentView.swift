@@ -24,10 +24,10 @@ enum Tab {
 
 struct ContentView: View {
     @EnvironmentObject var authManager: AuthManager
-    @StateObject private var themeManager = ThemeManager.shared
-    @StateObject private var networkMonitor = NetworkMonitor.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
     @ObservedObject private var audioPlayer = AudioPlayerManager.shared
-    @StateObject private var deepLinkManager = DeepLinkManager.shared
+    @ObservedObject private var deepLinkManager = DeepLinkManager.shared
     @State private var hasLoadedInitialBook = false
     @State private var selectedTab: Tab = .catalog
     @State private var previousOnlineTab: Tab? // Remember tab when going offline

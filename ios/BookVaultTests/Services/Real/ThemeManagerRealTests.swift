@@ -10,6 +10,8 @@ import SwiftUI
 import XCTest
 @testable import BookVault
 
+// ThemeManager is @MainActor-isolated, so the tests must be too.
+@MainActor
 final class ThemeManagerRealTests: XCTestCase {
     // MARK: - Properties
 

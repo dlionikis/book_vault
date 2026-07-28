@@ -13,8 +13,8 @@ import SwiftUI
 struct SeriesDetailView: View {
     let seriesId: String
 
-    @StateObject private var searchManager = SearchManager.shared
-    @StateObject private var libraryManager = LibraryManager.shared
+    @ObservedObject private var searchManager = SearchManager.shared
+    @ObservedObject private var libraryManager = LibraryManager.shared
     @State private var seriesDetail: GetSeries200Response?
     @State private var isLoading = true
     @State private var errorMessage: String?

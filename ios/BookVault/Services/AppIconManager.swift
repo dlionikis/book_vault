@@ -47,6 +47,7 @@ enum AppIconColor: String, CaseIterable, Identifiable {
 // MARK: - AppIconManager
 
 /// Manages alternate app icon selection and persistence
+@MainActor
 class AppIconManager: ObservableObject {
     static let shared = AppIconManager()
 

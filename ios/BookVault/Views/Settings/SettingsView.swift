@@ -10,10 +10,10 @@ import SwiftUI
 /// Settings screen with user preferences and account management
 struct SettingsView: View {
     @EnvironmentObject var authManager: AuthManager
-    @StateObject private var themeManager = ThemeManager.shared
-    @StateObject private var appIconManager = AppIconManager.shared
-    @StateObject private var biometricManager = BiometricAuthManager.shared
-    @StateObject private var playbackSettings = PlaybackSettings.shared
+    @ObservedObject private var themeManager = ThemeManager.shared
+    @ObservedObject private var appIconManager = AppIconManager.shared
+    @ObservedObject private var biometricManager = BiometricAuthManager.shared
+    @ObservedObject private var playbackSettings = PlaybackSettings.shared
     @State private var showingLogoutConfirmation = false
     @State private var showingDisableBiometricConfirmation = false
     @State private var showingClearCacheConfirmation = false

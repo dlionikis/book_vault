@@ -29,6 +29,7 @@ enum AppTheme: String, CaseIterable {
 // MARK: - ThemeManager
 
 /// Manages app theme preferences
+@MainActor
 class ThemeManager: ObservableObject {
     static let shared = ThemeManager()
 
