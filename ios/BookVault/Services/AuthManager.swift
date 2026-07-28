@@ -17,10 +17,12 @@ class AuthManager: ObservableObject, AuthManaging {
     @Published private(set) var currentUser: User?
     @Published private(set) var isLoading = false
     @Published private(set) var isRestoringSession = true  // Track session restoration state
+    @Published private(set) var isOfflineMode = false      // Local offline-only session (Phase 8b)
     @Published var errorMessage: String?
 
     private var apiClient: APIClientProtocol
     private let keychain: KeychainStoring
+    private let networkMonitor: any NetworkMonitoring
     private var refreshTokenValue: UUID?
 
     // Keychain keys
@@ -59,9 +61,12 @@ class AuthManager: ObservableObject, AuthManaging {
     }
 
     // Testable initializer (no automatic session restoration)
-    init(apiClient: APIClientProtocol, keychain: KeychainStoring) {
+    init(apiClient: APIClientProtocol,
+         keychain: KeychainStoring,
+         networkMonitor: any NetworkMonitoring = NetworkMonitor.shared) {
         self.apiClient = apiClient
         self.keychain = keychain
+        self.networkMonitor = networkMonitor
         self.isRestoringSession = false  // Tests manage their own session state
     }
 
@@ -146,6 +151,15 @@ class AuthManager: ObservableObject, AuthManaging {
 
         DebugLogger.auth("Refresh attempt starting - refreshToken: \(String(refreshToken.uuidString.prefix(8)))...")
 
+        // Do not attempt (or let a failure tear down the session) when offline.
+        // A network-caused refresh failure is transient, not an auth rejection,
+        // so clearing the session here would strand a merely-offline user at the
+        // login screen. Keep the session and let the app fall into offline mode.
+        guard networkMonitor.isConnected else {
+            DebugLogger.auth("Refresh skipped - device offline; preserving session")
+            return false
+        }
+
         do {
             DebugLogger.auth("Sending refresh request to /api/auth/mobile/refresh")
             let response = try await apiClient.refreshToken(refreshToken: refreshToken)
@@ -166,27 +180,90 @@ class AuthManager: ObservableObject, AuthManaging {
             DebugLogger.success("Token refresh successful - session extended for \(response.expiresIn)s")
             return true
         } catch let error as APIError {
-            // Log specific API error details
+            // Only a genuine auth rejection (401) should tear the session down.
+            // Network/decoding/5xx failures are transient — preserve the session
+            // so the user keeps a working offline experience.
             switch error {
             case .unauthorized:
-                DebugLogger.error("REFRESH FAILED: Server returned 401 Unauthorized - refresh token may be invalid/expired")
-            case .serverError(let code, let message):
+                DebugLogger.error("REFRESH FAILED: Server returned 401 Unauthorized - refresh token invalid/expired")
+                DebugLogger.auth("Clearing session due to auth rejection")
+                clearSession()
+                return false
+            case let .serverError(code, message):
                 DebugLogger.error("REFRESH FAILED: Server error \(code) - \(message ?? "no message")")
-            case .networkError(let underlying):
-                DebugLogger.error("REFRESH FAILED: Network error - \(underlying.localizedDescription)")
-            case .decodingError(let underlying):
-                DebugLogger.error("REFRESH FAILED: Decoding error - \(underlying.localizedDescription)")
+                if code == 401 {
+                    DebugLogger.auth("Clearing session due to 401 server error")
+                    clearSession()
+                }
+                return false // 5xx and other server errors are transient - keep session
+            case let .networkError(underlying):
+                DebugLogger.error("REFRESH FAILED: Network error - \(underlying.localizedDescription); preserving session")
+                return false
+            case let .decodingError(underlying):
+                DebugLogger.error("REFRESH FAILED: Decoding error - \(underlying.localizedDescription); preserving session")
+                return false
             default:
-                DebugLogger.error("REFRESH FAILED: API error - \(error.localizedDescription)")
+                DebugLogger.error("REFRESH FAILED: API error - \(error.localizedDescription); preserving session")
+                return false
             }
-            DebugLogger.auth("Clearing session due to refresh failure")
-            clearSession()
-            return false
         } catch {
-            DebugLogger.error("REFRESH FAILED: Unexpected error - \(error.localizedDescription)")
-            DebugLogger.auth("Clearing session due to refresh failure")
-            clearSession()
+            DebugLogger.error("REFRESH FAILED: Unexpected error - \(error.localizedDescription); preserving session")
             return false
+        }
+    }
+
+    // MARK: - Offline Mode (Phase 8b)
+
+    /// True when a prior online session's user data still lives in the keychain,
+    /// meaning an offline session can be reconstructed on this device.
+    var hasRestorableSession: Bool {
+        keychain.load(key: userDataKey) != nil
+    }
+
+    /// Enter a local, offline-only session. Rehydrates the cached user so that
+    /// user-scoped caches (library, progress) resolve, without claiming an
+    /// online-verified session. Downloaded audio plays entirely from local disk.
+    ///
+    /// Callers are expected to gate this behind identity verification (biometric)
+    /// so it is not an authentication bypass.
+    func enterOfflineMode() {
+        guard let userDataString = keychain.load(key: userDataKey),
+              let userData = userDataString.data(using: .utf8),
+              let user = try? JSONDecoder().decode(User.self, from: userData)
+        else {
+            DebugLogger.auth("enterOfflineMode: no cached user to restore")
+            errorMessage = "No offline session available on this device."
+            return
+        }
+
+        // Restore any cached tokens. The access token may be expired; that is
+        // fine because offline mode only touches local content.
+        if let accessToken = keychain.load(key: accessTokenKey) {
+            apiClient.accessToken = accessToken
+        }
+        if let refreshTokenString = keychain.load(key: refreshTokenKey) {
+            refreshTokenValue = UUID(uuidString: refreshTokenString)
+        }
+
+        currentUser = user
+        isOfflineMode = true
+        isRestoringSession = false
+        errorMessage = nil
+        DebugLogger.auth("Entered offline mode for user: \(user.username)")
+    }
+
+    /// Called when connectivity returns during an offline session. Attempts a
+    /// token refresh and, on success, upgrades to a full online session so the
+    /// online-only tabs become available again.
+    func promoteToOnlineIfPossible() async {
+        guard isOfflineMode else { return }
+        DebugLogger.auth("Connectivity returned in offline mode - attempting to promote to online")
+        if await refreshAccessToken() {
+            isAuthenticated = true
+            isOfflineMode = false
+            DebugLogger.success("Offline session promoted to online")
+        } else {
+            DebugLogger.auth("Promotion failed - remaining in offline mode")
         }
     }
 
@@ -265,6 +342,7 @@ class AuthManager: ObservableObject, AuthManaging {
         self.currentUser = nil
         self.refreshTokenValue = nil
         self.isAuthenticated = false
+        self.isOfflineMode = false
 
         DebugLogger.auth("Session cleared - isAuthenticated: false")
     }

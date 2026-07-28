@@ -12,6 +12,8 @@ import Foundation
 protocol AuthManaging: ObservableObject {
     var isAuthenticated: Bool { get }
     var isRestoringSession: Bool { get }
+    var isOfflineMode: Bool { get }
+    var hasRestorableSession: Bool { get }
     var currentUser: User? { get }
     var isLoading: Bool { get }
     var errorMessage: String? { get set }
@@ -22,4 +24,6 @@ protocol AuthManaging: ObservableObject {
     func logout() async
     func forceLogout()
     func refreshAccessToken() async -> Bool
+    func enterOfflineMode()
+    func promoteToOnlineIfPossible() async
 }

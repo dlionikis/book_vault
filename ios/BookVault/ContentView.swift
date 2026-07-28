@@ -59,8 +59,10 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(.systemBackground))
-        } else if authManager.isAuthenticated {
-            // User is logged in - show tab view with mini player
+        } else if authManager.isAuthenticated || authManager.isOfflineMode {
+            // User is logged in (online) or in a local offline-only session -
+            // show tab view with mini player. The networkMonitor.isConnected
+            // logic below then renders the offline tab set automatically.
             ZStack(alignment: .top) {
                 TabView(selection: $selectedTab) {
                     if networkMonitor.isConnected {
@@ -170,6 +172,11 @@ struct ContentView: View {
     private func handleNetworkChange(isOnline: Bool) {
         DebugLogger.network("handleNetworkChange called with isOnline: \(isOnline), currentTab: \(selectedTab)")
         if isOnline {
+            // If we were in a local offline-only session, try to upgrade to a
+            // full online session now that connectivity is back.
+            if authManager.isOfflineMode {
+                Task { await authManager.promoteToOnlineIfPossible() }
+            }
             // Going online: restore previous tab if it was Catalog/Browse/Search
             DebugLogger
                 .network(

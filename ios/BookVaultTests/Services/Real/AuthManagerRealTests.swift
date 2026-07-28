@@ -173,11 +173,13 @@ final class AuthManagerRealTests: XCTestCase {
     var sut: AuthManager!
     var mockAPIClient: MockAPIClientForAuth!
     var mockKeychain: MockKeychain!
+    var mockNetworkMonitor: MockNetworkMonitor!
 
     override func setUp() async throws {
         mockAPIClient = MockAPIClientForAuth()
         mockKeychain = MockKeychain()
-        sut = AuthManager(apiClient: mockAPIClient, keychain: mockKeychain)
+        mockNetworkMonitor = MockNetworkMonitor() // isConnected == true by default
+        sut = AuthManager(apiClient: mockAPIClient, keychain: mockKeychain, networkMonitor: mockNetworkMonitor)
         // Disable cache clearing for tests
         sut.clearCachesOnLogout = {}
     }
@@ -186,6 +188,7 @@ final class AuthManagerRealTests: XCTestCase {
         sut = nil
         mockAPIClient = nil
         mockKeychain = nil
+        mockNetworkMonitor = nil
     }
 
     // MARK: - Initial State Tests
@@ -554,5 +557,131 @@ final class AuthManagerRealTests: XCTestCase {
         // Then - login should fail due to keychain error
         XCTAssertFalse(sut.isAuthenticated)
         XCTAssertNotNil(sut.errorMessage)
+    }
+
+    // MARK: - Offline Mode (Phase 8b)
+
+    /// Helper: log in successfully so the SUT holds a refresh token + session.
+    private func loginSuccessfully(username: String = "testuser") async {
+        let user = TestFixtures.makeUser(username: username)
+        let response = TestFixtures.makeLoginResponse(accessToken: "old-token", user: user)
+        mockAPIClient.loginResult = .success(response)
+        await sut.login(username: username, password: "password123")
+    }
+
+    /// REGRESSION: a refresh that fails due to a network error must NOT clear the
+    /// session. Previously any failure logged the user out, stranding a merely
+    /// offline user at the login screen.
+    func testRefreshNetworkErrorPreservesSession() async {
+        // Given - authenticated session
+        await loginSuccessfully()
+        XCTAssertTrue(sut.isAuthenticated)
+        mockAPIClient.refreshResult = .failure(APIError.networkError(NSError(domain: "", code: -1009)))
+
+        // When
+        let result = await sut.refreshAccessToken()
+
+        // Then - refresh fails but session is preserved
+        XCTAssertFalse(result)
+        XCTAssertTrue(sut.isAuthenticated, "Network error must not clear the session")
+        XCTAssertNotNil(mockKeychain.storage["com.bookvault.refreshToken"], "Refresh token must be kept")
+    }
+
+    /// A real 401 (invalid/expired refresh token) must still clear the session.
+    func testRefreshUnauthorizedClearsSession() async {
+        // Given
+        await loginSuccessfully()
+        mockAPIClient.refreshResult = .failure(APIError.unauthorized)
+
+        // When
+        let result = await sut.refreshAccessToken()
+
+        // Then
+        XCTAssertFalse(result)
+        XCTAssertFalse(sut.isAuthenticated, "401 is a genuine auth rejection - session must clear")
+    }
+
+    /// When offline, refresh should short-circuit without hitting the API and
+    /// without clearing the session.
+    func testRefreshWhileOfflineSkipsAndPreservesSession() async {
+        // Given - authenticated, then go offline
+        await loginSuccessfully()
+        mockNetworkMonitor.isConnected = false
+        let callsBefore = mockAPIClient.refreshCallCount
+
+        // When
+        let result = await sut.refreshAccessToken()
+
+        // Then
+        XCTAssertFalse(result)
+        XCTAssertTrue(sut.isAuthenticated)
+        XCTAssertEqual(mockAPIClient.refreshCallCount, callsBefore, "Refresh must not be attempted while offline")
+    }
+
+    /// enterOfflineMode rehydrates the cached user and flips into offline mode.
+    func testEnterOfflineModeWithCachedUser() throws {
+        // Given - a cached user in the keychain (as a prior login would leave)
+        let user = TestFixtures.makeUser(username: "offlineuser")
+        let data = try JSONEncoder().encode(user)
+        mockKeychain.storage["com.bookvault.userData"] = String(data: data, encoding: .utf8)!
+
+        // When
+        sut.enterOfflineMode()
+
+        // Then
+        XCTAssertTrue(sut.isOfflineMode)
+        XCTAssertFalse(sut.isRestoringSession)
+        XCTAssertEqual(sut.currentUser?.username, "offlineuser")
+        XCTAssertNil(sut.errorMessage)
+    }
+
+    /// enterOfflineMode with no cached session does nothing but surface an error.
+    func testEnterOfflineModeWithoutCachedUserFails() {
+        // Given - empty keychain
+        XCTAssertFalse(sut.hasRestorableSession)
+
+        // When
+        sut.enterOfflineMode()
+
+        // Then
+        XCTAssertFalse(sut.isOfflineMode)
+        XCTAssertNil(sut.currentUser)
+        XCTAssertNotNil(sut.errorMessage)
+    }
+
+    /// hasRestorableSession reflects presence of cached user data.
+    func testHasRestorableSession() throws {
+        XCTAssertFalse(sut.hasRestorableSession)
+        let user = TestFixtures.makeUser(username: "u")
+        let data = try JSONEncoder().encode(user)
+        mockKeychain.storage["com.bookvault.userData"] = String(data: data, encoding: .utf8)!
+        XCTAssertTrue(sut.hasRestorableSession)
+    }
+
+    /// When connectivity returns, an offline session is promoted to online if the
+    /// refresh succeeds.
+    func testPromoteToOnlineSucceeds() throws {
+        // Given - an offline session with cached user + refresh token
+        let user = TestFixtures.makeUser(username: "offlineuser")
+        let data = try JSONEncoder().encode(user)
+        mockKeychain.storage["com.bookvault.userData"] = String(data: data, encoding: .utf8)!
+        mockKeychain.storage["com.bookvault.refreshToken"] = UUID().uuidString
+        sut.enterOfflineMode()
+        XCTAssertTrue(sut.isOfflineMode)
+
+        // When - back online and refresh succeeds
+        mockNetworkMonitor.isConnected = true
+        mockAPIClient.refreshResult = .success(TestFixtures.makeRefreshTokenResponse(accessToken: "fresh"))
+
+        let expectation = expectation(description: "promotion")
+        Task {
+            await sut.promoteToOnlineIfPossible()
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 2.0)
+
+        // Then
+        XCTAssertTrue(sut.isAuthenticated)
+        XCTAssertFalse(sut.isOfflineMode)
     }
 }
