@@ -62,6 +62,10 @@ enum DownloadUrlResult {
 class APIClient: APIClientProtocol {
     static let shared = APIClient()
 
+    /// Shorter timeout for auth endpoints (login/refresh) so a degraded network
+    /// fails fast instead of hanging the login screen on the default 30s.
+    private static let authRequestTimeout: TimeInterval = 15
+
     let baseURL: URL // Changed from private to allow SearchManager access
     private let session: URLSession
     private let decoder: JSONDecoder
@@ -201,7 +205,8 @@ class APIClient: APIClientProtocol {
         path: String,
         method: String,
         body: Encodable? = nil,
-        requiresAuth: Bool = false
+        requiresAuth: Bool = false,
+        timeout: TimeInterval? = nil
     ) throws -> URLRequest {
         guard let url = URL(string: path, relativeTo: baseURL) else {
             throw APIError.invalidURL
@@ -211,6 +216,12 @@ class APIClient: APIClientProtocol {
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        // Per-request timeout override (auth endpoints fail fast so a degraded
+        // link doesn't hang the login screen on the default 30s timeout).
+        if let timeout {
+            request.timeoutInterval = timeout
+        }
 
         // Add authorization header if required
         if requiresAuth, let token = accessToken {
@@ -473,7 +484,8 @@ class APIClient: APIClientProtocol {
             path: "/api/auth/mobile/login",
             method: "POST",
             body: requestBody,
-            requiresAuth: false
+            requiresAuth: false,
+            timeout: Self.authRequestTimeout
         )
 
         let response: LoginMobile200Response = try await execute(request: request)
@@ -498,7 +510,8 @@ class APIClient: APIClientProtocol {
             path: "/api/auth/mobile/refresh",
             method: "POST",
             body: requestBody,
-            requiresAuth: false
+            requiresAuth: false,
+            timeout: Self.authRequestTimeout
         )
 
         DebugLogger.auth("Sending refresh request to server...")

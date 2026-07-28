@@ -10,6 +10,7 @@ import SwiftUI
 struct LoginView: View {
     @StateObject private var authManager = AuthManager.shared
     @StateObject private var biometricManager = BiometricAuthManager.shared
+    @StateObject private var networkMonitor = NetworkMonitor.shared
 
     @State private var username = ""
     @State private var password = ""
@@ -41,6 +42,16 @@ struct LoginView: View {
                         .foregroundColor(.secondary)
                 }
                 .padding(.bottom, 40)
+
+                // Offline banner - shown when there is no connectivity so the
+                // user understands why login may not work and can go offline.
+                if !networkMonitor.isConnected {
+                    Label("No internet connection", systemImage: "wifi.slash")
+                        .font(.footnote)
+                        .foregroundColor(.orange)
+                        .padding(.horizontal, 32)
+                        .padding(.bottom, 8)
+                }
 
                 // Face ID button (shown if enabled for this username or no username entered yet)
                 if biometricManager.canUseBiometrics && biometricManager.isBiometricEnabled {
@@ -128,6 +139,26 @@ struct LoginView: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(username.isEmpty || password.isEmpty || authManager.isLoading)
                     .padding(.top, 8)
+
+                    // Continue Offline - escape hatch when there's no connectivity
+                    // but a prior session/identity exists on this device. Gated by
+                    // biometrics (when enrolled) so it is not an auth bypass.
+                    if !networkMonitor.isConnected,
+                       authManager.hasRestorableSession || biometricManager.isBiometricEnabled {
+                        Button {
+                            Task { await continueOffline() }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "wifi.slash")
+                                Text("Continue Offline")
+                                    .fontWeight(.medium)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(authManager.isLoading)
+                    }
                 }
                 .padding(.horizontal, 32)
 
@@ -155,6 +186,14 @@ struct LoginView: View {
     private func login() {
         // Dismiss keyboard
         focusedField = nil
+
+        // Short-circuit when offline: firing the request would hang on the
+        // network timeout with only a spinner. Fail fast and point the user at
+        // the offline option instead.
+        guard networkMonitor.isConnected else {
+            authManager.errorMessage = "You're offline. Check your connection, or continue offline."
+            return
+        }
 
         // Capture values before async call
         let loginUsername = username
@@ -184,6 +223,21 @@ struct LoginView: View {
             // Show error - user can fall back to password
             authManager.errorMessage = error.localizedDescription
         }
+    }
+
+    /// Enter offline mode from the login screen. Requires a biometric check when
+    /// biometrics are enrolled, so a stranger cannot open a previous user's
+    /// downloaded content. Falls back to the cached session identity otherwise.
+    private func continueOffline() async {
+        if biometricManager.canUseBiometrics, biometricManager.isBiometricEnabled {
+            do {
+                _ = try await biometricManager.authenticateAndGetCredentials()
+            } catch {
+                authManager.errorMessage = "Biometric verification failed. Try again to continue offline."
+                return
+            }
+        }
+        authManager.enterOfflineMode()
     }
 }
 
