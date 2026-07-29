@@ -39,7 +39,38 @@ class DebugLogger {
     }()
 
     /// Enable verbose logging for detailed debugging (can be toggled at runtime in debug builds)
-    static var verboseLoggingEnabled = true
+    ///
+    /// Backed by a lock rather than a plain `static var` because DebugLogger is called
+    /// from every actor in the app; a nonisolated mutable global is rejected under the
+    /// Swift 6 language mode. Same NSLock + @unchecked Sendable approach as
+    /// `FileExtensionStorage` in DownloadManager.
+    static var verboseLoggingEnabled: Bool {
+        get { verboseFlag.value }
+        set { verboseFlag.value = newValue }
+    }
+
+    private static let verboseFlag = AtomicBool(true)
+
+    /// Minimal lock-protected `Bool` for cross-actor access.
+    private final class AtomicBool: @unchecked Sendable {
+        private let lock = NSLock()
+        private var storage: Bool
+
+        init(_ initial: Bool) { storage = initial }
+
+        var value: Bool {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return storage
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                storage = newValue
+            }
+        }
+    }
 
     // MARK: - Log Categories
 

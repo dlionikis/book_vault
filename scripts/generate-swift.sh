@@ -20,6 +20,15 @@ if [ ! -d "ios/BookVault" ]; then
   exit 1
 fi
 
+# Validate template overrides exist. These are not optional: Validation.mustache
+# adds Sendable conformance to the rule structs, without which the generated
+# models fail to compile under the Swift 6 language mode.
+if [ ! -f "$TEMPLATE_DIR/Validation.mustache" ]; then
+  echo "❌ Error: template override missing at $TEMPLATE_DIR/Validation.mustache"
+  echo "   Generated code would not compile under Swift 6. See docs/plans/ios-modernization-sequencing.md (A3)."
+  exit 1
+fi
+
 # Clean previous generation (preserve committed files like Models.swift)
 echo "🗑️  Cleaning previous generated code..."
 # Keep the committed Models.swift if it exists (has custom validation types)
@@ -48,6 +57,7 @@ $OPENAPI_GEN generate \
   -i "$SPEC_PATH" \
   -g swift5 \
   -o "$OUTPUT_DIR" \
+  -t "$TEMPLATE_DIR" \
   --additional-properties=projectName=BookVault \
   --additional-properties=responseAs=AsyncAwait \
   --additional-properties=library=urlsession \

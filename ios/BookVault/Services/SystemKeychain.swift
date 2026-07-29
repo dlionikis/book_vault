@@ -12,7 +12,10 @@ import Security
 // MARK: - SystemKeychain
 
 /// Production implementation of KeychainStoring using the system Security framework
-final class SystemKeychain: KeychainStoring {
+///
+/// Sendable: stateless (no stored properties) — every call goes straight to the
+/// Security framework, which is itself thread-safe.
+final class SystemKeychain: KeychainStoring, Sendable {
     static let shared = SystemKeychain()
 
     private init() {}
