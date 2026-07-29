@@ -13,7 +13,7 @@ import SwiftUI
 struct BrowseListView<Item: BrowseListItem, Response: BrowseListResponse>: View where Response.Item == Item {
     let configuration: BrowseListConfiguration<Item, Response>
 
-    @StateObject private var searchManager = SearchManager.shared
+    @ObservedObject private var searchManager = SearchManager.shared
     @State private var items: [Item] = []
     @State private var currentPage = 1
     @State private var isLoading = false

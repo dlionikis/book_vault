@@ -13,7 +13,7 @@ import SwiftUI
 
 struct LibraryView: View {
     @StateObject private var viewModel = LibraryViewModel()
-    @StateObject private var authManager = AuthManager.shared
+    @ObservedObject private var authManager = AuthManager.shared
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
     @ObservedObject private var libraryManager = LibraryManager.shared
     @Binding var selectedTab: Tab

@@ -12,7 +12,9 @@ struct BookVaultApp: App {
     // AppDelegate for handling background URLSession events
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    @StateObject private var authManager = AuthManager.shared
+    // Observed, not owned: AuthManager is a singleton the app does not create.
+    // Injected into the environment below for the view tree to consume.
+    @ObservedObject private var authManager = AuthManager.shared
 
     init() {
         // Phase 8: Start background sync monitoring

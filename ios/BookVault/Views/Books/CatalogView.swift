@@ -19,7 +19,7 @@ enum CatalogMode: String {
 
 struct CatalogView: View {
     @StateObject private var viewModel = CatalogViewModel()
-    @StateObject private var authManager = AuthManager.shared
+    @ObservedObject private var authManager = AuthManager.shared
 
     private let columns = [
         GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)

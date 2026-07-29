@@ -58,7 +58,12 @@ targets:
         # it). aps-environment=development for Debug; automatic signing rewrites
         # it to production at archive time.
         CODE_SIGN_ENTITLEMENTS: BookVault/BookVault.entitlements
-        TARGETED_DEVICE_FAMILY: '1,2'
+        # iPhone only. iPad was previously declared here but the app has no
+        # adaptive layout (no NavigationSplitView / size-class handling), so it
+        # shipped as a stretched-phone experience. Re-add '2' only alongside a
+        # real iPad design. Orientation support is unchanged (iPhone landscape
+        # is still supported).
+        TARGETED_DEVICE_FAMILY: '1'
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
@@ -110,6 +115,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.bookvault.BookVaultTests
+        # Match the host app (iPhone only); xcodegen otherwise defaults to '1,2'.
+        TARGETED_DEVICE_FAMILY: '1'
         GENERATE_INFOPLIST_FILE: YES
         TEST_HOST: '$(BUILT_PRODUCTS_DIR)/BookVault.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BookVault'
         BUNDLE_LOADER: '$(TEST_HOST)'

@@ -11,7 +11,7 @@ import SwiftUI
 // MARK: - NowPlayingView
 
 struct NowPlayingView: View {
-    @StateObject private var audioPlayer = AudioPlayerManager.shared
+    @ObservedObject private var audioPlayer = AudioPlayerManager.shared
 
     // State for showing speed picker
     @State private var showingSpeedPicker = false

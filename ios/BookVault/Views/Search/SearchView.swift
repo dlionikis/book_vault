@@ -11,7 +11,7 @@ import SwiftUI
 
 /// Main search screen with autocomplete suggestions and results
 struct SearchView: View {
-    @StateObject private var searchManager = SearchManager.shared
+    @ObservedObject private var searchManager = SearchManager.shared
     @State private var searchText = ""
     @State private var suggestions: GetSearchSuggestions200Response?
     @State private var searchResults: SearchAll200Response?

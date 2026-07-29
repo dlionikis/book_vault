@@ -8,6 +8,7 @@
 import Foundation
 
 /// Manages playback preference settings with UserDefaults persistence
+@MainActor
 class PlaybackSettings: ObservableObject {
     static let shared = PlaybackSettings()
 

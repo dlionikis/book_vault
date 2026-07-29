@@ -17,8 +17,8 @@ struct DownloadSettingsView: View {
     @AppStorage("autoDeleteOldDownloads") private var autoDelete = false
     @AppStorage("autoDeleteDays") private var autoDeleteDays = 30
 
-    @StateObject private var storageManager = StorageManager.shared
-    @StateObject private var networkMonitor = NetworkMonitor.shared
+    @ObservedObject private var storageManager = StorageManager.shared
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
 
     private var storageLimit: Int64 {
         Int64(storageLimitRaw)

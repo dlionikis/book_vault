@@ -14,7 +14,7 @@ import SwiftUI
 /// Series is deliberately absent: browsing all series lives on the Catalog's
 /// Books/Series toggle instead (requirements Q6).
 struct BrowseView: View {
-    @StateObject private var searchManager = SearchManager.shared
+    @ObservedObject private var searchManager = SearchManager.shared
 
     @State private var authorsCount: Int = 0
     @State private var narratorsCount: Int = 0
