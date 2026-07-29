@@ -23,13 +23,13 @@ struct AuthorDetailView: View {
 // periphery:ignore - Used by Xcode Previews
 struct AuthorDetailView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             // Note: Using a placeholder ID for preview
             AuthorDetailView(authorId: "00000000-0000-0000-0000-000000000000")
         }
         .previewDisplayName("Author Detail")
 
-        NavigationView {
+        NavigationStack {
             AuthorDetailView(authorId: "00000000-0000-0000-0000-000000000000")
         }
         .preferredColorScheme(.dark)

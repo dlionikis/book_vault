@@ -21,12 +21,12 @@ struct CategoryListView: View {
 // periphery:ignore - Used by Xcode Previews
 struct CategoryListView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             CategoryListView()
         }
         .previewDisplayName("Category List")
 
-        NavigationView {
+        NavigationStack {
             CategoryListView()
         }
         .preferredColorScheme(.dark)

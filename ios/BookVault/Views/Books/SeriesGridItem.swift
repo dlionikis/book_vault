@@ -60,7 +60,7 @@ struct SeriesGridItem: View {
 // MARK: - Previews
 
 #Preview("Series Grid Item") {
-    NavigationView {
+    NavigationStack {
         ScrollView {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 200))], spacing: 20) {
                 SeriesGridItem(series: SeriesWithBookCount(

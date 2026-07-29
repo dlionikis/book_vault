@@ -30,7 +30,7 @@ struct PlaybackSpeedPicker: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 24) {
                 // Current speed display
                 VStack(spacing: 4) {

@@ -44,7 +44,7 @@ struct CatalogView: View {
     var body: some View {
         // swiftlint:disable:next redundant_discardable_let
         let _ = DebugLogger.info("🎨 CatalogView.body EVALUATED - isLoading: \(isLoading), booksCount: \(viewModel.books.count)")
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 if isLoading, isEmpty {
                     // Initial loading state
@@ -620,7 +620,7 @@ struct ProgressIndicator: View {
 }
 
 #Preview("Grid Item - Standard") {
-    NavigationView {
+    NavigationStack {
         ScrollView {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 200))], spacing: 20) {
                 NavigationLink(destination: BookDetailView(book: .mockStandard)) {
@@ -643,7 +643,7 @@ struct ProgressIndicator: View {
 }
 
 #Preview("Dark Mode") {
-    NavigationView {
+    NavigationStack {
         ScrollView {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 200))], spacing: 20) {
                 NavigationLink(destination: BookDetailView(book: .mockStandard)) {

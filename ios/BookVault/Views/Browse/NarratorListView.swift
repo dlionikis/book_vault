@@ -21,12 +21,12 @@ struct NarratorListView: View {
 // periphery:ignore - Used by Xcode Previews
 struct NarratorListView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             NarratorListView()
         }
         .previewDisplayName("Narrator List")
 
-        NavigationView {
+        NavigationStack {
             NarratorListView()
         }
         .preferredColorScheme(.dark)

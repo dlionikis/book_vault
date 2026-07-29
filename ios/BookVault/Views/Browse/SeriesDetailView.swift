@@ -427,13 +427,13 @@ struct SeriesDetailView: View {
 // periphery:ignore - Used by Xcode Previews
 struct SeriesDetailView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             // Note: Using a placeholder ID for preview
             SeriesDetailView(seriesId: "00000000-0000-0000-0000-000000000000")
         }
         .previewDisplayName("Series Detail")
 
-        NavigationView {
+        NavigationStack {
             SeriesDetailView(seriesId: "00000000-0000-0000-0000-000000000000")
         }
         .preferredColorScheme(.dark)

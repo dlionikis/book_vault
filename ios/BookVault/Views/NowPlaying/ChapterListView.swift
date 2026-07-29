@@ -23,7 +23,7 @@ struct ChapterListView: View {
     // MARK: - Body
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Group {
                 if chapters.isEmpty {
                     emptyState

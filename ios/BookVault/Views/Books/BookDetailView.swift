@@ -814,37 +814,37 @@ struct DownloadButton: View {
 // MARK: - Previews
 
 #Preview("Screenshot") {
-    NavigationView {
+    NavigationStack {
         BookDetailView(book: .mockScreenshot)
     }
 }
 
 #Preview("Standard Book") {
-    NavigationView {
+    NavigationStack {
         BookDetailView(book: .mockStandard)
     }
 }
 
 #Preview("Long Title with Series") {
-    NavigationView {
+    NavigationStack {
         BookDetailView(book: .mockLongTitle)
     }
 }
 
 #Preview("Minimal Book") {
-    NavigationView {
+    NavigationStack {
         BookDetailView(book: .mockMinimal)
     }
 }
 
 #Preview("Multiple Authors") {
-    NavigationView {
+    NavigationStack {
         BookDetailView(book: .mockMultipleAuthors)
     }
 }
 
 #Preview("Dark Mode") {
-    NavigationView {
+    NavigationStack {
         BookDetailView(book: .mockStandard)
     }
     .preferredColorScheme(.dark)

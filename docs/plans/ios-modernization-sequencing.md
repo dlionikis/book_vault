@@ -134,7 +134,7 @@ Ordered so each step is independently revertible:
 | ✅ **A1** | `@StateObject` → `@ObservedObject` on the singleton sites — **done** (32 sites)                                                 | 32 one-line edits | Very low                |
 | ✅ **A2** | `@MainActor` on the 4 unannotated services (`AppIconManager`, `PlaybackSettings`, `ProgressManager`, `ThemeManager`) — **done** | Small             | Low                     |
 | ✅ **A3** | `Sendable` validation rules via generator template override — **done**                                                          | Small but fiddly  | Medium — build tooling  |
-| **A5**    | Convert the 10 production `NavigationView` → `NavigationStack`                                                                  | 10 sites          | Medium — the real work  |
+| ✅ **A5** | Convert the 10 production `NavigationView` → `NavigationStack` — **done** (+25 preview sites)                                   | 10 sites          | Medium — the real work  |
 | **A6**    | _(optional)_ Legacy `PreviewProvider` → `#Preview` in the 10 remaining files; drops the `periphery:ignore` workarounds          | Small             | Very low                |
 | **A4**    | Flip `SWIFT_VERSION: '6.0'` + `SWIFT_STRICT_CONCURRENCY: complete` — **now the last step**, gated on Plan C below               | 2 lines           | Low _once Plan C lands_ |
 
@@ -232,6 +232,37 @@ not exercise all strict-concurrency paths. Lesson: measure by flipping the real 
 
 ---
 
+### Implementation notes — A5 (shipped July 29, 2026)
+
+`NavigationView` is now **entirely absent** from the codebase. `validate:full` green: web 525, DB 18,
+contract 286, iOS 698, both drift checks clean, SwiftLint `--strict` clean, no deprecation warnings.
+
+Two corrections to what this section predicted:
+
+1. **`CatalogView` has one production `navigationTitle`, not three.** The table below said 3; the other
+   two are inside `PreviewProvider` blocks. Same original error as the `NavigationView` count.
+
+2. **`LoginView` was a deletion, and the plan's reasoning was incomplete.** It correctly called this a
+   deletion rather than a conversion, but described the container as providing "nothing." It actually
+   carried `.navigationBarHidden(true)` — so it added a nav bar and then hid it. Both lines are gone.
+   Verified with `git diff -w`: ignoring indentation, the change is exactly **3 deleted lines**, no
+   logic touched. Confirmed on the simulator that the layout is unchanged and the offline escape hatch
+   (added in #132) still renders under its `!networkMonitor.isConnected` condition.
+
+**Also converted: the 25 preview-block occurrences.** Not strictly required, but these are what
+inflated the original count from 10 to 35 and would have kept doing so on every future audit. Leaves
+zero `NavigationView` in the repo, so the grep is now trustworthy.
+
+**Verification gap — be honest about this one.** The suite proves nothing about navigation UI: there is
+**no UI test target** (no `XCUIApplication` anywhere in `BookVaultTests/`). What was actually verified:
+a clean build with no deprecation warnings, 698 unit tests, and a simulator launch confirming the
+login screen renders correctly with safe-area insets respected. **Not** verified automatically: push →
+detail → back on each of the 9 tab screens, and safe-area propagation into pushed destinations — which
+is the entire reason A5 precedes Plan B. Simulator tap automation was unavailable (no `idb`), so
+**this needs the manual pass in §5 of the mini-player plan before Plan B relies on it.**
+
+---
+
 ### A0 — Drop iPad support
 
 **Decision made (July 28, 2026): remove iPad support until there is appetite to design for it
@@ -306,18 +337,18 @@ player tracks playback).
 
 Ten production sites. Verified per-screen complications:
 
-| Screen                | `.toolbar` | `navigationTitle` | Notes                                        |
-| --------------------- | ---------- | ----------------- | -------------------------------------------- |
-| `CatalogView`         | 1          | 3                 | 3 titles = conditional branches; verify each |
-| `LibraryView`         | 2          | 1                 |                                              |
-| `DownloadsView`       | 1          | 1                 |                                              |
-| `ChapterListView`     | 1          | 1                 | Sheet-presented                              |
-| `SearchView`          | 0          | 1                 | Custom search UI, **not** `.searchable`      |
-| `BrowseView`          | 0          | 1                 |                                              |
-| `SettingsView`        | 0          | 1                 | `Form`                                       |
-| `OfflineModeView`     | 0          | 1                 |                                              |
-| `PlaybackSpeedPicker` | 0          | 1                 | Sheet-presented                              |
-| **`LoginView`**       | 0          | **0**             | **Delete the container — see below**         |
+| Screen                | `.toolbar` | `navigationTitle` | Notes                                      |
+| --------------------- | ---------- | ----------------- | ------------------------------------------ |
+| `CatalogView`         | 1          | 1                 | ~~3 titles~~ — 2 of the 3 were in previews |
+| `LibraryView`         | 2          | 1                 |                                            |
+| `DownloadsView`       | 1          | 1                 |                                            |
+| `ChapterListView`     | 1          | 1                 | Sheet-presented                            |
+| `SearchView`          | 0          | 1                 | Custom search UI, **not** `.searchable`    |
+| `BrowseView`          | 0          | 1                 |                                            |
+| `SettingsView`        | 0          | 1                 | `Form`                                     |
+| `OfflineModeView`     | 0          | 1                 |                                            |
+| `PlaybackSpeedPicker` | 0          | 1                 | Sheet-presented                            |
+| **`LoginView`**       | 0          | **0**             | **Delete the container — see below**       |
 
 **Good news: zero `.searchable` usage** anywhere in the app. `.searchable` inside a migrated
 container is the classic source of migration regressions; its absence removes that whole risk class.

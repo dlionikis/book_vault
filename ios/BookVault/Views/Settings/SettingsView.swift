@@ -27,7 +27,7 @@ struct SettingsView: View {
     @State private var downloadedBooksSize: Int64 = 0
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 // Appearance Section
                 Section {

@@ -23,161 +23,158 @@ struct LoginView: View {
     }
 
     var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                Spacer()
+        VStack(spacing: 20) {
+            Spacer()
 
-                // Logo and title
-                VStack(spacing: 12) {
-                    Image(systemName: "books.vertical.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(.blue)
+            // Logo and title
+            VStack(spacing: 12) {
+                Image(systemName: "books.vertical.fill")
+                    .font(.system(size: 60))
+                    .foregroundColor(.blue)
 
-                    Text("BookVault")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
+                Text("BookVault")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
 
-                    Text("Your Personal Audiobook Library")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.bottom, 40)
+                Text("Your Personal Audiobook Library")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.bottom, 40)
 
-                // Offline banner - shown when there is no connectivity so the
-                // user understands why login may not work and can go offline.
-                if !networkMonitor.isConnected {
-                    Label("No internet connection", systemImage: "wifi.slash")
-                        .font(.footnote)
-                        .foregroundColor(.orange)
-                        .padding(.horizontal, 32)
-                        .padding(.bottom, 8)
-                }
-
-                // Face ID button (shown if enabled for this username or no username entered yet)
-                if biometricManager.canUseBiometrics && biometricManager.isBiometricEnabled {
-                    VStack(spacing: 12) {
-                        Button {
-                            Task { await authenticateWithBiometric() }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: biometricManager.biometryType == .faceID ? "faceid" : "touchid")
-                                    .font(.title2)
-                                Text("Use \(biometricManager.biometryName)")
-                                    .fontWeight(.semibold)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(authManager.isLoading)
-
-                        Text("or sign in with password")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+            // Offline banner - shown when there is no connectivity so the
+            // user understands why login may not work and can go offline.
+            if !networkMonitor.isConnected {
+                Label("No internet connection", systemImage: "wifi.slash")
+                    .font(.footnote)
+                    .foregroundColor(.orange)
                     .padding(.horizontal, 32)
                     .padding(.bottom, 8)
-                }
+            }
 
-                // Login form
-                VStack(spacing: 16) {
-                    // Username field
-                    TextField("Username", text: $username)
-                        .textFieldStyle(.roundedBorder)
-                        .textContentType(.username)
-                        .autocapitalization(.none)
-                        .focused($focusedField, equals: .username)
-                        .submitLabel(.next)
-                        .onSubmit {
-                            focusedField = .password
-                        }
-
-                    // Password field
-                    SecureField("Password", text: $password)
-                        .textFieldStyle(.roundedBorder)
-                        .textContentType(.password)
-                        .focused($focusedField, equals: .password)
-                        .submitLabel(.go)
-                        .onSubmit {
-                            login()
-                        }
-
-                    // Enable Face ID toggle (only shown if device supports biometrics and not already enabled)
-                    if biometricManager.canUseBiometrics && !biometricManager.isBiometricEnabled {
-                        Toggle(isOn: $enableBiometricOnLogin) {
-                            HStack(spacing: 6) {
-                                Image(systemName: biometricManager.biometryType == .faceID ? "faceid" : "touchid")
-                                Text("Enable \(biometricManager.biometryName)")
-                            }
-                            .font(.subheadline)
-                        }
-                        .toggleStyle(.switch)
-                        .padding(.top, 4)
-                    }
-
-                    // Error message
-                    if let errorMessage = authManager.errorMessage {
-                        Text(errorMessage)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                    }
-
-                    // Login button
-                    Button(action: login) {
-                        if authManager.isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .frame(maxWidth: .infinity)
-                        } else {
-                            Text("Log In")
+            // Face ID button (shown if enabled for this username or no username entered yet)
+            if biometricManager.canUseBiometrics && biometricManager.isBiometricEnabled {
+                VStack(spacing: 12) {
+                    Button {
+                        Task { await authenticateWithBiometric() }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: biometricManager.biometryType == .faceID ? "faceid" : "touchid")
+                                .font(.title2)
+                            Text("Use \(biometricManager.biometryName)")
                                 .fontWeight(.semibold)
-                                .frame(maxWidth: .infinity)
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(username.isEmpty || password.isEmpty || authManager.isLoading)
-                    .padding(.top, 8)
+                    .disabled(authManager.isLoading)
 
-                    // Continue Offline - escape hatch when there's no connectivity
-                    // but a prior session/identity exists on this device. Gated by
-                    // biometrics (when enrolled) so it is not an auth bypass.
-                    if !networkMonitor.isConnected,
-                       authManager.hasRestorableSession || biometricManager.isBiometricEnabled {
-                        Button {
-                            Task { await continueOffline() }
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "wifi.slash")
-                                Text("Continue Offline")
-                                    .fontWeight(.medium)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(authManager.isLoading)
-                    }
-                }
-                .padding(.horizontal, 32)
-
-                Spacer()
-
-                #if DEBUG
-                // Development hint - only shown in Debug builds
-                VStack(spacing: 4) {
-                    Text("Development Credentials")
+                    Text("or sign in with password")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text("test@example.com / password123")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
                 }
-                .padding(.bottom, 20)
-                #endif
+                .padding(.horizontal, 32)
+                .padding(.bottom, 8)
             }
-            .navigationBarHidden(true)
+
+            // Login form
+            VStack(spacing: 16) {
+                // Username field
+                TextField("Username", text: $username)
+                    .textFieldStyle(.roundedBorder)
+                    .textContentType(.username)
+                    .autocapitalization(.none)
+                    .focused($focusedField, equals: .username)
+                    .submitLabel(.next)
+                    .onSubmit {
+                        focusedField = .password
+                    }
+
+                // Password field
+                SecureField("Password", text: $password)
+                    .textFieldStyle(.roundedBorder)
+                    .textContentType(.password)
+                    .focused($focusedField, equals: .password)
+                    .submitLabel(.go)
+                    .onSubmit {
+                        login()
+                    }
+
+                // Enable Face ID toggle (only shown if device supports biometrics and not already enabled)
+                if biometricManager.canUseBiometrics && !biometricManager.isBiometricEnabled {
+                    Toggle(isOn: $enableBiometricOnLogin) {
+                        HStack(spacing: 6) {
+                            Image(systemName: biometricManager.biometryType == .faceID ? "faceid" : "touchid")
+                            Text("Enable \(biometricManager.biometryName)")
+                        }
+                        .font(.subheadline)
+                    }
+                    .toggleStyle(.switch)
+                    .padding(.top, 4)
+                }
+
+                // Error message
+                if let errorMessage = authManager.errorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+
+                // Login button
+                Button(action: login) {
+                    if authManager.isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        Text("Log In")
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(username.isEmpty || password.isEmpty || authManager.isLoading)
+                .padding(.top, 8)
+
+                // Continue Offline - escape hatch when there's no connectivity
+                // but a prior session/identity exists on this device. Gated by
+                // biometrics (when enrolled) so it is not an auth bypass.
+                if !networkMonitor.isConnected,
+                   authManager.hasRestorableSession || biometricManager.isBiometricEnabled {
+                    Button {
+                        Task { await continueOffline() }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "wifi.slash")
+                            Text("Continue Offline")
+                                .fontWeight(.medium)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(authManager.isLoading)
+                }
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+
+            #if DEBUG
+            // Development hint - only shown in Debug builds
+            VStack(spacing: 4) {
+                Text("Development Credentials")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text("test@example.com / password123")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.bottom, 20)
+            #endif
         }
     }
 

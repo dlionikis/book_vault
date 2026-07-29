@@ -82,7 +82,7 @@ struct BookDetailLoader: View {
 // periphery:ignore - Used by Xcode Previews
 struct BookDetailLoader_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             BookDetailLoader(bookId: "00000000-0000-0000-0000-000000000000")
         }
     }

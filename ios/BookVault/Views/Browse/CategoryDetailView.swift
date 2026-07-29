@@ -23,13 +23,13 @@ struct CategoryDetailView: View {
 // periphery:ignore - Used by Xcode Previews
 struct CategoryDetailView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             // Note: Using a placeholder ID for preview
             CategoryDetailView(categoryId: "00000000-0000-0000-0000-000000000000")
         }
         .previewDisplayName("Category Detail")
 
-        NavigationView {
+        NavigationStack {
             CategoryDetailView(categoryId: "00000000-0000-0000-0000-000000000000")
         }
         .preferredColorScheme(.dark)

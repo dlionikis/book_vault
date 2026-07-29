@@ -194,7 +194,7 @@ struct StatRow: View {
 // MARK: - Previews
 
 #Preview {
-    NavigationView {
+    NavigationStack {
         DownloadSettingsView()
     }
 }

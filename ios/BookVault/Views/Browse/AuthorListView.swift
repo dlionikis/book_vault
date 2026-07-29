@@ -21,12 +21,12 @@ struct AuthorListView: View {
 // periphery:ignore - Used by Xcode Previews
 struct AuthorListView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
+        NavigationStack {
             AuthorListView()
         }
         .previewDisplayName("Author List")
 
-        NavigationView {
+        NavigationStack {
             AuthorListView()
         }
         .preferredColorScheme(.dark)

@@ -35,7 +35,7 @@ struct LibraryView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 if isLoading, isEmpty {
                     // Initial loading state

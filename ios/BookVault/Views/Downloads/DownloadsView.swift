@@ -18,7 +18,7 @@ struct DownloadsView: View {
     @State private var showingSettings = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 // Storage summary section
                 Section {
