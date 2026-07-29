@@ -41,9 +41,14 @@ item with unbounded scope. It is neither. **It is a one-line fix in a template.*
 > ⚠️ **This measurement was incomplete — do not rely on it.** It built only the app target via
 > command-line overrides and missed `DebugLogger`, `SystemKeychain`, and 6 structural errors in
 > generated `URLSessionImplementations.swift`. The first two are fixed (A3); the third is
-> [Plan C](#plan-c--swift-6-readiness-for-the-generated-urlsession-layer) and is the reason A4 is now
+> [Plan C](ios-swift6-generated-networking-plan.md) and is the reason A4 is now
 > the last step rather than a trivial 2-line flip. Kept here as written because the flawed method is
 > itself the lesson: flip the real build setting and compile **both** targets.
+>
+> The claim that "hand-written code is already Swift 6 clean" did hold up — the two misses were a
+> mutable global and a missing conformance, both one-liners. And the `URLSessionImplementations`
+> errors turned out to be in **unused** code, so the conclusion (Swift 6 is close) was right for the
+> wrong reasons.
 
 ---
 
@@ -135,7 +140,7 @@ Ordered so each step is independently revertible:
 
 **A4 moved to the end.** It was originally "2 lines, low risk, gated on A3." A3 landed and A4 is
 still blocked — on generated **URLSession** code, a materially bigger problem than the validation
-rules (see [Plan C](#plan-c--swift-6-readiness-for-the-generated-urlsession-layer)).
+rules (see [Plan C](ios-swift6-generated-networking-plan.md)).
 
 **Dependencies:**
 
@@ -348,103 +353,25 @@ Plan A lands:
 - **Phase 3's per-screen occlusion audit stays** — still the core of the work, but now verifying a
   modern container rather than probing a deprecated one's edge cases.
 
-### Plan C — Swift 6 readiness for the generated URLSession layer
+### Plan C — Swift 6 readiness for the generated networking layer
 
-**Its own plan, not a step appended to Plan A.** The reasoning is in §7 below; the short version is
-that this is a different _kind_ of work (owning a fork of a vendor template that carries every API
-call in the app) with a different risk profile and a different review need than anything in Plan A.
+**Now its own plan: [ios-swift6-generated-networking-plan.md](ios-swift6-generated-networking-plan.md).**
 
 **Blocks:** A4 only. Nothing else in Plan A or B waits on it.
 
-#### The problem
+**The investigation recommended below was run, and it inverted the plan.** The blocking code turned
+out to be **dead code**: the generated request layer is referenced only by other generated files —
+the app's networking is the hand-written `APIClient` talking to `URLSession` directly. Deleting all
+seven request-layer files and rebuilding broke **no app code** (only two references inside another
+generated file).
 
-Under `SWIFT_VERSION 6.0` + `SWIFT_STRICT_CONCURRENCY complete`, the generated
-`URLSessionImplementations.swift` (682 lines) produces 6 errors:
+So C1 (fork the 682-line `URLSessionImplementations.mustache`) and C2 (separate framework target) are
+**withdrawn**. The adopted approach is **C3 — stop generating code we never use.** The endstate has
+less code, no vendor fork, and no structural seam.
 
-| Line | Error                                                                                     |
-| ---- | ----------------------------------------------------------------------------------------- |
-| 62   | `var challengeHandlerStore` — nonisolated global shared mutable state                     |
-| 65   | `var credentialStore` — nonisolated global shared mutable state                           |
-| 163  | capture of `self` (non-`Sendable` `URLSessionRequestBuilder<T>`) in a `@Sendable` closure |
-| 163  | capture of `completion` (non-`Sendable` closure) in a `@Sendable` closure                 |
-| 164  | capture of `cleanupRequest` (non-`Sendable` closure) in a `@Sendable` closure             |
-| 371  | non-final class `SessionDelegate` cannot conform to `Sendable`                            |
-
-These are **structural**, not a missing annotation. The template is already partially Swift-6 aware —
-`dataTaskFromProtocol`'s completion handler is declared `@escaping @Sendable` (template line 31/36),
-and that is precisely what makes the captures at 163–164 illegal. Upstream is mid-migration.
-
-#### Verified: upgrading the generator does not fix it
-
-Generator 7.24.0 (released 2026-07-20, newer than our 7.23.0 pin) ships a
-`URLSessionImplementations.mustache` that is **byte-identical except one unrelated line**:
-
-```diff
--} else if contentType.hasPrefix("application/octet-stream") || contentType.hasPrefix("image/") {
-+} else if contentType.hasPrefix("application/octet-stream"){
-```
-
-That is a **regression for us** — it drops `image/` content-type handling, which this app relies on
-for cover art. So 7.24.0 is not an upgrade path; it is a downgrade plus the same Swift 6 errors.
-Re-check on each future generator release before doing any of the work below.
-
-#### Options
-
-**C1 — Patch `URLSessionImplementations.mustache` as a second template override _(recommended)_**
-
-Extends the mechanism A3 already established and proved. Work required:
-
-1. `final class SessionDelegate` (line 371) — check nothing subclasses it.
-2. Replace the two mutable global `SynchronizedDictionary` stores with a lock-protected type, or
-   move them into the delegate's instance state.
-3. Restructure the dataTask completion closure (lines 162–166) so it does not capture `self`,
-   `completion`, or `cleanupRequest` across the `@Sendable` boundary — the genuinely delicate part.
-4. Regenerate, build under Swift 6, run the full gate.
-
-- **Pro**: no new build targets; consistent with A3; drift check keeps working; keeps generated code
-  in the same module.
-- **Con**: we own a fork of a 682-line vendor template covering the app's entire network path. Every
-  future generator upgrade needs a 3-way merge. This is the real cost, and it is ongoing.
-- **Mitigation**: coverage here is unusually good — 698 iOS tests plus 286 live contract tests all
-  exercise this code path, so a mistake shows up fast rather than silently.
-
-**C2 — Extract generated models into a separate framework target kept at Swift 5**
-
-Mixed-language-mode build: app code at 6.0, generated code at 5.0.
-
-- **Pro**: zero vendor-template ownership; generator upgrades stay trivial.
-- **Con**: new framework target, module boundary, `import` churn across the app, and everything
-  crossing that boundary must be `Sendable` anyway — so it may not even avoid the work. Leaves a
-  permanent structural seam to explain forever.
-- **Note**: this replaces "Option 3" from §3, which was **wrong as written** — it claimed XcodeGen
-  could set `SWIFT_VERSION` per _source group_. It cannot; `SWIFT_VERSION` is target-level and
-  `-swift-version` is whole-module in the compiler. A separate target is the only real form of that
-  idea.
-
-**C3 — Replace the generated URLSession layer with hand-written networking**
-
-The app already has a hand-written `APIClient` (838 lines) that is Swift 6 clean. The generated
-`URLSessionImplementations` may be largely redundant.
-
-- **Investigate first**: how much of the generated request machinery does `APIClient` actually route
-  through? If little, deleting it beats patching it.
-- **Pro**: removes the problem permanently, no fork, no extra target.
-- **Con**: potentially the largest change; needs the contract tests as the safety net.
-
-#### Recommended sequence
-
-1. **Scope C3 first** — one afternoon of investigation. If `APIClient` does not meaningfully depend
-   on the generated URLSession layer, C3 is the correct endstate and the other options are moot. This
-   is cheap to answer and changes everything, so it goes first.
-2. If C3 is not viable, **do C1**, with `image/` handling explicitly preserved and a regression test.
-3. Treat **C2 as the fallback** if C1's closure restructuring proves unsound.
-4. Then flip **A4** (2 lines) and delete this plan.
-
-#### Also part of Plan C
-
-- Bump `--swiftversion` to 6.0 in **both** `ios/.swiftformat` and `scripts/generate-swift.sh:99`.
-  Deliberately **not** done in A3: with the compiler on 5.0, telling swiftformat 6.0 would be
-  incoherent. These move with A4, not before.
+See the plan file for the one real complication (`JSONEncodable` is declared in the same file as the
+unused `RequestTask`, so a naive models-only exclusion will not compile), the mechanism options, and
+the `-g swift6` generator lead worth time-boxing first.
 
 ### Deliberately _not_ in any plan
 
@@ -487,7 +414,9 @@ deferring the bug fix to avoid duplicate work is not.
 - **A3 approach** — template override (Option 1) chosen and shipped. It worked cleanly: one
   overridden file, one changed generated file, drift check still meaningful.
 - **Plan A / Plan B split** — confirmed, for attribution rather than size (§2).
-- **URLSession work is its own plan (Plan C), not a Plan A step** — see §7.
+- **URLSession work is its own plan (Plan C), not a Plan A step** — see §7. Now written up as
+  [ios-swift6-generated-networking-plan.md](ios-swift6-generated-networking-plan.md), with the
+  investigation done: the blocking code is unused, so the approach is removal, not a vendor fork.
 - **Generator 7.24.0 is not an upgrade path** — verified identical template plus an `image/`
   content-type regression.
 
@@ -505,26 +434,26 @@ Everything in Plan A is **bounded and locally verifiable**: a known list of call
 change, and a green gate that means done. Even A3, the fiddliest, was "override one file, diff one
 generated file."
 
-Plan C is neither:
+Plan C was neither:
 
-1. **It creates ongoing ownership, not a one-time change.** C1 means maintaining a fork of a 682-line
-   vendor template that carries every API call in the app. That cost recurs at every generator
-   upgrade, forever. A "final step" framing hides a permanent maintenance obligation inside a
-   checklist item.
-2. **The approach isn't decided, and one option deletes the problem instead of solving it.** C3 —
-   discovering the generated URLSession layer is largely redundant next to the hand-written
-   `APIClient` — would be the genuine correct endstate. That deserves to be investigated and argued on
-   its own, not smuggled in under "finish A4."
+1. **The approach wasn't decided, and one option deletes the problem instead of solving it.** That
+   deserved to be investigated and argued on its own, not smuggled in under "finish A4."
+2. **It looked like ongoing ownership, not a one-time change.** Patching the vendor template would
+   have meant a 3-way merge at every generator upgrade, forever. A "final step" framing hides a
+   permanent maintenance obligation inside a checklist item.
 3. **Its risk profile is inverted from Plan A's.** Plan A's steps are individually safe and
-   collectively invisible. Plan C touches the network path for a payoff (`SWIFT_VERSION 6.0`) that is
-   **entirely invisible to users**. That trade needs to be made deliberately, in daylight.
+   collectively invisible. Plan C looked like it touched the network path for a payoff
+   (`SWIFT_VERSION 6.0`) that is **entirely invisible to users**. That trade needs to be made
+   deliberately, in daylight.
 4. **A4 stops being a hostage.** With A4 last and gated on Plan C, A5 → Plan B (the mini player, the
    thing you originally asked for) proceeds without ever waiting on generated networking code.
 
-The "correct endstate" instinct is right, and it is exactly why this should not be a bullet at the
-bottom of Plan A: appended final steps are the ones that quietly never happen. As its own plan with a
-recommended investigation-first sequence, it stays a real decision with a real owner.
+**Splitting it out is what surfaced the answer.** Given its own plan, point 1 got investigated
+properly — and the finding was that the blocking code is **dead code**, referenced only by other
+generated files. That reduced Plan C from "fork a 682-line vendor template carrying every API call" to
+"stop generating what we never use," and eliminated points 2 and 3 outright. Buried as a Plan A
+bullet, the likely outcome was patching the template and inheriting the fork forever.
 
-**What that endstate is:** app and generated code both compiling under Swift 6 with
-`SWIFT_STRICT_CONCURRENCY: complete`, no forked vendor template if C3 proves viable, and `A4` reduced
-to the 2-line flip it was always supposed to be.
+**The endstate:** app and generated code both compiling under Swift 6 with
+`SWIFT_STRICT_CONCURRENCY: complete`, **no forked vendor template, less generated code than today**,
+and `A4` reduced to the 2-line flip it was always supposed to be.
