@@ -38,6 +38,13 @@ shared mutable state`
 This inverts the recommendation I gave in the review, where I ranked Swift 6 as a medium-severity
 item with unbounded scope. It is neither. **It is a one-line fix in a template.**
 
+> ⚠️ **This measurement was incomplete — do not rely on it.** It built only the app target via
+> command-line overrides and missed `DebugLogger`, `SystemKeychain`, and 6 structural errors in
+> generated `URLSessionImplementations.swift`. The first two are fixed (A3); the third is
+> [Plan C](#plan-c--swift-6-readiness-for-the-generated-urlsession-layer) and is the reason A4 is now
+> the last step rather than a trivial 2-line flip. Kept here as written because the flawed method is
+> itself the lesson: flip the real build setting and compile **both** targets.
+
 ---
 
 ## 2. Answering your question directly
@@ -116,23 +123,27 @@ non-uniformity in the build.
 
 Ordered so each step is independently revertible:
 
-| Step      | Work                                                                                                                            | Size              | Risk                   |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ---------------------- |
-| ✅ **A0** | Drop iPad: `TARGETED_DEVICE_FAMILY: '1'` — **done**                                                                             | 1 line            | Very low               |
-| ✅ **A1** | `@StateObject` → `@ObservedObject` on the singleton sites — **done** (32 sites)                                                 | 32 one-line edits | Very low               |
-| ✅ **A2** | `@MainActor` on the 4 unannotated services (`AppIconManager`, `PlaybackSettings`, `ProgressManager`, `ThemeManager`) — **done** | Small             | Low                    |
-| **A3**    | `NumericRule: Sendable` via template override; wire up `TEMPLATE_DIR`; bump swiftformat `--swiftversion`                        | Small but fiddly  | Medium — build tooling |
-| **A4**    | Flip `SWIFT_VERSION: '6.0'` + `SWIFT_STRICT_CONCURRENCY: complete` in `project.yml`; `xcodegen generate`                        | 2 lines           | Low _once A3 lands_    |
-| **A5**    | Convert the 10 production `NavigationView` → `NavigationStack`                                                                  | 10 sites          | Medium — the real work |
-| **A6**    | _(optional)_ Legacy `PreviewProvider` → `#Preview` in the 10 remaining files; drops the `periphery:ignore` workarounds          | Small             | Very low               |
+| Step      | Work                                                                                                                            | Size              | Risk                    |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ----------------------- |
+| ✅ **A0** | Drop iPad: `TARGETED_DEVICE_FAMILY: '1'` — **done**                                                                             | 1 line            | Very low                |
+| ✅ **A1** | `@StateObject` → `@ObservedObject` on the singleton sites — **done** (32 sites)                                                 | 32 one-line edits | Very low                |
+| ✅ **A2** | `@MainActor` on the 4 unannotated services (`AppIconManager`, `PlaybackSettings`, `ProgressManager`, `ThemeManager`) — **done** | Small             | Low                     |
+| ✅ **A3** | `Sendable` validation rules via generator template override — **done**                                                          | Small but fiddly  | Medium — build tooling  |
+| **A5**    | Convert the 10 production `NavigationView` → `NavigationStack`                                                                  | 10 sites          | Medium — the real work  |
+| **A6**    | _(optional)_ Legacy `PreviewProvider` → `#Preview` in the 10 remaining files; drops the `periphery:ignore` workarounds          | Small             | Very low                |
+| **A4**    | Flip `SWIFT_VERSION: '6.0'` + `SWIFT_STRICT_CONCURRENCY: complete` — **now the last step**, gated on Plan C below               | 2 lines           | Low _once Plan C lands_ |
 
-**Dependencies** — only one hard ordering constraint exists:
+**A4 moved to the end.** It was originally "2 lines, low risk, gated on A3." A3 landed and A4 is
+still blocked — on generated **URLSession** code, a materially bigger problem than the validation
+rules (see [Plan C](#plan-c--swift-6-readiness-for-the-generated-urlsession-layer)).
+
+**Dependencies:**
 
 ```
-A3 ──▶ A4        (language mode breaks the build unless generated code is Sendable first)
+A3 ✅ ──▶ Plan C ──▶ A4      (language mode needs the URLSession layer Sendable-clean)
 
-A0, A1, A2, A5, A6   independent — any order, any time
-A5 ──▶ Plan B        (recommended, not required)
+A0 ✅, A1 ✅, A2 ✅, A5, A6   independent — any order, any time
+A5 ──▶ Plan B                (recommended, not required)
 ```
 
 **A5 is the step that actually needs care**, and it is worth restating why it's in this plan at all:
@@ -177,6 +188,42 @@ now report `1`.
 **Not yet verified — needs a device/simulator pass.** A1 fixes a _latent_ bug, so a green suite does
 not prove it. Manually exercise: tab switching, background/foreground, network toggle, theme change,
 and mini-player tracking during playback.
+
+---
+
+### Implementation notes — A3 (shipped July 29, 2026)
+
+Template override worked as hoped. `validate:ios` green: 698 tests, Swift drift check clean,
+SwiftLint `--strict` clean.
+
+1. **The `TEMPLATE_DIR` hook is now real.** It was declared at `generate-swift.sh:9` but the directory
+   never existed and `-t` was never passed. Added `-t "$TEMPLATE_DIR"` plus a hard precondition: if
+   `Validation.mustache` is missing, generation **fails** rather than silently emitting code that
+   won't compile under Swift 6.
+
+2. **All three rule structs got `Sendable`, not just `NumericRule`.** `StringRule` is also held as
+   `static let` (2 sites) and only escaped erroring because it has no generic parameter for the
+   checker to complain about. Fixing one and not the others would have been a latent repeat.
+
+3. **Correction to §3's reasoning.** That section said the rule structs' fields are "immutable value
+   types." They are declared `var`. The `Sendable` conformance is still sound — `static let` copies
+   are not shared mutable state — but the stated justification was wrong.
+
+4. **Two unplanned concurrency fixes**, both improvements independent of Swift version:
+   - `DebugLogger.verboseLoggingEnabled` was a nonisolated mutable global read from ~459 call sites
+     across every actor. Now `NSLock`-backed, matching `FileExtensionStorage` in `DownloadManager`.
+     Only the test suite writes it.
+   - `SystemKeychain` — `final` and stateless, so it declares `Sendable` directly.
+
+5. **`--swiftversion` bumps deliberately reverted.** Both `ios/.swiftformat` and
+   `generate-swift.sh:99` stay at 5.9. Telling swiftformat 6.0 while the compiler is on 5.0 is
+   incoherent; these move with A4.
+
+**The A4 measurement in §1 was incomplete — see Plan C.** It reported "4 errors, all `NumericRule`."
+Actually flipping the flag surfaced `DebugLogger`, `SystemKeychain`, and **6 structural errors in
+generated `URLSessionImplementations.swift`**. The original probe built only the app target and did
+not exercise all strict-concurrency paths. Lesson: measure by flipping the real setting and building
+**both** targets, not with command-line overrides on one.
 
 ---
 
@@ -301,7 +348,105 @@ Plan A lands:
 - **Phase 3's per-screen occlusion audit stays** — still the core of the work, but now verifying a
   modern container rather than probing a deprecated one's edge cases.
 
-### Deliberately _not_ in either plan
+### Plan C — Swift 6 readiness for the generated URLSession layer
+
+**Its own plan, not a step appended to Plan A.** The reasoning is in §7 below; the short version is
+that this is a different _kind_ of work (owning a fork of a vendor template that carries every API
+call in the app) with a different risk profile and a different review need than anything in Plan A.
+
+**Blocks:** A4 only. Nothing else in Plan A or B waits on it.
+
+#### The problem
+
+Under `SWIFT_VERSION 6.0` + `SWIFT_STRICT_CONCURRENCY complete`, the generated
+`URLSessionImplementations.swift` (682 lines) produces 6 errors:
+
+| Line | Error                                                                                     |
+| ---- | ----------------------------------------------------------------------------------------- |
+| 62   | `var challengeHandlerStore` — nonisolated global shared mutable state                     |
+| 65   | `var credentialStore` — nonisolated global shared mutable state                           |
+| 163  | capture of `self` (non-`Sendable` `URLSessionRequestBuilder<T>`) in a `@Sendable` closure |
+| 163  | capture of `completion` (non-`Sendable` closure) in a `@Sendable` closure                 |
+| 164  | capture of `cleanupRequest` (non-`Sendable` closure) in a `@Sendable` closure             |
+| 371  | non-final class `SessionDelegate` cannot conform to `Sendable`                            |
+
+These are **structural**, not a missing annotation. The template is already partially Swift-6 aware —
+`dataTaskFromProtocol`'s completion handler is declared `@escaping @Sendable` (template line 31/36),
+and that is precisely what makes the captures at 163–164 illegal. Upstream is mid-migration.
+
+#### Verified: upgrading the generator does not fix it
+
+Generator 7.24.0 (released 2026-07-20, newer than our 7.23.0 pin) ships a
+`URLSessionImplementations.mustache` that is **byte-identical except one unrelated line**:
+
+```diff
+-} else if contentType.hasPrefix("application/octet-stream") || contentType.hasPrefix("image/") {
++} else if contentType.hasPrefix("application/octet-stream"){
+```
+
+That is a **regression for us** — it drops `image/` content-type handling, which this app relies on
+for cover art. So 7.24.0 is not an upgrade path; it is a downgrade plus the same Swift 6 errors.
+Re-check on each future generator release before doing any of the work below.
+
+#### Options
+
+**C1 — Patch `URLSessionImplementations.mustache` as a second template override _(recommended)_**
+
+Extends the mechanism A3 already established and proved. Work required:
+
+1. `final class SessionDelegate` (line 371) — check nothing subclasses it.
+2. Replace the two mutable global `SynchronizedDictionary` stores with a lock-protected type, or
+   move them into the delegate's instance state.
+3. Restructure the dataTask completion closure (lines 162–166) so it does not capture `self`,
+   `completion`, or `cleanupRequest` across the `@Sendable` boundary — the genuinely delicate part.
+4. Regenerate, build under Swift 6, run the full gate.
+
+- **Pro**: no new build targets; consistent with A3; drift check keeps working; keeps generated code
+  in the same module.
+- **Con**: we own a fork of a 682-line vendor template covering the app's entire network path. Every
+  future generator upgrade needs a 3-way merge. This is the real cost, and it is ongoing.
+- **Mitigation**: coverage here is unusually good — 698 iOS tests plus 286 live contract tests all
+  exercise this code path, so a mistake shows up fast rather than silently.
+
+**C2 — Extract generated models into a separate framework target kept at Swift 5**
+
+Mixed-language-mode build: app code at 6.0, generated code at 5.0.
+
+- **Pro**: zero vendor-template ownership; generator upgrades stay trivial.
+- **Con**: new framework target, module boundary, `import` churn across the app, and everything
+  crossing that boundary must be `Sendable` anyway — so it may not even avoid the work. Leaves a
+  permanent structural seam to explain forever.
+- **Note**: this replaces "Option 3" from §3, which was **wrong as written** — it claimed XcodeGen
+  could set `SWIFT_VERSION` per _source group_. It cannot; `SWIFT_VERSION` is target-level and
+  `-swift-version` is whole-module in the compiler. A separate target is the only real form of that
+  idea.
+
+**C3 — Replace the generated URLSession layer with hand-written networking**
+
+The app already has a hand-written `APIClient` (838 lines) that is Swift 6 clean. The generated
+`URLSessionImplementations` may be largely redundant.
+
+- **Investigate first**: how much of the generated request machinery does `APIClient` actually route
+  through? If little, deleting it beats patching it.
+- **Pro**: removes the problem permanently, no fork, no extra target.
+- **Con**: potentially the largest change; needs the contract tests as the safety net.
+
+#### Recommended sequence
+
+1. **Scope C3 first** — one afternoon of investigation. If `APIClient` does not meaningfully depend
+   on the generated URLSession layer, C3 is the correct endstate and the other options are moot. This
+   is cheap to answer and changes everything, so it goes first.
+2. If C3 is not viable, **do C1**, with `image/` handling explicitly preserved and a regression test.
+3. Treat **C2 as the fallback** if C1's closure restructuring proves unsound.
+4. Then flip **A4** (2 lines) and delete this plan.
+
+#### Also part of Plan C
+
+- Bump `--swiftversion` to 6.0 in **both** `ios/.swiftformat` and `scripts/generate-swift.sh:99`.
+  Deliberately **not** done in A3: with the compiler on 5.0, telling swiftformat 6.0 would be
+  incoherent. These move with A4, not before.
+
+### Deliberately _not_ in any plan
 
 - **`@Observable` migration.** Still worthwhile (the `AudioPlayerManager.currentTime` re-render churn
   is real), but it is a _performance_ refactor touching 26 classes and every protocol in the DI layer.
@@ -330,32 +475,56 @@ deferring the bug fix to avoid duplicate work is not.
 
 ## 6. Readiness
 
-**Ready to implement: A0, A1, A2, A5, A6.** Each has a concrete change, a verification step, and no
-unresolved dependency.
+**Done:** A0, A1, A2 (PR #133) · A3 (PR #134).
 
-**A3 has one open decision** (below) that should be settled before starting it — the _approach_ is
-undecided, not the goal. A4 is trivial and gated on A3.
+**Ready now:** **A5** (`NavigationStack`), **A6** (previews). Both independent, both concrete.
 
-### The one remaining decision — A3's generated-code fix
-
-Option 1 (template override) is the durable answer and my recommendation, but it means building the
-template infrastructure that `generate-swift.sh` currently only pretends to have (`TEMPLATE_DIR` is
-declared at line 9, never created, never passed to the generator). If you'd rather not take on
-generator templating, **Option 3** (per-group `SWIFT_VERSION`) gets app code to Swift 6 today with one
-documented exception — a reasonable trade for a personal project.
-
-Suggested tactic: **attempt Option 1, time-box it, fall back to Option 3.** A3 is the only step with
-meaningful unknowns, and it blocks nothing except A4.
+**Blocked:** **A4** — waits on Plan C.
 
 ### Settled
 
-- **iPad** — removing it (A0). Verified safe: ad-hoc distribution, no App Store implication.
-- **`SWIFT_STRICT_CONCURRENCY: complete` from the start** — yes. The measurement shows the code passes
-  it today; it is much harder to adopt later once code drifts.
+- **iPad** — removed (A0). Verified safe: ad-hoc distribution, no App Store implication.
+- **A3 approach** — template override (Option 1) chosen and shipped. It worked cleanly: one
+  overridden file, one changed generated file, drift check still meaningful.
 - **Plan A / Plan B split** — confirmed, for attribution rather than size (§2).
+- **URLSession work is its own plan (Plan C), not a Plan A step** — see §7.
+- **Generator 7.24.0 is not an upgrade path** — verified identical template plus an `image/`
+  content-type regression.
 
-### Suggested first PR
+---
 
-**A0 + A1 + A2 together.** All three are low-risk, none depend on the others, and combined they are
-still a small diff. That clears the trivial work in one pass and leaves A3/A4 (build tooling) and A5
-(the real work) as focused PRs.
+## 7. Why the URLSession work is its own plan
+
+> Asked directly: append it to Plan A as a final step, or split it out? Goal is the correct endstate,
+> not the shortest path.
+
+**Split it out (Plan C).** Not because of size — because it is a different _kind_ of work, and mixing
+kinds inside one plan is what makes plans stop being useful.
+
+Everything in Plan A is **bounded and locally verifiable**: a known list of call sites, a mechanical
+change, and a green gate that means done. Even A3, the fiddliest, was "override one file, diff one
+generated file."
+
+Plan C is neither:
+
+1. **It creates ongoing ownership, not a one-time change.** C1 means maintaining a fork of a 682-line
+   vendor template that carries every API call in the app. That cost recurs at every generator
+   upgrade, forever. A "final step" framing hides a permanent maintenance obligation inside a
+   checklist item.
+2. **The approach isn't decided, and one option deletes the problem instead of solving it.** C3 —
+   discovering the generated URLSession layer is largely redundant next to the hand-written
+   `APIClient` — would be the genuine correct endstate. That deserves to be investigated and argued on
+   its own, not smuggled in under "finish A4."
+3. **Its risk profile is inverted from Plan A's.** Plan A's steps are individually safe and
+   collectively invisible. Plan C touches the network path for a payoff (`SWIFT_VERSION 6.0`) that is
+   **entirely invisible to users**. That trade needs to be made deliberately, in daylight.
+4. **A4 stops being a hostage.** With A4 last and gated on Plan C, A5 → Plan B (the mini player, the
+   thing you originally asked for) proceeds without ever waiting on generated networking code.
+
+The "correct endstate" instinct is right, and it is exactly why this should not be a bullet at the
+bottom of Plan A: appended final steps are the ones that quietly never happen. As its own plan with a
+recommended investigation-first sequence, it stays a real decision with a real owner.
+
+**What that endstate is:** app and generated code both compiling under Swift 6 with
+`SWIFT_STRICT_CONCURRENCY: complete`, no forked vendor template if C3 proves viable, and `A4` reduced
+to the 2-line flip it was always supposed to be.
