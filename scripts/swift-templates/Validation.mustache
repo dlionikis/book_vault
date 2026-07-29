@@ -12,50 +12,50 @@
 
 import Foundation
 
-public struct StringRule: Sendable {
-    public var minLength: Int?
-    public var maxLength: Int?
-    public var pattern: String?
+{{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} struct StringRule: Sendable {
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} var minLength: Int?
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} var maxLength: Int?
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} var pattern: String?
 }
 
-public struct NumericRule<T: Comparable & Numeric & Sendable>: Sendable {
-    public var minimum: T?
-    public var exclusiveMinimum = false
-    public var maximum: T?
-    public var exclusiveMaximum = false
-    public var multipleOf: T?
+{{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} struct NumericRule<T: Comparable & Numeric & Sendable>: Sendable {
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} var minimum: T?
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} var exclusiveMinimum = false
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} var maximum: T?
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} var exclusiveMaximum = false
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} var multipleOf: T?
 }
 
-public struct ArrayRule: Sendable {
-    public var minItems: Int?
-    public var maxItems: Int?
-    public var uniqueItems: Bool
+{{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} struct ArrayRule: Sendable {
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} var minItems: Int?
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} var maxItems: Int?
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} var uniqueItems: Bool
 }
 
-public enum StringValidationErrorKind: Error {
+{{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} enum StringValidationErrorKind: Error {
     case minLength, maxLength, pattern
 }
 
-public enum NumericValidationErrorKind: Error {
+{{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} enum NumericValidationErrorKind: Error {
     case minimum, maximum, multipleOf
 }
 
-public enum ArrayValidationErrorKind: Error {
+{{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} enum ArrayValidationErrorKind: Error {
     case minItems, maxItems, uniqueItems
 }
 
-public struct ValidationError<T: Error & Hashable>: Error {
-    public fileprivate(set) var kinds: Set<T>
+{{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} struct ValidationError<T: Error & Hashable>: Error {
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} fileprivate(set) var kinds: Set<T>
 }
 
-public struct Validator {
+{{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} struct Validator {
     /// Validate a string against a rule.
     /// - Parameter string: The String you wish to validate.
     /// - Parameter rule: The StringRule you wish to use for validation.
     /// - Returns: A validated string.
     /// - Throws: `ValidationError<StringValidationErrorKind>` if the string is invalid against the rule,
     ///           `NSError` if the rule.pattern is invalid.
-    public static func validate(_ string: String, against rule: StringRule) throws -> String {
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} static func validate(_ string: String, against rule: StringRule) throws -> String {
         var error = ValidationError<StringValidationErrorKind>(kinds: [])
         if let minLength = rule.minLength, !(minLength <= string.count) {
             error.kinds.insert(.minLength)
@@ -81,7 +81,7 @@ public struct Validator {
     /// - Parameter rule: The NumericRule you wish to use for validation.
     /// - Returns: A validated integer.
     /// - Throws: `ValidationError<NumericValidationErrorKind>` if the numeric is invalid against the rule.
-    public static func validate<T: Comparable & BinaryInteger>(_ numeric: T, against rule: NumericRule<T>) throws -> T {
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} static func validate<T: Comparable & BinaryInteger>(_ numeric: T, against rule: NumericRule<T>) throws -> T {
         var error = ValidationError<NumericValidationErrorKind>(kinds: [])
         if let minimum = rule.minimum {
             if !rule.exclusiveMinimum, minimum > numeric {
@@ -113,7 +113,7 @@ public struct Validator {
     /// - Parameter rule: The NumericRule you wish to use for validation.
     /// - Returns: A validated fractional number.
     /// - Throws: `ValidationError<NumericValidationErrorKind>` if the numeric is invalid against the rule.
-    public static func validate<T: Comparable & FloatingPoint>(_ numeric: T, against rule: NumericRule<T>) throws -> T {
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} static func validate<T: Comparable & FloatingPoint>(_ numeric: T, against rule: NumericRule<T>) throws -> T {
         var error = ValidationError<NumericValidationErrorKind>(kinds: [])
         if let minimum = rule.minimum {
             if !rule.exclusiveMinimum, minimum > numeric {
@@ -145,7 +145,7 @@ public struct Validator {
     /// - Parameter rule: The ArrayRule you wish to use for validation.
     /// - Returns: A validated array.
     /// - Throws: `ValidationError<ArrayValidationErrorKind>` if the string is invalid against the rule.
-    public static func validate(_ array: Array<AnyHashable>, against rule: ArrayRule) throws -> Array<AnyHashable> {
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} static func validate(_ array: Array<AnyHashable>, against rule: ArrayRule) throws -> Array<AnyHashable> {
         var error = ValidationError<ArrayValidationErrorKind>(kinds: [])
         if let minItems = rule.minItems, !(minItems <= array.count) {
             error.kinds.insert(.minItems)
