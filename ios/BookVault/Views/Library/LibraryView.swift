@@ -238,6 +238,7 @@ private struct LibraryBooksGrid: View {
                     BookGridItem(book: libraryBook.asBook)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(A11y.bookCell(libraryBook.id.uuidString))
             }
 
             // Load more indicator (only if pagination is enabled)

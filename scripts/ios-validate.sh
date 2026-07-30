@@ -118,10 +118,14 @@ print('platform=iOS Simulator,name=Any iOS Simulator Device')
 ")
   # Separate scheme: keeps UI tests out of the default scheme, and therefore out of
   # validate:ios / validate:full. See docs/plans/ios-ui-testing-plan.md.
+  #
+  # Note: no CODE_SIGNING_ALLOWED=NO here, unlike the build and unit-test steps.
+  # Skipping signing strips entitlements from the binary, so keychain writes fail
+  # with -34018 (errSecMissingEntitlement) and login can never persist a session.
+  # Unit tests never noticed because they do not exercise login.
   xcodebuild test \
     -scheme BookVault-UITests \
-    -destination "$SIMULATOR_DEST" \
-    CODE_SIGNING_ALLOWED=NO
+    -destination "$SIMULATOR_DEST"
 }
 
 case "${1:-all}" in

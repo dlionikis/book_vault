@@ -4,5 +4,16 @@
 <dict>
 	<key>aps-environment</key>
 	<string>development</string>
+	<!--
+	Declares the app's own keychain access group explicitly. Without this, an app
+	launched by the XCUITest runner in the simulator gets no keychain entitlement
+	and SecItemAdd fails with -34018 (errSecMissingEntitlement), so login cannot
+	persist a session. Normal launches were unaffected, which is why this only
+	surfaced once UI tests existed.
+	-->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.bookvault.BookVault</string>
+	</array>
 </dict>
 </plist>

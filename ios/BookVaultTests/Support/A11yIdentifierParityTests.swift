@@ -31,11 +31,17 @@ final class A11yIdentifierParityTests: XCTestCase {
         XCTAssertEqual(A11y.Tab.offline, "tab.offline")
     }
 
-    func testCatalogIdentifiers() {
-        XCTAssertEqual(A11y.Catalog.grid, "catalog.grid")
+    /// Shared by Catalog and Library. UI tests match on the prefix because the id is
+    /// assigned by the database, so keep the prefix and the builder consistent.
+    func testBookCellIdentifiers() {
+        XCTAssertEqual(A11y.bookCellPrefix, "bookCell.")
         XCTAssertEqual(
-            A11y.Catalog.cell("11111111-1111-1111-1111-111111111111"),
-            "catalog.cell.11111111-1111-1111-1111-111111111111"
+            A11y.bookCell("11111111-1111-1111-1111-111111111111"),
+            "bookCell.11111111-1111-1111-1111-111111111111"
+        )
+        XCTAssertTrue(
+            A11y.bookCell("abc").hasPrefix(A11y.bookCellPrefix),
+            "bookCell(_:) must start with bookCellPrefix or prefix-matching in UI tests breaks"
         )
     }
 
@@ -54,5 +60,6 @@ final class A11yIdentifierParityTests: XCTestCase {
         XCTAssertFalse(UITestEnvironment.isActive)
         XCTAssertFalse(UITestEnvironment.shouldResetSession)
         XCTAssertFalse(UITestEnvironment.shouldSkipInitialBookLoad)
+        XCTAssertFalse(UITestEnvironment.shouldSkipPushAuthorization)
     }
 }
