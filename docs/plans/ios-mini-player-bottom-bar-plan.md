@@ -1,8 +1,35 @@
 # iOS Mini Player → Bottom Bar Plan
 
-> **Status**: Proposed
+> **Status**: In progress (started July 30, 2026)
 > **Scope**: iOS app only (no API, DB, or web changes)
-> **Created**: July 28, 2026
+> **Created**: July 28, 2026 · **Revised** July 30, 2026 after Plan A landed
+> **Prerequisites landed**: A5 `NavigationStack` migration (#135) · XCUITest harness (#137, #138)
+
+---
+
+## 0. Revisions since this plan was written
+
+Plan A (#133–#136) and the UI-test work (#137–#138) changed four of this plan's premises:
+
+1. **Phase 4 is deleted.** The conditional `NavigationView` → `NavigationStack` migration happened in
+   A5 (#135). `NavigationView` is now **absent from the codebase**, so the plan's single biggest risk —
+   deprecated containers dropping the safe-area inset — is gone. Phase 3's audit still matters, but it
+   now verifies a modern container rather than probing a deprecated one's edge cases.
+2. **There is now an XCUITest suite** (#137, #138) — 6 passing flows. §5's "if the project's E2E suite
+   drives the UI" is no longer hypothetical: see §5a.
+3. **A likely cause of a known bug is in this plan's blast radius.** The current overlay is
+   `VStack { MiniPlayerView(); Spacer() }` inside a `ZStack`. **That `Spacer()` expands to fill the
+   whole screen**, sitting above the `TabView` and plausibly intercepting touches across the entire
+   content area — which matches the U3/U5 blocker recorded in
+   [ios-ui-testing-plan.md](ios-ui-testing-plan.md) §6b, where every book cell reports
+   `hittable == false`. **Verify this explicitly** (§5a); if it holds, this change fixes that bug and
+   unblocks 7 deferred UI tests as a side effect.
+4. **Open question 2 is now partly answered.** `loadMostRecentlyPlayedBook()` is suppressed under
+   `--uitesting` (#137), but in shipping builds it still populates `currentBook` at launch, so the bar
+   **will** appear on cold start for any user with playback history. Still worth an explicit decision.
+
+Also confirmed against the current code: `MiniPlayerView` is unchanged apart from the two
+`accessibilityIdentifier` calls added in #137, so Phase 1's steps all still apply.
 
 ---
 
@@ -180,10 +207,10 @@ Replace the system tab bar with a custom one so both bars are ordinary views in 
 
 ### Phase 3 — Audit every screen for occlusion (L1–L4)
 
-`safeAreaInset` on the `TabView` should propagate automatically, but **every tab wraps itself in its
-own `NavigationView`** (`CatalogView`, `LibraryView`, `BrowseView`, `SearchView`, `DownloadsView`,
-`SettingsView`, `OfflineModeView`) — a deprecated container whose safe-area propagation into pushed
-destinations is worth verifying rather than assuming. Check each:
+`safeAreaInset` on the `TabView` should propagate automatically, and since A5 (#135) every tab root is
+a `NavigationStack` rather than a deprecated `NavigationView` — so propagation into pushed destinations
+is now expected to work rather than being the plan's main risk. Still verify each screen, because
+"expected to work" is not "verified":
 
 | Screen                                                                                               | What to verify                                                                                                          |
 | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
@@ -200,10 +227,10 @@ destinations is worth verifying rather than assuming. Check each:
 Where a screen has bottom-pinned chrome of its own, ensure it composes with the inset rather than
 adding its own hardcoded padding — **no hardcoded mini-bar height anywhere** (A3).
 
-### Phase 4 — Migrate `NavigationView` → `NavigationStack` (conditional)
+### Phase 4 — ~~Migrate `NavigationView` → `NavigationStack`~~ **(done in A5, #135)**
 
-Only if Phase 3 shows `NavigationView` breaking inset propagation. This is a pre-existing
-deprecation debt (~20 sites) and should be a **separate PR** if needed, not folded into this one.
+No longer part of this plan. `NavigationView` is absent from the codebase, and every tab root plus
+pushed destination is a `NavigationStack`.
 
 ---
 
@@ -240,15 +267,60 @@ the final element clears the mini bar's top edge (L1/L2).
 
 ---
 
+## 5a. Automated verification (new — the suite did not exist when this plan was written)
+
+An XCUITest suite now exists (#137, #138) with 6 passing flows, and **7 deferred tests are blocked by
+what may be this plan's own bug**.
+
+### Before changing anything — confirm the hypothesis
+
+Record the answer either way; it decides whether this change carries a bug fix.
+
+1. On `main`, log in and confirm a book cell reports `hittable == false`
+   (documented in [ios-ui-testing-plan.md](ios-ui-testing-plan.md) §6b).
+2. Temporarily delete the `VStack { MiniPlayerView(); Spacer() }` overlay from `ContentView`.
+3. Re-check hittability. If cells become hittable, **the full-screen `Spacer()` inside the `ZStack` was
+   swallowing touches app-wide**, and Strategy A fixes it by construction — no overlay, no `Spacer()`.
+
+### After the change — un-defer the blocked tests
+
+If the hypothesis holds, restore these from `ios-uitests-u3-u5-wip` and expect them to pass:
+
+| Test                                             | Why it matters here         |
+| ------------------------------------------------ | --------------------------- |
+| `testTappingBookPushesDetailAndBackReturns`      | U3 — closes the A5 gap      |
+| `testDetailCanBePushedAgainAfterPopping`         | U3 push→pop→push            |
+| `testStartingPlaybackShowsMiniPlayer`            | **Direct F1 coverage**      |
+| `testTappingMiniPlayerOpensFullPlayer`           | **Direct F4 coverage**      |
+| `testMiniPlayerPlayPauseIsSeparatelyAddressable` | **Direct F5 + A1 coverage** |
+| `testOverflowTabsAreReachableViaMore`            | U4 overflow                 |
+| `testSwitchingAwayAndBackRestoresTabContent`     | U4 round-trip               |
+
+Three of those assert this plan's own requirements, so they become the regression net for it.
+
+### New tests worth adding for L1/L2
+
+The occlusion requirement is the core of this change and is exactly what manual checking misses:
+
+- With a book loaded, scroll a tab to the bottom and assert the **last cell is hittable** — a direct
+  encoding of L1/L2 that would catch content trapped under the bar.
+- Assert the mini bar and the tab bar do **not** overlap (compare `frame` values).
+
+> **Note on `.accessibilityElement(children: .combine)`** — A1 requires the play/pause button be a
+> separate element, and #137 found the combine modifier collapses it into the parent. Phase 1 step 5
+> already fixes this; `testMiniPlayerPlayPauseIsSeparatelyAddressable` is the check.
+
+---
+
 ## 6. Risks
 
-| Risk                                                                                              | Impact                                                           | Mitigation                                                                                   |
-| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `NavigationView` (deprecated, used by every tab) drops the safe-area inset in pushed destinations | Content clipped on detail screens — the exact failure L1 forbids | Phase 3 verifies per screen; Phase 4 migrates to `NavigationStack` if needed                 |
-| Nested `Button` (play/pause inside the bar's tappable region) makes taps ambiguous                | F5 breaks; sheet opens on every pause                            | Restructure to `contentShape` + `onTapGesture` instead of nested `Button`s                   |
-| Tab bar sitting above the mini bar reads as unfamiliar                                            | UX regression vs. Apple Music convention                         | Confirm ordering with the user first (§8); Strategy A is reversible to above-tab-bar cheaply |
-| Keyboard + bottom inset + `.ignoresSafeArea(.keyboard)` interaction                               | Bar strands mid-screen over `SearchView`                         | Explicit L7 test case                                                                        |
-| Empty-state paddings tuned against the old top overlay                                            | Slightly off-center empty states                                 | Re-eyeball `LibraryView`/`CatalogView`/`SearchView` empty states                             |
+| Risk                                                                               | Impact                                   | Mitigation                                                                                   |
+| ---------------------------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
+| ~~`NavigationView` drops the safe-area inset~~ — **resolved by A5 (#135)**         | —                                        | `NavigationView` no longer exists; every container is a `NavigationStack`                    |
+| Nested `Button` (play/pause inside the bar's tappable region) makes taps ambiguous | F5 breaks; sheet opens on every pause    | Restructure to `contentShape` + `onTapGesture` instead of nested `Button`s                   |
+| Tab bar sitting above the mini bar reads as unfamiliar                             | UX regression vs. Apple Music convention | Confirm ordering with the user first (§8); Strategy A is reversible to above-tab-bar cheaply |
+| Keyboard + bottom inset + `.ignoresSafeArea(.keyboard)` interaction                | Bar strands mid-screen over `SearchView` | Explicit L7 test case                                                                        |
+| Empty-state paddings tuned against the old top overlay                             | Slightly off-center empty states         | Re-eyeball `LibraryView`/`CatalogView`/`SearchView` empty states                             |
 
 ---
 
@@ -266,11 +338,12 @@ the final element clears the mini bar's top edge (L1/L2).
 
 ## 8. Open questions
 
-1. **Ordering** — confirm mini bar **below** the tab bar (as requested) rather than the Apple Music
-   convention of above it. This is the one decision that changes the implementation strategy.
-2. **Swipe to dismiss** — should the bar be dismissible, and if so does that stop playback or only
-   hide the bar? (Currently there is no way to clear `currentBook` from the UI; note that
-   `loadForMiniPlayer` populates it at launch, so the bar will be visible on cold start for any user
-   with playback history — even before they press play.)
+1. ~~**Ordering**~~ — **settled**: below the tab bar, as originally requested. Strategy A implements
+   this and is cheaply reversible to above-the-tab-bar if it reads wrong in practice.
+2. **Swipe to dismiss** — **still open, and now more visible.** There is no way to clear `currentBook`
+   from the UI, and `loadMostRecentlyPlayedBook()` populates it at launch, so any user with playback
+   history sees the bar on cold start before pressing play. A full-width bottom bar is more prominent
+   than the old 70% top card, so "permanently present with no dismissal" is a more noticeable choice
+   than it was. Out of scope to build here (§7), but worth deciding.
 3. **Height** — keep ~68pt content height, or tighten to ~56pt now that it is full width?
 4. **Tab bar material** — should the tab bar become opaque so the two stacked bars read as one unit?
