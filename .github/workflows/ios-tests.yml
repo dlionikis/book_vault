@@ -108,6 +108,32 @@ jobs:
             exit 1
           fi
 
+      # UI tests run on a separate scheme so they stay out of validate:ios.
+      # Non-blocking for now, matching how SwiftLint and the coverage threshold are
+      # already treated here: an immediately-blocking flaky UI suite teaches people
+      # to ignore CI. Promote to blocking once it has been reliably green.
+      # Only the login flows run here — the rest need a backend with seeded data.
+      # See docs/plans/ios-ui-testing-plan.md.
+      - name: Run UI tests
+        working-directory: ios
+        continue-on-error: true
+        run: |
+          rm -rf UITestResults.xcresult
+
+          xcodebuild test \
+            -scheme BookVault-UITests \
+            -destination '${{ steps.simulator.outputs.destination }}' \
+            -resultBundlePath UITestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee xcodebuild-ui.log
+
+          if grep -qF "** TEST SUCCEEDED **" xcodebuild-ui.log; then
+            echo "✅ UI tests passed"
+          else
+            echo "⚠️ UI tests failed (non-blocking)"
+            exit 1
+          fi
+
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -116,6 +142,8 @@ jobs:
           path: |
             ios/TestResults.xcresult
             ios/xcodebuild.log
+            ios/UITestResults.xcresult
+            ios/xcodebuild-ui.log
 
       - name: Generate coverage report
         if: success()

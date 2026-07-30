@@ -278,6 +278,17 @@ class AuthManager: ObservableObject, AuthManaging {
             DebugLogger.auth("Session restoration complete - isAuthenticated: \(isAuthenticated), hasRefreshToken: \(refreshTokenValue != nil)")
         }
 
+        // UI tests must start at the login screen. Clear any session left in the
+        // keychain by a previous run rather than just skipping restoration, so
+        // state cannot leak between tests.
+        if UITestEnvironment.shouldResetSession {
+            DebugLogger.auth("UI testing: clearing keychain session")
+            keychain.delete(key: accessTokenKey)
+            keychain.delete(key: refreshTokenKey)
+            keychain.delete(key: userDataKey)
+            return
+        }
+
         // Check what's in keychain
         let hasAccessToken = keychain.load(key: accessTokenKey) != nil
         let hasRefreshToken = keychain.load(key: refreshTokenKey) != nil

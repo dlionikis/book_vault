@@ -133,6 +133,32 @@ targets:
     dependencies:
       - target: BookVault
 
+  # XCUITest target. Deliberately NOT in the default BookVault scheme's `test:`
+  # block: scripts/ios-validate.sh runs a bare `xcodebuild test -scheme BookVault`,
+  # so adding it there would put slow UI tests in the fast inner loop. Driven by
+  # the BookVault-UITests scheme instead. See docs/plans/ios-ui-testing-plan.md.
+  BookVaultUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: '17.0'
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.bookvault.BookVaultUITests
+        # Match the host app (iPhone only); xcodegen otherwise defaults to '1,2'.
+        TARGETED_DEVICE_FAMILY: '1'
+        # Keep in step with the app; moves with A4.
+        SWIFT_VERSION: '5.0'
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: BookVault
+
+    sources:
+      - path: BookVaultUITests
+        createIntermediateGroups: true
+
+    dependencies:
+      - target: BookVault
+
 schemes:
   BookVault:
     build:
@@ -147,6 +173,24 @@ schemes:
         - BookVaultTests
     profile:
       config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  # Separate scheme so UI tests stay out of `validate:ios` / `validate:full`.
+  # Run with: npm run ios:test:ui
+  BookVault-UITests:
+    build:
+      targets:
+        BookVault: all
+        BookVaultUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - BookVaultUITests
     analyze:
       config: Debug
     archive:

@@ -1,6 +1,6 @@
 # iOS UI Testing Plan (XCUITest)
 
-> **Status**: Proposed
+> **Status**: Phases 1–3 + 5 shipped July 30, 2026 · Phase 4 (flows U2–U5) remaining
 > **Scope**: iOS test infrastructure. No app logic, no API, no DB, no web.
 > **Created**: July 30, 2026
 > **Related**: [ios-modernization-sequencing.md](ios-modernization-sequencing.md) ·
@@ -205,6 +205,49 @@ One file per flow. Assert on identifiers, not labels.
 | **Identifier churn**                  | Identifiers are invisible to users, so they only change when someone edits them — far more stable than labels                                                                                                                 |
 | **Auto-loaded book breaks U5**        | `loadMostRecentlyPlayedBook()` populates `currentBook` at launch, so the mini player may already be visible before playback. The `--uitesting` reset must handle this — noted in the mini-player plan as an open question too |
 | **Scope creep into snapshot testing** | Explicitly out of scope (§4)                                                                                                                                                                                                  |
+
+---
+
+## 6a. Implementation notes — Phases 1–3 + 5 (shipped July 30, 2026)
+
+Infrastructure is live and proven: **3 UI tests pass in 22.8s**. Unit suite went 698 → **703**
+(5 new parity tests). `validate:full` green, exit 0.
+
+**Phase 4 is deliberately incomplete.** U1 (login) is done because it needs no backend and therefore
+proves the harness. U2–U5 need `npm run dev` + `npm run e2e:seed` and are the next PR.
+
+What differed from the plan:
+
+1. **The identifiers are shared constants, not string literals.** `A11y` in
+   `BookVault/Support/AccessibilityIdentifiers.swift` is the source of truth. A UI test bundle runs
+   out-of-process and **cannot `@testable import` the app**, so `BookVaultUITests/A11yID.swift`
+   mirrors the strings. Duplication drifts silently, so `A11yIdentifierParityTests` in the unit target
+   pins the app-side values — a rename now fails a fast unit test instead of producing a UI test that
+   mysteriously cannot find an element.
+
+2. **`.accessibilityElement(children: .combine)` on the mini player is a real constraint, as
+   predicted.** It collapses the play/pause button into the parent element. An identifier is set on
+   both, but **U5 must verify the button is independently tappable** — if it is not, the combine
+   modifier has to be reworked, which is a change to the mini player's accessibility semantics and
+   overlaps Plan B's requirement A1.
+
+3. **Two app-side hooks, both gated on `--uitesting`** (`UITestEnvironment`):
+   - `AuthManager.restoreSession()` **clears** the keychain rather than merely skipping restoration,
+     so state cannot leak between runs.
+   - `ContentView`'s `loadMostRecentlyPlayedBook()` is suppressed, so "the mini player appears" is not
+     vacuously true at launch.
+     A parity test asserts both are inactive without the launch argument, so a shipping build can never
+     clear the keychain on launch.
+
+4. **Scheme separation verified, not assumed.** `BookVault.xcscheme` tests only `BookVaultTests`;
+   `BookVault-UITests.xcscheme` tests only `BookVaultUITests`. Confirmed `validate:ios` runs 703 unit
+   tests with zero `LoginFlowUITests` — the fast loop is intact.
+
+5. **Unplanned fix:** `.xcresult/` bundles were not gitignored. Pre-existing (CI already wrote
+   `TestResults.xcresult`), and the new UI bundle would have widened it. Added.
+
+**Timing confirms the plan's caution:** ~7s per UI test vs 703 unit tests in 4.2s. Keeping these out
+of `validate:ios` was the right call.
 
 ---
 

@@ -103,6 +103,7 @@ struct CatalogView: View {
                                             BookGridItem(book: book)
                                         }
                                         .buttonStyle(.plain)
+                                        .accessibilityIdentifier(A11y.Catalog.cell(book.id.uuidString))
                                     }
 
                                     if viewModel.hasMorePages {
@@ -116,6 +117,7 @@ struct CatalogView: View {
                                     }
                                 }
                                 .padding(.horizontal)
+                                .accessibilityIdentifier(A11y.Catalog.grid)
                             } else {
                                 LazyVGrid(columns: columns, spacing: 20) {
                                     ForEach(viewModel.seriesViewItems) { item in

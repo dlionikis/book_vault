@@ -171,6 +171,8 @@ ios/build/
 ios/DerivedData/
 *.xcuserstate
 *.xcuserdatad/
+# Test result bundles (xcodebuild -resultBundlePath, local and CI)
+*.xcresult/
 
 docs/infra
 

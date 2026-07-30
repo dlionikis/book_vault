@@ -70,18 +70,21 @@ struct ContentView: View {
                         CatalogView()
                             .tabItem {
                                 Label("Catalog", systemImage: "books.vertical.fill")
+                                    .accessibilityIdentifier(A11y.Tab.catalog)
                             }
                             .tag(Tab.catalog)
 
                         BrowseView()
                             .tabItem {
                                 Label("Browse", systemImage: "square.grid.2x2")
+                                    .accessibilityIdentifier(A11y.Tab.browse)
                             }
                             .tag(Tab.browse)
 
                         SearchView()
                             .tabItem {
                                 Label("Search", systemImage: "magnifyingglass")
+                                    .accessibilityIdentifier(A11y.Tab.search)
                             }
                             .tag(Tab.search)
                     } else {
@@ -89,6 +92,7 @@ struct ContentView: View {
                         OfflineModeView(selectedTab: $selectedTab)
                             .tabItem {
                                 Label("Offline", systemImage: "wifi.slash")
+                                    .accessibilityIdentifier(A11y.Tab.offline)
                             }
                             .tag(Tab.offline)
                     }
@@ -97,12 +101,14 @@ struct ContentView: View {
                     LibraryView(selectedTab: $selectedTab)
                         .tabItem {
                             Label("Library", systemImage: "books.vertical")
+                                    .accessibilityIdentifier(A11y.Tab.library)
                         }
                         .tag(Tab.library)
 
                     DownloadsView()
                         .tabItem {
                             Label("Downloads", systemImage: "arrow.down.circle")
+                                    .accessibilityIdentifier(A11y.Tab.downloads)
                         }
                         .tag(Tab.downloads)
 
@@ -111,12 +117,14 @@ struct ContentView: View {
                     }
                     .tabItem {
                         Label("Restores", systemImage: "clock.arrow.circlepath")
+                                    .accessibilityIdentifier(A11y.Tab.restores)
                     }
                     .tag(Tab.restores)
 
                     SettingsView()
                         .tabItem {
                             Label("Settings", systemImage: "gearshape")
+                                    .accessibilityIdentifier(A11y.Tab.settings)
                         }
                         .tag(Tab.settings)
                 }
@@ -125,8 +133,11 @@ struct ContentView: View {
                     handleNetworkChange(isOnline: isConnected)
                 }
                 .task {
-                    // Auto-load most recently played book on first appearance
-                    if !hasLoadedInitialBook, audioPlayer.currentBook == nil {
+                    // Auto-load most recently played book on first appearance.
+                    // Suppressed under UI testing so the mini player only appears
+                    // as a result of playback the test actually started.
+                    if !UITestEnvironment.shouldSkipInitialBookLoad,
+                       !hasLoadedInitialBook, audioPlayer.currentBook == nil {
                         await loadMostRecentlyPlayedBook()
                         hasLoadedInitialBook = true
                     }

@@ -58,6 +58,7 @@
     "ios:lint": "./scripts/ios-validate.sh --lint-only",
     "ios:build": "./scripts/ios-validate.sh --build-only",
     "ios:test": "./scripts/ios-validate.sh --test-only",
+    "ios:test:ui": "./scripts/ios-validate.sh --ui-only",
     "ios:validate": "./scripts/ios-validate.sh",
     "deploy": "./scripts/deploy.sh",
     "deploy:dry-run": "./scripts/deploy.sh --dry-run",

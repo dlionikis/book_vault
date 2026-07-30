@@ -280,6 +280,7 @@ struct BookDetailView: View {
             .padding(.vertical)
         }
         .navigationBarTitleDisplayMode(.inline)
+        .accessibilityIdentifier(A11y.BookDetail.root)
         .sheet(isPresented: $showingNowPlaying) {
             NowPlayingView()
                 .presentationDragIndicator(.visible)
@@ -390,6 +391,7 @@ struct BookPlayButton: View {
             .foregroundColor(.white)
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
+        .accessibilityIdentifier(A11y.BookDetail.play)
     }
 }
 

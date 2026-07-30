@@ -52,6 +52,7 @@ struct MiniPlayerView: View {
                             }
                         )
                         .buttonStyle(PlainButtonStyle())
+                        .accessibilityIdentifier(A11y.MiniPlayer.playPause)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
@@ -68,6 +69,7 @@ struct MiniPlayerView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Now playing: \(book.title)")
                 .accessibilityHint("Tap to open full player")
+                .accessibilityIdentifier(A11y.MiniPlayer.root)
                 .sheet(isPresented: $showingFullPlayer) {
                     NowPlayingView()
                         .presentationDragIndicator(.visible)

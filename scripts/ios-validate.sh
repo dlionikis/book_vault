@@ -100,13 +100,38 @@ print('platform=iOS Simulator,name=Any iOS Simulator Device')
     CODE_SIGNING_ALLOWED=NO
 }
 
+run_ui_tests() {
+  CURRENT_STEP="iOS UI tests"
+  echo "📱 Running iOS UI tests..."
+  echo "   Note: flows beyond the login screen need a running backend"
+  echo "         (npm run dev) with a seeded user (npm run e2e:seed)."
+  SIMULATOR_DEST=$(xcrun simctl list devices available -j | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for runtime, devices in data.get('devices', {}).items():
+    if 'iOS' in runtime:
+        for d in devices:
+            if 'iPhone' in d['name'] and d['isAvailable']:
+                print(f\"platform=iOS Simulator,id={d['udid']}\")
+                sys.exit(0)
+print('platform=iOS Simulator,name=Any iOS Simulator Device')
+")
+  # Separate scheme: keeps UI tests out of the default scheme, and therefore out of
+  # validate:ios / validate:full. See docs/plans/ios-ui-testing-plan.md.
+  xcodebuild test \
+    -scheme BookVault-UITests \
+    -destination "$SIMULATOR_DEST" \
+    CODE_SIGNING_ALLOWED=NO
+}
+
 case "${1:-all}" in
   --lint-only)  run_lint ;;
   --build-only) run_build ;;
   --test-only)  run_tests ;;
+  --ui-only)    run_ui_tests ;;
   --skip-drift) run_lint && run_build && run_tests ;;
   all|"")       run_drift_check && run_lint && run_build && run_tests ;;
-  *)            echo "Usage: $0 [--lint-only|--build-only|--test-only|--skip-drift]"; exit 1 ;;
+  *)            echo "Usage: $0 [--lint-only|--build-only|--test-only|--ui-only|--skip-drift]"; exit 1 ;;
 esac
 
 # Clear step tracking on success

@@ -90,6 +90,7 @@ struct LoginView: View {
                     .onSubmit {
                         focusedField = .password
                     }
+                    .accessibilityIdentifier(A11y.Login.username)
 
                 // Password field
                 SecureField("Password", text: $password)
@@ -100,6 +101,7 @@ struct LoginView: View {
                     .onSubmit {
                         login()
                     }
+                    .accessibilityIdentifier(A11y.Login.password)
 
                 // Enable Face ID toggle (only shown if device supports biometrics and not already enabled)
                 if biometricManager.canUseBiometrics && !biometricManager.isBiometricEnabled {
@@ -138,6 +140,7 @@ struct LoginView: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(username.isEmpty || password.isEmpty || authManager.isLoading)
                 .padding(.top, 8)
+                .accessibilityIdentifier(A11y.Login.submit)
 
                 // Continue Offline - escape hatch when there's no connectivity
                 // but a prior session/identity exists on this device. Gated by
@@ -157,6 +160,7 @@ struct LoginView: View {
                     }
                     .buttonStyle(.bordered)
                     .disabled(authManager.isLoading)
+                    .accessibilityIdentifier(A11y.Login.continueOffline)
                 }
             }
             .padding(.horizontal, 32)

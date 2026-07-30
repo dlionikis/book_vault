@@ -248,6 +248,7 @@ struct NowPlayingView: View {
         }
         .navigationTitle("Now Playing")
         .navigationBarTitleDisplayMode(.inline)
+        .accessibilityIdentifier(A11y.NowPlaying.root)
         .sheet(isPresented: $showingChapterList) {
             ChapterListView(
                 chapters: audioPlayer.chapters,
