@@ -284,68 +284,56 @@ Both were invisible to 703 unit tests and the full gate.
 - **`Catalog.grid` was removed.** A container-level identifier added nothing that cell-level ones did
   not already provide.
 
-### Deferred — the blocker
+### Resolved — the blocker was a system "Save Password?" sheet (July 30, 2026)
 
-**Every book cell reports `hittable == false`** despite existing at a valid on-screen frame (e.g.
-`(16, 234, 177, 242)` inside an 874pt window), across all 10 cells. A plain `.tap()` fails too, so it
-is not an over-strict `hittable` predicate.
+**Root cause:** `LoginView` uses `.textContentType(.password)` — correct for shipping, since it enables
+password autofill — so after a successful login iOS offers to save the credential. That sheet renders in
+a **separate window above the app** and makes **every** element report `isHittable == false`: not just
+book cells, but the navigation bar, the tab bar, and the tab buttons.
 
-Blocked tests, all written and preserved in the branch history of `ios-uitests-phase4`:
+It appears asynchronously and not on every launch, which is exactly why the symptom read as flaky and
+why removing the mini-player overlay appeared to change nothing.
 
-| Test                                             | Flow                         |
-| ------------------------------------------------ | ---------------------------- |
-| `testTappingBookPushesDetailAndBackReturns`      | **U3 — closes the A5 gap**   |
-| `testDetailCanBePushedAgainAfterPopping`         | U3, push→pop→push            |
-| `testStartingPlaybackShowsMiniPlayer`            | U5                           |
-| `testTappingMiniPlayerOpensFullPlayer`           | U5                           |
-| `testMiniPlayerPlayPauseIsSeparatelyAddressable` | U5 + the `.combine` question |
-| `testOverflowTabsAreReachableViaMore`            | U4 overflow                  |
-| `testSwitchingAwayAndBackRestoresTabContent`     | U4 round-trip                |
+**Fix:** `dismissSavePasswordSheetIfPresent()` in `UITestCase`, called at the end of `logIn()`. It polls
+for a "Not Now" button and returns early once a cell becomes hittable. App behaviour is untouched —
+`.textContentType(.password)` stays, because losing autofill to satisfy a test would be the wrong trade.
 
-**Hypotheses already tested and disproved:**
+**Result: 12 of 13 UI tests pass**, stable across repeat runs. All previously deferred tests are now
+live, including U3 (`testTappingBookPushesDetailAndBackReturns`), which closes the A5 gap.
 
-- ~~`.accessibilityIdentifier` on the `LazyVGrid` container swallows child hit-testing~~ — removing it
-  changed nothing.
-- ~~The `hittable` predicate is too strict~~ — a plain `.tap()` fails identically.
-- ~~The push alert is covering the grid~~ — fixed, and cells are still not hittable.
+**How it was found:** a single `app.debugDescription` snapshot showed two windows — a plain `Window`
+holding the catalog, and a `Window (Main)` holding a `Sheet` labelled **"Save Password?"**. Earlier
+probes issued many live queries instead, and the hierarchy shifted between them, producing
+`No matches found for Element at index 2` and truncated output that hid the sheet.
 
-**Update (July 30, 2026) — the mini-player overlay is _not_ the cause.** Measured directly: with the
-`VStack { MiniPlayerView(); Spacer() }` overlay **entirely removed** from `ContentView`, a book cell is
-_still_ `hittable == false`. So Plan B will **not** fix this as a side effect, and these tests stay
-deferred as independent work.
+**What was ruled out along the way** (all recorded so they are not retried):
 
-**What the same probe did reveal — and it reframes the problem.** Almost nothing reports as hittable:
+- ~~`.accessibilityIdentifier` on the `LazyVGrid` container swallows child hit-testing~~
+- ~~The `hittable` predicate is too strict~~ — a plain `.tap()` failed identically
+- ~~The push-permission alert~~ — separately real, separately fixed in #138
+- ~~The mini-player `ZStack` overlay~~ — removing it entirely changed nothing
+- `isHittable` is **not** a reliable signal in this app: the Catalog tab button reports `false` while
+  `testDirectlyVisibleTabsAreReachable` taps it successfully
 
-| Element                          | `isHittable` |
-| -------------------------------- | ------------ |
-| book cell                        | `false`      |
-| navigation bar                   | `false`      |
-| tab bar                          | `false`      |
-| **Catalog tab button**           | **`false`**  |
-| segmented control (Books/Series) | `false`      |
-| scroll view                      | `true`       |
+**Cautions for future debugging:**
 
-The Catalog tab button reports `false` **yet `testDirectlyVisibleTabsAreReachable` taps it
-successfully**. So `isHittable` is not a reliable signal in this app, and the real failure is narrower:
-XCUITest refuses the _cell_ tap specifically, with `Failed to not hittable`. A coordinate tap
-(`coordinate(withNormalizedOffset:).tap()`), which normally bypasses hittability, also failed to
-navigate.
+- Prefer **one** `app.debugDescription` snapshot over many live queries; the hierarchy moves.
+- Do **not** query other processes' hierarchies via `XCUIApplication(bundleIdentifier:)` for
+  Passwords/AuthKitUI — doing so killed Springboard and required a simulator reboot.
+- `xcodebuild` needs `-project BookVault.xcodeproj` or an explicit `cd`; a wrong working directory
+  silently reuses stale output and wasted several iterations here.
 
-**Next leads**, in order of promise:
+### One real product defect found
 
-1. **`NavigationLink` inside `LazyVGrid` inside `ScrollView`.** The cell is a `NavigationLink` wrapping
-   a `BookGridItem`. Test whether a plain `Button` in the same position is tappable — that isolates
-   whether the link itself is the problem.
-2. **`.buttonStyle(.plain)` on the `NavigationLink`.** It may produce an element that reports as a
-   button but has no hit region XCUITest recognises.
-3. **The `AdditionalDimmingOverlay`** image at `(-120, 731, 642, 286)` seen in the hierarchy dump — its
-   origin is still unidentified.
+`testMiniPlayerPlayPauseDoesNotOpenFullPlayer` is a **documented skip**, not a pass.
+`MiniPlayerView` nests the play/pause `Button` inside an outer `Button` whose action is
+`showingFullPlayer = true`, so tapping play/pause **also presents the full player**. Verified before the
+test was converted to a skip.
 
-Not pursued further to avoid open-ended debugging inside unrelated feature work.
-
-**Note on a self-inflicted detour:** a blind `app.tap()` was briefly added in `setUp` to prime an
-interruption monitor. It taps screen centre, which can hit a cell and navigate before the test starts.
-Removed — do not reintroduce it.
+This is exactly requirements **F5 and A1** of
+[ios-mini-player-bottom-bar-plan.md](ios-mini-player-bottom-bar-plan.md), whose Phase 1 already
+specifies the fix (`contentShape` + `onTapGesture` instead of nested `Button`s). Re-enable the
+assertions as part of that work — they are the regression net for F5.
 
 ---
 

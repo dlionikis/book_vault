@@ -44,4 +44,45 @@ final class TabNavigationUITests: UITestCase {
             )
         }
     }
+
+    /// The overflow tabs live behind the system "More" tab. Worth asserting because it
+    /// is easy to forget three screens are a tap further away than the rest.
+    func testOverflowTabsAreReachableViaMore() throws {
+        logIn()
+
+        let more = app.tabBars.buttons["More"]
+        guard more.waitForExistence(timeout: UITestCase.defaultTimeout) else {
+            throw XCTSkip(
+                """
+                No "More" tab found. If the tab count dropped to five or fewer, the overflow \
+                no longer exists and this test should be replaced by direct assertions.
+                """
+            )
+        }
+        more.tap()
+
+        // The More screen renders rows as cells; query by label across types rather
+        // than assuming staticTexts.
+        for title in ["Downloads", "Restores", "Settings"] {
+            let row = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", title))
+                .firstMatch
+            require(row, "\(title) in the More tab list")
+        }
+    }
+
+    /// Returning to a tab must not leave it blank — a regression mode when tab content
+    /// is rebuilt with a new view identity.
+    func testSwitchingAwayAndBackRestoresTabContent() throws {
+        logIn()
+        try requireSeededCatalog()
+
+        // Assert on observable content rather than isSelected: that property proved
+        // unreliable in this app (it reads false even for tabs that tap successfully).
+        app.buttons[A11yID.Tab.browse].tap()
+        require(app.buttons[A11yID.Tab.catalog], "the tab bar after switching to Browse")
+
+        app.buttons[A11yID.Tab.catalog].tap()
+        require(anyBookCell, "catalog content after returning to the Catalog tab")
+    }
 }

@@ -85,6 +85,49 @@ class UITestCase: XCTestCase {
             app.buttons[A11yID.Tab.catalog],
             "the Catalog tab after logging in"
         )
+
+        dismissSavePasswordSheetIfPresent()
+    }
+
+    /// Dismisses the system "Save Password?" sheet if iOS presents it.
+    ///
+    /// **This was the cause of the long-standing "cells exist but are not hittable"
+    /// failure** (docs/plans/ios-ui-testing-plan.md §6b). `LoginView` uses
+    /// `.textContentType(.password)` — correct for shipping, since it enables password
+    /// autofill — so iOS offers to save the credential after a successful login. The
+    /// sheet renders in a separate window above the app and makes **every** element
+    /// report `isHittable == false`: not just book cells but the nav bar, the tab bar,
+    /// even the tab buttons.
+    ///
+    /// It appears asynchronously and not on every launch, which is why the symptom
+    /// looked intermittent. Poll for it rather than waiting a fixed interval.
+    ///
+    /// Test-only concern: a real user simply taps "Not Now".
+    func dismissSavePasswordSheetIfPresent(timeout: TimeInterval = 5) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            for label in ["Not Now", "Not now"] {
+                let button = app.buttons[label]
+                if button.exists, button.isHittable {
+                    button.tap()
+                    return
+                }
+            }
+            if anyBookCell.isHittable { return } // no sheet, or already gone
+            Thread.sleep(forTimeInterval: 0.5)
+        }
+    }
+
+    /// Looks up an element by identifier without caring about its element type.
+    ///
+    /// SwiftUI decides the type: `.accessibilityIdentifier` on a `ScrollView` root
+    /// surfaces as `scrollViews`, on a `VStack` as `otherElements`. Querying
+    /// `app.otherElements[…]` therefore silently misses elements that do exist, so
+    /// match on the identifier alone.
+    func element(withIdentifier identifier: String) -> XCUIElement {
+        app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == %@", identifier))
+            .firstMatch
     }
 
     /// Any book grid cell, matched on the identifier prefix.

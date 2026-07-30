@@ -268,44 +268,44 @@ the final element clears the mini bar's top edge (L1/L2).
 
 ---
 
-## 5a. Automated verification (new — the suite did not exist when this plan was written)
+## 5a. Automated verification — **the suite now covers this change**
 
-An XCUITest suite now exists (#137, #138) with 6 passing flows.
+Resolved since the last revision: the UI-test hit-test blocker was a system **"Save Password?"** sheet,
+not the mini-player overlay (see [ios-ui-testing-plan.md](ios-ui-testing-plan.md) §6b). All deferred
+tests are live, so **this plan ships with real automated coverage** rather than manual checks alone.
 
-### Do not expect this change to unblock the deferred UI tests
+### Requirements now covered automatically
 
-The hypothesis that the mini-player overlay caused the `hittable == false` blocker was **tested and
-disproved** (see §0.3): removing the overlay entirely changed nothing. The 7 deferred tests on
-`ios-uitests-u3-u5-wip` stay deferred, and three of them would have been this plan's regression net:
+| Requirement                                            | Test                                                                                  |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| **F1** — bar appears when a book is loaded             | `testStartingPlaybackShowsMiniPlayer` ✅                                              |
+| **F2** — bar absent when none loaded                   | `testMiniPlayerIsHiddenBeforePlayback` ✅                                             |
+| **F4** — tapping the bar opens the full player         | `testTappingMiniPlayerOpensFullPlayer` ✅                                             |
+| **F5 / A1** — play/pause does not open the full player | `testMiniPlayerPlayPauseDoesNotOpenFullPlayer` ⏸ **skipped: known defect, see below** |
+| **F6** — survives navigation                           | `CatalogNavigationUITests` (U3) ✅ indirectly                                         |
 
-| Deferred test                                    | Requirement it would have covered |
-| ------------------------------------------------ | --------------------------------- |
-| `testStartingPlaybackShowsMiniPlayer`            | F1                                |
-| `testTappingMiniPlayerOpensFullPlayer`           | F4                                |
-| `testMiniPlayerPlayPauseIsSeparatelyAddressable` | F5, A1                            |
+Run `npm run ios:test:ui` before and after: **12 pass, 1 documented skip.**
 
-**Consequence: F1/F4/F5/A1 and all of L1–L7 must be verified manually** for this change, per §5's
-matrix. That is the same position A5 was in, and it is worth stating plainly rather than implying the
-suite covers this work.
+### ⚠️ F5/A1 is already broken on `main`
 
-### What the existing suite still gives us
+The UI test found a live defect. `MiniPlayerView` nests the play/pause `Button` **inside** an outer
+`Button` whose action is `showingFullPlayer = true`, so tapping play/pause **also presents the full
+player**.
 
-The 6 passing flows are a regression net for _not breaking what works_: login renders, catalog loads,
-the visible tabs are reachable, and — directly relevant here —
-`testMiniPlayerIsHiddenBeforePlayback` asserts the bar is absent before playback, which is **F2**.
-Run `npm run ios:test:ui` before and after.
+This plan's Phase 1 step 6 already prescribes the fix — replace the outer `Button` with `contentShape`
 
-### Worth adding once the hit-test bug is fixed
+- `onTapGesture` — and step 5 splits the accessibility element. So F5/A1 is not a new requirement to
+  design, it is **a bug to fix, with a test waiting to be re-enabled.** Do that as part of Phase 1 and
+  convert the skip back into assertions.
 
-Not now, since these need the same taps that are currently blocked:
+### Still manual
+
+L1–L7 (occlusion and layout) have no automated coverage — SwiftUI layout is not directly assertable, and
+the §5 manual matrix remains the gate for them. Two tests worth adding once the bar moves:
 
 - With a book loaded, scroll a tab to the bottom and assert the last cell is hittable — a direct
   encoding of L1/L2.
 - Assert the mini bar and tab bar frames do not overlap.
-
-> **Note on `.accessibilityElement(children: .combine)`** — A1 requires play/pause be a separate
-> element, and #137 found the combine modifier collapses it into the parent. Phase 1 step 5 fixes it,
-> but with `testMiniPlayerPlayPauseIsSeparatelyAddressable` deferred, **verify by VoiceOver manually.**
 
 ---
 
