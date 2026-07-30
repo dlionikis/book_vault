@@ -17,13 +17,14 @@ Plan A (#133–#136) and the UI-test work (#137–#138) changed four of this pla
    now verifies a modern container rather than probing a deprecated one's edge cases.
 2. **There is now an XCUITest suite** (#137, #138) — 6 passing flows. §5's "if the project's E2E suite
    drives the UI" is no longer hypothetical: see §5a.
-3. **A likely cause of a known bug is in this plan's blast radius.** The current overlay is
-   `VStack { MiniPlayerView(); Spacer() }` inside a `ZStack`. **That `Spacer()` expands to fill the
-   whole screen**, sitting above the `TabView` and plausibly intercepting touches across the entire
-   content area — which matches the U3/U5 blocker recorded in
-   [ios-ui-testing-plan.md](ios-ui-testing-plan.md) §6b, where every book cell reports
-   `hittable == false`. **Verify this explicitly** (§5a); if it holds, this change fixes that bug and
-   unblocks 7 deferred UI tests as a side effect.
+3. ~~**A likely cause of a known bug is in this plan's blast radius.**~~ — **tested and disproved
+   (July 30, 2026).** The theory was that the overlay's full-screen `Spacer()` inside the `ZStack` was
+   swallowing touches app-wide. Measured on the simulator: with the overlay present, a book cell reports
+   `hittable == false`; with the overlay **entirely removed**, it is _still_ `hittable == false`. So the
+   mini player is **not** the cause, and **this change will not unblock U3/U5.** Treat those as
+   independent work. Details and the next lead are in
+   [ios-ui-testing-plan.md](ios-ui-testing-plan.md) §6b.
+
 4. **Open question 2 is now partly answered.** `loadMostRecentlyPlayedBook()` is suppressed under
    `--uitesting` (#137), but in shipping builds it still populates `currentBook` at launch, so the bar
    **will** appear on cold start for any user with playback history. Still worth an explicit decision.
@@ -269,46 +270,42 @@ the final element clears the mini bar's top edge (L1/L2).
 
 ## 5a. Automated verification (new — the suite did not exist when this plan was written)
 
-An XCUITest suite now exists (#137, #138) with 6 passing flows, and **7 deferred tests are blocked by
-what may be this plan's own bug**.
+An XCUITest suite now exists (#137, #138) with 6 passing flows.
 
-### Before changing anything — confirm the hypothesis
+### Do not expect this change to unblock the deferred UI tests
 
-Record the answer either way; it decides whether this change carries a bug fix.
+The hypothesis that the mini-player overlay caused the `hittable == false` blocker was **tested and
+disproved** (see §0.3): removing the overlay entirely changed nothing. The 7 deferred tests on
+`ios-uitests-u3-u5-wip` stay deferred, and three of them would have been this plan's regression net:
 
-1. On `main`, log in and confirm a book cell reports `hittable == false`
-   (documented in [ios-ui-testing-plan.md](ios-ui-testing-plan.md) §6b).
-2. Temporarily delete the `VStack { MiniPlayerView(); Spacer() }` overlay from `ContentView`.
-3. Re-check hittability. If cells become hittable, **the full-screen `Spacer()` inside the `ZStack` was
-   swallowing touches app-wide**, and Strategy A fixes it by construction — no overlay, no `Spacer()`.
+| Deferred test                                    | Requirement it would have covered |
+| ------------------------------------------------ | --------------------------------- |
+| `testStartingPlaybackShowsMiniPlayer`            | F1                                |
+| `testTappingMiniPlayerOpensFullPlayer`           | F4                                |
+| `testMiniPlayerPlayPauseIsSeparatelyAddressable` | F5, A1                            |
 
-### After the change — un-defer the blocked tests
+**Consequence: F1/F4/F5/A1 and all of L1–L7 must be verified manually** for this change, per §5's
+matrix. That is the same position A5 was in, and it is worth stating plainly rather than implying the
+suite covers this work.
 
-If the hypothesis holds, restore these from `ios-uitests-u3-u5-wip` and expect them to pass:
+### What the existing suite still gives us
 
-| Test                                             | Why it matters here         |
-| ------------------------------------------------ | --------------------------- |
-| `testTappingBookPushesDetailAndBackReturns`      | U3 — closes the A5 gap      |
-| `testDetailCanBePushedAgainAfterPopping`         | U3 push→pop→push            |
-| `testStartingPlaybackShowsMiniPlayer`            | **Direct F1 coverage**      |
-| `testTappingMiniPlayerOpensFullPlayer`           | **Direct F4 coverage**      |
-| `testMiniPlayerPlayPauseIsSeparatelyAddressable` | **Direct F5 + A1 coverage** |
-| `testOverflowTabsAreReachableViaMore`            | U4 overflow                 |
-| `testSwitchingAwayAndBackRestoresTabContent`     | U4 round-trip               |
+The 6 passing flows are a regression net for _not breaking what works_: login renders, catalog loads,
+the visible tabs are reachable, and — directly relevant here —
+`testMiniPlayerIsHiddenBeforePlayback` asserts the bar is absent before playback, which is **F2**.
+Run `npm run ios:test:ui` before and after.
 
-Three of those assert this plan's own requirements, so they become the regression net for it.
+### Worth adding once the hit-test bug is fixed
 
-### New tests worth adding for L1/L2
+Not now, since these need the same taps that are currently blocked:
 
-The occlusion requirement is the core of this change and is exactly what manual checking misses:
+- With a book loaded, scroll a tab to the bottom and assert the last cell is hittable — a direct
+  encoding of L1/L2.
+- Assert the mini bar and tab bar frames do not overlap.
 
-- With a book loaded, scroll a tab to the bottom and assert the **last cell is hittable** — a direct
-  encoding of L1/L2 that would catch content trapped under the bar.
-- Assert the mini bar and the tab bar do **not** overlap (compare `frame` values).
-
-> **Note on `.accessibilityElement(children: .combine)`** — A1 requires the play/pause button be a
-> separate element, and #137 found the combine modifier collapses it into the parent. Phase 1 step 5
-> already fixes this; `testMiniPlayerPlayPauseIsSeparatelyAddressable` is the check.
+> **Note on `.accessibilityElement(children: .combine)`** — A1 requires play/pause be a separate
+> element, and #137 found the combine modifier collapses it into the parent. Phase 1 step 5 fixes it,
+> but with `testMiniPlayerPlayPauseIsSeparatelyAddressable` deferred, **verify by VoiceOver manually.**
 
 ---
 

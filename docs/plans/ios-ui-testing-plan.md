@@ -309,11 +309,39 @@ Blocked tests, all written and preserved in the branch history of `ios-uitests-p
 - ~~The `hittable` predicate is too strict~~ — a plain `.tap()` fails identically.
 - ~~The push alert is covering the grid~~ — fixed, and cells are still not hittable.
 
-**Next lead:** the hierarchy dump shows an `AdditionalDimmingOverlay` image spanning
-`(-120, 731, 642, 286)` plus several full-window `Other` elements. Which of those intercepts touches is
-unconfirmed. Worth also testing whether the current **mini-player `ZStack` overlay** in `ContentView`
-is the culprit — if so, **Plan B's move to `safeAreaInset` may fix it as a side effect**, which would
-make U3/U5 land naturally alongside that work.
+**Update (July 30, 2026) — the mini-player overlay is _not_ the cause.** Measured directly: with the
+`VStack { MiniPlayerView(); Spacer() }` overlay **entirely removed** from `ContentView`, a book cell is
+_still_ `hittable == false`. So Plan B will **not** fix this as a side effect, and these tests stay
+deferred as independent work.
+
+**What the same probe did reveal — and it reframes the problem.** Almost nothing reports as hittable:
+
+| Element                          | `isHittable` |
+| -------------------------------- | ------------ |
+| book cell                        | `false`      |
+| navigation bar                   | `false`      |
+| tab bar                          | `false`      |
+| **Catalog tab button**           | **`false`**  |
+| segmented control (Books/Series) | `false`      |
+| scroll view                      | `true`       |
+
+The Catalog tab button reports `false` **yet `testDirectlyVisibleTabsAreReachable` taps it
+successfully**. So `isHittable` is not a reliable signal in this app, and the real failure is narrower:
+XCUITest refuses the _cell_ tap specifically, with `Failed to not hittable`. A coordinate tap
+(`coordinate(withNormalizedOffset:).tap()`), which normally bypasses hittability, also failed to
+navigate.
+
+**Next leads**, in order of promise:
+
+1. **`NavigationLink` inside `LazyVGrid` inside `ScrollView`.** The cell is a `NavigationLink` wrapping
+   a `BookGridItem`. Test whether a plain `Button` in the same position is tappable — that isolates
+   whether the link itself is the problem.
+2. **`.buttonStyle(.plain)` on the `NavigationLink`.** It may produce an element that reports as a
+   button but has no hit region XCUITest recognises.
+3. **The `AdditionalDimmingOverlay`** image at `(-120, 731, 642, 286)` seen in the hierarchy dump — its
+   origin is still unidentified.
+
+Not pursued further to avoid open-ended debugging inside unrelated feature work.
 
 **Note on a self-inflicted detour:** a blind `app.tap()` was briefly added in `setUp` to prime an
 interruption monitor. It taps screen centre, which can hit a cell and navigate before the test starts.
