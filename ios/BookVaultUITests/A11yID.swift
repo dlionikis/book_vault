@@ -31,11 +31,12 @@ enum A11yID {
         static let offline = "tab.offline"
     }
 
-    enum Catalog {
-        static let grid = "catalog.grid"
+    /// Book grid cell, shared by Catalog and Library.
+    static func bookCell(_ bookId: String) -> String { "bookCell.\(bookId)" }
 
-        static func cell(_ bookId: String) -> String { "catalog.cell.\(bookId)" }
-    }
+    /// Prefix for predicate-based lookups (the id is DB-assigned, so tests match
+    /// the prefix rather than a known id).
+    static let bookCellPrefix = "bookCell."
 
     enum BookDetail {
         static let root = "bookDetail.root"

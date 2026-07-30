@@ -35,13 +35,16 @@ enum A11y {
         static let offline = "tab.offline"
     }
 
-    enum Catalog {
-        static let grid = "catalog.grid"
+    /// A book grid cell. Shared by Catalog and Library, which render the same
+    /// `BookGridItem`, so UI tests can find a book on either screen with one prefix.
+    ///
+    /// Keyed on the book id rather than the title: titles come from live data and
+    /// change, ids do not. Tests match on the `bookCell.` prefix because the id is
+    /// assigned by the database and is not knowable in advance.
+    static func bookCell(_ bookId: String) -> String { "bookCell.\(bookId)" }
 
-        /// Per-item identifier. Uses the book id so tests can target a seeded
-        /// fixture without depending on its title.
-        static func cell(_ bookId: String) -> String { "catalog.cell.\(bookId)" }
-    }
+    /// Prefix for `bookCell(_:)`, for predicate-based lookups.
+    static let bookCellPrefix = "bookCell."
 
     enum BookDetail {
         static let root = "bookDetail.root"

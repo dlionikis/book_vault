@@ -67,6 +67,14 @@ final class NotificationRegistrar {
     /// The device token arrives asynchronously in the AppDelegate, which calls
     /// `registerToken(_:)`.
     func requestAuthorizationAndRegister() async {
+        // The permission alert is a Springboard window that steals taps from the app,
+        // making UI tests non-deterministic. Suppressing the request is more reliable
+        // than racing an interruption monitor to dismiss it.
+        if UITestEnvironment.shouldSkipPushAuthorization {
+            DebugLogger.info("UI testing: skipping push authorization request")
+            return
+        }
+
         do {
             let granted = try await authorizer.requestAuthorization(options: [.alert, .sound, .badge])
             guard granted else {

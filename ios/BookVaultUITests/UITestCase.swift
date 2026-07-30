@@ -26,6 +26,10 @@ class UITestCase: XCTestCase {
         // on earlier ones, so continuing produces cascading noise.
         continueAfterFailure = false
 
+        // No interruption monitor for the push-permission alert: the app skips the
+        // authorization request entirely under `--uitesting`, so the alert never
+        // appears. Suppressing it is deterministic; racing a monitor to dismiss a
+        // Springboard window is not.
         app = XCUIApplication()
         app.launchArguments = ["--uitesting"]
         app.launch()
@@ -81,5 +85,35 @@ class UITestCase: XCTestCase {
             app.buttons[A11yID.Tab.catalog],
             "the Catalog tab after logging in"
         )
+    }
+
+    /// Any book grid cell, matched on the identifier prefix.
+    ///
+    /// Cell identifiers embed the book's UUID, which is assigned by the database —
+    /// `scripts/seed-e2e.ts` upserts on `asin`, so the id is stable per database but
+    /// not knowable in advance and not portable to a fresh one. These flows only
+    /// need *a* book, so match the prefix rather than hardcoding an id.
+    ///
+    /// Catalog and Library both render `BookGridItem`, so this works on either.
+    var anyBookCell: XCUIElement {
+        app.buttons
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", A11yID.bookCellPrefix))
+            .firstMatch
+    }
+
+    /// Skips the test when the catalog never populates.
+    ///
+    /// These flows need `npm run dev` plus `npm run e2e:seed`. Skipping beats failing:
+    /// a missing backend is an environment problem, and a red suite for that reason
+    /// trains people to ignore it.
+    func requireSeededCatalog() throws {
+        guard anyBookCell.waitForExistence(timeout: UITestCase.defaultTimeout) else {
+            throw XCTSkip(
+                """
+                No catalog books found. These flows need a running backend with seeded data:
+                  npm run dev && npm run e2e:seed
+                """
+            )
+        }
     }
 }

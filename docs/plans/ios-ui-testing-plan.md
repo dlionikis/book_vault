@@ -1,6 +1,6 @@
 # iOS UI Testing Plan (XCUITest)
 
-> **Status**: Phases 1–3 + 5 shipped July 30, 2026 · Phase 4 (flows U2–U5) remaining
+> **Status**: Phases 1–3 + 5 shipped · Phase 4 partially shipped (U1, U2, U4-partial, U5-partial) · **U3 and the rest of U5 blocked — see §6b**
 > **Scope**: iOS test infrastructure. No app logic, no API, no DB, no web.
 > **Created**: July 30, 2026
 > **Related**: [ios-modernization-sequencing.md](ios-modernization-sequencing.md) ·
@@ -248,6 +248,76 @@ What differed from the plan:
 
 **Timing confirms the plan's caution:** ~7s per UI test vs 703 unit tests in 4.2s. Keeping these out
 of `validate:ios` was the right call.
+
+---
+
+## 6b. Implementation notes — Phase 4, partial (July 30, 2026)
+
+**6 of 6 committed UI tests pass.** U1 (3 tests), U2, U4-partial and U5-partial are green.
+**U3 and three U5 tests are written but not committed** — they fail on a blocker described below.
+
+### Two real app bugs, found only because UI tests exist
+
+Both were invisible to 703 unit tests and the full gate.
+
+1. **`CODE_SIGNING_ALLOWED=NO` strips entitlements.** The build and unit-test steps pass this flag, so
+   the app binary shipped with **no entitlements at all** (verified with
+   `codesign -d --entitlements -`). `SecItemAdd` then failed with **-34018**
+   (`errSecMissingEntitlement`), the login screen showed "Failed to save to keychain", and no session
+   could persist. Removed the flag from the UI-test invocation only; the unit path is untouched because
+   it never exercises login. `keychain-access-groups` was also added to the entitlements file.
+
+2. **The push-permission alert steals taps.** `NotificationRegistrar` requests authorization on launch,
+   and the resulting Springboard alert sits over the app, intercepting every tap. Now suppressed under
+   `--uitesting` (`shouldSkipPushAuthorization`). Suppression is deterministic; racing a
+   `addUIInterruptionMonitor` to dismiss a Springboard window is not.
+
+### Corrections to this plan's own assumptions
+
+- **iOS collapses the tab bar.** `ContentView` declares **seven** online tabs, but a `TabView` with
+  more than five shows only four plus a system **"More"** tab. So Downloads, Restores and Settings are
+  **not directly tappable** — U4 originally asserted all seven and could never have passed. The
+  committed U4 covers the four visible tabs; the overflow variant is deferred.
+- **Book cell identifiers are keyed on a DB-assigned UUID.** `scripts/seed-e2e.ts` upserts on `asin`,
+  so the id is stable per database but unknowable in advance. Tests match the `bookCell.` prefix
+  instead. The identifier is shared by Catalog and Library, which render the same `BookGridItem`.
+- **`Catalog.grid` was removed.** A container-level identifier added nothing that cell-level ones did
+  not already provide.
+
+### Deferred — the blocker
+
+**Every book cell reports `hittable == false`** despite existing at a valid on-screen frame (e.g.
+`(16, 234, 177, 242)` inside an 874pt window), across all 10 cells. A plain `.tap()` fails too, so it
+is not an over-strict `hittable` predicate.
+
+Blocked tests, all written and preserved in the branch history of `ios-uitests-phase4`:
+
+| Test                                             | Flow                         |
+| ------------------------------------------------ | ---------------------------- |
+| `testTappingBookPushesDetailAndBackReturns`      | **U3 — closes the A5 gap**   |
+| `testDetailCanBePushedAgainAfterPopping`         | U3, push→pop→push            |
+| `testStartingPlaybackShowsMiniPlayer`            | U5                           |
+| `testTappingMiniPlayerOpensFullPlayer`           | U5                           |
+| `testMiniPlayerPlayPauseIsSeparatelyAddressable` | U5 + the `.combine` question |
+| `testOverflowTabsAreReachableViaMore`            | U4 overflow                  |
+| `testSwitchingAwayAndBackRestoresTabContent`     | U4 round-trip                |
+
+**Hypotheses already tested and disproved:**
+
+- ~~`.accessibilityIdentifier` on the `LazyVGrid` container swallows child hit-testing~~ — removing it
+  changed nothing.
+- ~~The `hittable` predicate is too strict~~ — a plain `.tap()` fails identically.
+- ~~The push alert is covering the grid~~ — fixed, and cells are still not hittable.
+
+**Next lead:** the hierarchy dump shows an `AdditionalDimmingOverlay` image spanning
+`(-120, 731, 642, 286)` plus several full-window `Other` elements. Which of those intercepts touches is
+unconfirmed. Worth also testing whether the current **mini-player `ZStack` overlay** in `ContentView`
+is the culprit — if so, **Plan B's move to `safeAreaInset` may fix it as a side effect**, which would
+make U3/U5 land naturally alongside that work.
+
+**Note on a self-inflicted detour:** a blind `app.tap()` was briefly added in `setUp` to prime an
+interruption monitor. It taps screen centre, which can hit a cell and navigate before the test starts.
+Removed — do not reintroduce it.
 
 ---
 

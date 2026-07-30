@@ -29,4 +29,8 @@ enum UITestEnvironment {
 
     /// Skip the launch-time mini-player auto-load so playback assertions are real.
     static var shouldSkipInitialBookLoad: Bool { isActive }
+
+    /// Skip the push-authorization request. Its system alert is a Springboard window
+    /// that steals taps from the app, so leaving it enabled makes every flow flaky.
+    static var shouldSkipPushAuthorization: Bool { isActive }
 }
