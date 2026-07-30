@@ -49,6 +49,7 @@ final class A11yIdentifierParityTests: XCTestCase {
         XCTAssertEqual(A11y.BookDetail.root, "bookDetail.root")
         XCTAssertEqual(A11y.BookDetail.play, "bookDetail.play")
         XCTAssertEqual(A11y.MiniPlayer.root, "miniPlayer.root")
+        XCTAssertEqual(A11y.MiniPlayer.info, "miniPlayer.info")
         XCTAssertEqual(A11y.MiniPlayer.playPause, "miniPlayer.playPause")
         XCTAssertEqual(A11y.NowPlaying.root, "nowPlaying.root")
     }
@@ -61,5 +62,7 @@ final class A11yIdentifierParityTests: XCTestCase {
         XCTAssertFalse(UITestEnvironment.shouldResetSession)
         XCTAssertFalse(UITestEnvironment.shouldSkipInitialBookLoad)
         XCTAssertFalse(UITestEnvironment.shouldSkipPushAuthorization)
+        // Must stay false in shipping builds or users lose password autofill.
+        XCTAssertFalse(UITestEnvironment.shouldDisablePasswordAutofill)
     }
 }

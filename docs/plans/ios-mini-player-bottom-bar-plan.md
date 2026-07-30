@@ -1,6 +1,6 @@
 # iOS Mini Player → Bottom Bar Plan
 
-> **Status**: In progress (started July 30, 2026)
+> **Status**: Phases 1–3 implemented July 30, 2026 (ordering changed — see §2). Manual matrix partly done.
 > **Scope**: iOS app only (no API, DB, or web changes)
 > **Created**: July 28, 2026 · **Revised** July 30, 2026 after Plan A landed
 > **Prerequisites landed**: A5 `NavigationStack` migration (#135) · XCUITest harness (#137, #138)
@@ -115,7 +115,41 @@ Replace the system tab bar with a custom one so both bars are ordinary views in 
 > tab bar and requires raising the deployment target from 17.0. It also implements the opposite of
 > the requested ordering. Noted only so it is not mistaken for the right tool.
 
-**Decision: Strategy A.** Confirm the ordering preference before building (see §8).
+**Decision: Strategy A — but its central premise was wrong, and the ordering changed as a result.**
+
+### ⚠️ Measured July 30, 2026: `safeAreaInset` does **not** move the system tab bar
+
+Strategy A above assumed "the system tab bar then lays out _above_ the inset." **It does not.**
+Measured on the simulator (iPhone 17 Pro, 402×874pt window):
+
+| Element                        | Frame                   |
+| ------------------------------ | ----------------------- |
+| Window                         | `(0, 0, 402, 874)`      |
+| `TabBar`                       | `(0, 791, 402, 83)`     |
+| Mini bar as inset on `TabView` | `(0, 779.7, 402, 94.3)` |
+
+The tab bar occupies the **entire bottom strip to the window edge** and is laid out as a **sibling
+outside the TabView's inset chain**. Inset content placed there renders _behind_ it. No modifier on
+the `TabView` can move it.
+
+**Consequence: the requested below-the-tab-bar ordering is not achievable with a system `TabView`.**
+Only Strategy B (fully custom tab bar) delivers it, at the cost of a large `ContentView` rewrite and
+the loss of free tab-bar behaviour — including the More-tab overflow this app's 8 tabs rely on.
+
+**Resolved with the user (July 30, 2026): mini bar sits _above_ the tab bar** — the Apple Music /
+Podcasts convention — keeping the system `TabView`. Open question 1 is re-answered accordingly.
+
+### Where the inset actually has to go
+
+A second placement also failed. Applied to a tab root _outside_ its `NavigationStack`, the bar drew
+in the right place, but the `ScrollView` inside the stack takes its content inset from the stack's own
+safe area — which an inset applied outside the stack does not change. The last grid row scrolled under
+the bar and was **clipped mid-title** (verified by screenshot).
+
+**Correct placement: inside the `NavigationStack`, on the scrollable content.** That is where
+`.miniPlayerInset()` is applied in all 7 tab roots. See
+[MiniPlayerInset.swift](../../ios/BookVault/Components/MiniPlayerInset.swift), which records these
+measurements so the two dead ends are not retried.
 
 ---
 
@@ -170,7 +204,26 @@ Replace the system tab bar with a custom one so both bars are ordinary views in 
 
 ## 4. Implementation plan
 
-### Phase 1 — Rebuild `MiniPlayerView` as a bottom bar
+### Phase 1 — Rebuild `MiniPlayerView` as a bottom bar ✅ **(done)**
+
+**Implementation notes (July 30, 2026)**
+
+All seven steps landed. Two things worth recording:
+
+- **The F5/A1 fix is structural, not a tweak.** The outer `Button` is gone entirely. The row is now a
+  plain `HStack`; only the cover/title/author region gets `contentShape(Rectangle())` +
+  `onTapGesture`, and the play/pause `Button` is its **sibling**, not its descendant. A nested
+  `Button` cannot fire two actions if there is no outer `Button` to fire.
+- **A new identifier was needed**: `A11y.MiniPlayer.info`. The bar is now
+  `accessibilityElement(children: .contain)`, so `miniPlayer.root` is a **container and is not
+  tappable** — the F4 test had to move its tap to `miniPlayer.info`. Mirrored in
+  `BookVaultUITests/A11yID.swift` and pinned in `A11yIdentifierParityTests`.
+
+Also: `@Environment(\.accessibilityReduceMotion)` drives the transition (A5), the fixed
+`.frame(height: 68)` is gone so Dynamic Type grows the bar (A3), and `.background(.bar)` supplies the
+material (V2) while extending under the row into the safe area (L5).
+
+Original steps:
 
 **File**: [ios/BookVault/Components/MiniPlayerView.swift](../../ios/BookVault/Components/MiniPlayerView.swift)
 
@@ -191,7 +244,23 @@ Replace the system tab bar with a custom one so both bars are ordinary views in 
 7. Update the four `#Preview` blocks — they currently wrap in `VStack { Spacer(); MiniPlayerView() }`
    which already previews it bottom-anchored, so mostly they just need width assertions.
 
-### Phase 2 — Reposition in `ContentView`
+### Phase 2 — Reposition in `ContentView` ✅ **(done)**
+
+**Implementation notes (July 30, 2026)**
+
+The `ZStack(alignment: .top)` and the `VStack { MiniPlayerView(); Spacer() }` overlay are gone;
+`.safeAreaInset(edge: .bottom, spacing: 0)` on the `TabView` replaces them. The whole TabView body
+de-indented one level as a result, which makes the diff larger than the change.
+
+- **Step 3 moved.** The plan said to put `.transition`/`.animation` on the inset content. The
+  `.transition` does live on `MiniPlayerView`, but `.animation(_:value:)` has to sit **outside** the
+  inset — on the `TabView` — because the value being animated (`currentBook != nil`) is what decides
+  whether the inset content exists at all. Inside, there is nothing to observe the change.
+- **Step 5 holds by construction, and is now covered.** The inset is attached to the `TabView`, which
+  only exists in the authenticated branch, so the login and `isRestoringSession` branches cannot get
+  the bar (F8). `testMiniPlayerIsHiddenBeforePlayback` covers the no-book case.
+
+Original steps:
 
 **File**: [ios/BookVault/ContentView.swift](../../ios/BookVault/ContentView.swift)
 
@@ -206,7 +275,27 @@ Replace the system tab bar with a custom one so both bars are ordinary views in 
    `isRestoringSession` branch (F8) — it is attached to the `TabView` only, so this should hold by
    construction; verify.
 
-### Phase 3 — Audit every screen for occlusion (L1–L4)
+### Phase 3 — Audit every screen for occlusion (L1–L4) — **partly automated**
+
+**Implementation notes (July 30, 2026)**
+
+`safeAreaInset` did **not** propagate automatically, contrary to this phase's opening assumption — see
+§2. It has to be applied inside each `NavigationStack`, so all 7 tab roots got an explicit
+`.miniPlayerInset()` call. That is one line per file and no hardcoded heights, so A3 still holds.
+
+Two of the table's rows are now covered by tests rather than eyeballing:
+
+- `testContentIsNotOccludedByMiniPlayer` scrolls Catalog to the bottom and asserts the last cell's
+  `maxY` clears the bar's `minY`. **This test caught the real occlusion bug** — before the fix, content
+  reached y=775 against a bar top edge of y=730.7.
+- `testMiniPlayerSitsAboveTabBarFullWidth` asserts the bar's _controls_ clear the tab bar and that the
+  bar spans the full window width.
+
+The remaining rows in the table below are still manual. Verified by screenshot on Catalog and Library;
+Search (keyboard, L7), Downloads, Restores, Settings and the offline tab swap are **not yet
+eyeballed**.
+
+Original table:
 
 `safeAreaInset` on the `TabView` should propagate automatically, and since A5 (#135) every tab root is
 a `NavigationStack` rather than a deprecated `NavigationView` — so propagation into pushed destinations
@@ -284,7 +373,25 @@ tests are live, so **this plan ships with real automated coverage** rather than 
 | **F5 / A1** — play/pause does not open the full player | `testMiniPlayerPlayPauseDoesNotOpenFullPlayer` ⏸ **skipped: known defect, see below** |
 | **F6** — survives navigation                           | `CatalogNavigationUITests` (U3) ✅ indirectly                                         |
 
-Run `npm run ios:test:ui` before and after: **12 pass, 1 documented skip.**
+Run `npm run ios:test:ui` before and after: **12 pass + 1 skip before → 15 pass, 0 skips after.**
+
+### Update (July 30, 2026): all of F5/A1 now covered, plus two new layout tests
+
+- **F5/A1 fixed and asserted.** The nested-`Button` defect is gone and
+  `testMiniPlayerPlayPauseDoesNotOpenFullPlayer` is a real assertion again.
+- **Two tests found bugs in my own test code.** `startPlaybackFromLibrary()` left the full player
+  presented, because `BookDetailView` sets `showingNowPlaying = true` when "Play Audiobook" is tapped
+  (BookDetailView.swift:381). That made **`testTappingMiniPlayerOpensFullPlayer` pass vacuously** —
+  `nowPlaying.root` already existed before the mini player was ever tapped. The helper now dismisses
+  the sheet and returns to the list.
+- **The `dismissSavePasswordSheetIfPresent()` helper from #139 was flaky.** It gated the "Not Now" tap
+  on `isHittable`, which is unreliable in this app, so it silently gave up with the sheet still up.
+  Replaced: the app now suppresses the sheet entirely under `--uitesting` via
+  `UITestEnvironment.shouldDisablePasswordAutofill`, since the sheet could not be dismissed from the
+  test process at all — tapping "Not Now" synthesizes an event but the sheet stays. Shipping builds
+  keep autofill.
+- **New coverage**: `testContentIsNotOccludedByMiniPlayer` (L1/L2) and
+  `testMiniPlayerSitsAboveTabBarFullWidth` (V1/L5).
 
 ### ⚠️ F5/A1 is already broken on `main`
 
@@ -335,8 +442,10 @@ the §5 manual matrix remains the gate for them. Two tests worth adding once the
 
 ## 8. Open questions
 
-1. ~~**Ordering**~~ — **settled**: below the tab bar, as originally requested. Strategy A implements
-   this and is cheaply reversible to above-the-tab-bar if it reads wrong in practice.
+1. ~~**Ordering**~~ — **re-settled July 30, 2026: _above_ the tab bar.** Below-the-tab-bar is not
+   achievable with a system `TabView` (measurements in §2); it would require replacing the tab bar
+   entirely. Confirmed with the user, who chose to keep the system `TabView`. This is also the
+   Apple Music / Podcasts convention.
 2. **Swipe to dismiss** — **still open, and now more visible.** There is no way to clear `currentBook`
    from the UI, and `loadMostRecentlyPlayedBook()` populates it at launch, so any user with playback
    history sees the bar on cold start before pressing play. A full-width bottom bar is more prominent

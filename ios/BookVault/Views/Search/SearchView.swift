@@ -114,6 +114,7 @@ struct SearchView: View {
                     }
                 }
             }
+            .miniPlayerInset()
             .navigationTitle("Search")
             .navigationBarTitleDisplayMode(.inline)
         }

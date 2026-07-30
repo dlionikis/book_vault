@@ -89,6 +89,21 @@ class UITestCase: XCTestCase {
         dismissSavePasswordSheetIfPresent()
     }
 
+    /// Best-effort dismissal of the system "Save Password?" sheet.
+    ///
+    /// **The app now prevents this sheet from appearing at all** under `--uitesting`
+    /// (`UITestEnvironment.shouldDisablePasswordAutofill`), because it proved impossible
+    /// to dismiss reliably from the test process — tapping "Not Now" synthesizes an event
+    /// but the sheet stays up, and it blocks every element beneath it.
+    ///
+    /// Kept as a safety net for the case where the suppression regresses: it detects the
+    /// sheet and asserts, so the failure names the real cause instead of surfacing as an
+    /// inexplicable "exists but not hittable" somewhere unrelated.
+    ///
+    /// Historical detail preserved below.
+    ///
+    /// ---
+    ///
     /// Dismisses the system "Save Password?" sheet if iOS presents it.
     ///
     /// **This was the cause of the long-standing "cells exist but are not hittable"
@@ -103,19 +118,49 @@ class UITestCase: XCTestCase {
     /// looked intermittent. Poll for it rather than waiting a fixed interval.
     ///
     /// Test-only concern: a real user simply taps "Not Now".
-    func dismissSavePasswordSheetIfPresent(timeout: TimeInterval = 5) {
+    ///
+    /// Deliberately does **not** gate on `isHittable`. `isHittable` is unreliable in this
+    /// app — elements that tap successfully report `false` — so gating the "Not Now" tap
+    /// on it made this helper give up silently while the sheet was still up, leaving
+    /// every later query blocked. Detect the sheet by its own existence instead, and tap
+    /// via `coordinate` so an inaccurate hittability result cannot veto the tap.
+    /// `timeout` is short: with suppression working the sheet never appears, so this is
+    /// pure overhead on every login. Long enough to catch a regression, not to stall.
+    func dismissSavePasswordSheetIfPresent(timeout: TimeInterval = 2) {
+        let sheet = app.descendants(matching: .sheet)
+            .matching(NSPredicate(format: "label CONTAINS[c] %@", "Save Password"))
+            .firstMatch
+
+        guard sheet.waitForExistence(timeout: timeout) else { return } // never appeared
+
+        for label in ["Not Now", "Not now"] {
+            let button = app.buttons[label]
+            guard button.exists else { continue }
+            button.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            break
+        }
+
+        // The sheet blocks everything beneath it, so a silent failure here would surface
+        // later as a baffling "exists but not hittable" on an unrelated element — which
+        // is exactly the bug this helper was written to fix. Fail here instead.
+        XCTAssertTrue(
+            waitForNonExistence(sheet, timeout: 5),
+            """
+            The system "Save Password?" sheet is still presented. It renders in a separate \
+            window above the app and blocks interaction with every element beneath it, so \
+            the rest of this test would fail for the wrong reason.
+            """
+        )
+    }
+
+    /// Waits for an element to go away. `waitForExistence` has no negative form.
+    func waitForNonExistence(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
-            for label in ["Not Now", "Not now"] {
-                let button = app.buttons[label]
-                if button.exists, button.isHittable {
-                    button.tap()
-                    return
-                }
-            }
-            if anyBookCell.isHittable { return } // no sheet, or already gone
-            Thread.sleep(forTimeInterval: 0.5)
+            if !element.exists { return true }
+            Thread.sleep(forTimeInterval: 0.25)
         }
+        return !element.exists
     }
 
     /// Looks up an element by identifier without caring about its element type.

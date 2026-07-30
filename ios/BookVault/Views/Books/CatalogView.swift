@@ -140,6 +140,7 @@ struct CatalogView: View {
                     .padding(.vertical)
                 }
             }
+            .miniPlayerInset()
             .navigationTitle("Catalog")
             .toolbar {
                 ToolbarItem(placement: .principal) {

@@ -112,6 +112,7 @@ struct DownloadsView: View {
                     }
                 }
             }
+            .miniPlayerInset()
             .navigationTitle("Downloads")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

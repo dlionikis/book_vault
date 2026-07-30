@@ -83,7 +83,10 @@ struct LoginView: View {
                 // Username field
                 TextField("Username", text: $username)
                     .textFieldStyle(.roundedBorder)
-                    .textContentType(.username)
+                    // nil under UI testing: autofill triggers a "Save Password?" sheet
+                    // that blocks the whole app and cannot be dismissed reliably from
+                    // the test process. See UITestEnvironment.
+                    .textContentType(UITestEnvironment.shouldDisablePasswordAutofill ? nil : .username)
                     .autocapitalization(.none)
                     .focused($focusedField, equals: .username)
                     .submitLabel(.next)
@@ -95,7 +98,7 @@ struct LoginView: View {
                 // Password field
                 SecureField("Password", text: $password)
                     .textFieldStyle(.roundedBorder)
-                    .textContentType(.password)
+                    .textContentType(UITestEnvironment.shouldDisablePasswordAutofill ? nil : .password)
                     .focused($focusedField, equals: .password)
                     .submitLabel(.go)
                     .onSubmit {

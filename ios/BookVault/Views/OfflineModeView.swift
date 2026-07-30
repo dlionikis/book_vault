@@ -131,6 +131,7 @@ struct OfflineModeView: View {
                 .padding(.bottom, 20)
                 .animation(.easeInOut, value: networkMonitor.isConnected)
             }
+            .miniPlayerInset()
             .navigationTitle("Offline Mode")
             .navigationBarTitleDisplayMode(.inline)
         }

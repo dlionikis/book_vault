@@ -278,6 +278,7 @@ struct SettingsView: View {
             .onAppear {
                 refreshCacheStats()
             }
+            .miniPlayerInset()
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.large)
             .confirmationDialog("Log Out", isPresented: $showingLogoutConfirmation) {

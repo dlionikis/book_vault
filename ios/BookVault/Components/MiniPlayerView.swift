@@ -8,24 +8,35 @@
 
 import SwiftUI
 
-/// Persistent mini player bar that shows at the top of all screens when audio is playing
-/// Compact style (70% width, right-aligned) to avoid overlapping navigation buttons
+// MARK: - MiniPlayerView
+
+/// Persistent mini player bar pinned to the bottom of the window, below the tab bar.
+///
+/// Rendered as `ContentView`'s bottom `safeAreaInset`, so the framework shrinks every
+/// screen's safe area by this bar's height — content insets are handled automatically
+/// and nothing here may hardcode a height (see A3 in
+/// docs/plans/ios-mini-player-bottom-bar-plan.md).
+///
+/// The bar sizes to its content so Dynamic Type grows it, and the material background
+/// extends into the bottom safe area beneath the row.
 struct MiniPlayerView: View {
     @ObservedObject var audioManager = AudioPlayerManager.shared
-    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showingFullPlayer = false
 
     var body: some View {
         if let book = audioManager.currentBook {
-            GeometryReader { geometry in
-                Button(
-                    action: { showingFullPlayer = true },
-                    label: {
-                        HStack(spacing: 12) {
-                        // Cover Art
+            VStack(spacing: 0) {
+                Divider()
+
+                HStack(spacing: 12) {
+                    // Tapping anywhere in this region opens the full player. It is a
+                    // `contentShape` + `onTapGesture` rather than a `Button` on purpose:
+                    // wrapping the row in a Button made the nested play/pause Button fire
+                    // *both* actions, so pausing also presented the sheet (F5/A1).
+                    HStack(spacing: 12) {
                         coverArt(for: book)
 
-                        // Book Info
                         VStack(alignment: .leading, spacing: 2) {
                             Text(book.title)
                                 .font(.subheadline)
@@ -39,47 +50,55 @@ struct MiniPlayerView: View {
                                 .lineLimit(1)
                         }
 
-                        Spacer()
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { showingFullPlayer = true }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel("Now playing: \(book.title)")
+                    .accessibilityHint("Opens the full player")
+                    .accessibilityIdentifier(A11y.MiniPlayer.info)
 
-                        // Play/Pause Button
-                        Button(
-                            action: { audioManager.togglePlayPause() },
-                            label: {
-                                Image(systemName: audioManager.isPlaying ? "pause.fill" : "play.fill")
-                                    .font(.title2)
-                                    .foregroundColor(.primary)
-                                    .frame(width: 44, height: 44)
-                            }
-                        )
-                        .buttonStyle(PlainButtonStyle())
-                        .accessibilityIdentifier(A11y.MiniPlayer.playPause)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemBackground).opacity(0.95))
-                            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.4 : 0.1), radius: 8, y: 2)
+                    // Its own accessibility element, so VoiceOver can reach play/pause
+                    // independently of the label above (A1).
+                    Button(
+                        action: { audioManager.togglePlayPause() },
+                        label: {
+                            Image(systemName: audioManager.isPlaying ? "pause.fill" : "play.fill")
+                                .font(.title2)
+                                .foregroundColor(.primary)
+                                // ≥44x44pt hit target (A2).
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
                     )
-                    .frame(width: geometry.size.width * 0.70)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    }
-                )
-                .buttonStyle(PlainButtonStyle())
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Now playing: \(book.title)")
-                .accessibilityHint("Tap to open full player")
-                .accessibilityIdentifier(A11y.MiniPlayer.root)
-                .sheet(isPresented: $showingFullPlayer) {
-                    NowPlayingView()
-                        .presentationDragIndicator(.visible)
+                    .buttonStyle(PlainButtonStyle())
+                    .accessibilityLabel(audioManager.isPlaying ? "Pause" : "Play")
+                    .accessibilityIdentifier(A11y.MiniPlayer.playPause)
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
-            .frame(height: 68)
+            // Material rather than a solid fill so content scrolling beneath reads as
+            // layered, matching the tab bar sitting directly below (V2).
+            .background(.bar)
+            // Children are addressable individually; the bar itself is not one element.
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier(A11y.MiniPlayer.root)
+            .transition(barTransition)
+            .sheet(isPresented: $showingFullPlayer) {
+                NowPlayingView()
+                    .presentationDragIndicator(.visible)
+            }
         }
     }
 
-    @ViewBuilder
+    /// Slides up from the bottom edge, or cross-fades under Reduce Motion (A5).
+    private var barTransition: AnyTransition {
+        reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity)
+    }
+
     private func coverArt(for book: Book) -> some View {
         CachedCoverImage(bookId: book.id, coverUrl: book.coverUrl)
             .aspectRatio(contentMode: .fill)
@@ -88,50 +107,64 @@ struct MiniPlayerView: View {
     }
 }
 
-// MARK: - Previews
+// MARK: - MiniPlayerPreviewHost
 
-#Preview("Playing", traits: .sizeThatFitsLayout) {
-    VStack {
-        Spacer()
-        MiniPlayerView()
-    }
-    .onAppear {
-        let manager = AudioPlayerManager.shared
-        manager.play(book: .mockStandard)
+/// Previewed inside a `safeAreaInset` to match how `ContentView` mounts it: the bar
+/// spans the full width and the material extends into the bottom safe area.
+private struct MiniPlayerPreviewHost<Content: View>: View {
+    @ViewBuilder var configure: () -> Content
+
+    var body: some View {
+        List(0 ..< 20, id: \.self) { index in
+            Text("Row \(index)")
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            MiniPlayerView()
+        }
+        .overlay { configure().frame(width: 0, height: 0) }
     }
 }
 
-#Preview("Paused", traits: .sizeThatFitsLayout) {
-    VStack {
-        Spacer()
-        MiniPlayerView()
-    }
-    .onAppear {
-        let manager = AudioPlayerManager.shared
-        manager.play(book: .mockLongTitle)
-        manager.pause()
+#Preview("Playing") {
+    MiniPlayerPreviewHost {
+        Color.clear.onAppear {
+            AudioPlayerManager.shared.play(book: .mockStandard)
+        }
     }
 }
 
-#Preview("Long Title", traits: .sizeThatFitsLayout) {
-    VStack {
-        Spacer()
-        MiniPlayerView()
-    }
-    .onAppear {
-        let manager = AudioPlayerManager.shared
-        manager.play(book: .mockLongTitle)
+#Preview("Paused") {
+    MiniPlayerPreviewHost {
+        Color.clear.onAppear {
+            let manager = AudioPlayerManager.shared
+            manager.play(book: .mockStandard)
+            manager.pause()
+        }
     }
 }
 
-#Preview("Dark Mode", traits: .sizeThatFitsLayout) {
-    VStack {
-        Spacer()
-        MiniPlayerView()
+#Preview("Long Title") {
+    MiniPlayerPreviewHost {
+        Color.clear.onAppear {
+            AudioPlayerManager.shared.play(book: .mockLongTitle)
+        }
     }
-    .onAppear {
-        let manager = AudioPlayerManager.shared
-        manager.play(book: .mockStandard)
+}
+
+#Preview("Dark Mode") {
+    MiniPlayerPreviewHost {
+        Color.clear.onAppear {
+            AudioPlayerManager.shared.play(book: .mockStandard)
+        }
     }
     .preferredColorScheme(.dark)
+}
+
+#Preview("Accessibility XL") {
+    MiniPlayerPreviewHost {
+        Color.clear.onAppear {
+            AudioPlayerManager.shared.play(book: .mockLongTitle)
+        }
+    }
+    .environment(\.sizeCategory, .accessibilityExtraLarge)
 }

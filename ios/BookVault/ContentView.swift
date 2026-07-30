@@ -28,6 +28,7 @@ struct ContentView: View {
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
     @ObservedObject private var audioPlayer = AudioPlayerManager.shared
     @ObservedObject private var deepLinkManager = DeepLinkManager.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hasLoadedInitialBook = false
     @State private var selectedTab: Tab = .catalog
     @State private var previousOnlineTab: Tab? // Remember tab when going offline
@@ -63,96 +64,90 @@ struct ContentView: View {
             // User is logged in (online) or in a local offline-only session -
             // show tab view with mini player. The networkMonitor.isConnected
             // logic below then renders the offline tab set automatically.
-            ZStack(alignment: .top) {
-                TabView(selection: $selectedTab) {
-                    if networkMonitor.isConnected {
-                        // Online mode: 6 tabs
-                        CatalogView()
-                            .tabItem {
-                                Label("Catalog", systemImage: "books.vertical.fill")
-                                    .accessibilityIdentifier(A11y.Tab.catalog)
-                            }
-                            .tag(Tab.catalog)
-
-                        BrowseView()
-                            .tabItem {
-                                Label("Browse", systemImage: "square.grid.2x2")
-                                    .accessibilityIdentifier(A11y.Tab.browse)
-                            }
-                            .tag(Tab.browse)
-
-                        SearchView()
-                            .tabItem {
-                                Label("Search", systemImage: "magnifyingglass")
-                                    .accessibilityIdentifier(A11y.Tab.search)
-                            }
-                            .tag(Tab.search)
-                    } else {
-                        // Offline mode: Replace Catalog/Browse/Search with Offline tab
-                        OfflineModeView(selectedTab: $selectedTab)
-                            .tabItem {
-                                Label("Offline", systemImage: "wifi.slash")
-                                    .accessibilityIdentifier(A11y.Tab.offline)
-                            }
-                            .tag(Tab.offline)
-                    }
-
-                    // Always show Library, Downloads, Settings
-                    LibraryView(selectedTab: $selectedTab)
+            TabView(selection: $selectedTab) {
+                if networkMonitor.isConnected {
+                    // Online mode: 6 tabs
+                    CatalogView()
                         .tabItem {
-                            Label("Library", systemImage: "books.vertical")
-                                    .accessibilityIdentifier(A11y.Tab.library)
+                            Label("Catalog", systemImage: "books.vertical.fill")
+                                .accessibilityIdentifier(A11y.Tab.catalog)
                         }
-                        .tag(Tab.library)
+                        .tag(Tab.catalog)
 
-                    DownloadsView()
+                    BrowseView()
                         .tabItem {
-                            Label("Downloads", systemImage: "arrow.down.circle")
-                                    .accessibilityIdentifier(A11y.Tab.downloads)
+                            Label("Browse", systemImage: "square.grid.2x2")
+                                .accessibilityIdentifier(A11y.Tab.browse)
                         }
-                        .tag(Tab.downloads)
+                        .tag(Tab.browse)
 
-                    NavigationStack {
-                        RestoreRequestsView()
-                    }
+                    SearchView()
+                        .tabItem {
+                            Label("Search", systemImage: "magnifyingglass")
+                                .accessibilityIdentifier(A11y.Tab.search)
+                        }
+                        .tag(Tab.search)
+                } else {
+                    // Offline mode: Replace Catalog/Browse/Search with Offline tab
+                    OfflineModeView(selectedTab: $selectedTab)
+                        .tabItem {
+                            Label("Offline", systemImage: "wifi.slash")
+                                .accessibilityIdentifier(A11y.Tab.offline)
+                        }
+                        .tag(Tab.offline)
+                }
+
+                // Always show Library, Downloads, Settings
+                LibraryView(selectedTab: $selectedTab)
                     .tabItem {
-                        Label("Restores", systemImage: "clock.arrow.circlepath")
-                                    .accessibilityIdentifier(A11y.Tab.restores)
+                        Label("Library", systemImage: "books.vertical")
+                            .accessibilityIdentifier(A11y.Tab.library)
                     }
-                    .tag(Tab.restores)
+                    .tag(Tab.library)
 
-                    SettingsView()
-                        .tabItem {
-                            Label("Settings", systemImage: "gearshape")
-                                    .accessibilityIdentifier(A11y.Tab.settings)
-                        }
-                        .tag(Tab.settings)
-                }
-                .onChange(of: networkMonitor.isConnected) { oldValue, isConnected in
-                    DebugLogger.network("onChange triggered: \(oldValue) -> \(isConnected)")
-                    handleNetworkChange(isOnline: isConnected)
-                }
-                .task {
-                    // Auto-load most recently played book on first appearance.
-                    // Suppressed under UI testing so the mini player only appears
-                    // as a result of playback the test actually started.
-                    if !UITestEnvironment.shouldSkipInitialBookLoad,
-                       !hasLoadedInitialBook, audioPlayer.currentBook == nil {
-                        await loadMostRecentlyPlayedBook()
-                        hasLoadedInitialBook = true
+                DownloadsView()
+                    .tabItem {
+                        Label("Downloads", systemImage: "arrow.down.circle")
+                            .accessibilityIdentifier(A11y.Tab.downloads)
                     }
-                }
+                    .tag(Tab.downloads)
 
-                // Mini player overlay - floats at top, below navigation bar
-                if audioPlayer.currentBook != nil {
-                    VStack(spacing: 0) {
-                        MiniPlayerView()
-                        Spacer()
+                NavigationStack {
+                    RestoreRequestsView()
+                }
+                .tabItem {
+                    Label("Restores", systemImage: "clock.arrow.circlepath")
+                        .accessibilityIdentifier(A11y.Tab.restores)
+                }
+                .tag(Tab.restores)
+
+                SettingsView()
+                    .tabItem {
+                        Label("Settings", systemImage: "gearshape")
+                            .accessibilityIdentifier(A11y.Tab.settings)
                     }
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: audioPlayer.currentBook != nil)
+                    .tag(Tab.settings)
+            }
+            .onChange(of: networkMonitor.isConnected) { oldValue, isConnected in
+                DebugLogger.network("onChange triggered: \(oldValue) -> \(isConnected)")
+                handleNetworkChange(isOnline: isConnected)
+            }
+            .task {
+                // Auto-load most recently played book on first appearance.
+                // Suppressed under UI testing so the mini player only appears
+                // as a result of playback the test actually started.
+                if !UITestEnvironment.shouldSkipInitialBookLoad,
+                   !hasLoadedInitialBook, audioPlayer.currentBook == nil {
+                    await loadMostRecentlyPlayedBook()
+                    hasLoadedInitialBook = true
                 }
             }
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8),
+                value: audioPlayer.currentBook != nil
+            )
+            // Keeps the tab bar and mini bar pinned when the keyboard shows,
+            // rather than being lifted with it (L7).
             .ignoresSafeArea(.keyboard)
             .preferredColorScheme(themeManager.selectedTheme.colorScheme)
             // Phase 7b: request push authorization once authenticated so the

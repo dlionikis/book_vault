@@ -33,4 +33,14 @@ enum UITestEnvironment {
     /// Skip the push-authorization request. Its system alert is a Springboard window
     /// that steals taps from the app, so leaving it enabled makes every flow flaky.
     static var shouldSkipPushAuthorization: Bool { isActive }
+
+    /// Drop the autofill `textContentType` from the login fields.
+    ///
+    /// `.username`/`.password` are correct for shipping - they enable password
+    /// autofill - but they make iOS present a "Save Password?" sheet after a
+    /// successful login. That sheet lives in a separate window above the app and
+    /// blocks interaction with every element beneath it, and it cannot be reliably
+    /// dismissed from the test process: tapping "Not Now" synthesizes an event but the
+    /// sheet stays up. Suppressing the trigger is deterministic; dismissing it is not.
+    static var shouldDisablePasswordAutofill: Bool { isActive }
 }

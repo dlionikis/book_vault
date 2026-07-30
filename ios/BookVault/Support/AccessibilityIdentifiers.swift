@@ -52,7 +52,11 @@ enum A11y {
     }
 
     enum MiniPlayer {
+        /// The bar itself. A container, not a tappable element - tapping opens the
+        /// full player only via `info`.
         static let root = "miniPlayer.root"
+        /// The cover/title/author region. Tapping this opens the full player.
+        static let info = "miniPlayer.info"
         static let playPause = "miniPlayer.playPause"
     }
 

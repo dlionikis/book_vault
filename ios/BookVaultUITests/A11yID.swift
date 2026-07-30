@@ -44,7 +44,10 @@ enum A11yID {
     }
 
     enum MiniPlayer {
+        /// The bar container. Not tappable - use `info` to open the full player.
         static let root = "miniPlayer.root"
+        /// Cover/title/author region; tapping it opens the full player.
+        static let info = "miniPlayer.info"
         static let playPause = "miniPlayer.playPause"
     }
 

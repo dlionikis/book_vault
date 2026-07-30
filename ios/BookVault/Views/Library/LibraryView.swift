@@ -182,6 +182,7 @@ struct LibraryView: View {
                     .padding(.vertical)
                 }
             }
+            .miniPlayerInset()
             .navigationTitle("Library")
             .refreshable {
                 // Only allow refresh when online

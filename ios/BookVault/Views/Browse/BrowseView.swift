@@ -80,6 +80,7 @@ struct BrowseView: View {
                     }
                 }
             }
+            .miniPlayerInset()
             .navigationTitle("Browse")
             .navigationBarTitleDisplayMode(.large)
             .task {
