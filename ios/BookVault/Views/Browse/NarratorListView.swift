@@ -15,21 +15,17 @@ struct NarratorListView: View {
         BrowseListView(configuration: .narrators())
     }
 }
+// MARK: - Previews
 
-// MARK: - NarratorListView_Previews
-
-// periphery:ignore - Used by Xcode Previews
-struct NarratorListView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            NarratorListView()
-        }
-        .previewDisplayName("Narrator List")
-
-        NavigationStack {
-            NarratorListView()
-        }
-        .preferredColorScheme(.dark)
-        .previewDisplayName("Narrator List (Dark)")
+#Preview("Narrator List") {
+    NavigationStack {
+        NarratorListView()
     }
+}
+
+#Preview("Narrator List (Dark)") {
+    NavigationStack {
+        NarratorListView()
+    }
+    .preferredColorScheme(.dark)
 }

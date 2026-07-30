@@ -17,22 +17,18 @@ struct NarratorDetailView: View {
         BrowseDetailView(itemId: narratorId, configuration: .narrator())
     }
 }
+// MARK: - Previews
 
-// MARK: - NarratorDetailView_Previews
-
-// periphery:ignore - Used by Xcode Previews
-struct NarratorDetailView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            // Note: Using a placeholder ID for preview
-            NarratorDetailView(narratorId: "00000000-0000-0000-0000-000000000000")
-        }
-        .previewDisplayName("Narrator Detail")
-
-        NavigationStack {
-            NarratorDetailView(narratorId: "00000000-0000-0000-0000-000000000000")
-        }
-        .preferredColorScheme(.dark)
-        .previewDisplayName("Narrator Detail (Dark)")
+#Preview("Narrator Detail") {
+    NavigationStack {
+        // Note: Using a placeholder ID for preview
+        NarratorDetailView(narratorId: "00000000-0000-0000-0000-000000000000")
     }
+}
+
+#Preview("Narrator Detail (Dark)") {
+    NavigationStack {
+        NarratorDetailView(narratorId: "00000000-0000-0000-0000-000000000000")
+    }
+    .preferredColorScheme(.dark)
 }

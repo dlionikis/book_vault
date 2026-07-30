@@ -76,14 +76,10 @@ struct BookDetailLoader: View {
         isLoading = false
     }
 }
+// MARK: - Previews
 
-// MARK: - BookDetailLoader_Previews
-
-// periphery:ignore - Used by Xcode Previews
-struct BookDetailLoader_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            BookDetailLoader(bookId: "00000000-0000-0000-0000-000000000000")
-        }
+#Preview {
+    NavigationStack {
+        BookDetailLoader(bookId: "00000000-0000-0000-0000-000000000000")
     }
 }

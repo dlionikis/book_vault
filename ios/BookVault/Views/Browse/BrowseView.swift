@@ -158,21 +158,13 @@ private struct BrowseCategoryRow: View {
         .accessibilityHint("Tap to browse \(title.lowercased())")
     }
 }
+// MARK: - Previews
 
-// MARK: - BrowseView_Previews
+#Preview("Browse View") {
+    BrowseView()
+}
 
-// periphery:ignore - Used by Xcode Previews
-struct BrowseView_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            // Default state
-            BrowseView()
-                .previewDisplayName("Browse View")
-
-            // Dark mode
-            BrowseView()
-                .preferredColorScheme(.dark)
-                .previewDisplayName("Browse View (Dark)")
-        }
-    }
+#Preview("Browse View (Dark)") {
+    BrowseView()
+        .preferredColorScheme(.dark)
 }

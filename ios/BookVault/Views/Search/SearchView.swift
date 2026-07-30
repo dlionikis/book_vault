@@ -437,21 +437,13 @@ struct SearchView: View {
         currentPage = 1
     }
 }
+// MARK: - Previews
 
-// MARK: - SearchView_Previews
+#Preview("Search View (Empty)") {
+    SearchView()
+}
 
-// periphery:ignore - Used by Xcode Previews
-struct SearchView_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            // Empty state
-            SearchView()
-                .previewDisplayName("Search View (Empty)")
-
-            // Dark mode
-            SearchView()
-                .preferredColorScheme(.dark)
-                .previewDisplayName("Search View (Dark)")
-        }
-    }
+#Preview("Search View (Dark)") {
+    SearchView()
+        .preferredColorScheme(.dark)
 }

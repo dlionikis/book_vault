@@ -135,7 +135,7 @@ Ordered so each step is independently revertible:
 | ✅ **A2** | `@MainActor` on the 4 unannotated services (`AppIconManager`, `PlaybackSettings`, `ProgressManager`, `ThemeManager`) — **done** | Small             | Low                     |
 | ✅ **A3** | `Sendable` validation rules via generator template override — **done**                                                          | Small but fiddly  | Medium — build tooling  |
 | ✅ **A5** | Convert the 10 production `NavigationView` → `NavigationStack` — **done** (+25 preview sites)                                   | 10 sites          | Medium — the real work  |
-| **A6**    | _(optional)_ Legacy `PreviewProvider` → `#Preview` in the 10 remaining files; drops the `periphery:ignore` workarounds          | Small             | Very low                |
+| ✅ **A6** | Legacy `PreviewProvider` → `#Preview` in 10 files; dropped all 10 `periphery:ignore` workarounds — **done**                     | Small             | Very low                |
 | **A4**    | Flip `SWIFT_VERSION: '6.0'` + `SWIFT_STRICT_CONCURRENCY: complete` — **now the last step**, gated on Plan C below               | 2 lines           | Low _once Plan C lands_ |
 
 **A4 moved to the end.** It was originally "2 lines, low risk, gated on A3." A3 landed and A4 is
@@ -147,7 +147,7 @@ rules (see [Plan C](ios-swift6-generated-networking-plan.md)).
 ```
 A3 ✅ ──▶ Plan C ──▶ A4      (language mode needs the URLSession layer Sendable-clean)
 
-A0 ✅, A1 ✅, A2 ✅, A5, A6   independent — any order, any time
+A0 ✅, A1 ✅, A2 ✅, A5 ✅, A6 ✅   independent — any order, any time
 A5 ──▶ Plan B                (recommended, not required)
 ```
 
@@ -260,6 +260,23 @@ login screen renders correctly with safe-area insets respected. **Not** verified
 detail → back on each of the 9 tab screens, and safe-area propagation into pushed destinations — which
 is the entire reason A5 precedes Plan B. Simulator tap automation was unavailable (no `idb`), so
 **this needs the manual pass in §5 of the mini-player plan before Plan B relies on it.**
+
+### Implementation notes — A6 (shipped July 30, 2026)
+
+All 10 legacy `PreviewProvider` structs converted to the `#Preview` macro. Net **-48 lines** across 10
+files. `validate:ios` green: 698 tests, drift clean, SwiftLint `--strict` clean.
+
+**The real win is deleting a workaround.** Each `PreviewProvider` needed a
+`// periphery:ignore - Used by Xcode Previews` comment to stop dead-code analysis flagging it. The
+`#Preview` macro needs none, so **all 10 suppressions are gone.** (The 5 remaining `periphery:ignore`
+comments in `MockData.swift` are for mock fixtures — a different purpose, correctly left alone.)
+
+Two shapes existed: bare sibling views with `.previewDisplayName(...)`, and a `Group { }` wrapper.
+Both become separate `#Preview("Name") { }` blocks, matching the convention already used in
+`CatalogView` and `LibraryView`. The `Group` cases (`SearchView`, `BrowseView`) needed hand-fixing —
+an automated split mishandled their leading comments and produced an empty first block.
+
+`PreviewProvider` is now absent from the codebase.
 
 ---
 
@@ -433,9 +450,9 @@ deferring the bug fix to avoid duplicate work is not.
 
 ## 6. Readiness
 
-**Done:** A0, A1, A2 (PR #133) · A3 (PR #134).
+**Done:** A0, A1, A2 (#133) · A3 (#134) · A5 (#135) · A6 (#136).
 
-**Ready now:** **A5** (`NavigationStack`), **A6** (previews). Both independent, both concrete.
+**Ready now:** nothing in Plan A — **Plan B** (mini-player bottom bar) is the next work.
 
 **Blocked:** **A4** — waits on Plan C.
 

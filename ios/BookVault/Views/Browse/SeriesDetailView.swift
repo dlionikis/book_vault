@@ -421,22 +421,18 @@ struct SeriesDetailView: View {
         }
     }
 }
+// MARK: - Previews
 
-// MARK: - SeriesDetailView_Previews
-
-// periphery:ignore - Used by Xcode Previews
-struct SeriesDetailView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            // Note: Using a placeholder ID for preview
-            SeriesDetailView(seriesId: "00000000-0000-0000-0000-000000000000")
-        }
-        .previewDisplayName("Series Detail")
-
-        NavigationStack {
-            SeriesDetailView(seriesId: "00000000-0000-0000-0000-000000000000")
-        }
-        .preferredColorScheme(.dark)
-        .previewDisplayName("Series Detail (Dark)")
+#Preview("Series Detail") {
+    NavigationStack {
+        // Note: Using a placeholder ID for preview
+        SeriesDetailView(seriesId: "00000000-0000-0000-0000-000000000000")
     }
+}
+
+#Preview("Series Detail (Dark)") {
+    NavigationStack {
+        SeriesDetailView(seriesId: "00000000-0000-0000-0000-000000000000")
+    }
+    .preferredColorScheme(.dark)
 }

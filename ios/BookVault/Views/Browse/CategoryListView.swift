@@ -15,21 +15,17 @@ struct CategoryListView: View {
         BrowseListView(configuration: .categories())
     }
 }
+// MARK: - Previews
 
-// MARK: - CategoryListView_Previews
-
-// periphery:ignore - Used by Xcode Previews
-struct CategoryListView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            CategoryListView()
-        }
-        .previewDisplayName("Category List")
-
-        NavigationStack {
-            CategoryListView()
-        }
-        .preferredColorScheme(.dark)
-        .previewDisplayName("Category List (Dark)")
+#Preview("Category List") {
+    NavigationStack {
+        CategoryListView()
     }
+}
+
+#Preview("Category List (Dark)") {
+    NavigationStack {
+        CategoryListView()
+    }
+    .preferredColorScheme(.dark)
 }

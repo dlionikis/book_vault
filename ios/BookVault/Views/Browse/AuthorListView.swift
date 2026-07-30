@@ -15,21 +15,17 @@ struct AuthorListView: View {
         BrowseListView(configuration: .authors())
     }
 }
+// MARK: - Previews
 
-// MARK: - AuthorListView_Previews
-
-// periphery:ignore - Used by Xcode Previews
-struct AuthorListView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            AuthorListView()
-        }
-        .previewDisplayName("Author List")
-
-        NavigationStack {
-            AuthorListView()
-        }
-        .preferredColorScheme(.dark)
-        .previewDisplayName("Author List (Dark)")
+#Preview("Author List") {
+    NavigationStack {
+        AuthorListView()
     }
+}
+
+#Preview("Author List (Dark)") {
+    NavigationStack {
+        AuthorListView()
+    }
+    .preferredColorScheme(.dark)
 }
