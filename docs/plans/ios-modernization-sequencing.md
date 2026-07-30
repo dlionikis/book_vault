@@ -261,6 +261,10 @@ detail → back on each of the 9 tab screens, and safe-area propagation into pus
 is the entire reason A5 precedes Plan B. Simulator tap automation was unavailable (no `idb`), so
 **this needs the manual pass in §5 of the mini-player plan before Plan B relies on it.**
 
+**Remedy proposed:** [ios-ui-testing-plan.md](ios-ui-testing-plan.md) — an XCUITest target covering
+five smoke flows, including the push → detail → back flow this gap describes. Recommended **before**
+Plan B so the mini-player change ships with automated verification rather than manual passes.
+
 ### Implementation notes — A6 (shipped July 30, 2026)
 
 All 10 legacy `PreviewProvider` structs converted to the `#Preview` macro. Net **-48 lines** across 10
