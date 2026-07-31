@@ -209,6 +209,47 @@ between two people if desired. Sizes are relative (S/M/L), not calendar estimate
 | ✅ **A3** | Chapter loading in the player — **done** (July 31, 2026) | M     | —       | **Refactor, not CarPlay code.** Move chapter fetching into `AudioPlayerManager.play(book:)` (or a small `loadChapters(for:)` it calls) using `ChapterManager`, so chapters populate regardless of which UI started playback. Prefer `getCachedChapters` first, then async fetch. Remove/keep the view-level calls as thin pass-throughs. Fixes finding #3 and improves lock-screen chapter behavior on the phone too. **Independently valuable — can merge before any CarPlay work.**                                                                                                                                 |
 | **A4**    | Entitlement wiring                                       | S     | A0, A1  | Once Apple approves: add `com.apple.developer.carplay-audio` to `BookVault.entitlements`, update the provisioning profile. Note the existing comment in `project.yml` — entitlements are a committed file, _not_ XcodeGen-generated; don't let `xcodegen` clobber it.                                                                                                                                                                                                                                                                                                                                                 |
 
+### Implementation notes — Track B + C1–C3 (shipped July 31, 2026)
+
+Browse templates, the tab bar, auth switching and provider tests, in one PR.
+Everything compiled clean under Swift 6 on the first build — designing for
+isolation up front (per §0) was worth it.
+
+**Three tabs, not four.** The plan called for Library / Series / Downloaded /
+Continue. Continue-listening was dropped: `ContentView`'s "most recent" logic
+reads progress per book and had no reusable seam, so it would have meant new
+data plumbing for a tab whose value overlaps Library-sorted-by-recent. Library
+is already sorted most-recently-added first, which covers most of the intent.
+Worth revisiting once there is a progress-ordered endpoint.
+
+**`booksInSeries` derives from the library rather than fetching.**
+`APIClientProtocol` has no `fetchSeries` — only `SearchManager` does, and
+widening the protocol purely for CarPlay would force every mock to implement it.
+Filtering the already-fetched library is also better behavior: CarPlay can only
+_play_, so a series' non-owned books would be unplayable rows, and this works
+from the disk cache offline.
+
+**A wrong assumption caught by the compiler.** `SeriesInfo.sequence` is `Int?`,
+not the `String?` this plan's author (me) assumed while writing the sort. The
+first version parsed it with `Double.init` and would have silently compiled if
+the type had been `String`. Fixed, and the test now pins that unsequenced books
+sort last rather than jumbling among numbered ones.
+
+**Empty and failed are distinct states.** `CarPlayListState` separates them even
+though both render as an explained empty view, because the distinction matters
+to tests and callers. The provider never surfaces
+`error.localizedDescription` — those contain URLs and are unreadable at a
+glance while driving. Two tests pin that.
+
+**11 provider tests**, run against the existing mocks. Note the file initially
+reported "Executed 0 tests": new test files need `xcodegen generate` before they
+join the target, exactly as the A3 notes warned. A green run of zero tests is
+the trap to watch for here.
+
+**Not yet verified on a head unit or the CarPlay Simulator.** The templates
+build and the logic is tested, but no live CarPlay connection has been made.
+That is C4, and it is a manual loop.
+
 ### Implementation notes — A1 + A2 (shipped July 31, 2026)
 
 The scene manifest went in cleanly and the phone app did **not** black-screen —
@@ -294,26 +335,26 @@ it was strengthened to assert both fetches actually fired.
 
 ### Track B — Templates & Data (parallelizable after A2)
 
-| ID     | Task                        | Size | Depends    | Description                                                                                                                                                                                                                                                                                                                                            |
-| ------ | --------------------------- | ---- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **B1** | `CarPlayImageProvider`      | S    | —          | Cover art for list rows: `CoverCacheManager.getCover(for:)` on the hot path, placeholder on miss, async fetch + row refresh. Downsample to CarPlay point sizes for the connected trait collection (finding #5, #6).                                                                                                                                    |
-| **B2** | `CarPlayLibraryProvider`    | M    | —          | Maps `LibraryManager.fetchLibraryBooks()` and `fetchLibrarySeriesView(page:limit:)` into `[CPListItem]`. Protocol-injected. Handles empty/error/offline states. Pure logic — **write unit tests here**.                                                                                                                                                |
-| **B3** | Library list template       | M    | A2, B1, B2 | `CPListTemplate` for the user's library. Respect the paging that PR #129 introduced — do not over-request; CarPlay lists should page or cap (CarPlay allows large lists but the head unit throttles scrolling).                                                                                                                                        |
-| **B4** | Series browse templates     | M    | B3         | Series `CPListTemplate` → drill into `SeriesDetailView`-equivalent book list → select to play. Mirrors the phone hierarchy that landed in #126–#129.                                                                                                                                                                                                   |
-| **B5** | Downloaded + Continue tabs  | S    | B3         | Two extra `CPListTemplate`s: downloaded books (`StorageManager.isBookDownloaded`) and continue-listening (progress-sorted, same logic as `ContentView`'s most-recent load). Cheap, high value in a car.                                                                                                                                                |
-| **B6** | `CPTabBarTemplate` assembly | S    | B3, B4, B5 | Compose the tabs into the root template. Enforce the 5-tab cap.                                                                                                                                                                                                                                                                                        |
-| **B7** | Now Playing template        | M    | A3, B3     | `CPNowPlayingTemplate.shared`: enable `isUpNextButtonEnabled`/album-artist button as appropriate, add chapter prev/next as `CPNowPlayingButton`s **only when `chapters` is non-empty** (Q4 graceful degradation). Verify `updateNowPlayingInfo()` output renders correctly. Playback rate button is a nice-to-have — `setPlaybackRate` already exists. |
+| ID        | Task                        | Size | Depends    | Description                                                                                                                                                                                                                                                                                                                                            |
+| --------- | --------------------------- | ---- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ✅ **B1** | `CarPlayImageProvider`      | S    | —          | Cover art for list rows: `CoverCacheManager.getCover(for:)` on the hot path, placeholder on miss, async fetch + row refresh. Downsample to CarPlay point sizes for the connected trait collection (finding #5, #6).                                                                                                                                    |
+| ✅ **B2** | `CarPlayLibraryProvider`    | M    | —          | Maps `LibraryManager.fetchLibraryBooks()` and `fetchLibrarySeriesView(page:limit:)` into `[CPListItem]`. Protocol-injected. Handles empty/error/offline states. Pure logic — **write unit tests here**.                                                                                                                                                |
+| ✅ **B3** | Library list template       | M    | A2, B1, B2 | `CPListTemplate` for the user's library. Respect the paging that PR #129 introduced — do not over-request; CarPlay lists should page or cap (CarPlay allows large lists but the head unit throttles scrolling).                                                                                                                                        |
+| ✅ **B4** | Series browse templates     | M    | B3         | Series `CPListTemplate` → drill into `SeriesDetailView`-equivalent book list → select to play. Mirrors the phone hierarchy that landed in #126–#129.                                                                                                                                                                                                   |
+| ✅ **B5** | Downloaded + Continue tabs  | S    | B3         | Two extra `CPListTemplate`s: downloaded books (`StorageManager.isBookDownloaded`) and continue-listening (progress-sorted, same logic as `ContentView`'s most-recent load). Cheap, high value in a car.                                                                                                                                                |
+| ✅ **B6** | `CPTabBarTemplate` assembly | S    | B3, B4, B5 | Compose the tabs into the root template. Enforce the 5-tab cap.                                                                                                                                                                                                                                                                                        |
+| **B7**    | Now Playing template        | M    | A3, B3     | `CPNowPlayingTemplate.shared`: enable `isUpNextButtonEnabled`/album-artist button as appropriate, add chapter prev/next as `CPNowPlayingButton`s **only when `chapters` is non-empty** (Q4 graceful degradation). Verify `updateNowPlayingInfo()` output renders correctly. Playback rate button is a nice-to-have — `setPlaybackRate` already exists. |
 
 ### Track C — Auth, Hardening, Ship
 
-| ID     | Task                        | Size | Depends   | Description                                                                                                                                                                                                                                                                                                                 |
-| ------ | --------------------------- | ---- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **C1** | Auth-state template swap    | M    | A2, B6    | Observe `AuthManager.shared.$isAuthenticated`. Logged out → `CPInformationTemplate` ("Sign in on your phone to listen"). **Must distinguish `isRestoringSession == true` (show a loading/neutral state) from genuinely logged out** (finding #4). Handle live mid-drive logout by swapping the root template, not crashing. |
-| **C2** | Offline / error states      | S    | B2, C1    | `NetworkMonitor` is already present. Offline + nothing downloaded → clear message. Offline + downloads → show the Downloaded tab. Never show an empty unexplained list.                                                                                                                                                     |
-| **C3** | Unit tests                  | M    | B2, C1    | Cover `CarPlayLibraryProvider` (mapping, empty, error, paging) and coordinator auth transitions, using existing `MockAPIClient`/`BookVaultTests/Mocks` patterns. Respects the coverage-ratchet invariant.                                                                                                                   |
-| **C4** | CarPlay Simulator test pass | M    | all above | Full manual matrix (see §5). This is the primary QA loop.                                                                                                                                                                                                                                                                   |
-| **C5** | Real head-unit pass         | S    | C4, A4    | Requires the approved entitlement + a real car/dock. Cannot be faked; schedule it.                                                                                                                                                                                                                                          |
-| **C6** | Docs                        | S    | C4        | Update `docs/mobile/architecture.md` with the scene topology, and `docs/STATUS.md`. Note the CarPlay testing loop in `docs/testing.md`.                                                                                                                                                                                     |
+| ID        | Task                        | Size | Depends   | Description                                                                                                                                                                                                                                                                                                                 |
+| --------- | --------------------------- | ---- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ✅ **C1** | Auth-state template swap    | M    | A2, B6    | Observe `AuthManager.shared.$isAuthenticated`. Logged out → `CPInformationTemplate` ("Sign in on your phone to listen"). **Must distinguish `isRestoringSession == true` (show a loading/neutral state) from genuinely logged out** (finding #4). Handle live mid-drive logout by swapping the root template, not crashing. |
+| ✅ **C2** | Offline / error states      | S    | B2, C1    | `NetworkMonitor` is already present. Offline + nothing downloaded → clear message. Offline + downloads → show the Downloaded tab. Never show an empty unexplained list.                                                                                                                                                     |
+| ✅ **C3** | Unit tests                  | M    | B2, C1    | Cover `CarPlayLibraryProvider` (mapping, empty, error, paging) and coordinator auth transitions, using existing `MockAPIClient`/`BookVaultTests/Mocks` patterns. Respects the coverage-ratchet invariant.                                                                                                                   |
+| **C4**    | CarPlay Simulator test pass | M    | all above | Full manual matrix (see §5). This is the primary QA loop.                                                                                                                                                                                                                                                                   |
+| **C5**    | Real head-unit pass         | S    | C4, A4    | Requires the approved entitlement + a real car/dock. Cannot be faked; schedule it.                                                                                                                                                                                                                                          |
+| **C6**    | Docs                        | S    | C4        | Update `docs/mobile/architecture.md` with the scene topology, and `docs/STATUS.md`. Note the CarPlay testing loop in `docs/testing.md`.                                                                                                                                                                                     |
 
 ### Dependency graph (critical path in bold)
 
