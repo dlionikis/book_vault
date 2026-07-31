@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetLibrarySeriesView200Response: Codable, JSONEncodable, Hashable {
+public struct GetLibrarySeriesView200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public var results: [CatalogSeriesViewItem]
     public var pagination: Pagination

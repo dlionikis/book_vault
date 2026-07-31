@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetAdminCosts200Response: Codable, JSONEncodable, Hashable {
+public struct GetAdminCosts200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public var months: [GetAdminCosts200ResponseMonthsInner]
     public var currency: String

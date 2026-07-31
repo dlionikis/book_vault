@@ -68,9 +68,12 @@ targets:
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
-        # Still Swift 5. The move to 6.0 (step A4) is blocked on generated
-        # URLSession code, not on app code — see
-        # docs/plans/ios-modernization-sequencing.md (A4).
+        # Still Swift 5. The generated-code blocker is now gone (Plan C trimmed
+        # the unused request layer), and the remaining blocker is app code:
+        # APIClientProtocol is not Sendable, so passing `apiClient` across an
+        # isolation boundary is rejected. Making it Sendable means isolating
+        # APIClient's accessToken + the two handler closures. That is A4's
+        # remaining work — see docs/plans/ios-modernization-sequencing.md (A4).
         SWIFT_VERSION: '5.0'
         ENABLE_PREVIEWS: YES
         SWIFT_EMIT_LOC_STRINGS: YES

@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetAdminBudgets200Response: Codable, JSONEncodable, Hashable {
+public struct GetAdminBudgets200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public var budgets: [GetAdminBudgets200ResponseBudgetsInner]
 

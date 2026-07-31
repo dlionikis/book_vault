@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct SeriesWithBookCount: Codable, JSONEncodable, Hashable {
+public struct SeriesWithBookCount: Sendable, Codable, JSONEncodable, Hashable {
 
     public static let bookCountRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public static let ownedCountRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)

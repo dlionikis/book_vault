@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetUserLists200ResponseListsInner: Codable, JSONEncodable, Hashable {
+public struct GetUserLists200ResponseListsInner: Sendable, Codable, JSONEncodable, Hashable {
 
     public static let bookCountRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public var id: UUID

@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct ReorderList200Response: Codable, JSONEncodable, Hashable {
+public struct ReorderList200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public var success: Bool
     public var updated: Int

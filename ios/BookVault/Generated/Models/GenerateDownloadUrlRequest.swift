@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GenerateDownloadUrlRequest: Codable, JSONEncodable, Hashable {
+public struct GenerateDownloadUrlRequest: Sendable, Codable, JSONEncodable, Hashable {
 
     /** Optional device identifier */
     public var deviceId: String?

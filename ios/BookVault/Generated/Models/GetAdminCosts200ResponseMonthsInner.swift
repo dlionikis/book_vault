@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetAdminCosts200ResponseMonthsInner: Codable, JSONEncodable, Hashable {
+public struct GetAdminCosts200ResponseMonthsInner: Sendable, Codable, JSONEncodable, Hashable {
 
     public var month: String
     public var services: [GetAdminCosts200ResponseMonthsInnerServicesInner]

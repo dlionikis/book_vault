@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct RemoveSeriesFromLibrary200Response: Codable, JSONEncodable, Hashable {
+public struct RemoveSeriesFromLibrary200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public static let removedRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public var message: String

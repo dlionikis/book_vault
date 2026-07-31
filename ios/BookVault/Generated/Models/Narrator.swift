@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct Narrator: Codable, JSONEncodable, Hashable {
+public struct Narrator: Sendable, Codable, JSONEncodable, Hashable {
 
     public var id: UUID
     public var name: String

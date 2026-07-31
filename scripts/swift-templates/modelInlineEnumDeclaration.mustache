@@ -1,0 +1,20 @@
+{{!
+  TEMPLATE OVERRIDE (scripts/swift-templates/modelInlineEnumDeclaration.mustache)
+
+  Identical to the upstream swift5 modelInlineEnumDeclaration.mustache
+  (openapi-generator 7.23.0, pinned in openapitools.json) except that generated
+  inline enums additionally declare `Sendable`, matching modelObject/modelEnum.
+
+  See those overrides for the full rationale, and
+  docs/archive/completed-plans/ios-swift6-generated-networking-plan.md.
+}}
+    {{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} enum {{enumName}}: {{^isContainer}}{{dataType}}{{/isContainer}}{{#isContainer}}String{{/isContainer}}, {{#useVapor}}Content, Hashable{{/useVapor}}{{^useVapor}}Sendable, Codable{{^isContainer}}{{^isString}}{{^isInteger}}{{^isFloat}}{{^isDouble}}, JSONEncodable{{/isDouble}}{{/isFloat}}{{/isInteger}}{{/isString}}{{/isContainer}}{{/useVapor}}, CaseIterable{{#enumUnknownDefaultCase}}{{#isInteger}}, CaseIterableDefaultsLast{{/isInteger}}{{#isFloat}}, CaseIterableDefaultsLast{{/isFloat}}{{#isDouble}}, CaseIterableDefaultsLast{{/isDouble}}{{#isString}}, CaseIterableDefaultsLast{{/isString}}{{#isContainer}}, CaseIterableDefaultsLast{{/isContainer}}{{/enumUnknownDefaultCase}} {
+        {{#allowableValues}}
+        {{#enumVars}}
+        {{#enumDescription}}
+        /// {{enumDescription}}
+        {{/enumDescription}}
+        case {{{name}}} = {{{value}}}
+        {{/enumVars}}
+        {{/allowableValues}}
+    }

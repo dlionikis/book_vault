@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct RefreshToken200Response: Codable, JSONEncodable, Hashable {
+public struct RefreshToken200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     /** New JWT access token */
     public var accessToken: String

@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct BatchUpdateProgress200Response: Codable, JSONEncodable, Hashable {
+public struct BatchUpdateProgress200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public static let updatedRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public static let conflictsRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)

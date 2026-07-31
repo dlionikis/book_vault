@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetAdminRestores200ResponseSummary: Codable, JSONEncodable, Hashable {
+public struct GetAdminRestores200ResponseSummary: Sendable, Codable, JSONEncodable, Hashable {
 
     public var inProgress: Int
     public var completedLast7d: Int

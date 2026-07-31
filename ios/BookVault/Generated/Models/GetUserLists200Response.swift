@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetUserLists200Response: Codable, JSONEncodable, Hashable {
+public struct GetUserLists200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public var lists: [GetUserLists200ResponseListsInner]
 

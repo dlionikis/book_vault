@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetAdminS3Storage200ResponseCurrent: Codable, JSONEncodable, Hashable {
+public struct GetAdminS3Storage200ResponseCurrent: Sendable, Codable, JSONEncodable, Hashable {
 
     public var totalSizeGB: Double
     public var standardGB: Double

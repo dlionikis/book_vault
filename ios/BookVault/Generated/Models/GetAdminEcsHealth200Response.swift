@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetAdminEcsHealth200Response: Codable, JSONEncodable, Hashable {
+public struct GetAdminEcsHealth200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public var cluster: String
     public var services: [GetAdminEcsHealth200ResponseServicesInner]

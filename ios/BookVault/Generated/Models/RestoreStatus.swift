@@ -10,9 +10,9 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct RestoreStatus: Codable, JSONEncodable, Hashable {
+public struct RestoreStatus: Sendable, Codable, JSONEncodable, Hashable {
 
-    public enum Status: String, Codable, CaseIterable {
+    public enum Status: String, Sendable, Codable, CaseIterable {
         case available = "available"
         case archived = "archived"
         case restoring = "restoring"

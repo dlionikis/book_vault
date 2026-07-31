@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct LoginMobile200Response: Codable, JSONEncodable, Hashable {
+public struct LoginMobile200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     /** JWT access token for API requests */
     public var accessToken: String

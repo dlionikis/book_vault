@@ -128,27 +128,35 @@ non-uniformity in the build.
 
 Ordered so each step is independently revertible:
 
-| Step      | Work                                                                                                                            | Size              | Risk                    |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ----------------------- |
-| ✅ **A0** | Drop iPad: `TARGETED_DEVICE_FAMILY: '1'` — **done**                                                                             | 1 line            | Very low                |
-| ✅ **A1** | `@StateObject` → `@ObservedObject` on the singleton sites — **done** (32 sites)                                                 | 32 one-line edits | Very low                |
-| ✅ **A2** | `@MainActor` on the 4 unannotated services (`AppIconManager`, `PlaybackSettings`, `ProgressManager`, `ThemeManager`) — **done** | Small             | Low                     |
-| ✅ **A3** | `Sendable` validation rules via generator template override — **done**                                                          | Small but fiddly  | Medium — build tooling  |
-| ✅ **A5** | Convert the 10 production `NavigationView` → `NavigationStack` — **done** (+25 preview sites)                                   | 10 sites          | Medium — the real work  |
-| ✅ **A6** | Legacy `PreviewProvider` → `#Preview` in 10 files; dropped all 10 `periphery:ignore` workarounds — **done**                     | Small             | Very low                |
-| **A4**    | Flip `SWIFT_VERSION: '6.0'` + `SWIFT_STRICT_CONCURRENCY: complete` — **now the last step**, gated on Plan C below               | 2 lines           | Low _once Plan C lands_ |
+| Step      | Work                                                                                                                                                  | Size                            | Risk                                   |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | -------------------------------------- |
+| ✅ **A0** | Drop iPad: `TARGETED_DEVICE_FAMILY: '1'` — **done**                                                                                                   | 1 line                          | Very low                               |
+| ✅ **A1** | `@StateObject` → `@ObservedObject` on the singleton sites — **done** (32 sites)                                                                       | 32 one-line edits               | Very low                               |
+| ✅ **A2** | `@MainActor` on the 4 unannotated services (`AppIconManager`, `PlaybackSettings`, `ProgressManager`, `ThemeManager`) — **done**                       | Small                           | Low                                    |
+| ✅ **A3** | `Sendable` validation rules via generator template override — **done**                                                                                | Small but fiddly                | Medium — build tooling                 |
+| ✅ **A5** | Convert the 10 production `NavigationView` → `NavigationStack` — **done** (+25 preview sites)                                                         | 10 sites                        | Medium — the real work                 |
+| ✅ **A6** | Legacy `PreviewProvider` → `#Preview` in 10 files; dropped all 10 `periphery:ignore` workarounds — **done**                                           | Small                           | Very low                               |
+| **A4**    | Flip `SWIFT_VERSION: '6.0'` + `SWIFT_STRICT_CONCURRENCY: complete` — **last step**. Plan C landed; now gated on making `APIClientProtocol` `Sendable` | 2 lines + `APIClient` isolation | Medium — touches the auth/refresh path |
 
-**A4 moved to the end.** It was originally "2 lines, low risk, gated on A3." A3 landed and A4 is
+**A4 moved to the end.** It was originally "2 lines, low risk, gated on A3." A3 landed and A4 was
 still blocked — on generated **URLSession** code, a materially bigger problem than the validation
 rules (see [Plan C](ios-swift6-generated-networking-plan.md)).
+
+**Update (July 30, 2026): Plan C shipped, and A4 is _still_ not a 2-line flip.** Removing the
+generated request layer cleared every generated blocker, but flipping the language mode then surfaced
+an app-code one: `APIClientProtocol` is not `Sendable`, so `DownloadManager` (`@MainActor`) cannot
+pass `apiClient` into an `await` call. Closing that means isolating `APIClient`'s `accessToken` and
+its two handler closures — the token-refresh path PR #131 just fixed. That is now A4's real content,
+and it is deliberately its own PR. Plan C also shipped `Sendable` generated models (needed by
+`MockData`'s `static let` fixtures), so nothing generated remains in A4's way.
 
 **Dependencies:**
 
 ```
-A3 ✅ ──▶ Plan C ──▶ A4      (language mode needs the URLSession layer Sendable-clean)
+A3 ✅ ──▶ Plan C ✅ ──▶ APIClient Sendable ──▶ A4
 
 A0 ✅, A1 ✅, A2 ✅, A5 ✅, A6 ✅   independent — any order, any time
-A5 ──▶ Plan B                (recommended, not required)
+A5 ──▶ Plan B ✅             (recommended, not required)
 ```
 
 **A5 is the step that actually needs care**, and it is worth restating why it's in this plan at all:
@@ -454,11 +462,12 @@ deferring the bug fix to avoid duplicate work is not.
 
 ## 6. Readiness
 
-**Done:** A0, A1, A2 (#133) · A3 (#134) · A5 (#135) · A6 (#136).
+**Done:** A0, A1, A2 (#133) · A3 (#134) · A5 (#135) · A6 (#136) · Plan B (#140) · Plan C (July 30, 2026).
 
-**Ready now:** nothing in Plan A — **Plan B** (mini-player bottom bar) is the next work.
-
-**Blocked:** **A4** — waits on Plan C.
+**Ready now:** **A4** — no longer blocked on anything external. Its remaining content is making
+`APIClientProtocol` `Sendable` (isolate `accessToken` + the two handler closures), then the 2-line
+flip on all **three** targets (app, unit tests, UI tests) plus `--swiftversion 6.0` in both
+`ios/.swiftformat` and `generate-swift.sh`.
 
 ### Settled
 

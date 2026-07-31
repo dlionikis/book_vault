@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetDownloadHistory200Response: Codable, JSONEncodable, Hashable {
+public struct GetDownloadHistory200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public static let dailyCountRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public var downloads: [GetDownloadHistory200ResponseDownloadsInner]

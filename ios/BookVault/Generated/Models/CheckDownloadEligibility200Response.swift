@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct CheckDownloadEligibility200Response: Codable, JSONEncodable, Hashable {
+public struct CheckDownloadEligibility200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public var eligible: Bool
 

@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetSearchSuggestions200ResponseAuthorsInner: Codable, JSONEncodable, Hashable {
+public struct GetSearchSuggestions200ResponseAuthorsInner: Sendable, Codable, JSONEncodable, Hashable {
 
     public var id: UUID
     public var name: String

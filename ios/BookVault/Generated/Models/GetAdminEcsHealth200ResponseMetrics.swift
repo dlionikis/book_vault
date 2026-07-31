@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetAdminEcsHealth200ResponseMetrics: Codable, JSONEncodable, Hashable {
+public struct GetAdminEcsHealth200ResponseMetrics: Sendable, Codable, JSONEncodable, Hashable {
 
     public var cpu: [Double]
     public var memory: [Double]

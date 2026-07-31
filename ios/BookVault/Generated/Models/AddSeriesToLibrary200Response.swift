@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct AddSeriesToLibrary200Response: Codable, JSONEncodable, Hashable {
+public struct AddSeriesToLibrary200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public static let addedRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public static let totalRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)

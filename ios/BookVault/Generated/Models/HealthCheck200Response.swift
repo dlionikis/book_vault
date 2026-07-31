@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct HealthCheck200Response: Codable, JSONEncodable, Hashable {
+public struct HealthCheck200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public var status: String
 

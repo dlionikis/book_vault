@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct VerifyToken200Response: Codable, JSONEncodable, Hashable {
+public struct VerifyToken200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public var valid: Bool
     public var user: VerifyToken200ResponseUser?

@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetCategory200Response: Codable, JSONEncodable, Hashable {
+public struct GetCategory200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public static let levelRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public var id: UUID

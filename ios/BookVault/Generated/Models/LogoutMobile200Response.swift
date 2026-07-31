@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct LogoutMobile200Response: Codable, JSONEncodable, Hashable {
+public struct LogoutMobile200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public var message: String
 

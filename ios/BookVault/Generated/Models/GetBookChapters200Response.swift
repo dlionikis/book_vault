@@ -10,9 +10,9 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetBookChapters200Response: Codable, JSONEncodable, Hashable {
+public struct GetBookChapters200Response: Sendable, Codable, JSONEncodable, Hashable {
 
-    public enum Source: String, Codable, CaseIterable {
+    public enum Source: String, Sendable, Codable, CaseIterable {
         case database = "database"
         case extracted = "extracted"
         case _none = "none"

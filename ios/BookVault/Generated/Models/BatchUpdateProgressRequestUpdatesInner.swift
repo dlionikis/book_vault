@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct BatchUpdateProgressRequestUpdatesInner: Codable, JSONEncodable, Hashable {
+public struct BatchUpdateProgressRequestUpdatesInner: Sendable, Codable, JSONEncodable, Hashable {
 
     public static let positionSecondsRule = NumericRule<Double>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public var bookId: UUID

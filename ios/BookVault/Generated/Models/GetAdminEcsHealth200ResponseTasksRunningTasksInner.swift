@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetAdminEcsHealth200ResponseTasksRunningTasksInner: Codable, JSONEncodable, Hashable {
+public struct GetAdminEcsHealth200ResponseTasksRunningTasksInner: Sendable, Codable, JSONEncodable, Hashable {
 
     public var taskId: String?
     public var service: String?

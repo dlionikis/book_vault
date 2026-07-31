@@ -10,9 +10,9 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct BatchUpdateProgress200ResponseDetailsInner: Codable, JSONEncodable, Hashable {
+public struct BatchUpdateProgress200ResponseDetailsInner: Sendable, Codable, JSONEncodable, Hashable {
 
-    public enum Status: String, Codable, CaseIterable {
+    public enum Status: String, Sendable, Codable, CaseIterable {
         case updated = "updated"
         case conflict = "conflict"
     }

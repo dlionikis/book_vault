@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetDownloadHistory200ResponseDownloadsInner: Codable, JSONEncodable, Hashable {
+public struct GetDownloadHistory200ResponseDownloadsInner: Sendable, Codable, JSONEncodable, Hashable {
 
     public var bookId: UUID
     public var bookTitle: String
