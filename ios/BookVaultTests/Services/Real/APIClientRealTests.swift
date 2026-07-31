@@ -89,7 +89,6 @@ final class APIClientRealTests: XCTestCase, @unchecked Sendable {
     var mockSession: URLSession!
 
     override func setUp() async throws {
-        try await super.setUp()
         MockURLProtocol.reset()
 
         // Create URLSession with mock protocol
@@ -109,7 +108,6 @@ final class APIClientRealTests: XCTestCase, @unchecked Sendable {
         MockURLProtocol.reset()
         sut = nil
         mockSession = nil
-        try await super.tearDown()
     }
 
     // MARK: - Helper Methods

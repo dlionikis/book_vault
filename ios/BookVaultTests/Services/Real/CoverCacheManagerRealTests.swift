@@ -31,7 +31,6 @@ final class CoverCacheManagerRealTests: XCTestCase, @unchecked Sendable {
     private let token = "test-bearer-token"
 
     override func setUp() async throws {
-        try await super.setUp()
         MockURLProtocol.reset()
 
         let config = URLSessionConfiguration.ephemeral
@@ -47,7 +46,6 @@ final class CoverCacheManagerRealTests: XCTestCase, @unchecked Sendable {
         try? FileManager.default.removeItem(at: tempDir)
         mockSession = nil
         tempDir = nil
-        try await super.tearDown()
     }
 
     // MARK: - Helpers

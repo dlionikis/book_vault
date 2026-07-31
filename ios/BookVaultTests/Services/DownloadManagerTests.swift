@@ -18,7 +18,6 @@ final class DownloadManagerTests: XCTestCase {
     var cancellables: Set<AnyCancellable>!
 
     override func setUp() async throws {
-        try await super.setUp()
         sut = MockDownloadManager()
         mockStorageManager = MockStorageManager()
         mockNetworkMonitor = MockNetworkMonitor()
@@ -30,7 +29,6 @@ final class DownloadManagerTests: XCTestCase {
         sut = nil
         mockStorageManager = nil
         mockNetworkMonitor = nil
-        try await super.tearDown()
     }
 
     // MARK: - Initial State Tests

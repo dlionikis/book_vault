@@ -13,14 +13,12 @@ final class AudioPlayerManagerTests: XCTestCase {
     var sut: MockAudioPlayerManager!
 
     override func setUp() async throws {
-        try await super.setUp()
         sut = MockAudioPlayerManager()
     }
 
     override func tearDown() async throws {
         sut.reset()
         sut = nil
-        try await super.tearDown()
     }
 
     // MARK: - Initial State Tests

@@ -26,7 +26,6 @@ final class SyncManagerRealTests: XCTestCase {
     // init. Legal on the async form of setUp, unlike the synchronous one.
     @MainActor
     override func setUp() async throws {
-        try await super.setUp()
         mockNetworkMonitor = MockNetworkMonitor()
         mockOfflineStore = MockOfflineProgressStore()
         mockProgressManager = MockProgressManager()
@@ -46,7 +45,6 @@ final class SyncManagerRealTests: XCTestCase {
         mockOfflineStore = nil
         mockProgressManager = nil
         mockLibraryManager = nil
-        try await super.tearDown()
     }
 
     // MARK: - Initialization Tests

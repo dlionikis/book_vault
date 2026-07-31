@@ -14,13 +14,11 @@ final class OfflineProgressStoreTests: XCTestCase {
     var sut: MockOfflineProgressStore!
 
     override func setUp() async throws {
-        try await super.setUp()
         sut = MockOfflineProgressStore()
     }
 
     override func tearDown() async throws {
         sut = nil
-        try await super.tearDown()
     }
 
     // MARK: - Save Progress Tests

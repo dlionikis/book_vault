@@ -14,7 +14,6 @@ final class StorageManagerTests: XCTestCase {
     var testDirectory: URL!
 
     override func setUp() async throws {
-        try await super.setUp()
         sut = MockStorageManager()
         // Create temp directory for test files
         testDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -26,7 +25,6 @@ final class StorageManagerTests: XCTestCase {
         try? FileManager.default.removeItem(at: testDirectory)
         testDirectory = nil
         sut = nil
-        try await super.tearDown()
     }
 
     // MARK: - Storage Space Tests

@@ -22,7 +22,6 @@ final class ThemeManagerRealTests: XCTestCase {
     // MARK: - Setup & Teardown
 
     override func setUp() async throws {
-        try await super.setUp()
         // Create a unique suite name for each test to ensure isolation
         suiteName = "ThemeManagerTests-\(UUID().uuidString)"
         testDefaults = UserDefaults(suiteName: suiteName)!
@@ -36,7 +35,6 @@ final class ThemeManagerRealTests: XCTestCase {
         testDefaults = nil
         themeManager = nil
         suiteName = nil
-        try await super.tearDown()
     }
 
     // MARK: - Initialization Tests

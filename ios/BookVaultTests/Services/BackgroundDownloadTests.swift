@@ -20,7 +20,6 @@ final class BackgroundDownloadTests: XCTestCase {
     var cancellables: Set<AnyCancellable>!
 
     override func setUp() async throws {
-        try await super.setUp()
         mockAPIClient = MockAPIClient()
         mockStorageManager = MockStorageManager()
         mockNetworkMonitor = MockNetworkMonitor()
@@ -52,7 +51,6 @@ final class BackgroundDownloadTests: XCTestCase {
         mockStorageManager = nil
         mockNetworkMonitor = nil
         testUserDefaults = nil
-        try await super.tearDown()
     }
 
     // MARK: - DownloadState Tests

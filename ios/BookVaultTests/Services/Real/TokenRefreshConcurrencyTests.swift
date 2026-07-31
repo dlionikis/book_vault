@@ -127,7 +127,6 @@ final class TokenRefreshConcurrencyTests: XCTestCase, @unchecked Sendable {
     private let concurrentRequestCount = 8
 
     override func setUp() async throws {
-        try await super.setUp()
         MockURLProtocol.reset()
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [MockURLProtocol.self]
@@ -141,7 +140,6 @@ final class TokenRefreshConcurrencyTests: XCTestCase, @unchecked Sendable {
         MockURLProtocol.reset()
         sut = nil
         mockSession = nil
-        try await super.tearDown()
     }
 
     // MARK: - Helpers
@@ -416,7 +414,6 @@ final class ResourceLoaderRefreshConcurrencyTests: XCTestCase {
     private var mockSession: URLSession!
 
     override func setUp() async throws {
-        try await super.setUp()
         MockURLProtocol.reset()
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [MockURLProtocol.self]
@@ -426,7 +423,6 @@ final class ResourceLoaderRefreshConcurrencyTests: XCTestCase {
     override func tearDown() async throws {
         MockURLProtocol.reset()
         mockSession = nil
-        try await super.tearDown()
     }
 
     /// Two concurrent 401s in the streaming path, where the refresh takes far

@@ -23,7 +23,6 @@ final class OfflineProgressStoreRealTests: XCTestCase {
     // which is what forced the conversion).
     @MainActor
     override func setUp() async throws {
-        try await super.setUp()
         // Create a unique temporary directory for each test
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("OfflineProgressStoreTests-\(UUID().uuidString)")
@@ -45,7 +44,6 @@ final class OfflineProgressStoreRealTests: XCTestCase {
         store = nil
         tempDirectory = nil
         testUserId = nil
-        try await super.tearDown()
     }
 
     // MARK: - Initialization Tests

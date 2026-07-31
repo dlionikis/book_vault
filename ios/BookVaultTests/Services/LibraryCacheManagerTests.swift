@@ -14,13 +14,11 @@ final class LibraryCacheManagerTests: XCTestCase {
     var sut: MockLibraryCacheManager!
 
     override func setUp() async throws {
-        try await super.setUp()
         sut = MockLibraryCacheManager()
     }
 
     override func tearDown() async throws {
         sut = nil
-        try await super.tearDown()
     }
 
     // MARK: - Save Library Tests

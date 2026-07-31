@@ -40,7 +40,6 @@ final class StorageManagerRealTests: XCTestCase {
     // init. Legal on the async form of setUp, unlike the synchronous one.
     @MainActor
     override func setUp() async throws {
-        try await super.setUp()
         // Create a unique temporary directory for each test
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("StorageManagerTests-\(UUID().uuidString)")
@@ -65,7 +64,6 @@ final class StorageManagerRealTests: XCTestCase {
         suiteName = nil
         storageManager = nil
         tempDirectory = nil
-        try await super.tearDown()
     }
 
     // MARK: - Initialization Tests

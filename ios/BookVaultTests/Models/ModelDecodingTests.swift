@@ -13,7 +13,6 @@ final class ModelDecodingTests: XCTestCase {
     var decoder: JSONDecoder!
 
     override func setUp() async throws {
-        try await super.setUp()
         decoder = JSONDecoder()
         // Configure decoder to match APIClient's date handling
         decoder.dateDecodingStrategy = .custom { decoder in
@@ -51,7 +50,6 @@ final class ModelDecodingTests: XCTestCase {
 
     override func tearDown() async throws {
         decoder = nil
-        try await super.tearDown()
     }
 
     // MARK: - Book Decoding Tests

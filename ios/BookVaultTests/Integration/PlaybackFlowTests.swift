@@ -20,7 +20,6 @@ final class PlaybackFlowTests: XCTestCase {
     var mockAudioPlayerManager: MockAudioPlayerManager!
 
     override func setUp() async throws {
-        try await super.setUp()
         mockOfflineStore = MockOfflineProgressStore()
         mockLibraryCache = MockLibraryCacheManager()
         mockSyncManager = MockSyncManager()
@@ -36,7 +35,6 @@ final class PlaybackFlowTests: XCTestCase {
         mockNetworkMonitor = nil
         mockStorageManager = nil
         mockAudioPlayerManager = nil
-        try await super.tearDown()
     }
 
     // MARK: - Online Playback Flow Tests

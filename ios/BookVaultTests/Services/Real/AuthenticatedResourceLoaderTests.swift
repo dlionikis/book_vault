@@ -70,7 +70,6 @@ final class AuthenticatedResourceLoaderTests: XCTestCase, @unchecked Sendable {
     private var mockSession: URLSession!
 
     override func setUp() async throws {
-        try await super.setUp()
         MockURLProtocol.reset()
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [MockURLProtocol.self]
@@ -80,7 +79,6 @@ final class AuthenticatedResourceLoaderTests: XCTestCase, @unchecked Sendable {
     override func tearDown() async throws {
         MockURLProtocol.reset()
         mockSession = nil
-        try await super.tearDown()
     }
 
     // MARK: - Helpers

@@ -20,7 +20,6 @@ final class NetworkMonitorRealTests: XCTestCase {
     // MARK: - Setup & Teardown
 
     override func setUp() async throws {
-        try await super.setUp()
         suiteName = "NetworkMonitorTests-\(UUID().uuidString)"
         testDefaults = UserDefaults(suiteName: suiteName)!
         testDefaults.removePersistentDomain(forName: suiteName)
@@ -32,7 +31,6 @@ final class NetworkMonitorRealTests: XCTestCase {
         testDefaults = nil
         networkMonitor = nil
         suiteName = nil
-        try await super.tearDown()
     }
 
     // MARK: - ConnectionType Tests

@@ -25,7 +25,6 @@ final class ProgressManagerRealTests: XCTestCase {
     // init. Legal on the async form of setUp, unlike the synchronous one.
     @MainActor
     override func setUp() async throws {
-        try await super.setUp()
         mockAPIClient = MockAPIClient()
         mockOfflineStore = MockOfflineProgressStore()
         mockNetworkMonitor = MockNetworkMonitor()
@@ -42,7 +41,6 @@ final class ProgressManagerRealTests: XCTestCase {
         mockAPIClient = nil
         mockOfflineStore = nil
         mockNetworkMonitor = nil
-        try await super.tearDown()
     }
 
     // MARK: - Fetch Progress Tests (Online)

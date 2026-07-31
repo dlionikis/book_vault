@@ -14,7 +14,6 @@ final class ProgressManagerTests: XCTestCase {
     var mockNetworkMonitor: MockNetworkMonitor!
 
     override func setUp() async throws {
-        try await super.setUp()
         mockAPIClient = MockAPIClient()
         mockNetworkMonitor = MockNetworkMonitor()
     }
@@ -22,7 +21,6 @@ final class ProgressManagerTests: XCTestCase {
     override func tearDown() async throws {
         mockAPIClient = nil
         mockNetworkMonitor = nil
-        try await super.tearDown()
     }
 
     // MARK: - Save Progress Tests

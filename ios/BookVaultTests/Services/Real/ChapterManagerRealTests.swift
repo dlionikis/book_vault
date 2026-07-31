@@ -28,7 +28,6 @@ final class ChapterManagerRealTests: XCTestCase {
     // init. Legal on the async form of setUp, unlike the synchronous one.
     @MainActor
     override func setUp() async throws {
-        try await super.setUp()
         mockAPIClient = MockAPIClient()
         chapterManager = ChapterManager(apiClient: mockAPIClient)
 
@@ -66,7 +65,6 @@ final class ChapterManagerRealTests: XCTestCase {
         mockAPIClient = nil
         testBookId = nil
         testChapters = nil
-        try await super.tearDown()
     }
 
     // MARK: - Fetch Chapters Tests

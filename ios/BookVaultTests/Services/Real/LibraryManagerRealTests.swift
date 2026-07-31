@@ -31,7 +31,6 @@ final class LibraryManagerRealTests: XCTestCase {
     // init. Legal on the async form of setUp, unlike the synchronous one.
     @MainActor
     override func setUp() async throws {
-        try await super.setUp()
         mockAPIClient = MockAPIClient()
         mockLibraryCacheManager = MockLibraryCacheManager()
         mockCoverCacheManager = MockCoverCacheManager()
@@ -62,7 +61,6 @@ final class LibraryManagerRealTests: XCTestCase {
         mockNetworkMonitor = nil
         mockStorageManager = nil
         testBooks = nil
-        try await super.tearDown()
     }
 
     // MARK: - Helper Methods
