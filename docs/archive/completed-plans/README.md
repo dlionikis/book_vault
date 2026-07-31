@@ -38,6 +38,7 @@ For current development, use active docs in `docs/`.
 - `ios-offline-login-mode-plan.md` — reaching a cached library when the network is down (✅ #132)
 - `ios-ui-testing-plan.md` — XCUITest target + critical-path flows (✅ #137–#139). §6b is the point-in-time record of the hit-test blocker, later diagnosed as a "Save Password?" sheet.
 - `ios-mini-player-bottom-bar-plan.md` — mini player → full-width bottom bar (✅ #140). Open questions 2–4 remain deliberate follow-ups; "dismiss mini-player" is on the STATUS roadmap.
+- `ios-swift6-generated-networking-plan.md` — stopped generating the unused OpenAPI request layer (✅ #142). Its Phase 3 was always step A4 of [ios-modernization-sequencing](../../plans/ios-modernization-sequencing.md), which is still open.
 - `testing-hardening-implementation.md` — test-coverage hardening (mostly done; one Phase-5 device smoke pending)
 - `testing-coverage-review.md` — point-in-time coverage review (superseded by the hardening plan)
 - `app-store-submission-review-guide.md` — one-off App Store pre-submission checklist

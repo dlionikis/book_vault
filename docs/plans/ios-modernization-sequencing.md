@@ -41,7 +41,7 @@ item with unbounded scope. It is neither. **It is a one-line fix in a template.*
 > ⚠️ **This measurement was incomplete — do not rely on it.** It built only the app target via
 > command-line overrides and missed `DebugLogger`, `SystemKeychain`, and 6 structural errors in
 > generated `URLSessionImplementations.swift`. The first two are fixed (A3); the third is
-> [Plan C](ios-swift6-generated-networking-plan.md) and is the reason A4 is now
+> [Plan C](../archive/completed-plans/ios-swift6-generated-networking-plan.md) and is the reason A4 is now
 > the last step rather than a trivial 2-line flip. Kept here as written because the flawed method is
 > itself the lesson: flip the real build setting and compile **both** targets.
 >
@@ -140,15 +140,34 @@ Ordered so each step is independently revertible:
 
 **A4 moved to the end.** It was originally "2 lines, low risk, gated on A3." A3 landed and A4 was
 still blocked — on generated **URLSession** code, a materially bigger problem than the validation
-rules (see [Plan C](ios-swift6-generated-networking-plan.md)).
+rules (see [Plan C](../archive/completed-plans/ios-swift6-generated-networking-plan.md)).
 
-**Update (July 30, 2026): Plan C shipped, and A4 is _still_ not a 2-line flip.** Removing the
+**Update (July 30, 2026): Plan C shipped (#142), and A4 is _still_ not a 2-line flip.** Removing the
 generated request layer cleared every generated blocker, but flipping the language mode then surfaced
-an app-code one: `APIClientProtocol` is not `Sendable`, so `DownloadManager` (`@MainActor`) cannot
-pass `apiClient` into an `await` call. Closing that means isolating `APIClient`'s `accessToken` and
-its two handler closures — the token-refresh path PR #131 just fixed. That is now A4's real content,
-and it is deliberately its own PR. Plan C also shipped `Sendable` generated models (needed by
-`MockData`'s `static let` fixtures), so nothing generated remains in A4's way.
+app-code ones. Plan C also shipped `Sendable` generated models (needed by `MockData`'s `static let`
+fixtures), so nothing generated remains in A4's way.
+
+**Measured on merged `main` (July 31, 2026): 11 errors across 4 files.**
+
+| File                          | Errors |
+| ----------------------------- | ------ |
+| `LibraryManager.swift`        | 5      |
+| `ProgressManager.swift`       | 4      |
+| `NotificationRegistrar.swift` | 2      |
+
+⚠️ **Do not trust a single build's error count here** — this was first reported as "2 errors," which
+was wrong. The compiler stops at the first failing file, so one build under-reports. The 11 above is
+the union of four consecutive builds, and it may still grow as each fix lets the compiler reach
+further. Same lesson as §1's flawed measurement, in a new disguise.
+
+They are not 11 independent problems. Three DI protocols need `Sendable` — `APIClientProtocol` (most
+of them), `CoverCaching`, and `NotificationAuthorizing` — plus one distinct case at
+`LibraryManager.swift:159`, a closure passed to `Task.detached` that captures main-actor state.
+
+The substantive work is `APIClient`: it holds `accessToken` and two handler closures
+(`forceLogoutHandler`, `tokenRefreshHandler`) as unisolated `var`s, so the conformance is not free.
+Isolating them means touching the token-refresh path that PR #131 just fixed — which is why A4 is
+deliberately its own PR.
 
 **Dependencies:**
 
@@ -415,7 +434,7 @@ Plan A lands:
 
 ### Plan C — Swift 6 readiness for the generated networking layer
 
-**Now its own plan: [ios-swift6-generated-networking-plan.md](ios-swift6-generated-networking-plan.md).**
+**Now its own plan: [ios-swift6-generated-networking-plan.md](../archive/completed-plans/ios-swift6-generated-networking-plan.md).**
 
 **Blocks:** A4 only. Nothing else in Plan A or B waits on it.
 
@@ -464,10 +483,16 @@ deferring the bug fix to avoid duplicate work is not.
 
 **Done:** A0, A1, A2 (#133) · A3 (#134) · A5 (#135) · A6 (#136) · Plan B (#140) · Plan C (July 30, 2026).
 
-**Ready now:** **A4** — no longer blocked on anything external. Its remaining content is making
-`APIClientProtocol` `Sendable` (isolate `accessToken` + the two handler closures), then the 2-line
-flip on all **three** targets (app, unit tests, UI tests) plus `--swiftversion 6.0` in both
-`ios/.swiftformat` and `generate-swift.sh`.
+**Ready now:** **A4** — no longer blocked on anything external. Its content, in order:
+
+1. `Sendable` on three DI protocols: `APIClientProtocol`, `CoverCaching`, `NotificationAuthorizing`.
+2. Isolate `APIClient`'s `accessToken` + the two handler closures, so its conformance is honest.
+3. The `Task.detached` closure capture at `LibraryManager.swift:159`.
+4. Then the flip: `SWIFT_VERSION: '6.0'` + `SWIFT_STRICT_CONCURRENCY: complete` on all **three**
+   targets (app, unit tests, UI tests), plus `--swiftversion 6.0` in both `ios/.swiftformat` and
+   `generate-swift.sh`.
+
+Re-measure after each step rather than trusting the first build's count — see §4.
 
 ### Settled
 
@@ -476,7 +501,7 @@ flip on all **three** targets (app, unit tests, UI tests) plus `--swiftversion 6
   overridden file, one changed generated file, drift check still meaningful.
 - **Plan A / Plan B split** — confirmed, for attribution rather than size (§2).
 - **URLSession work is its own plan (Plan C), not a Plan A step** — see §7. Now written up as
-  [ios-swift6-generated-networking-plan.md](ios-swift6-generated-networking-plan.md), with the
+  [ios-swift6-generated-networking-plan.md](../archive/completed-plans/ios-swift6-generated-networking-plan.md), with the
   investigation done: the blocking code is unused, so the approach is removal, not a vendor fork.
 - **Generator 7.24.0 is not an upgrade path** — verified identical template plus an `image/`
   content-type regression.
