@@ -204,10 +204,61 @@ between two people if desired. Sizes are relative (S/M/L), not calendar estimate
 | ID        | Task                                                     | Size  | Depends | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | --------- | -------------------------------------------------------- | ----- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **A0**    | Request CarPlay audio entitlement                        | S     | —       | Submit the request to Apple for `com.apple.developer.carplay-audio`. **Do this first, today.** It's a business-process bottleneck with unpredictable lead time (weeks), and every other task can proceed without it. Track the request ID.                                                                                                                                                                                                                                                                                                                                                                            |
-| **A1**    | Scene manifest + multi-scene                             | **L** | —       | In `project.yml`: set `UIApplicationSupportsMultipleScenes: true`, add a full `UIApplicationSceneManifest` with `UISceneConfigurations` for both `UIWindowSceneSessionRoleApplication` (SwiftUI default) and `CPTemplateApplicationSceneSessionRoleApplication`. Run `xcodegen generate`. **Highest-risk task** — verify the _phone_ app still launches, backgrounds, and handles push deep links before moving on. Run **`npm run ios:test:ui`** (15 XCUITest flows) as part of this task: launch, navigation and mini-player are exactly the blast radius, and that suite did not exist when this plan was written. |
-| **A2**    | `CarPlaySceneDelegate` skeleton                          | M     | A1      | Implement `CPTemplateApplicationSceneDelegate` (`didConnect`/`didDisconnect` interface controller). Ship a hardcoded one-item `CPListTemplate` to prove the scene connects in the CarPlay Simulator. Merge this as a walking skeleton before building real UI.                                                                                                                                                                                                                                                                                                                                                        |
+| ✅ **A1** | Scene manifest + multi-scene — **done**                  | **L** | —       | In `project.yml`: set `UIApplicationSupportsMultipleScenes: true`, add a full `UIApplicationSceneManifest` with `UISceneConfigurations` for both `UIWindowSceneSessionRoleApplication` (SwiftUI default) and `CPTemplateApplicationSceneSessionRoleApplication`. Run `xcodegen generate`. **Highest-risk task** — verify the _phone_ app still launches, backgrounds, and handles push deep links before moving on. Run **`npm run ios:test:ui`** (15 XCUITest flows) as part of this task: launch, navigation and mini-player are exactly the blast radius, and that suite did not exist when this plan was written. |
+| ✅ **A2** | `CarPlaySceneDelegate` skeleton — **done**               | M     | A1      | Implement `CPTemplateApplicationSceneDelegate` (`didConnect`/`didDisconnect` interface controller). Ship a hardcoded one-item `CPListTemplate` to prove the scene connects in the CarPlay Simulator. Merge this as a walking skeleton before building real UI.                                                                                                                                                                                                                                                                                                                                                        |
 | ✅ **A3** | Chapter loading in the player — **done** (July 31, 2026) | M     | —       | **Refactor, not CarPlay code.** Move chapter fetching into `AudioPlayerManager.play(book:)` (or a small `loadChapters(for:)` it calls) using `ChapterManager`, so chapters populate regardless of which UI started playback. Prefer `getCachedChapters` first, then async fetch. Remove/keep the view-level calls as thin pass-throughs. Fixes finding #3 and improves lock-screen chapter behavior on the phone too. **Independently valuable — can merge before any CarPlay work.**                                                                                                                                 |
 | **A4**    | Entitlement wiring                                       | S     | A0, A1  | Once Apple approves: add `com.apple.developer.carplay-audio` to `BookVault.entitlements`, update the provisioning profile. Note the existing comment in `project.yml` — entitlements are a committed file, _not_ XcodeGen-generated; don't let `xcodegen` clobber it.                                                                                                                                                                                                                                                                                                                                                 |
+
+### Implementation notes — A1 + A2 (shipped July 31, 2026)
+
+The scene manifest went in cleanly and the phone app did **not** black-screen —
+the risk this task was budgeted for did not materialize. What the regression pass
+surfaced instead was unrelated, pre-existing, and worse.
+
+**The manifest.** `UIApplicationSupportsMultipleScenes: true` plus two
+`UISceneConfigurations`. The window-scene entry deliberately declares **no**
+`UISceneDelegateClassName`: SwiftUI's `App` lifecycle installs its own, and naming
+one is the documented route to a black screen. Verified the generated plist, and
+verified `$(PRODUCT_MODULE_NAME)` actually expands in the built app (it resolves
+to `BookVault.CarPlaySceneDelegate`) — a literal, unexpanded variable there would
+fail silently at runtime.
+
+**The regression pass found a real crash in shipping code.** Five
+`MiniPlayerUITests` flows failed. They were **not** caused by the scene change:
+stashing it reproduced the same five failures on `main`. Bisecting the four
+commits since these last passed pinned it to **#144, the Swift 6 adoption**.
+
+The `.xcresult` held the answer the console output did not —
+`com.bookvault.BookVault crashed in <external symbol>`. The app was crashing, not
+hanging. The crash report's faulting thread:
+
+```
+_dispatch_assert_queue_fail
+swift_task_checkIsolatedSwift
+closure #1 in AudioPlayerManager.updateNowPlayingInfo()
+-[MPMediaItemArtwork jpegDataWithSize:]
+-[MPNowPlayingInfoCenter _onQueue_pushNowPlayingInfoAndRetry:]
+```
+
+`MPMediaItemArtwork`'s image-request closure was written inline inside a
+`@MainActor` method, so it inherited main-actor isolation — but MediaPlayer
+invokes it on its own dispatch queue while building the Now Playing dictionary.
+Swift 5 tolerated the mismatch; Swift 6 traps on it. EXC_BREAKPOINT, every time
+artwork was set on a book with a cached cover. Fixed with a `nonisolated static`
+helper whose handler is `@Sendable` and only returns an already-resolved
+`UIImage`.
+
+**Two lessons worth carrying into Track B:**
+
+1. **The unit suite cannot see this class of bug.** 711 unit tests stayed green
+   straight through the crash; nothing there drives MediaPlayer. The XCUITest
+   flows caught it. Run `npm run ios:test:ui` whenever concurrency annotations
+   change — not only when layout changes.
+2. **A misleading failure message cost most of the debugging time.** "Expected the
+   library list to appear" reads like UI timing, and the first two theories chased
+   that (including one wrong fix that had to be reverted). The result bundle said
+   "crashed" in a field the console never printed. **Read the `.xcresult` before
+   theorising.**
 
 ### Implementation notes — A3 (shipped July 31, 2026)
 

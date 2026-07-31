@@ -141,6 +141,7 @@
 		98080535C2F55D327B8E58E8 /* PlaybackSpeedPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89F8F83CE5DC7BC0943EBA8E /* PlaybackSpeedPicker.swift */; };
 		9953946332648246B73DF553 /* RefreshToken200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4464ECD53B6B3F122500F8C6 /* RefreshToken200Response.swift */; };
 		9A806F8C1E29F5FB63701623 /* CategoryListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1DBED70F5BFE6DFC574153 /* CategoryListView.swift */; };
+		9D66D48802458E45464FB55B /* CarPlaySceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2186955306729B8C5DF63029 /* CarPlaySceneDelegate.swift */; };
 		9DC33270A8269553FA851D74 /* ProgressManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1387F0EC39E91CFD227D8B41 /* ProgressManagerTests.swift */; };
 		9F8A67532C4726CBAA61BE4B /* AccessibilityIdentifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E65E31FF9DD1F387A0262CA /* AccessibilityIdentifiers.swift */; };
 		A1577E1DC70967C9EE19EB01 /* ModelDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEADA8A99DC7641D4954F6DA /* ModelDecodingTests.swift */; };
@@ -300,6 +301,7 @@
 		1F81E9584E20CF16F786CBC5 /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
 		1FFF5A73653FF94DEC587D67 /* BookVaultApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookVaultApp.swift; sourceTree = "<group>"; };
 		212CADA7C0A7037F4F2DB311 /* CachedCoverImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedCoverImage.swift; sourceTree = "<group>"; };
+		2186955306729B8C5DF63029 /* CarPlaySceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlaySceneDelegate.swift; sourceTree = "<group>"; };
 		21EAA387CF8B5B3E2CB029D5 /* MockLibraryCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockLibraryCacheManager.swift; sourceTree = "<group>"; };
 		224B1150587B17F911A52A29 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		22D438EF4C403C46FB8E9EF9 /* ModelError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelError.swift; sourceTree = "<group>"; };
@@ -799,6 +801,14 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		A251C8413123F6FE41EB8FB1 /* CarPlay */ = {
+			isa = PBXGroup;
+			children = (
+				2186955306729B8C5DF63029 /* CarPlaySceneDelegate.swift */,
+			);
+			path = CarPlay;
+			sourceTree = "<group>";
+		};
 		A620417F88167978A975650B /* Real */ = {
 			isa = PBXGroup;
 			children = (
@@ -915,6 +925,7 @@
 				057BB056D4C72AB45F6BD3C3 /* Info.plist */,
 				0EBC40FF7EC2C18644492E92 /* MockData.swift */,
 				B63627130C255AF1CC12875F /* PrivacyInfo.xcprivacy */,
+				A251C8413123F6FE41EB8FB1 /* CarPlay */,
 				23FB26F0B5F034779CA444A0 /* Components */,
 				2DE196971164BC1BDF9E2D41 /* Extensions */,
 				A14EBCE113DFB4697DDEDA04 /* Models */,
@@ -1256,6 +1267,7 @@
 				A1786235CB8353766F483273 /* BrowseProtocols.swift in Sources */,
 				3FB0C2B58C8E878E0E683217 /* BrowseView.swift in Sources */,
 				6B59789EDF756A3EE4D09852 /* CachedCoverImage.swift in Sources */,
+				9D66D48802458E45464FB55B /* CarPlaySceneDelegate.swift in Sources */,
 				B345153120119C48D84CCE54 /* CatalogSeriesViewItem.swift in Sources */,
 				D56AE7065B0D72EAF53CC001 /* CatalogView.swift in Sources */,
 				DFE63B52B26C132AD9B366CA /* Category.swift in Sources */,
