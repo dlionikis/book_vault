@@ -1,6 +1,9 @@
 # Plan C — Swift 6 Readiness for the Generated Networking Layer
 
-> **Status**: Ready to implement — investigation complete, approach decided
+> **Status**: ✅ **Implemented (July 30, 2026).** Phases 1–2 shipped: the generated request layer is
+> no longer generated (112 → 102 files, 11 support files → 3). **Phase 3 (A4) did not land** — the
+> trim removed every _generated_ blocker, but flipping the language mode surfaced an app-code one
+> that this plan did not predict. See §9.
 > **Scope**: iOS generated OpenAPI code + generation script. No app logic, no API, no DB, no web.
 > **Created**: July 29, 2026
 > **Blocks**: step **A4** (`SWIFT_VERSION: 6.0`) in
@@ -182,10 +185,74 @@ Already fixed in A3 and expected to stay clean: `DebugLogger` (lock-backed globa
 
 ## 8. Open questions
 
-1. **Try `-g swift6` first?** Cheap to evaluate and could subsume the plan, but risks a large diff
-   across all model files. My recommendation: **time-box a look, default to the C3 path above.**
-2. **Retain `NullEncodable` / `Response<T>` / the error enums?** Keeping unused-but-harmless
-   declarations is cheaper than proving each is dead. Only `RequestTask` _must_ go (it is the Swift 6
-   offender). Suggest keeping the rest unless trivially removable.
-3. **Worth deleting `Package.swift` / `project.yml` from the generated dir?** Already excluded from the
-   Xcode target, so cosmetic only.
+1. ~~**Try `-g swift6` first?**~~ — **evaluated and rejected (July 30, 2026).** It was worth the
+   time-box: the swift6 generator emits `Sendable` models and drops `JSONEncodable` and
+   `Configuration.swift` outright, and the per-model diff is only ~14 lines. But it also emits **14 API
+   entry-point classes** (`BooksAPI`, `AuthenticationAPI`, …) plus new infra (`OpenAPIMutex`,
+   `JSONValue`) that this app would never call — _more_ dead code, which is the opposite of this
+   plan's goal. Stayed on `swift5` and took the `Sendable` idea via a template override instead.
+2. ~~**Retain `NullEncodable` / `Response<T>` / the error enums?**~~ — **resolved: all removed.**
+   Measured rather than assumed: `Response<T>` and the error enums have **zero** references from app,
+   test, or model code. The 8 `Response` and 9 `Configuration` grep hits flagged in §6 as a risk were
+   all false positives — the app's own `BrowseListResponse` / `BrowseListConfiguration`, plus
+   `HTTPURLResponse`. `NullEncodable` was kept (harmless, and it costs nothing).
+3. **Worth deleting `Package.swift` / `project.yml` from the generated dir?** Moot — the
+   `supportingFiles` allowlist means neither is generated any more.
+
+---
+
+## 9. Implementation notes (July 30, 2026)
+
+Phases 1–2 landed. **Phase 3 (A4) did not**, for a reason worth recording.
+
+### What shipped
+
+`generate-swift.sh` now passes `--global-property=models,modelDocs=false,apis=false,supportingFiles=…`
+with an explicit three-file allowlist. Generated output went **112 → 102 files**; the support layer
+went **11 files → 3** (`Models.swift`, `Validation.swift`, `Extensions.swift`). Four template
+overrides back it: `Models`, `Extensions`, `modelObject`, `modelEnum`,
+`modelInlineEnumDeclaration` (plus the pre-existing `Validation`).
+
+### Three things the plan got wrong
+
+1. **The `supportingFiles` allowlist alone does not compile — twice over.** §3 correctly predicted the
+   `JSONEncodable` problem, but not that `Extensions.swift` **also** depends on the request layer: it
+   declares `HTTPURLResponse.isStatusCodeSuccessful`, which reads
+   `Configuration.successfulStatusCodeRange`, and its two `encodeToJSON()` bodies call
+   `CodableHelper.dateFormatter` / `.jsonEncoder`. Both needed an `Extensions.mustache` override —
+   the first deleted (dead code), the second rewritten to use a file-private formatter/encoder.
+
+2. **`Configuration.swift` was never mentioned, and it was the first thing to fail.** §1 lists 6 errors
+   in `URLSessionImplementations.swift`. On current code, the first Swift 6 error is
+   `Configuration.swift:17` (`static var successfulStatusCodeRange`). Same category, same fix — but a
+   plan that enumerates specific files ages badly against a moving generator.
+
+3. **Trimming the request layer was necessary but not sufficient for A4.** With the generated layer
+   gone, flipping `SWIFT_VERSION: 6.0` + `SWIFT_STRICT_CONCURRENCY: complete` on all three targets
+   surfaced **9 errors, then 2** after further trimming — and the last 2 are **app code**, not
+   generated:
+
+   ```
+   DownloadManager.swift:564 / :577  sending 'self.apiClient' risks causing data races
+   ```
+
+   `APIClientProtocol` is not `Sendable`, so a `@MainActor` class cannot pass its `apiClient` to an
+   `await` call. Making it `Sendable` requires isolating `APIClient`'s `accessToken` and its two
+   handler closures (`forceLogoutHandler`, `tokenRefreshHandler`) — i.e. real concurrency work on the
+   token-refresh path that PR #131 just fixed. **Deliberately deferred to its own PR** rather than
+   bundled here, so the trim can be reviewed and reverted independently of an auth-path change.
+
+### Also required, and not anticipated: `Sendable` models
+
+Flipping the language mode rejected every `static let` model fixture in `MockData.swift`
+(`static property 'mockStandard' is not concurrency-safe because non-'Sendable' type 'Book' …`).
+The generated models are immutable-by-construction value types, so the conformance is sound; three
+template overrides (`modelObject`, `modelEnum`, `modelInlineEnumDeclaration`) now add `Sendable`,
+matching what the swift6 generator does natively. **These shipped** — they are correct independent of
+the language mode, and they are why A4's remaining diff is only the `APIClient` isolation.
+
+### Verification
+
+`validate:ios` green: **706 tests, 0 failures**, SwiftLint clean, and — the check that matters here —
+**`api:check-drift:swift` clean**, proving the trimmed generation is deterministic and reproducible
+from a clean checkout.

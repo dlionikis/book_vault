@@ -10,9 +10,9 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetAdminHealth200ResponseChecksInner: Codable, JSONEncodable, Hashable {
+public struct GetAdminHealth200ResponseChecksInner: Sendable, Codable, JSONEncodable, Hashable {
 
-    public enum Status: String, Codable, CaseIterable {
+    public enum Status: String, Sendable, Codable, CaseIterable {
         case ok = "ok"
         case warn = "warn"
         case error = "error"

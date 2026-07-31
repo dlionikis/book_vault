@@ -10,9 +10,9 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct SetProgressStatusRequest: Codable, JSONEncodable, Hashable {
+public struct SetProgressStatusRequest: Sendable, Codable, JSONEncodable, Hashable {
 
-    public enum Status: String, Codable, CaseIterable {
+    public enum Status: String, Sendable, Codable, CaseIterable {
         case completed = "completed"
         case notStarted = "not-started"
     }

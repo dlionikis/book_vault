@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct RefreshTokenRequest: Codable, JSONEncodable, Hashable {
+public struct RefreshTokenRequest: Sendable, Codable, JSONEncodable, Hashable {
 
     /** Refresh token from login response */
     public var refreshToken: UUID

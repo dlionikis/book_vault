@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct BatchUpdateProgressRequest: Codable, JSONEncodable, Hashable {
+public struct BatchUpdateProgressRequest: Sendable, Codable, JSONEncodable, Hashable {
 
     public var updates: [BatchUpdateProgressRequestUpdatesInner]
 

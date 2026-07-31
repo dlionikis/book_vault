@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct ReorderListRequest: Codable, JSONEncodable, Hashable {
+public struct ReorderListRequest: Sendable, Codable, JSONEncodable, Hashable {
 
     /** Array of book IDs in desired order */
     public var bookIds: [UUID]

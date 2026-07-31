@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct AddToLibraryRequest: Codable, JSONEncodable, Hashable {
+public struct AddToLibraryRequest: Sendable, Codable, JSONEncodable, Hashable {
 
     public var bookId: UUID
 

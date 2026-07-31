@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct Chapter: Codable, JSONEncodable, Hashable {
+public struct Chapter: Sendable, Codable, JSONEncodable, Hashable {
 
     public static let startTimeRule = NumericRule<Double>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public static let endTimeRule = NumericRule<Double>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)

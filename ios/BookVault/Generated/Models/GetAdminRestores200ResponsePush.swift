@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetAdminRestores200ResponsePush: Codable, JSONEncodable, Hashable {
+public struct GetAdminRestores200ResponsePush: Sendable, Codable, JSONEncodable, Hashable {
 
     public var configured: Bool
     public var activeTokens: Int

@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct RestoresListResponse: Codable, JSONEncodable, Hashable {
+public struct RestoresListResponse: Sendable, Codable, JSONEncodable, Hashable {
 
     public var restores: [RestoreRequestSummary]
 

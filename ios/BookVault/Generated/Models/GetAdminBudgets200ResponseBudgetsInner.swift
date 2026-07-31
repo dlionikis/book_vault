@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetAdminBudgets200ResponseBudgetsInner: Codable, JSONEncodable, Hashable {
+public struct GetAdminBudgets200ResponseBudgetsInner: Sendable, Codable, JSONEncodable, Hashable {
 
     public var name: String
     public var limit: Double

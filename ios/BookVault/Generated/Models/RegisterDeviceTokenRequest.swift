@@ -10,9 +10,9 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct RegisterDeviceTokenRequest: Codable, JSONEncodable, Hashable {
+public struct RegisterDeviceTokenRequest: Sendable, Codable, JSONEncodable, Hashable {
 
-    public enum Platform: String, Codable, CaseIterable {
+    public enum Platform: String, Sendable, Codable, CaseIterable {
         case ios = "ios"
     }
     /** APNs device token (hex string) */

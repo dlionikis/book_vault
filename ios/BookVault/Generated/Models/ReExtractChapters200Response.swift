@@ -10,9 +10,9 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct ReExtractChapters200Response: Codable, JSONEncodable, Hashable {
+public struct ReExtractChapters200Response: Sendable, Codable, JSONEncodable, Hashable {
 
-    public enum Source: String, Codable, CaseIterable {
+    public enum Source: String, Sendable, Codable, CaseIterable {
         case reExtracted = "re-extracted"
         case _none = "none"
         case error = "error"

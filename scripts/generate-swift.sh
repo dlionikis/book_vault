@@ -20,14 +20,22 @@ if [ ! -d "ios/BookVault" ]; then
   exit 1
 fi
 
-# Validate template overrides exist. These are not optional: Validation.mustache
-# adds Sendable conformance to the rule structs, without which the generated
-# models fail to compile under the Swift 6 language mode.
-if [ ! -f "$TEMPLATE_DIR/Validation.mustache" ]; then
-  echo "❌ Error: template override missing at $TEMPLATE_DIR/Validation.mustache"
-  echo "   Generated code would not compile under Swift 6. See docs/plans/ios-modernization-sequencing.md (A3)."
-  exit 1
-fi
+# Validate template overrides exist. These are not optional:
+#   Validation.mustache — adds Sendable conformance to the rule structs (A3).
+#   Models.mustache     — drops the request-layer declarations, including
+#                         RequestTask, which references URLSessionDataTaskProtocol
+#                         from the request layer we no longer generate (Plan C).
+#   Extensions.mustache — drops the one HTTPURLResponse extension that reads
+#                         Configuration.successfulStatusCodeRange (Plan C).
+# Without these, the generated code does not compile.
+for tmpl in Validation Models Extensions; do
+  if [ ! -f "$TEMPLATE_DIR/$tmpl.mustache" ]; then
+    echo "❌ Error: template override missing at $TEMPLATE_DIR/$tmpl.mustache"
+    echo "   Generated code would not compile under Swift 6."
+    echo "   See docs/archive/completed-plans/ios-swift6-generated-networking-plan.md."
+    exit 1
+  fi
+done
 
 # Clean previous generation (preserve committed files like Models.swift)
 echo "🗑️  Cleaning previous generated code..."
@@ -51,6 +59,32 @@ else
   exit 1
 fi
 
+# Support files to emit. This is an explicit ALLOWLIST, not a filter: everything
+# not named here is never generated.
+#
+# Only three files survive, and only because the model files genuinely need them:
+#   Models.swift      — declares JSONEncodable (every model conforms) and
+#                       CaseIterableDefaultsLast (enum models use it)
+#   Validation.swift  — NumericRule / StringRule, held as `static let` by 24 models
+#   Extensions.swift  — the encode/decode helpers the model bodies call
+#
+# Everything else the generator offers belongs to the request-execution layer and
+# is unreachable here: the app's networking is the hand-written APIClient talking
+# to URLSession directly. Omitted deliberately, each verified to have zero
+# references from app, test, or model code:
+#   URLSessionImplementations.swift, APIs.swift, Configuration.swift  (request layer)
+#   CodableHelper.swift, JSONEncodingHelper.swift, JSONDataEncoding.swift,
+#   APIHelper.swift, OpenISO8601DateFormatter.swift                   (its helpers)
+#
+# That whole cluster was what blocked the Swift 6 language mode -- CodableHelper
+# alone contributed 6 "nonisolated global shared mutable state" errors.
+#
+# If a future spec change makes the generator want a new support file, the build
+# fails loudly on a missing symbol rather than silently regressing. Add it here
+# only after confirming it is genuinely needed.
+# See docs/archive/completed-plans/ios-swift6-generated-networking-plan.md.
+SUPPORTING_FILES="Models.swift:Validation.swift:Extensions.swift"
+
 # Generate Swift models
 echo "📝 Generating Swift models..."
 $OPENAPI_GEN generate \
@@ -62,6 +96,7 @@ $OPENAPI_GEN generate \
   --additional-properties=responseAs=AsyncAwait \
   --additional-properties=library=urlsession \
   --additional-properties=swiftPackageManager=false \
+  --global-property="models,modelDocs=false,apis=false,supportingFiles=$SUPPORTING_FILES" \
   --skip-validate-spec
 
 # Move generated models to a flatter structure and clean up

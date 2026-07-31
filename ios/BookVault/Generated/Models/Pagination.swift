@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct Pagination: Codable, JSONEncodable, Hashable {
+public struct Pagination: Sendable, Codable, JSONEncodable, Hashable {
 
     public static let pageRule = NumericRule<Int>(minimum: 1, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public static let limitRule = NumericRule<Int>(minimum: 1, exclusiveMinimum: false, maximum: 100, exclusiveMaximum: false, multipleOf: nil)

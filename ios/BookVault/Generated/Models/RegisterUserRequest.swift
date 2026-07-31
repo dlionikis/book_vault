@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct RegisterUserRequest: Codable, JSONEncodable, Hashable {
+public struct RegisterUserRequest: Sendable, Codable, JSONEncodable, Hashable {
 
     public static let passwordRule = StringRule(minLength: 8, maxLength: nil, pattern: nil)
     public var username: String

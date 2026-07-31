@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct UnregisterDeviceTokenRequest: Codable, JSONEncodable, Hashable {
+public struct UnregisterDeviceTokenRequest: Sendable, Codable, JSONEncodable, Hashable {
 
     public var deviceToken: String
 

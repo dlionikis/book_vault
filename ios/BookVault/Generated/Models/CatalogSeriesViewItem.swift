@@ -11,7 +11,7 @@ import AnyCodable
 #endif
 
 /** Exactly one of &#x60;series&#x60;/&#x60;book&#x60; is present per item — never both, never neither. Not enforced by the schema; enforced by server-side construction and covered by unit tests.  */
-public struct CatalogSeriesViewItem: Codable, JSONEncodable, Hashable {
+public struct CatalogSeriesViewItem: Sendable, Codable, JSONEncodable, Hashable {
 
     public var series: SeriesWithBookCount?
     public var book: Book?

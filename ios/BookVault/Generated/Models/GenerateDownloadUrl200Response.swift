@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GenerateDownloadUrl200Response: Codable, JSONEncodable, Hashable {
+public struct GenerateDownloadUrl200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public static let fileSizeRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     /** Pre-signed S3 URL (expires in 1 hour) */

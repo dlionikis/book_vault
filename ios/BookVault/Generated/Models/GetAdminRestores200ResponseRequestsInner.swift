@@ -10,9 +10,9 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetAdminRestores200ResponseRequestsInner: Codable, JSONEncodable, Hashable {
+public struct GetAdminRestores200ResponseRequestsInner: Sendable, Codable, JSONEncodable, Hashable {
 
-    public enum Status: String, Codable, CaseIterable {
+    public enum Status: String, Sendable, Codable, CaseIterable {
         case inProgress = "in_progress"
         case completed = "completed"
         case failed = "failed"

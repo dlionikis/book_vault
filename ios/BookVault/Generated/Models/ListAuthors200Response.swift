@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct ListAuthors200Response: Codable, JSONEncodable, Hashable {
+public struct ListAuthors200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public var results: [AuthorWithBookCount]
     public var pagination: ListBooks200ResponsePagination

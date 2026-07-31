@@ -10,7 +10,7 @@ import Foundation
 import AnyCodable
 #endif
 
-public struct GetAdminEcsHealth200ResponseSummary: Codable, JSONEncodable, Hashable {
+public struct GetAdminEcsHealth200ResponseSummary: Sendable, Codable, JSONEncodable, Hashable {
 
     public var spotInterruptions: Int
     public var crashes: Int

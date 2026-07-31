@@ -1,0 +1,29 @@
+{{!
+  TEMPLATE OVERRIDE (scripts/swift-templates/modelEnum.mustache)
+
+  Identical to the upstream swift5 modelEnum.mustache (openapi-generator 7.23.0,
+  pinned in openapitools.json) except that generated model types additionally
+  declare `Sendable`.
+
+  Every model is an immutable-by-construction value type of Sendable members, so
+  the conformance is sound. Without it, `static let` model fixtures (MockData.swift,
+  TestFixtures.swift) are rejected under the Swift 6 language mode as
+  "not concurrency-safe because non-'Sendable' type ... may have shared mutable state".
+  The upstream swift6 generator emits Sendable models for the same reason; we stay on
+  swift5 because swift6 also emits 14 API entry-point classes this project does not use.
+
+  On a generator upgrade, re-extract the upstream template and re-apply the
+  `, Sendable` additions. See
+  docs/archive/completed-plans/ios-swift6-generated-networking-plan.md.
+}}
+{{#additionalModelEnumAttributes}}{{{.}}}
+{{/additionalModelEnumAttributes}}{{#nonPublicApi}}internal{{/nonPublicApi}}{{^nonPublicApi}}public{{/nonPublicApi}} enum {{classname}}: {{dataType}}, {{#useVapor}}Content, Hashable{{/useVapor}}{{^useVapor}}Sendable, Codable{{^isString}}{{^isInteger}}{{^isFloat}}{{^isDouble}}, JSONEncodable{{/isDouble}}{{/isFloat}}{{/isInteger}}{{/isString}}{{/useVapor}}, CaseIterable{{#enumUnknownDefaultCase}}{{#isInteger}}, CaseIterableDefaultsLast{{/isInteger}}{{#isFloat}}, CaseIterableDefaultsLast{{/isFloat}}{{#isDouble}}, CaseIterableDefaultsLast{{/isDouble}}{{#isString}}, CaseIterableDefaultsLast{{/isString}}{{/enumUnknownDefaultCase}} {
+{{#allowableValues}}
+{{#enumVars}}
+    {{#enumDescription}}
+    /// {{enumDescription}}
+    {{/enumDescription}}
+    case {{{name}}} = {{{value}}}
+{{/enumVars}}
+{{/allowableValues}}
+}
