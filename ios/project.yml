@@ -36,8 +36,27 @@ targets:
       path: BookVault/Info.plist
       properties:
         APIBaseURL: $(API_BASE_URL)
+        # Two scenes: the SwiftUI phone window and the CarPlay template scene.
+        #
+        # `UIApplicationSupportsMultipleScenes` MUST be true for CarPlay — the
+        # CarPlay scene is a second, concurrently-connected scene. This also
+        # changes UIKit lifecycle behavior for the phone app, which is why this
+        # change ships with a phone regression pass (`npm run ios:test:ui`).
+        #
+        # The window-scene configuration deliberately declares NO
+        # `UISceneDelegateClassName`. SwiftUI's `App` lifecycle installs its own
+        # scene delegate; naming one here (or omitting the configuration
+        # entirely once a manifest exists) is the classic way to make the phone
+        # app launch to a black screen.
         UIApplicationSceneManifest:
-          UIApplicationSupportsMultipleScenes: false
+          UIApplicationSupportsMultipleScenes: true
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default Configuration
+            CPTemplateApplicationSceneSessionRoleApplication:
+              - UISceneConfigurationName: CarPlay Configuration
+                UISceneClassName: CPTemplateApplicationScene
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).CarPlaySceneDelegate
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
