@@ -241,11 +241,7 @@ struct ContentView: View {
                         savedPosition: mostRecent.progress.positionSeconds
                     )
                 }
-
-                // Fetch and load chapters in background
-                let chapterManager = ChapterManager()
-                let chapters = await chapterManager.fetchChapters(bookId: mostRecent.book.id.uuidString)
-                audioPlayer.updateChapters(chapters)
+                // loadForMiniPlayer loads chapters itself; no fetch needed here.
             }
         } catch {
             DebugLogger.error("Failed to load most recently played book", error: error)

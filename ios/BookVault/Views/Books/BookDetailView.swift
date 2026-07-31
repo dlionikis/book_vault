@@ -372,12 +372,8 @@ struct BookPlayButton: View {
             } else {
                 // Start playing or resume, and show full player
                 // Always call play() - it handles resume internally when player is ready
+                // play(book:) loads chapters itself, so no fetch is needed here.
                 audioPlayer.play(book: book)
-                // Fetch chapters in background (non-blocking)
-                Task {
-                    let chapters = await chapterManager.fetchChapters(bookId: book.id.uuidString)
-                    audioPlayer.updateChapters(chapters)
-                }
                 showingNowPlaying = true
             }
         } label: {
