@@ -149,29 +149,54 @@ class AudioPlayerManager: ObservableObject {
     // MARK: - Setup
 
     private func setupAudioSession() {
+        let audioSession = AVAudioSession.sharedInstance()
+
+        // Configure for background audio playback.
+        //
+        // Deliberately no options. AirPlay and Bluetooth A2DP routing are
+        // implicit for `.playback`, and as of **iOS 26** passing
+        // `.allowAirPlay` / `.allowBluetoothA2DP` alongside `.playback` makes
+        // setCategory throw -50 (kAudio_ParamError). They were accepted on
+        // earlier iOS, so this reads as a regression rather than a
+        // long-standing misuse — the app shipped with them for a long time.
+        //
+        // The throw is not cosmetic: it aborted the rest of this method, so the
+        // session kept its default category (which does not play in the
+        // background) and neither observer below was ever registered — taking
+        // interruption handling down with it.
         do {
-            let audioSession = AVAudioSession.sharedInstance()
-
-            // Configure for background audio playback
-            try audioSession.setCategory(
-                .playback,
-                mode: .spokenAudio,
-                options: [.allowBluetoothA2DP, .allowAirPlay]
-            )
-
-            try audioSession.setActive(true)
-
-            DebugLogger.audio("Audio session configured for background playback")
-
-            // Setup interruption handling
-            setupInterruptionObserver()
-
-            // Setup route change handling
-            setupRouteChangeObserver()
+            try audioSession.setCategory(.playback, mode: .spokenAudio)
         } catch {
-            DebugLogger.error("Failed to set up audio session", error: error)
+            DebugLogger.error("Failed to set audio session category", error: error)
+            self.error = error
+
+            // Fall back to the barest configuration that still supports
+            // background playback. Better a session without the preferred mode
+            // than one left at `.soloAmbient`, which silently stops audio the
+            // moment the app backgrounds.
+            do {
+                try audioSession.setCategory(.playback)
+                DebugLogger.audio("Fell back to .playback with no mode")
+            } catch {
+                DebugLogger.error("Fallback audio session category also failed", error: error)
+            }
+        }
+
+        do {
+            try audioSession.setActive(true)
+            DebugLogger.audio("Audio session configured for background playback")
+        } catch {
+            DebugLogger.error("Failed to activate audio session", error: error)
             self.error = error
         }
+
+        // Registered unconditionally. These were previously inside the same
+        // `do` block as the calls above, so any throw silently skipped them and
+        // left the app unable to react to interruptions or route changes at
+        // all. They depend on NotificationCenter, not on the session having
+        // been configured successfully, so there is no reason to gate them.
+        setupInterruptionObserver()
+        setupRouteChangeObserver()
     }
 
     private func setupNotifications() {
