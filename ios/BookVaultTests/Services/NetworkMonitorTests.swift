@@ -14,16 +14,16 @@ final class NetworkMonitorTests: XCTestCase {
     var sut: MockNetworkMonitor!
     var cancellables: Set<AnyCancellable>!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         sut = MockNetworkMonitor()
         cancellables = []
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         cancellables = nil
         sut = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Connection Status Tests

@@ -17,20 +17,20 @@ final class SyncManagerTests: XCTestCase {
     var mockNetworkMonitor: MockNetworkMonitor!
     var cancellables: Set<AnyCancellable>!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         sut = MockSyncManager()
         mockOfflineStore = MockOfflineProgressStore()
         mockNetworkMonitor = MockNetworkMonitor()
         cancellables = []
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         cancellables = nil
         sut = nil
         mockOfflineStore = nil
         mockNetworkMonitor = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Initial State Tests

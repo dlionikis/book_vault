@@ -127,7 +127,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         )
 
         // Mock auth token provider
-        sut.authTokenProvider = { "test-token" }
+        sut.authTokenProvider = { @Sendable in "test-token" }
     }
 
     override func tearDown() async throws {
@@ -339,7 +339,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
 
     func testAuthTokenProviderIsUsed() {
         let tokenProviderCalled = Locked(false)
-        sut.authTokenProvider = {
+        sut.authTokenProvider = { @Sendable in
             tokenProviderCalled.value = true
             return "custom-token"
         }
@@ -351,7 +351,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
     }
 
     func testAuthTokenProviderReturnsNil() {
-        sut.authTokenProvider = { nil }
+        sut.authTokenProvider = { @Sendable in nil }
 
         XCTAssertNil(sut.authTokenProvider())
     }

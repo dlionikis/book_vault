@@ -102,7 +102,7 @@ final class APIClientRealTests: XCTestCase, @unchecked Sendable {
         sut = APIClient(baseURL: baseURL, session: mockSession)
 
         // Disable force logout for tests
-        sut.forceLogoutHandler = {}
+        sut.forceLogoutHandler = { @Sendable in }
     }
 
     override func tearDown() {

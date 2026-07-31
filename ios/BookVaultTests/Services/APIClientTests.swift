@@ -55,7 +55,7 @@ final class APIClientTests: XCTestCase, @unchecked Sendable {
         )
 
         // When: Custom handler is set
-        client.tokenRefreshHandler = {
+        client.tokenRefreshHandler = { @Sendable in
             return true
         }
 
@@ -71,7 +71,7 @@ final class APIClientTests: XCTestCase, @unchecked Sendable {
         )
 
         // When: Custom handler is set
-        client.forceLogoutHandler = {}
+        client.forceLogoutHandler = { @Sendable in }
 
         // Then: Handler should be configurable (used for testing/DI)
         XCTAssertNotNil(client.forceLogoutHandler)
@@ -104,7 +104,7 @@ final class APIClientTests: XCTestCase, @unchecked Sendable {
         )
 
         let forceLogoutCount = Locked(0)
-        client.forceLogoutHandler = {
+        client.forceLogoutHandler = { @Sendable in
             forceLogoutCount.withLock { $0 += 1 }
         }
 

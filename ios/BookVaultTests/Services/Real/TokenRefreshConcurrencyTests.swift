@@ -133,7 +133,7 @@ final class TokenRefreshConcurrencyTests: XCTestCase, @unchecked Sendable {
         config.protocolClasses = [MockURLProtocol.self]
         mockSession = URLSession(configuration: config)
         sut = APIClient(baseURL: URL(string: "http://localhost:3000")!, session: mockSession)
-        sut.forceLogoutHandler = {}
+        sut.forceLogoutHandler = { @Sendable in }
         sut.accessToken = "expired-token"
     }
 
@@ -186,7 +186,7 @@ final class TokenRefreshConcurrencyTests: XCTestCase, @unchecked Sendable {
         let refreshCount = AtomicCounter()
         installExpiringTokenHandler(validToken: "fresh-token")
 
-        sut.tokenRefreshHandler = { [self] in
+        sut.tokenRefreshHandler = { @Sendable [self] in
             _ = refreshCount.increment()
             // Model real refresh latency so the race window is open, and so a
             // second entrant has time to slip through the check-then-act gap.
@@ -240,7 +240,7 @@ final class TokenRefreshConcurrencyTests: XCTestCase, @unchecked Sendable {
             (response(401, for: request), Data("{}".utf8))
         }
 
-        sut.tokenRefreshHandler = { [self] in
+        sut.tokenRefreshHandler = { @Sendable [self] in
             _ = refreshCount.increment()
             sut.accessToken = "fresh-token"
             refreshHasCompleted.fulfill()
@@ -286,7 +286,7 @@ final class TokenRefreshConcurrencyTests: XCTestCase, @unchecked Sendable {
 
         installExpiringTokenHandler(validToken: "fresh-token")
 
-        sut.tokenRefreshHandler = { [self] in
+        sut.tokenRefreshHandler = { @Sendable [self] in
             // Read-then-rotate, exactly as the server-side rotation behaves,
             // and atomically — see RotatingToken.
             let presented = refreshToken.presentAndRotate()
@@ -331,7 +331,7 @@ final class TokenRefreshConcurrencyTests: XCTestCase, @unchecked Sendable {
 
         // No sleep: the refresh resolves as fast as possible, maximizing the
         // chance it drains `waiters` before a waiter is appended.
-        sut.tokenRefreshHandler = { [self] in
+        sut.tokenRefreshHandler = { @Sendable [self] in
             sut.accessToken = "fresh-token"
             return true
         }
@@ -378,11 +378,11 @@ final class TokenRefreshConcurrencyTests: XCTestCase, @unchecked Sendable {
             (response(401, for: request), Data("{}".utf8))
         }
 
-        sut.tokenRefreshHandler = {
+        sut.tokenRefreshHandler = { @Sendable in
             try? await Task.sleep(nanoseconds: 20_000_000)
             return false
         }
-        sut.forceLogoutHandler = {
+        sut.forceLogoutHandler = { @Sendable in
             logoutLock.lock()
             defer { logoutLock.unlock() }
             _ = logoutCount.increment()
@@ -556,9 +556,9 @@ final class ResourceLoaderRefreshConcurrencyTests: XCTestCase {
             session: mockSession,
             refreshCoordinator: sharedCoordinator
         )
-        client.forceLogoutHandler = {}
+        client.forceLogoutHandler = { @Sendable in }
         client.accessToken = "stale-token"
-        client.tokenRefreshHandler = {
+        client.tokenRefreshHandler = { @Sendable in
             let ok = await refresh()
             client.accessToken = currentToken.value
             return ok
