@@ -3,7 +3,7 @@
 > **Status**: Review / recommendations
 > **Scope**: iOS view layer, state management, navigation, windowing
 > **Created**: July 28, 2026
-> **Companion**: [ios-mini-player-bottom-bar-plan.md](ios-mini-player-bottom-bar-plan.md)
+> **Companion**: [ios-mini-player-bottom-bar-plan.md](../archive/completed-plans/ios-mini-player-bottom-bar-plan.md)
 
 ---
 
@@ -203,7 +203,7 @@ makes regressions hard to attribute.
 
 ### Step 2 — Ship the mini-player bottom bar
 
-Per [ios-mini-player-bottom-bar-plan.md](ios-mini-player-bottom-bar-plan.md), now on a modern
+Per [ios-mini-player-bottom-bar-plan.md](../archive/completed-plans/ios-mini-player-bottom-bar-plan.md), now on a modern
 navigation container. Phase 4 of that plan (the conditional `NavigationStack` migration) becomes
 unnecessary — it is absorbed by Step 1.
 

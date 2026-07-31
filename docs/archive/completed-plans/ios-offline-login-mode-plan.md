@@ -1,6 +1,6 @@
 # iOS Offline Login Mode — Implementation Plan
 
-Status: **Ready to implement**
+Status: ✅ **Complete** — shipped in PR #132 (July 28, 2026); manual verification done
 Owner: (assign)
 Related: `docs/plans/ios-audio-session-persistence-plan.md`, approved plan `~/.claude/plans/generic-squishing-axolotl.md`
 
@@ -399,4 +399,4 @@ Link Conditioner ("100% Loss"):
 - [x] Step 4 — LoginView banner / Continue Offline / short-circuit
 - [x] Step 5 — faster auth timeout (15s on login/refresh via `createRequest(timeout:)`)
 - [x] Tests added & passing — `AuthManagerRealTests` 27/27 pass (7 new offline tests)
-- [ ] Manual verification 1–5 (simulator, on-device)
+- [x] Manual verification 1–5 (simulator, on-device) — confirmed July 30, 2026

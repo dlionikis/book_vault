@@ -62,7 +62,7 @@ Per discussion, v1 is intentionally constrained to match Apple's CarPlay audio a
 3. **Offline/downloaded content**: Does v1 CarPlay only stream (same as phone today), or does it need to account for any offline/downloaded playback path? (Need to confirm whether Book Vault iOS has a download-for-offline feature at all — not confirmed in the investigation.)
 4. **Chapter navigation**: Chapters are lazy-loaded on first playback per project docs — does CarPlay's Now Playing template need chapter data pre-fetched before the scene can display chapter skip controls, and what's the UX if chapters haven't loaded yet?
 5. **Testing**: CarPlay can only be fully tested via the CarPlay Simulator (bundled with Xcode) or a real head unit/dock. Should be called out as a testing-approach decision before implementation — this is a different QA loop than the existing simulator-based iOS test flow.
-6. **Auth/session behavior in CarPlay**: If the [iOS logout/session bug](ios-audio-session-persistence-plan.md) reproduces while CarPlay is connected, what should CarPlay show? Worth sequencing CarPlay after that bug is resolved, since a mid-drive forced logout with no way to re-auth from CarPlay would be a bad experience.
+6. **Auth/session behavior in CarPlay**: If the [iOS logout/session bug](../archive/completed-plans/ios-audio-session-persistence-plan.md) reproduces while CarPlay is connected, what should CarPlay show? Worth sequencing CarPlay after that bug is resolved, since a mid-drive forced logout with no way to re-auth from CarPlay would be a bad experience.
 
 ## Explicitly Out of Scope (per this request, v1)
 
