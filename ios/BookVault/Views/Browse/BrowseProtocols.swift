@@ -11,7 +11,7 @@ import Foundation
 
 /// Normalizes list item types (AuthorWithBookCount, etc.) so generic views
 /// can access a display name regardless of whether the model uses `.name` or `.title`.
-protocol BrowseListItem: Identifiable, Hashable {
+protocol BrowseListItem: Identifiable, Hashable, Sendable {
     var id: UUID { get }
     var displayName: String { get }
     var bookCount: Int { get }
@@ -20,7 +20,7 @@ protocol BrowseListItem: Identifiable, Hashable {
 // MARK: - BrowseDetailResponse
 
 /// Normalizes detail response types (GetAuthor200Response, etc.).
-protocol BrowseDetailResponse {
+protocol BrowseDetailResponse: Sendable {
     var id: UUID { get }
     var displayName: String { get }
     var books: [Book] { get }
@@ -30,7 +30,7 @@ protocol BrowseDetailResponse {
 
 /// Normalizes paginated list responses, bridging the two different pagination types
 /// (`Pagination` vs `ListBooks200ResponsePagination`) behind a single interface.
-protocol BrowseListResponse {
+protocol BrowseListResponse: Sendable {
     associatedtype Item: BrowseListItem
     var results: [Item] { get }
     var paginationPages: Int { get }
