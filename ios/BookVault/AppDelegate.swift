@@ -101,27 +101,38 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     }
 
     /// The user tapped a notification — route to the deep link it carries.
+    ///
+    /// Note the completion handler is deliberately **not** marked `@Sendable`.
+    /// Newer SDKs declare it that way, but the Xcode 16.2 SDK that CI pins does
+    /// not, and adding the annotation makes this signature stop matching the
+    /// protocol requirement there ("sendability of function types ... does not
+    /// match requirement"). Leaving it off compiles on both.
     nonisolated func userNotificationCenter(
         _: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
-        withCompletionHandler completionHandler: @escaping @Sendable () -> Void
+        withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        // `userInfo` is `[AnyHashable: Any]`, which is not `Sendable`, so it
-        // cannot cross into the Task as-is. Flatten it to `[String: String]`
-        // here — synchronously, before the hop.
+        // Neither value can cross into the Task as-is: `userInfo` is
+        // `[AnyHashable: Any]` and the handler is a non-`Sendable` closure. Both
+        // are packaged here, synchronously, before the hop.
         //
-        // No information is lost for this use: `DeepLinkManager.deepLink(from:)`
-        // reads exactly one key, `bookId`, and only as a `String`. Nested values
-        // like the APNs `aps` payload were never consulted.
+        // No information is lost flattening `userInfo`:
+        // `DeepLinkManager.deepLink(from:)` reads exactly one key, `bookId`, and
+        // only as a `String`. Nested values like the APNs `aps` payload were
+        // never consulted.
         let userInfo = response.notification.request.content.userInfo
         let payload = userInfo.reduce(into: [String: String]()) { result, entry in
             if let key = entry.key as? String, let value = entry.value as? String {
                 result[key] = value
             }
         }
+        // A one-shot box carries the non-`Sendable` handler across the isolation
+        // boundary. Safe because it is invoked exactly once: UserNotifications
+        // vends one handler per delivery and permits calling it from any thread.
+        let completion = UncheckedBox(completionHandler)
         Task { @MainActor in
             DeepLinkManager.shared.handleNotification(userInfo: payload)
-            completionHandler()
+            completion.value()
         }
     }
 }

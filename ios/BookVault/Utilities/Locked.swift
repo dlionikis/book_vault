@@ -62,3 +62,23 @@ final class Locked<Value: Sendable>: @unchecked Sendable {
         return try body(&storage)
     }
 }
+
+/// Carries a **non-`Sendable`** value across an isolation boundary.
+///
+/// Unlike `Locked`, this provides no synchronization and makes no safety claim
+/// of its own — it exists for values the compiler cannot prove safe but the
+/// surrounding contract does. Every use must justify itself.
+///
+/// The motivating case is a system completion handler: the framework hands over
+/// a plain (non-`Sendable`) closure, we must invoke it after hopping to another
+/// actor, and the framework guarantees a single delivery. There is no shared
+/// mutable state, so there is nothing to lock — only a type-system gap to cross.
+///
+/// Use `Locked` instead whenever the value is genuinely shared.
+struct UncheckedBox<Value>: @unchecked Sendable {
+    let value: Value
+
+    init(_ value: Value) {
+        self.value = value
+    }
+}
