@@ -10,7 +10,7 @@ import Foundation
 
 /// Manages fetching and caching of audiobook chapters
 @MainActor
-class ChapterManager: ObservableObject {
+class ChapterManager: ObservableObject, ChapterFetching {
     // MARK: - Published Properties
 
     @Published var chapters: [Chapter] = []

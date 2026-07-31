@@ -111,18 +111,21 @@ final class AudioPlayerManagerRealTests: XCTestCase {
     var mockDownloadManager: MockDownloadManagerForAudio!
     var mockStorageManager: MockStorageManagerForDownloads!
     var mockAPIClient: MockAPIClient!
+    var mockChapterFetcher: MockChapterFetcher!
 
     override func setUp() async throws {
         mockProgressManager = MockProgressManagerForAudio()
         mockDownloadManager = MockDownloadManagerForAudio()
         mockStorageManager = MockStorageManagerForDownloads()
         mockAPIClient = MockAPIClient()
+        mockChapterFetcher = MockChapterFetcher()
 
         sut = AudioPlayerManager(
             progressManager: mockProgressManager,
             downloadManager: mockDownloadManager,
             storageManager: mockStorageManager,
             apiClient: mockAPIClient, // Avoid real network calls on the streaming path
+            chapterFetcher: mockChapterFetcher,
             skipAudioSetup: true // Skip AVAudioSession setup for unit tests
         )
 
@@ -136,6 +139,7 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         mockDownloadManager = nil
         mockStorageManager = nil
         mockAPIClient = nil
+        mockChapterFetcher = nil
     }
 
     // MARK: - Initial State Tests
@@ -605,5 +609,136 @@ final class AudioPlayerManagerRealTests: XCTestCase {
             }
             try await Task.sleep(nanoseconds: 20_000_000) // 20ms
         }
+    }
+}
+
+// MARK: - MockChapterFetcher
+
+/// Records lookups so tests can assert the player, not a view, drove them.
+///
+/// `@unchecked Sendable` for the usual test-double reason: one instance per
+/// test, driven from one place.
+final class MockChapterFetcher: ChapterFetching, @unchecked Sendable {
+    var cachedChapters: [String: [Chapter]] = [:]
+    var fetchResult: [Chapter] = []
+
+    private(set) var fetchCalls: [String] = []
+    private(set) var cacheChecks: [String] = []
+
+    /// Set to delay `fetchChapters`, to exercise the in-flight book-change guard.
+    var fetchDelay: Duration?
+
+    func fetchChapters(bookId: String) async -> [Chapter] {
+        fetchCalls.append(bookId)
+        if let fetchDelay {
+            try? await Task.sleep(for: fetchDelay)
+        }
+        return fetchResult
+    }
+
+    func getCachedChapters(bookId: String) -> [Chapter] {
+        cacheChecks.append(bookId)
+        return cachedChapters[bookId] ?? []
+    }
+
+    func hasCachedChapters(bookId: String) -> Bool {
+        !(cachedChapters[bookId] ?? []).isEmpty
+    }
+}
+
+// MARK: - Chapter loading (A3)
+
+/// These cover the gap CarPlay would otherwise hit: chapters used to be fetched
+/// only by `BookDetailView` / `ContentView`, so playback started from anywhere
+/// else — lock screen, remote command, CarPlay — produced a book with no
+/// chapters and therefore no chapter controls.
+extension AudioPlayerManagerRealTests {
+    private func makeChapters() -> [Chapter] {
+        [
+            Chapter(id: UUID(), title: "One", startTime: 0, endTime: 60, duration: 60, index: 0),
+            Chapter(id: UUID(), title: "Two", startTime: 60, endTime: 120, duration: 60, index: 1)
+        ]
+    }
+
+    /// Cached chapters apply synchronously — no empty-list flash for a book we
+    /// have already loaded once.
+    func testPlayAppliesCachedChaptersImmediately() {
+        let book = TestFixtures.makeBook()
+        let chapters = makeChapters()
+        mockChapterFetcher.cachedChapters[book.id.uuidString] = chapters
+
+        sut.play(book: book)
+
+        XCTAssertEqual(sut.chapters.count, chapters.count,
+                       "Cached chapters should be applied without awaiting a fetch")
+        XCTAssertTrue(mockChapterFetcher.fetchCalls.isEmpty,
+                      "A warm cache must not trigger a network fetch")
+    }
+
+    /// The regression this refactor exists for: a cache miss must still populate
+    /// chapters, without any view having asked.
+    func testPlayFetchesChaptersOnCacheMiss() async throws {
+        let book = TestFixtures.makeBook()
+        mockChapterFetcher.fetchResult = makeChapters()
+
+        sut.play(book: book)
+
+        try await waitUntil { !self.sut.chapters.isEmpty }
+        XCTAssertEqual(mockChapterFetcher.fetchCalls, [book.id.uuidString])
+        XCTAssertEqual(sut.chapters.count, 2)
+    }
+
+    /// A book with no chapters must not break playback — this is the graceful
+    /// degradation CarPlay's chapter buttons rely on.
+    func testPlayWithNoChaptersLeavesChaptersEmpty() async throws {
+        let book = TestFixtures.makeBook()
+        mockChapterFetcher.fetchResult = []
+
+        sut.play(book: book)
+
+        try await waitUntil { self.mockChapterFetcher.fetchCalls.isEmpty == false }
+        XCTAssertTrue(sut.chapters.isEmpty)
+        XCTAssertEqual(sut.currentBook?.id, book.id, "Playback should proceed regardless")
+    }
+
+    /// Switching books mid-fetch must not apply the first book's chapters to the
+    /// second. Without the guard in `loadChapters(for:)` this races.
+    func testInFlightChapterFetchIsDiscardedWhenBookChanges() async throws {
+        let firstBook = TestFixtures.makeBook()
+        mockChapterFetcher.fetchResult = makeChapters()
+        mockChapterFetcher.fetchDelay = .milliseconds(200)
+
+        sut.play(book: firstBook)
+
+        // Switch to a different book while the first fetch is still in flight.
+        let secondBook = TestFixtures.makeBook(id: UUID(), title: "Second Book")
+        mockChapterFetcher.fetchResult = []
+        mockChapterFetcher.fetchDelay = nil
+        sut.play(book: secondBook)
+
+        try await Task.sleep(nanoseconds: 400_000_000)
+
+        XCTAssertEqual(sut.currentBook?.id, secondBook.id)
+        XCTAssertTrue(sut.chapters.isEmpty,
+                      "The first book's chapters must not land on the second book")
+
+        // Both fetches must actually have been issued. Without this the test is
+        // vacuous: if the player loaded no chapters at all, `chapters` would be
+        // empty for the wrong reason and the assertion above would still pass.
+        XCTAssertEqual(mockChapterFetcher.fetchCalls.count, 2,
+                       "Both books should have triggered a fetch")
+        XCTAssertEqual(mockChapterFetcher.fetchCalls.first, firstBook.id.uuidString)
+    }
+
+    /// The mini-player path matters for cold launch: the lock screen should have
+    /// chapter data before the user opens any detail view.
+    func testLoadForMiniPlayerAlsoLoadsChapters() {
+        let book = TestFixtures.makeBook()
+        let chapters = makeChapters()
+        mockChapterFetcher.cachedChapters[book.id.uuidString] = chapters
+
+        sut.loadForMiniPlayer(book: book, savedPosition: 30)
+
+        XCTAssertEqual(sut.chapters.count, chapters.count)
     }
 }

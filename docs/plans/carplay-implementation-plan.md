@@ -1,11 +1,57 @@
 # CarPlay App — Implementation Plan & Task Breakdown
 
 > **Created**: July 27, 2026
+> **Reviewed**: July 31, 2026 — every §1 finding re-verified against current code; see §0
 > **Status**: Scoped — ready to start (Track A can begin immediately)
 > **Priority**: TBD
 > **Platform**: iOS only
 > **Requirements doc**: [carplay-app-plan.md](carplay-app-plan.md)
 > **Deployment target**: iOS 17.0 (`project.yml`) — all CarPlay APIs used here are iOS 14+, so no bump needed.
+
+---
+
+## 0. Review notes (July 31, 2026)
+
+The plan was re-checked against the codebase before starting. **All seven §1.2 findings still
+hold** — verified individually:
+
+| Finding                                         | Verified                                                                         |
+| ----------------------------------------------- | -------------------------------------------------------------------------------- |
+| #1 `UIApplicationSupportsMultipleScenes: false` | ✅ `project.yml:40`                                                              |
+| #2 Pure SwiftUI lifecycle, no `UISceneDelegate` | ✅ `BookVaultApp.swift` — `@main`, `WindowGroup`, `UIApplicationDelegateAdaptor` |
+| #3 Chapters loaded by views, not the player     | ✅ `play(book:)` never fetches; only `ContentView:247` + `BookDetailView:378` do |
+| #4 `isRestoringSession` starts `true`           | ✅ `AuthManager.swift:19`                                                        |
+| #5 `getCover(for:)` sync + cache-only           | ✅ `CoverCacheManager.swift:123`                                                 |
+| #6 No CarPlay image downsampling helper         | ✅ absent                                                                        |
+| #7 Protocol-mocked test infra                   | ✅ `BookVaultTests/Mocks/` (6 mocks)                                             |
+
+Every API the plan builds against exists with the assumed signature:
+`fetchLibrarySeriesView(page:limit:)`, `fetchLibraryBooks(forceRefresh:)`,
+`isBookDownloaded(bookId:)`, `play(book:)`, `skipToChapter(_:)`, `setPlaybackRate(_:)`.
+
+**Three things changed since the plan was written:**
+
+1. **⚠️ The app is now on Swift 6 with `SWIFT_STRICT_CONCURRENCY: complete`** (#144). The plan
+   predates this and never mentions concurrency. This is a **material new constraint on every new
+   file**: `CarPlaySceneDelegate` runs on the main actor, but the provider/coordinator will be
+   crossing isolation boundaries to reach `AudioPlayerManager.shared` (`@MainActor`) and
+   `APIClientProtocol` (now `Sendable`). Expect to annotate as you go rather than at the end — the
+   A4 experience was that fixing these late is much more expensive than designing for them. Note
+   also that a green local build does **not** prove CI green: CI pins an older Xcode, and the
+   Swift-6 adoption took five rounds of CI-only failures to settle.
+
+2. **Q6 is resolved.** The plan says the session-persistence bug is open and recommends fixing it
+   before ship. It **shipped** (#131, verified on device) and is archived. C1 still needs to handle
+   mid-drive logout, but the "spurious logout" risk in §6 is no longer live and should not gate C5.
+
+3. **A UI-test target now exists** (`BookVaultUITests`, 15 flows). A1's phone-regression pass is no
+   longer purely manual — `npm run ios:test:ui` covers launch, navigation, and the mini player,
+   which is exactly the blast radius of the multi-scene change. Run it as part of A1.
+
+**One judgement call to flag:** A0 (the Apple entitlement request) is a business process, not code.
+It gates shipping but nothing in development. Everything below is buildable and testable in the
+CarPlay Simulator without it, so the entitlement is deliberately **not** treated as a blocker for
+starting.
 
 ---
 
@@ -91,7 +137,7 @@ These are the findings that drive the task list:
 | Q3  | Offline/downloaded content         | **A download feature absolutely exists** (`DownloadManager`, `StorageManager.isBookDownloaded`) and `AudioPlayerManager` already prefers local files. v1 gets this **for free** — but should surface a "Downloaded" section, since streaming in a car is the flakiest network case. |
 | Q4  | Chapter navigation                 | **Requires the Task A3 refactor** (finding #3). Chapters are not fetched by the player. Degrade gracefully: show chapter controls only when `chapters` is non-empty.                                                                                                                |
 | Q5  | Testing                            | CarPlay Simulator (Xcode ▸ I/O ▸ External Displays ▸ CarPlay) for the loop; unit tests for provider/coordinator logic; one real-head-unit pass before ship. `validate:full` still applies.                                                                                          |
-| Q6  | Auth/session behavior              | Must be handled in-scene regardless (finding #4). **Recommend sequencing after the session-persistence bug fix**, but CarPlay does not have to _block_ on it — the sign-in template is needed either way.                                                                           |
+| Q6  | Auth/session behavior              | Must be handled in-scene regardless (finding #4). ~~Recommend sequencing after the session-persistence bug fix~~ — **that bug shipped (#131) and is archived**, so no sequencing constraint remains. The sign-in template is still needed either way.                               |
 
 ---
 
@@ -155,13 +201,45 @@ between two people if desired. Sizes are relative (S/M/L), not calendar estimate
 
 ### Track A — Foundation (must be sequential)
 
-| ID     | Task                              | Size  | Depends | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ------ | --------------------------------- | ----- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A0** | Request CarPlay audio entitlement | S     | —       | Submit the request to Apple for `com.apple.developer.carplay-audio`. **Do this first, today.** It's a business-process bottleneck with unpredictable lead time (weeks), and every other task can proceed without it. Track the request ID.                                                                                                                                                                                                                                            |
-| **A1** | Scene manifest + multi-scene      | **L** | —       | In `project.yml`: set `UIApplicationSupportsMultipleScenes: true`, add a full `UIApplicationSceneManifest` with `UISceneConfigurations` for both `UIWindowSceneSessionRoleApplication` (SwiftUI default) and `CPTemplateApplicationSceneSessionRoleApplication`. Run `xcodegen generate`. **Highest-risk task** — verify the _phone_ app still launches, backgrounds, and handles push deep links before moving on.                                                                   |
-| **A2** | `CarPlaySceneDelegate` skeleton   | M     | A1      | Implement `CPTemplateApplicationSceneDelegate` (`didConnect`/`didDisconnect` interface controller). Ship a hardcoded one-item `CPListTemplate` to prove the scene connects in the CarPlay Simulator. Merge this as a walking skeleton before building real UI.                                                                                                                                                                                                                        |
-| **A3** | Chapter loading in the player     | M     | —       | **Refactor, not CarPlay code.** Move chapter fetching into `AudioPlayerManager.play(book:)` (or a small `loadChapters(for:)` it calls) using `ChapterManager`, so chapters populate regardless of which UI started playback. Prefer `getCachedChapters` first, then async fetch. Remove/keep the view-level calls as thin pass-throughs. Fixes finding #3 and improves lock-screen chapter behavior on the phone too. **Independently valuable — can merge before any CarPlay work.** |
-| **A4** | Entitlement wiring                | S     | A0, A1  | Once Apple approves: add `com.apple.developer.carplay-audio` to `BookVault.entitlements`, update the provisioning profile. Note the existing comment in `project.yml` — entitlements are a committed file, _not_ XcodeGen-generated; don't let `xcodegen` clobber it.                                                                                                                                                                                                                 |
+| ID        | Task                                                     | Size  | Depends | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| --------- | -------------------------------------------------------- | ----- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A0**    | Request CarPlay audio entitlement                        | S     | —       | Submit the request to Apple for `com.apple.developer.carplay-audio`. **Do this first, today.** It's a business-process bottleneck with unpredictable lead time (weeks), and every other task can proceed without it. Track the request ID.                                                                                                                                                                                                                                                                                                                                                                            |
+| **A1**    | Scene manifest + multi-scene                             | **L** | —       | In `project.yml`: set `UIApplicationSupportsMultipleScenes: true`, add a full `UIApplicationSceneManifest` with `UISceneConfigurations` for both `UIWindowSceneSessionRoleApplication` (SwiftUI default) and `CPTemplateApplicationSceneSessionRoleApplication`. Run `xcodegen generate`. **Highest-risk task** — verify the _phone_ app still launches, backgrounds, and handles push deep links before moving on. Run **`npm run ios:test:ui`** (15 XCUITest flows) as part of this task: launch, navigation and mini-player are exactly the blast radius, and that suite did not exist when this plan was written. |
+| **A2**    | `CarPlaySceneDelegate` skeleton                          | M     | A1      | Implement `CPTemplateApplicationSceneDelegate` (`didConnect`/`didDisconnect` interface controller). Ship a hardcoded one-item `CPListTemplate` to prove the scene connects in the CarPlay Simulator. Merge this as a walking skeleton before building real UI.                                                                                                                                                                                                                                                                                                                                                        |
+| ✅ **A3** | Chapter loading in the player — **done** (July 31, 2026) | M     | —       | **Refactor, not CarPlay code.** Move chapter fetching into `AudioPlayerManager.play(book:)` (or a small `loadChapters(for:)` it calls) using `ChapterManager`, so chapters populate regardless of which UI started playback. Prefer `getCachedChapters` first, then async fetch. Remove/keep the view-level calls as thin pass-throughs. Fixes finding #3 and improves lock-screen chapter behavior on the phone too. **Independently valuable — can merge before any CarPlay work.**                                                                                                                                 |
+| **A4**    | Entitlement wiring                                       | S     | A0, A1  | Once Apple approves: add `com.apple.developer.carplay-audio` to `BookVault.entitlements`, update the provisioning profile. Note the existing comment in `project.yml` — entitlements are a committed file, _not_ XcodeGen-generated; don't let `xcodegen` clobber it.                                                                                                                                                                                                                                                                                                                                                 |
+
+### Implementation notes — A3 (shipped July 31, 2026)
+
+Landed as a standalone PR, independent of any CarPlay code.
+
+`AudioPlayerManager` now owns chapter loading via a private `loadChapters(for:)`
+called from both `play(book:)` and `loadForMiniPlayer(book:savedPosition:)`. The
+view-level fetches in `BookDetailView` and `ContentView` are gone — they were the
+only reason chapters ever populated.
+
+Three things worth recording:
+
+1. **`loadForMiniPlayer` needed it too.** The plan only named `play(book:)`. But
+   `ContentView` restores the last-played book through the mini-player path on
+   cold launch, so without the same call the lock screen had no chapter data
+   until the user opened a detail view.
+
+2. **A new `ChapterFetching` protocol** was added rather than depending on the
+   concrete `ChapterManager`, per the `APIClientProtocol`-not-`URLSession.shared`
+   hardening invariant. It is deliberately narrower than `ChapterManager`'s full
+   surface — the player only reads chapters, so the `@Published` state the views
+   bind to is omitted.
+
+3. **The in-flight guard is real, not defensive.** `loadChapters` checks
+   `currentBook?.id` before applying a fetch result, so switching books mid-fetch
+   cannot land the first book's chapters on the second.
+
+Five tests were added and **verified against the pre-refactor behavior**: with
+the loading removed, four of five fail with the right diagnostics. The fifth
+(`testInFlightChapterFetchIsDiscardedWhenBookChanges`) passed under sabotage —
+it was vacuous, since chapters are trivially empty when nothing loads them — so
+it was strengthened to assert both fetches actually fired.
 
 ### Track B — Templates & Data (parallelizable after A2)
 
@@ -216,11 +294,14 @@ Starting A0 late is the single most likely cause of a slipped ship date.
 5. **Then**: C1/C2 (auth + offline), C3 tests.
 6. **Ship gate**: C4, then C5 once A4 lands.
 
-**On the session-persistence bug** (requirements Q6): C1 is written to handle logout mid-drive
-regardless, so CarPlay isn't strictly blocked. But shipping CarPlay _before_
-[ios-audio-session-persistence-plan.md](../archive/completed-plans/ios-audio-session-persistence-plan.md) is fixed means a
-spurious logout becomes a spurious mid-drive playback stop with no in-car recovery. **Recommend
-fixing that bug before C5/ship**, though development can proceed in parallel.
+**On the session-persistence bug** (requirements Q6): resolved. It shipped in #131 and was verified
+on device, so the "spurious mid-drive logout" scenario this section warned about is no longer live
+and does not gate C5. C1 still swaps the root template on a genuine logout, because that path exists
+regardless of the bug.
+
+**On Swift 6** (see §0): every new file lands under `SWIFT_STRICT_CONCURRENCY: complete`. Design the
+provider/coordinator for isolation up front — decide deliberately what is `@MainActor` and what is
+`Sendable` — rather than annotating after the compiler complains.
 
 ---
 
@@ -262,15 +343,15 @@ throttling, image scaling at real trait collections, or Siri/voice interactions.
 
 ## 6. Risks
 
-| Risk                                                             | Likelihood         | Impact   | Mitigation                                                                                                       |
-| ---------------------------------------------------------------- | ------------------ | -------- | ---------------------------------------------------------------------------------------------------------------- |
-| Apple entitlement denied or slow                                 | Medium             | **High** | Submit A0 immediately; the entire build is dev-testable in the Simulator without it, so only shipping is blocked |
-| `UIApplicationSupportsMultipleScenes: true` breaks the phone app | Medium             | High     | A1 includes an explicit phone regression pass; keep A1+A2 a small revertable PR                                  |
-| Scene manifest misconfiguration → black screen                   | Medium             | Medium   | Walking-skeleton approach (A2) surfaces it immediately                                                           |
-| Chapters empty for CarPlay-initiated playback                    | **Certain, today** | Medium   | A3 refactor; B7 degrades gracefully                                                                              |
-| Cover art missing/slow in lists                                  | Medium             | Low      | B1 placeholder + async fill                                                                                      |
-| XcodeGen clobbering hand-edited `Info.plist`/entitlements        | Medium             | Medium   | All plist changes go in `project.yml`; entitlements stay a committed file (A4)                                   |
-| Session-persistence bug → mid-drive logout                       | Medium             | High     | C1 handles it gracefully; recommend fixing the underlying bug before ship                                        |
+| Risk                                                              | Likelihood         | Impact   | Mitigation                                                                                                       |
+| ----------------------------------------------------------------- | ------------------ | -------- | ---------------------------------------------------------------------------------------------------------------- |
+| Apple entitlement denied or slow                                  | Medium             | **High** | Submit A0 immediately; the entire build is dev-testable in the Simulator without it, so only shipping is blocked |
+| `UIApplicationSupportsMultipleScenes: true` breaks the phone app  | Medium             | High     | A1 includes an explicit phone regression pass; keep A1+A2 a small revertable PR                                  |
+| Scene manifest misconfiguration → black screen                    | Medium             | Medium   | Walking-skeleton approach (A2) surfaces it immediately                                                           |
+| Chapters empty for CarPlay-initiated playback                     | **Certain, today** | Medium   | A3 refactor; B7 degrades gracefully                                                                              |
+| Cover art missing/slow in lists                                   | Medium             | Low      | B1 placeholder + async fill                                                                                      |
+| XcodeGen clobbering hand-edited `Info.plist`/entitlements         | Medium             | Medium   | All plist changes go in `project.yml`; entitlements stay a committed file (A4)                                   |
+| ~~Session-persistence bug → mid-drive logout~~ — **fixed (#131)** | ~~Medium~~ Low     | High     | C1 still handles logout gracefully; the underlying bug is resolved, so this is no longer a ship gate             |
 
 ---
 

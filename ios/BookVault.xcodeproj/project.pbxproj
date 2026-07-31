@@ -209,6 +209,7 @@
 		D56AE7065B0D72EAF53CC001 /* CatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5FD8C5DC287A182B13EC696 /* CatalogView.swift */; };
 		D666B63B6C872873EA9250AA /* GetAdminRestores200ResponseSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23B26FEFED8D4497C895EFB2 /* GetAdminRestores200ResponseSummary.swift */; };
 		D87F6B1D3E53AB9BE6190CDE /* SearchAll200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFD79F799C012860F9795B2 /* SearchAll200Response.swift */; };
+		DAB866C629A15E78D2674F03 /* ChapterFetching.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A9085EFF439CA3498C5D3F /* ChapterFetching.swift */; };
 		DB3C1016C5AC00F490B72DF7 /* AuthManagerRealTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5104F762AF9B3A1CEB8447 /* AuthManagerRealTests.swift */; };
 		DD9D1D03BADB7139C127E7A4 /* DownloadManagerRealTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FA26D0447C892A0DC0D15E3 /* DownloadManagerRealTests.swift */; };
 		DDDD60C4A3A4762A11C25057 /* BookDetailLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D631995ACACE90A072FEDE5 /* BookDetailLoader.swift */; };
@@ -454,6 +455,7 @@
 		BD1DBED70F5BFE6DFC574153 /* CategoryListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryListView.swift; sourceTree = "<group>"; };
 		BE977EF025B734C88E47A1B2 /* BookVault.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BookVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFFEE5014DD48F10276BCAB9 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
+		C0A9085EFF439CA3498C5D3F /* ChapterFetching.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterFetching.swift; sourceTree = "<group>"; };
 		C158AA1980D4F36E08846107 /* RegisterDeviceTokenRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterDeviceTokenRequest.swift; sourceTree = "<group>"; };
 		C390D6703147CD203E1B7A96 /* NetworkMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitorTests.swift; sourceTree = "<group>"; };
 		C5DA846B1EB6F15D57933802 /* NetworkMonitoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitoring.swift; sourceTree = "<group>"; };
@@ -716,6 +718,7 @@
 				BAAA6B3B45D27E31F7E3A21A /* APIClientProtocol.swift */,
 				D254EB2F45F4EC1390469104 /* AudioPlayerManaging.swift */,
 				700B7329A0C11B1E66A5E889 /* AuthManaging.swift */,
+				C0A9085EFF439CA3498C5D3F /* ChapterFetching.swift */,
 				8BE572A604F3BE1377E8E70F /* CoverCaching.swift */,
 				5947295C8B2508B0EB786DA4 /* DownloadManaging.swift */,
 				BC56DCFD2E00A90B6B7E15B0 /* KeychainStoring.swift */,
@@ -1260,6 +1263,7 @@
 				9A806F8C1E29F5FB63701623 /* CategoryListView.swift in Sources */,
 				D3BE9FC12436B1FACE542BD0 /* CategoryWithBookCount.swift in Sources */,
 				AF6E0E42E388EEEEAE2FC088 /* Chapter.swift in Sources */,
+				DAB866C629A15E78D2674F03 /* ChapterFetching.swift in Sources */,
 				E97DEF0A6567ABA3FBDC08C7 /* ChapterListView.swift in Sources */,
 				83FBA4EB518106B855919653 /* ChapterManager.swift in Sources */,
 				E8321028FDBCAF704BDB31DF /* CheckDownloadEligibility200Response.swift in Sources */,

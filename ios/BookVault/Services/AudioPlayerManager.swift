@@ -62,6 +62,10 @@ class AudioPlayerManager: ObservableObject {
     private let storageManager: any StorageManaging
     private let apiClient: any APIClientProtocol
 
+    /// Chapter lookup. The player owns this so chapters populate no matter which
+    /// UI started playback — see `loadChapters(for:)`.
+    private let chapterFetcher: any ChapterFetching
+
     // Concrete reference for download observation (protocols can't expose $publishers)
     private weak var concreteDownloadManager: DownloadManager?
 
@@ -124,7 +128,8 @@ class AudioPlayerManager: ObservableObject {
             downloadManager: DownloadManager.shared,
             storageManager: StorageManager.shared,
             apiClient: APIClient.shared,
-            concreteDownloadManager: DownloadManager.shared
+            concreteDownloadManager: DownloadManager.shared,
+            chapterFetcher: ChapterManager()
         )
         setupAudioSession()
         setupNotifications()
@@ -138,8 +143,10 @@ class AudioPlayerManager: ObservableObject {
         storageManager: any StorageManaging,
         apiClient: any APIClientProtocol = APIClient.shared,
         concreteDownloadManager: DownloadManager? = nil,
+        chapterFetcher: (any ChapterFetching)? = nil,
         skipAudioSetup: Bool = false
     ) {
+        self.chapterFetcher = chapterFetcher ?? ChapterManager(apiClient: apiClient)
         self.progressManager = progressManager
         self.downloadManager = downloadManager
         self.storageManager = storageManager
@@ -401,6 +408,13 @@ class AudioPlayerManager: ObservableObject {
         // Apply default playback rate from settings for new books
         playbackRate = PlaybackSettings.shared.defaultPlaybackRate
 
+        // Chapters are loaded here, by the player, rather than by whichever view
+        // happened to start playback. Previously only BookDetailView and
+        // ContentView fetched them, so any other entry point — the lock screen,
+        // a remote command, CarPlay — produced a book with no chapters and no
+        // chapter controls. Loading them here fixes that for every caller at once.
+        loadChapters(for: book)
+
         // Get token and setup player asynchronously
         Task {
             let bookId = book.id.uuidString
@@ -418,6 +432,36 @@ class AudioPlayerManager: ObservableObject {
         }
     }
 
+    /// Populate `chapters` for a book, preferring the cache.
+    ///
+    /// Cached chapters are applied synchronously so the UI never flashes an
+    /// empty chapter list for a book we have already loaded. A cache miss falls
+    /// back to an async fetch that does not block playback — audio starts
+    /// regardless of whether the book turns out to have chapters at all.
+    private func loadChapters(for book: Book) {
+        let bookId = book.id.uuidString
+
+        let cached = chapterFetcher.getCachedChapters(bookId: bookId)
+        if !cached.isEmpty {
+            updateChapters(cached)
+            return
+        }
+
+        // Clear stale chapters from the previous book before fetching, so the
+        // transport controls do not briefly offer the wrong book's chapters.
+        clearChapters()
+
+        Task { [weak self] in
+            guard let self else { return }
+            let fetched = await chapterFetcher.fetchChapters(bookId: bookId)
+
+            // The user may have moved on while this was in flight; only apply
+            // the result if it still matches what is loaded.
+            guard currentBook?.id == book.id else { return }
+            updateChapters(fetched)
+        }
+    }
+
     /// Load a book for mini-player display without triggering playback or download
     /// Used when restoring the last-played book on app launch
     /// - Parameter book: The book to display in the mini-player
@@ -428,6 +472,12 @@ class AudioPlayerManager: ObservableObject {
         currentTime = savedPosition
         isPlaying = false
         isLoading = false
+
+        // Same reasoning as play(book:): chapters belong to the loaded book, not
+        // to whichever screen loaded it. Doing it here means the lock screen and
+        // remote controls have chapter data on a cold launch, before the user
+        // has opened any detail view.
+        loadChapters(for: book)
 
         DebugLogger.audio("Loaded book for mini-player: \(book.title) at \(savedPosition)s")
     }
