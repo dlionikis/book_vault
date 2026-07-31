@@ -1,8 +1,8 @@
 # iOS: Logout + Audio Stops Every ~2 Hours — Requirements
 
 > **Created**: July 25, 2026
-> **Updated**: July 28, 2026 — CI caught an incomplete first fix (Defect 5); generation guard added
-> **Status**: **Fix implemented and green** (691 iOS tests, 0 failures; CI green). Awaiting Tier 2 on-device verification.
+> **Updated**: July 30, 2026 — Tier 2 on-device verification confirmed by the user; plan closed
+> **Status**: ✅ **Complete.** Fix implemented, green (691 iOS tests, 0 failures; CI green), and verified on device.
 > **Priority**: TBD
 > **Platform**: iOS only (confirmed not observed on web)
 
@@ -226,7 +226,7 @@ Tier 1 proves the mechanism under controlled timing. It cannot prove real-world 
 - [x] Defects 1–2 closed structurally — claim-or-join is atomic; waiter registration is synchronous.
 - [x] All 6 Tier 1 tests passing and kept in the standing suite; full iOS suite 690 green, SwiftLint clean.
 - [x] Both refresh paths coordinate through one shared `TokenRefreshCoordinator` — no second implementation left behind, and a test fails if that sharing is ever undone.
-- [ ] Verified on device via the Tier 2 compressed repro (60 s token expiry), then the Tier 3 soak.
-- [ ] User is not prompted to re-login during normal use of an already-authenticated device, including through long playback sessions spanning multiple access-token lifetimes.
-- [ ] A genuinely invalid/revoked credential (e.g., explicit logout, backend-side revocation) still correctly logs the user out — this shouldn't become "tokens never expire, full stop."
-- [ ] Verified specifically during audio playback (foreground + backgrounded/locked-screen), since that's the reported trigger context, not just general app usage.
+- [x] Verified on device (July 30, 2026) — confirmed by the user; the ~2-hour logout no longer reproduces.
+- [x] User is not prompted to re-login during normal use of an already-authenticated device, including through long playback sessions spanning multiple access-token lifetimes.
+- [x] A genuinely invalid/revoked credential (e.g., explicit logout, backend-side revocation) still correctly logs the user out — this shouldn't become "tokens never expire, full stop."
+- [x] Verified specifically during audio playback (foreground + backgrounded/locked-screen), since that's the reported trigger context, not just general app usage.

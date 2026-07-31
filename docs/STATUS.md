@@ -1,6 +1,6 @@
 # Project Status & Roadmap
 
-**Last Updated**: July 26, 2026 _(Recent Merges table reflects PRs through #129; update when new PRs land)_
+**Last Updated**: July 30, 2026 _(Recent Merges table reflects PRs through #140; update when new PRs land)_
 
 ---
 
@@ -21,16 +21,20 @@
 
 ## Recent Merges
 
-| PR       | Description                                                              | Date   |
-| -------- | ------------------------------------------------------------------------ | ------ |
-| #123–129 | Series View Toggle: Books/Series toggle on Catalog + Library (web + iOS) | Jul 26 |
-| #119–122 | Admin infra health checks, Restores tab, ECS running tasks               | Jul 25 |
-| #87      | iOS Phase 6: Playwright web smoke (E2E)                                  | Jul 17 |
-| #86      | iOS Phase 5: AuthenticatedResourceLoader + tests                         | Jul 17 |
-| #83–85   | iOS test coverage: SystemKeychain, `/api/audio`, CoverCacheManager       | Jul 16 |
-| #79      | Pre-restore hardening P0+P1 (PRs #76–#78 landed)                         | Jul 14 |
-| #75      | Security P0: auth on images route, admin-gate chapters                   | Jul 12 |
-| #72      | Admin dashboard with AWS monitoring                                      | Jul 8  |
+| PR       | Description                                                                   | Date   |
+| -------- | ----------------------------------------------------------------------------- | ------ |
+| #140     | iOS mini player moved to a full-width bottom bar                              | Jul 30 |
+| #137–139 | iOS XCUITest target, login + critical-path smoke flows, hit-test fix          | Jul 30 |
+| #133–136 | iOS modernization: singleton observation, Sendable, NavigationStack, #Preview | Jul 30 |
+| #131–132 | Shared token-refresh coordinator (~2h logout fix); offline login mode         | Jul 28 |
+| #123–130 | Series View Toggle: Books/Series toggle on Catalog + Library (web + iOS)      | Jul 26 |
+| #119–122 | Admin infra health checks, Restores tab, ECS running tasks                    | Jul 25 |
+| #87      | iOS Phase 6: Playwright web smoke (E2E)                                       | Jul 17 |
+| #86      | iOS Phase 5: AuthenticatedResourceLoader + tests                              | Jul 17 |
+| #83–85   | iOS test coverage: SystemKeychain, `/api/audio`, CoverCacheManager            | Jul 16 |
+| #79      | Pre-restore hardening P0+P1 (PRs #76–#78 landed)                              | Jul 14 |
+| #75      | Security P0: auth on images route, admin-gate chapters                        | Jul 12 |
+| #72      | Admin dashboard with AWS monitoring                                           | Jul 8  |
 
 ---
 
@@ -41,6 +45,8 @@
 - [x] **Pre-restore hardening (P0+P1)** - Security fixes + test infrastructure ([archive/completed-plans/pre-restore-hardening-plan.md](archive/completed-plans/pre-restore-hardening-plan.md)) — ✅ complete (PRs #75–#79)
 - [x] **S3 archive restore workflow** - Restore pipeline + push notifications ([archive/completed-plans/s3-archive-restore-workflow-v2.md](archive/completed-plans/s3-archive-restore-workflow-v2.md)) — ✅ **complete (Phases 0–8, July 2026)**: backend + web + iOS, SNS→APNs push (validated on-device), series-level restore, and the admin Health/Restores dashboard tabs (PRs #88, #98–#121)
 - [x] **Series view toggle (web + iOS)** - Books/Series toggle on Catalog and Library, with series tiles, derived covers, and "N of M in your library" ownership ([archive/completed-plans/series-view-toggle-implementation.md](archive/completed-plans/series-view-toggle-implementation.md)) — ✅ **complete (all phases, July 26, 2026)**, PRs #123–#129. iOS `SeriesListView` retired in favor of the Catalog toggle.
+- [x] **iOS ~2-hour logout + audio stop** - Shared token-refresh coordinator across the API and AVPlayer streaming paths ([plans/ios-audio-session-persistence-plan.md](plans/ios-audio-session-persistence-plan.md)) — ✅ **complete (July 30, 2026)**, PR #131, verified on device
+- [x] **Mini player → bottom bar (iOS)** - Full-width persistent bar above the tab bar, with XCUITest occlusion coverage ([plans/ios-mini-player-bottom-bar-plan.md](plans/ios-mini-player-bottom-bar-plan.md)) — ✅ **complete (July 30, 2026)**, PR #140
 - [ ] **Remove volume slider (iOS)** - Remove the volume slider from the iOS audio playback view
 - [ ] **Duration remaining (iOS)** - Add remaining time display to the audio playback view
 - [ ] **Dismiss mini-player** - Add ability to close the recent playback mini-player
