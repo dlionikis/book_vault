@@ -17,17 +17,17 @@ final class BiometricAuthManagerTests: XCTestCase {
     private let testBiometricEnabledKey = "biometricEnabled"
     private let testBiometricUsernameKey = "biometricUsername"
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         // Clear any existing biometric state before each test
         UserDefaults.standard.removeObject(forKey: testBiometricEnabledKey)
         UserDefaults.standard.removeObject(forKey: testBiometricUsernameKey)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         // Clean up after tests
         BiometricAuthManager.shared.disableBiometric()
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Biometry Type Detection Tests
