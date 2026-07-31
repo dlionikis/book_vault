@@ -69,18 +69,18 @@ final class MockResourceLoadingRequest: ResourceLoadingRequesting, @unchecked Se
 final class AuthenticatedResourceLoaderTests: XCTestCase, @unchecked Sendable {
     private var mockSession: URLSession!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         MockURLProtocol.reset()
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [MockURLProtocol.self]
         mockSession = URLSession(configuration: config)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         MockURLProtocol.reset()
         mockSession = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Helpers

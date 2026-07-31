@@ -17,18 +17,18 @@ final class ChapterManagerTests: XCTestCase, @unchecked Sendable {
     var sut: ChapterManager!
     var mockAPIClient: MockAPIClient!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         mockAPIClient = MockAPIClient()
         sut = ChapterManager(apiClient: mockAPIClient)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         sut.clearCache()
         sut = nil
         mockAPIClient.reset()
         mockAPIClient = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Fetch Chapters Tests

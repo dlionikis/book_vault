@@ -88,8 +88,8 @@ final class APIClientRealTests: XCTestCase, @unchecked Sendable {
     var sut: APIClient!
     var mockSession: URLSession!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         MockURLProtocol.reset()
 
         // Create URLSession with mock protocol
@@ -105,11 +105,11 @@ final class APIClientRealTests: XCTestCase, @unchecked Sendable {
         sut.forceLogoutHandler = { @Sendable in }
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         MockURLProtocol.reset()
         sut = nil
         mockSession = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Helper Methods

@@ -126,8 +126,8 @@ final class TokenRefreshConcurrencyTests: XCTestCase, @unchecked Sendable {
     /// race window reliably observable, low enough to stay fast.
     private let concurrentRequestCount = 8
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         MockURLProtocol.reset()
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [MockURLProtocol.self]
@@ -137,11 +137,11 @@ final class TokenRefreshConcurrencyTests: XCTestCase, @unchecked Sendable {
         sut.accessToken = "expired-token"
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         MockURLProtocol.reset()
         sut = nil
         mockSession = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Helpers
@@ -415,18 +415,18 @@ final class TokenRefreshConcurrencyTests: XCTestCase, @unchecked Sendable {
 final class ResourceLoaderRefreshConcurrencyTests: XCTestCase {
     private var mockSession: URLSession!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         MockURLProtocol.reset()
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [MockURLProtocol.self]
         mockSession = URLSession(configuration: config)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         MockURLProtocol.reset()
         mockSession = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     /// Two concurrent 401s in the streaming path, where the refresh takes far

@@ -30,8 +30,8 @@ final class CoverCacheManagerRealTests: XCTestCase, @unchecked Sendable {
     private let apiBaseURL = URL(string: "http://localhost:3000")!
     private let token = "test-bearer-token"
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         MockURLProtocol.reset()
 
         let config = URLSessionConfiguration.ephemeral
@@ -42,12 +42,12 @@ final class CoverCacheManagerRealTests: XCTestCase, @unchecked Sendable {
             .appendingPathComponent("cover-cache-tests-\(UUID().uuidString)", isDirectory: true)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         MockURLProtocol.reset()
         try? FileManager.default.removeItem(at: tempDir)
         mockSession = nil
         tempDir = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Helpers
