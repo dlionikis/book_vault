@@ -318,6 +318,28 @@ class AudioPlayerManager: ObservableObject {
         DebugLogger.audio("Remote command center configured")
     }
 
+    /// Build a `MPMediaItemArtwork` whose request handler is safe to call from
+    /// MediaPlayer's own queue.
+    ///
+    /// This is `nonisolated static` on purpose. Written inline inside a
+    /// `@MainActor` method, the handler closure inherits main-actor isolation —
+    /// but MediaPlayer invokes it on a private dispatch queue while building the
+    /// Now Playing dictionary. Under the Swift 6 language mode that isolation
+    /// mismatch is no longer tolerated: it traps in
+    /// `swift_task_checkIsolatedSwift`, crashing the app with EXC_BREAKPOINT
+    /// somewhere inside `-[MPNowPlayingInfoCenter _onQueue_pushNowPlayingInfoAndRetry:]`.
+    ///
+    /// The handler does no work beyond returning an image that was already
+    /// resolved on the main actor before this call, so `@Sendable` is honest
+    /// here rather than a silencer. `UIImage` is immutable once created.
+    ///
+    /// Found by five XCUITest flows that started failing after the Swift 6
+    /// adoption; the unit suite could not see it, because nothing there drives
+    /// MediaPlayer.
+    nonisolated private static func makeArtwork(from image: UIImage) -> MPMediaItemArtwork {
+        MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
+    }
+
     private func updateNowPlayingInfo() {
         guard let book = currentBook else {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
@@ -357,10 +379,7 @@ class AudioPlayerManager: ObservableObject {
         // CoverCacheManager is populated by LibraryManager on library fetch
         // and by CachedCoverImage views when displaying covers
         if let coverImage = CoverCacheManager.shared.getCover(for: book.id) {
-            let artwork = MPMediaItemArtwork(boundsSize: coverImage.size) { _ in
-                coverImage
-            }
-            nowPlayingInfo[MPMediaItemPropertyArtwork] = artwork
+            nowPlayingInfo[MPMediaItemPropertyArtwork] = Self.makeArtwork(from: coverImage)
         } else if let coverUrlString = book.coverUrl, let coverUrl = URL(string: coverUrlString) {
             // Cache miss - trigger async cache population, then update
             Task { @MainActor in
@@ -368,10 +387,7 @@ class AudioPlayerManager: ObservableObject {
                     try await CoverCacheManager.shared.cacheCover(for: book.id, from: coverUrl)
                     if let cachedImage = CoverCacheManager.shared.getCover(for: book.id) {
                         var updatedInfo = nowPlayingInfo
-                        let artwork = MPMediaItemArtwork(boundsSize: cachedImage.size) { _ in
-                            cachedImage
-                        }
-                        updatedInfo[MPMediaItemPropertyArtwork] = artwork
+                        updatedInfo[MPMediaItemPropertyArtwork] = Self.makeArtwork(from: cachedImage)
                         MPNowPlayingInfoCenter.default().nowPlayingInfo = updatedInfo
                         DebugLogger.audio("Updated Now Playing artwork after cache")
                     }
