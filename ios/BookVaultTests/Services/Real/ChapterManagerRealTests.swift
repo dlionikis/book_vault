@@ -24,9 +24,11 @@ final class ChapterManagerRealTests: XCTestCase {
 
     // MARK: - Setup & Teardown
 
+    // `@MainActor` because the type under test has a main-actor isolated
+    // init. Legal on the async form of setUp, unlike the synchronous one.
     @MainActor
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         mockAPIClient = MockAPIClient()
         chapterManager = ChapterManager(apiClient: mockAPIClient)
 
@@ -59,13 +61,12 @@ final class ChapterManagerRealTests: XCTestCase {
         ]
     }
 
-    @MainActor
-    override func tearDown() {
+    override func tearDown() async throws {
         chapterManager = nil
         mockAPIClient = nil
         testBookId = nil
         testChapters = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Fetch Chapters Tests

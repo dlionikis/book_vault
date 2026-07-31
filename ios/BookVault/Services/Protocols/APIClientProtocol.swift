@@ -8,7 +8,7 @@
 import Foundation
 
 /// Protocol for API client to enable testing with mocks
-protocol APIClientProtocol {
+protocol APIClientProtocol: Sendable {
     var accessToken: String? { get set }
     var baseURL: URL { get }
 

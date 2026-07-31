@@ -27,9 +27,11 @@ final class LibraryManagerRealTests: XCTestCase {
 
     // MARK: - Setup & Teardown
 
+    // `@MainActor` because the type under test has a main-actor isolated
+    // init. Legal on the async form of setUp, unlike the synchronous one.
     @MainActor
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         mockAPIClient = MockAPIClient()
         mockLibraryCacheManager = MockLibraryCacheManager()
         mockCoverCacheManager = MockCoverCacheManager()
@@ -52,8 +54,7 @@ final class LibraryManagerRealTests: XCTestCase {
         ]
     }
 
-    @MainActor
-    override func tearDown() {
+    override func tearDown() async throws {
         libraryManager = nil
         mockAPIClient = nil
         mockLibraryCacheManager = nil
@@ -61,7 +62,7 @@ final class LibraryManagerRealTests: XCTestCase {
         mockNetworkMonitor = nil
         mockStorageManager = nil
         testBooks = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Helper Methods

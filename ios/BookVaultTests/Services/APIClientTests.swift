@@ -14,7 +14,7 @@
 import XCTest
 @testable import BookVault
 
-final class APIClientTests: XCTestCase {
+final class APIClientTests: XCTestCase, @unchecked Sendable {
     // MARK: - URL Construction Tests
 
     func testBaseURLIsConfiguredCorrectly() {
@@ -103,9 +103,9 @@ final class APIClientTests: XCTestCase {
             session: URLSession.shared
         )
 
-        var forceLogoutCount = 0
+        let forceLogoutCount = Locked(0)
         client.forceLogoutHandler = {
-            forceLogoutCount += 1
+            forceLogoutCount.withLock { $0 += 1 }
         }
 
         // When: Access token is nil (already logged out)
@@ -114,7 +114,7 @@ final class APIClientTests: XCTestCase {
         // Then: The guard `if accessToken != nil` in the code should prevent
         // forceLogoutHandler from being called. We verify the state is correct.
         XCTAssertNil(client.accessToken)
-        XCTAssertEqual(forceLogoutCount, 0, "Force logout should not have been called yet")
+        XCTAssertEqual(forceLogoutCount.value, 0, "Force logout should not have been called yet")
 
         // When: Token is set
         client.accessToken = "test-token"

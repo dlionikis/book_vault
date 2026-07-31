@@ -12,11 +12,28 @@ import XCTest
 // MARK: - MockURLProtocol
 
 final class MockURLProtocol: URLProtocol {
-    // Handler to provide mock responses
-    static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+    // Handler to provide mock responses.
+    //
+    // Lock-backed: URLProtocol callbacks run on URLSession's queues, so these
+    // really are read from a different thread than the test body that writes
+    // them. Under the Swift 6 language mode a plain `static var` is rejected,
+    // and correctly so. The computed-property wrappers keep every existing call
+    // site (`MockURLProtocol.requestHandler = { ... }`) working unchanged.
+    static var requestHandler: (@Sendable (URLRequest) throws -> (HTTPURLResponse, Data))? {
+        get { requestHandlerStorage.value }
+        set { requestHandlerStorage.value = newValue }
+    }
+
+    private static let requestHandlerStorage =
+        Locked<(@Sendable (URLRequest) throws -> (HTTPURLResponse, Data))?>(nil)
 
     // Track all requests made
-    static var capturedRequests: [URLRequest] = []
+    static var capturedRequests: [URLRequest] {
+        get { capturedRequestsStorage.value }
+        set { capturedRequestsStorage.value = newValue }
+    }
+
+    fileprivate static let capturedRequestsStorage = Locked<[URLRequest]>([])
 
     override static func canInit(with _: URLRequest) -> Bool {
         true
@@ -27,7 +44,10 @@ final class MockURLProtocol: URLProtocol {
     }
 
     override func startLoading() {
-        MockURLProtocol.capturedRequests.append(request)
+        // withLock, not `capturedRequests.append(...)`: the latter takes the
+        // lock once to read and again to write, letting a concurrent request
+        // slip in between and get lost.
+        MockURLProtocol.capturedRequestsStorage.withLock { $0.append(request) }
 
         guard let handler = MockURLProtocol.requestHandler else {
             let error = NSError(
@@ -61,7 +81,10 @@ final class MockURLProtocol: URLProtocol {
 
 // MARK: - APIClientRealTests
 
-final class APIClientRealTests: XCTestCase {
+/// `@unchecked Sendable` so test bodies can capture `self` in the `@Sendable`
+/// URLProtocol handlers. XCTest runs one instance per test method, never
+/// concurrently, so there is no cross-test state to race on.
+final class APIClientRealTests: XCTestCase, @unchecked Sendable {
     var sut: APIClient!
     var mockSession: URLSession!
 
@@ -91,7 +114,24 @@ final class APIClientRealTests: XCTestCase {
 
     // MARK: - Helper Methods
 
-    func makeJSONResponse(statusCode: Int, json: [String: Any]) -> (HTTPURLResponse, Data) {
+    // `nonisolated`: pure builders, called from the @Sendable URLProtocol handlers.
+    /// Pre-serialize a JSON dictionary so it can cross into a `@Sendable`
+    /// URLProtocol handler. `[String: Any]` is not `Sendable`; `Data` is.
+    nonisolated func jsonData(_ json: [String: Any]) -> Data {
+        try! JSONSerialization.data(withJSONObject: json)
+    }
+
+    nonisolated func makeResponse(statusCode: Int, data: Data) -> (HTTPURLResponse, Data) {
+        let response = HTTPURLResponse(
+            url: URL(string: "http://localhost:3000")!,
+            statusCode: statusCode,
+            httpVersion: nil,
+            headerFields: ["Content-Type": "application/json"]
+        )!
+        return (response, data)
+    }
+
+    nonisolated func makeJSONResponse(statusCode: Int, json: [String: Any]) -> (HTTPURLResponse, Data) {
         let response = HTTPURLResponse(
             url: URL(string: "http://localhost:3000")!,
             statusCode: statusCode,
@@ -102,7 +142,7 @@ final class APIClientRealTests: XCTestCase {
         return (response, data)
     }
 
-    func makeJSONResponse(statusCode: Int, object: some Encodable) -> (HTTPURLResponse, Data) {
+    nonisolated func makeJSONResponse(statusCode: Int, object: some Encodable) -> (HTTPURLResponse, Data) {
         let response = HTTPURLResponse(
             url: URL(string: "http://localhost:3000")!,
             statusCode: statusCode,
@@ -140,11 +180,12 @@ final class APIClientRealTests: XCTestCase {
             "refreshToken": refreshToken.uuidString,
             "expiresIn": 3600
         ]
+        let responseData = jsonData(responseJSON)
 
         MockURLProtocol.requestHandler = { request in
             XCTAssertEqual(request.url?.path, "/api/auth/mobile/login")
             XCTAssertEqual(request.httpMethod, "POST")
-            return self.makeJSONResponse(statusCode: 200, json: responseJSON)
+            return self.makeResponse(statusCode: 200, data: responseData)
         }
 
         // When
@@ -169,13 +210,14 @@ final class APIClientRealTests: XCTestCase {
             "refreshToken": refreshToken.uuidString,
             "expiresIn": 3600
         ]
+        let responseData = jsonData(responseJSON)
 
-        var capturedBody: [String: String]?
+        let capturedBody = Locked<[String: String]?>(nil)
 
         MockURLProtocol.requestHandler = { request in
             // httpBody can be nil in URLProtocol - try httpBodyStream instead
             if let bodyData = request.httpBody {
-                capturedBody = try? JSONSerialization.jsonObject(with: bodyData) as? [String: String]
+                capturedBody.value = try? JSONSerialization.jsonObject(with: bodyData) as? [String: String]
             } else if let stream = request.httpBodyStream {
                 stream.open()
                 var data = Data()
@@ -189,17 +231,17 @@ final class APIClientRealTests: XCTestCase {
                     }
                 }
                 stream.close()
-                capturedBody = try? JSONSerialization.jsonObject(with: data) as? [String: String]
+                capturedBody.value = try? JSONSerialization.jsonObject(with: data) as? [String: String]
             }
-            return self.makeJSONResponse(statusCode: 200, json: responseJSON)
+            return self.makeResponse(statusCode: 200, data: responseData)
         }
 
         // When
         _ = try await sut.login(username: "testuser2", password: "secret123")
 
         // Then
-        XCTAssertEqual(capturedBody?["username"], "testuser2")
-        XCTAssertEqual(capturedBody?["password"], "secret123")
+        XCTAssertEqual(capturedBody.value?["username"], "testuser2")
+        XCTAssertEqual(capturedBody.value?["password"], "secret123")
     }
 
     func testLoginUnauthorizedError() async {
@@ -235,11 +277,12 @@ final class APIClientRealTests: XCTestCase {
             "refreshToken": newRefreshToken.uuidString,
             "expiresIn": 3600
         ]
+        let responseData = jsonData(responseJSON)
 
         MockURLProtocol.requestHandler = { request in
             XCTAssertEqual(request.url?.path, "/api/auth/mobile/refresh")
             XCTAssertEqual(request.httpMethod, "POST")
-            return self.makeJSONResponse(statusCode: 200, json: responseJSON)
+            return self.makeResponse(statusCode: 200, data: responseData)
         }
 
         // When
@@ -277,13 +320,14 @@ final class APIClientRealTests: XCTestCase {
                 "pages": 1
             ]
         ]
+        let responseData = jsonData(responseJSON)
 
         MockURLProtocol.requestHandler = { request in
             XCTAssertTrue(request.url?.path.contains("/api/books") ?? false)
             XCTAssertEqual(request.httpMethod, "GET")
             // Verify auth header
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer valid-token")
-            return self.makeJSONResponse(statusCode: 200, json: responseJSON)
+            return self.makeResponse(statusCode: 200, data: responseData)
         }
 
         // When
@@ -302,20 +346,21 @@ final class APIClientRealTests: XCTestCase {
             "books": [],
             "pagination": ["page": 2, "limit": 10, "total": 50, "pages": 5]
         ]
+        let responseData = jsonData(responseJSON)
 
-        var capturedURL: URL?
+        let capturedURL = Locked<URL?>(nil)
 
         MockURLProtocol.requestHandler = { request in
-            capturedURL = request.url
-            return self.makeJSONResponse(statusCode: 200, json: responseJSON)
+            capturedURL.value = request.url
+            return self.makeResponse(statusCode: 200, data: responseData)
         }
 
         // When
         _ = try await sut.fetchBooks(page: 2, limit: 10, sortBy: "title")
 
         // Then
-        XCTAssertNotNil(capturedURL)
-        let components = URLComponents(url: capturedURL!, resolvingAgainstBaseURL: false)
+        XCTAssertNotNil(capturedURL.value)
+        let components = URLComponents(url: capturedURL.value!, resolvingAgainstBaseURL: false)
         let queryItems = components?.queryItems
 
         XCTAssertTrue(queryItems?.contains(where: { $0.name == "page" && $0.value == "2" }) ?? false)
@@ -340,10 +385,11 @@ final class APIClientRealTests: XCTestCase {
             "runtimeMinutes": 200,
             "releaseDate": "2024-01-01"
         ]
+        let responseData = jsonData(responseJSON)
 
         MockURLProtocol.requestHandler = { request in
             XCTAssertTrue(request.url?.path.contains(bookId.uuidString) ?? false)
-            return self.makeJSONResponse(statusCode: 200, json: responseJSON)
+            return self.makeResponse(statusCode: 200, data: responseData)
         }
 
         // When
@@ -391,11 +437,12 @@ final class APIClientRealTests: XCTestCase {
             "lastPlayed": lastPlayed,
             "updated": true
         ]
+        let responseData = jsonData(responseJSON)
 
         MockURLProtocol.requestHandler = { request in
             XCTAssertEqual(request.url?.path, "/api/progress")
             XCTAssertEqual(request.httpMethod, "POST")
-            return self.makeJSONResponse(statusCode: 200, json: responseJSON)
+            return self.makeResponse(statusCode: 200, data: responseData)
         }
 
         // When
@@ -458,19 +505,20 @@ final class APIClientRealTests: XCTestCase {
             "books": [],
             "pagination": ["page": 1, "limit": 20, "total": 0, "pages": 0]
         ]
+        let responseData = jsonData(responseJSON)
 
-        var capturedAuthHeader: String?
+        let capturedAuthHeader = Locked<String?>(nil)
 
         MockURLProtocol.requestHandler = { request in
-            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
-            return self.makeJSONResponse(statusCode: 200, json: responseJSON)
+            capturedAuthHeader.value = request.value(forHTTPHeaderField: "Authorization")
+            return self.makeResponse(statusCode: 200, data: responseData)
         }
 
         // When
         _ = try await sut.fetchBooks(page: 1, limit: 20, sortBy: nil)
 
         // Then
-        XCTAssertEqual(capturedAuthHeader, "Bearer my-auth-token")
+        XCTAssertEqual(capturedAuthHeader.value, "Bearer my-auth-token")
     }
 
     // MARK: - Content Type Tests
@@ -486,19 +534,20 @@ final class APIClientRealTests: XCTestCase {
             "refreshToken": refreshToken.uuidString,
             "expiresIn": 3600
         ]
+        let responseData = jsonData(responseJSON)
 
-        var capturedContentType: String?
+        let capturedContentType = Locked<String?>(nil)
 
         MockURLProtocol.requestHandler = { request in
-            capturedContentType = request.value(forHTTPHeaderField: "Content-Type")
-            return self.makeJSONResponse(statusCode: 200, json: responseJSON)
+            capturedContentType.value = request.value(forHTTPHeaderField: "Content-Type")
+            return self.makeResponse(statusCode: 200, data: responseData)
         }
 
         // When
         _ = try await sut.login(username: "testuser", password: "password")
 
         // Then
-        XCTAssertEqual(capturedContentType, "application/json")
+        XCTAssertEqual(capturedContentType.value, "application/json")
     }
 
     // Ported from the former APIClientTests placeholder stub (Phase 1 cleanup):
@@ -510,18 +559,19 @@ final class APIClientRealTests: XCTestCase {
             "books": [],
             "pagination": ["page": 1, "limit": 20, "total": 0, "pages": 0]
         ]
+        let responseData = jsonData(responseJSON)
 
-        var capturedAuthHeader: String? = "sentinel"
+        let capturedAuthHeader = Locked<String?>("sentinel")
         MockURLProtocol.requestHandler = { request in
-            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
-            return self.makeJSONResponse(statusCode: 200, json: responseJSON)
+            capturedAuthHeader.value = request.value(forHTTPHeaderField: "Authorization")
+            return self.makeResponse(statusCode: 200, data: responseData)
         }
 
         // When
         _ = try await sut.fetchBooks(page: 1, limit: 20, sortBy: nil)
 
         // Then
-        XCTAssertNil(capturedAuthHeader, "No Authorization header should be sent without a token")
+        XCTAssertNil(capturedAuthHeader.value, "No Authorization header should be sent without a token")
     }
 
     // Ported from the former APIClientTests placeholder stub (Phase 1 cleanup):
@@ -581,12 +631,12 @@ final class APIClientRealTests: XCTestCase {
         sut.accessToken = "download-token"
         let bookId = UUID()
 
-        var capturedAuthHeader: String?
+        let capturedAuthHeader = Locked<String?>(nil)
 
         MockURLProtocol.requestHandler = { request in
             XCTAssertEqual(request.url?.path, "/api/downloads/\(bookId.uuidString)/check")
             XCTAssertEqual(request.httpMethod, "GET")
-            capturedAuthHeader = request.value(forHTTPHeaderField: "Authorization")
+            capturedAuthHeader.value = request.value(forHTTPHeaderField: "Authorization")
             return self.makeJSONResponse(statusCode: 200, json: ["eligible": true])
         }
 
@@ -595,7 +645,7 @@ final class APIClientRealTests: XCTestCase {
 
         // Then
         XCTAssertTrue(response.eligible)
-        XCTAssertEqual(capturedAuthHeader, "Bearer download-token")
+        XCTAssertEqual(capturedAuthHeader.value, "Bearer download-token")
     }
 
     func testGenerateDownloadUrlSendsDeviceIdAndDecodesResponse() async throws {
@@ -607,15 +657,16 @@ final class APIClientRealTests: XCTestCase {
             "expiresAt": "2026-01-01T00:00:00Z",
             "fileSize": 12_345_678
         ]
+        let responseData = jsonData(responseJSON)
 
-        var capturedBody: [String: String]?
+        let capturedBody = Locked<[String: String]?>(nil)
 
         MockURLProtocol.requestHandler = { request in
             XCTAssertEqual(request.url?.path, "/api/downloads/\(bookId.uuidString)")
             XCTAssertEqual(request.httpMethod, "POST")
             // httpBody can be nil in URLProtocol - try httpBodyStream instead
             if let bodyData = request.httpBody {
-                capturedBody = try? JSONSerialization.jsonObject(with: bodyData) as? [String: String]
+                capturedBody.value = try? JSONSerialization.jsonObject(with: bodyData) as? [String: String]
             } else if let stream = request.httpBodyStream {
                 stream.open()
                 var data = Data()
@@ -629,16 +680,16 @@ final class APIClientRealTests: XCTestCase {
                     }
                 }
                 stream.close()
-                capturedBody = try? JSONSerialization.jsonObject(with: data) as? [String: String]
+                capturedBody.value = try? JSONSerialization.jsonObject(with: data) as? [String: String]
             }
-            return self.makeJSONResponse(statusCode: 200, json: responseJSON)
+            return self.makeResponse(statusCode: 200, data: responseData)
         }
 
         // When
         let result = try await sut.generateDownloadUrl(bookId: bookId, deviceId: "test-device-id")
 
         // Then — a 200 decodes to .ready with the presigned URL
-        XCTAssertEqual(capturedBody?["deviceId"], "test-device-id")
+        XCTAssertEqual(capturedBody.value?["deviceId"], "test-device-id")
         guard case let .ready(response) = result else {
             return XCTFail("Expected .ready, got \(result)")
         }

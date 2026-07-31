@@ -28,8 +28,8 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
     ///   independently of the JSON API path, which is the bug this shares state
     ///   to avoid.
     init(
-        tokenProvider: @escaping () -> String?,
-        tokenRefreshHandler: @escaping () async -> Bool,
+        tokenProvider: @escaping @Sendable () -> String?,
+        tokenRefreshHandler: @escaping @Sendable () async -> Bool,
         refreshCoordinator: TokenRefreshCoordinator
     ) {
         let configuration = URLSessionConfiguration.default
@@ -62,6 +62,13 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
 }
 
 // MARK: - AVAssetResourceLoadingRequest + ResourceLoadingRequesting
+
+// `@retroactive` because this conforms an Apple type to our protocol; `@unchecked`
+// because `AVAssetResourceLoadingRequest` predates `Sendable` and carries no
+// annotation. See `ResourceLoadingRequesting` for why the guarantee holds:
+// AVFoundation drives one request from one serial loader queue, and this code
+// never fans a request out across tasks.
+extension AVAssetResourceLoadingRequest: @retroactive @unchecked Sendable {}
 
 /// Adapts the concrete AVFoundation loading request to the testable protocol.
 /// Declarative glue only — the behavior it forwards into is covered by

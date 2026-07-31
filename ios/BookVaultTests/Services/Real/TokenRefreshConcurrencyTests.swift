@@ -79,9 +79,46 @@ private final class AtomicLog: @unchecked Sendable {
     }
 }
 
+/// A rotating refresh token, mirroring server-side rotation.
+///
+/// Exists because the Swift 6 language mode forbids `NSLock.lock()` in an async
+/// context and rejects mutating captured `var`s from concurrent code. The
+/// semantics are deliberately identical to the `NSLock` + `var` code this
+/// replaced: **one** atomic read-then-rotate, so two concurrent callers can
+/// never observe the same token. That indivisibility is the whole point of the
+/// test — a version that read and wrote under separate lock acquisitions would
+/// still compile and would silently stop testing anything.
+private final class RotatingToken: @unchecked Sendable {
+    private var generation = 1
+    private var current: String
+    private let lock = NSLock()
+
+    init(_ initial: String) { current = initial }
+
+    /// Atomically return the token a caller would present, then rotate it.
+    func presentAndRotate() -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        let presented = current
+        generation += 1
+        current = "refresh-token-\(generation)"
+        return presented
+    }
+
+    var value: String {
+        lock.lock()
+        defer { lock.unlock() }
+        return current
+    }
+}
+
 // MARK: - TokenRefreshConcurrencyTests
 
-final class TokenRefreshConcurrencyTests: XCTestCase {
+/// `@unchecked Sendable` so test bodies can capture `self` inside the
+/// `@Sendable` closures these tests hand to URLProtocol / refresh handlers.
+/// XCTest drives one instance per test method and never concurrently, so
+/// there is no cross-test sharing to race on.
+final class TokenRefreshConcurrencyTests: XCTestCase, @unchecked Sendable {
     private var mockSession: URLSession!
     private var sut: APIClient!
 
@@ -245,19 +282,14 @@ final class TokenRefreshConcurrencyTests: XCTestCase {
     /// that actually causes the logout.
     func testRefreshTokenIsNeverConsumedTwice() async {
         let submitted = AtomicLog()
-        let refreshLock = NSLock()
-        var currentRefreshToken = "refresh-token-1"
-        var generation = 1
+        let refreshToken = RotatingToken("refresh-token-1")
 
         installExpiringTokenHandler(validToken: "fresh-token")
 
         sut.tokenRefreshHandler = { [self] in
-            // Read-then-rotate, exactly as the server-side rotation behaves.
-            refreshLock.lock()
-            let presented = currentRefreshToken
-            generation += 1
-            currentRefreshToken = "refresh-token-\(generation)"
-            refreshLock.unlock()
+            // Read-then-rotate, exactly as the server-side rotation behaves,
+            // and atomically — see RotatingToken.
+            let presented = refreshToken.presentAndRotate()
 
             submitted.append(presented)
             try? await Task.sleep(nanoseconds: 50_000_000)
@@ -405,8 +437,10 @@ final class ResourceLoaderRefreshConcurrencyTests: XCTestCase {
     /// 401, and playback was torn down. The retry must now carry the refreshed
     /// token, which requires waiting on refresh completion rather than a timer.
     func testConcurrentStreamRequestRetriesWithRefreshedTokenNotStaleToken() async {
-        let tokenLock = NSLock()
-        var currentToken = "stale-token"
+        // `Locked` rather than NSLock + a captured `var`: the Swift 6 language
+        // mode forbids `lock()` in async contexts and rejects mutating captured
+        // vars from concurrent code. Same semantics, same timing.
+        let currentToken = Locked("stale-token")
 
         let retryTokens = AtomicLog()
 
@@ -432,16 +466,10 @@ final class ResourceLoaderRefreshConcurrencyTests: XCTestCase {
         // woke early and retried with the stale one. It must now wait for the
         // refresh to actually complete, however long that takes.
         let loader = AuthenticatedResourceLoader(
-            tokenProvider: {
-                tokenLock.lock()
-                defer { tokenLock.unlock() }
-                return currentToken
-            },
+            tokenProvider: { currentToken.value },
             tokenRefreshHandler: {
                 try? await Task.sleep(nanoseconds: 300_000_000)
-                tokenLock.lock()
-                currentToken = "fresh-token"
-                tokenLock.unlock()
+                currentToken.value = "fresh-token"
                 return true
             },
             session: mockSession
@@ -483,8 +511,7 @@ final class ResourceLoaderRefreshConcurrencyTests: XCTestCase {
     /// consumed twice, the second is rejected, and the user is logged out.
     func testStreamingAndAPIPathsShareOneRefresh() async {
         let refreshCount = AtomicCounter()
-        let tokenLock = NSLock()
-        var currentToken = "stale-token"
+        let currentToken = Locked("stale-token")
 
         MockURLProtocol.requestHandler = { request in
             let auth = request.value(forHTTPHeaderField: "Authorization") ?? ""
@@ -520,9 +547,7 @@ final class ResourceLoaderRefreshConcurrencyTests: XCTestCase {
         let refresh: @Sendable () async -> Bool = {
             _ = refreshCount.increment()
             try? await Task.sleep(nanoseconds: 200_000_000)
-            tokenLock.lock()
-            currentToken = "fresh-token"
-            tokenLock.unlock()
+            currentToken.value = "fresh-token"
             return true
         }
 
@@ -535,18 +560,12 @@ final class ResourceLoaderRefreshConcurrencyTests: XCTestCase {
         client.accessToken = "stale-token"
         client.tokenRefreshHandler = {
             let ok = await refresh()
-            tokenLock.lock()
-            client.accessToken = currentToken
-            tokenLock.unlock()
+            client.accessToken = currentToken.value
             return ok
         }
 
         let loader = AuthenticatedResourceLoader(
-            tokenProvider: {
-                tokenLock.lock()
-                defer { tokenLock.unlock() }
-                return currentToken
-            },
+            tokenProvider: { currentToken.value },
             tokenRefreshHandler: refresh,
             session: mockSession,
             refreshCoordinator: sharedCoordinator

@@ -338,16 +338,16 @@ final class AudioPlayerManagerRealTests: XCTestCase {
     // MARK: - Auth Token Provider Tests
 
     func testAuthTokenProviderIsUsed() {
-        var tokenProviderCalled = false
+        let tokenProviderCalled = Locked(false)
         sut.authTokenProvider = {
-            tokenProviderCalled = true
+            tokenProviderCalled.value = true
             return "custom-token"
         }
 
         // Trigger token access (would be used in play() or loadCoverImage())
         // For unit test, just verify the provider is correctly set
         XCTAssertEqual(sut.authTokenProvider(), "custom-token")
-        XCTAssertTrue(tokenProviderCalled)
+        XCTAssertTrue(tokenProviderCalled.value)
     }
 
     func testAuthTokenProviderReturnsNil() {

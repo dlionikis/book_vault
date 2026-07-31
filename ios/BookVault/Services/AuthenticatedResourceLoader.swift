@@ -23,7 +23,21 @@ import Foundation
 ///
 /// A concrete `AVAssetResourceLoadingRequest` is adapted to this protocol by the
 /// delegate shim; tests supply a mock conformance.
-protocol ResourceLoadingRequesting: AnyObject {
+/// `Sendable` because these objects are handed to `Task`s that outlive the
+/// synchronous `startLoading` call AVFoundation requires.
+///
+/// This is a real assertion, not a formality, so it is worth stating why it
+/// holds: AVFoundation vends one loading request per resource and drives it
+/// from a single serial loader queue. This type never fans a request out to
+/// multiple tasks — `startLoading` and `handleUnauthorized` each spawn exactly
+/// one `Task` per request, and the retry path runs only after the first
+/// attempt has finished. So a given request is only ever touched from one
+/// place at a time.
+///
+/// The production conformer is `AVAssetResourceLoadingRequest` (an Apple class
+/// that predates `Sendable` and is not annotated), which is why the conformance
+/// has to be `@unchecked` at that site rather than checked here.
+protocol ResourceLoadingRequesting: AnyObject, Sendable {
     /// The original (custom-scheme) request URL.
     var requestURL: URL? { get }
 
@@ -66,9 +80,17 @@ struct ResourceContentInformation {
 /// from another stream request *or* from the JSON API path — joins the in-flight
 /// refresh and resumes when it genuinely completes, then retries with the new
 /// token.
-final class AuthenticatedResourceLoader {
-    private let tokenProvider: () -> String?
-    private let tokenRefreshHandler: () async -> Bool
+/// `@unchecked Sendable` because AVFoundation requires `startLoading` to return
+/// synchronously, so the actual work runs in a `Task` that captures `self`.
+///
+/// The guarantee is real rather than asserted: every stored property is a `let`
+/// holding a `Sendable` value, except `loadingTasks`, whose every access is
+/// already guarded by `tasksLock`. There is no unsynchronized mutable state to
+/// race on. `@unchecked` is needed only because the compiler cannot verify the
+/// lock discipline itself.
+final class AuthenticatedResourceLoader: @unchecked Sendable {
+    private let tokenProvider: @Sendable () -> String?
+    private let tokenRefreshHandler: @Sendable () async -> Bool
     private let session: URLSession
 
     /// Single-flight refresh coordination, shared with `APIClient` so a
@@ -84,8 +106,8 @@ final class AuthenticatedResourceLoader {
     static let errorDomain = "AuthenticatedAVAssetResourceLoaderDelegate"
 
     init(
-        tokenProvider: @escaping () -> String?,
-        tokenRefreshHandler: @escaping () async -> Bool,
+        tokenProvider: @escaping @Sendable () -> String?,
+        tokenRefreshHandler: @escaping @Sendable () async -> Bool,
         session: URLSession,
         refreshCoordinator: TokenRefreshCoordinator = TokenRefreshCoordinator()
     ) {

@@ -29,7 +29,7 @@ extension XCTestCase {
     func waitForAsync(
         timeout: TimeInterval = 2.0,
         description: String = "Async operation",
-        operation: @escaping () async throws -> Void
+        operation: @escaping @Sendable () async throws -> Void
     ) {
         let expectation = expectation(description: description)
 

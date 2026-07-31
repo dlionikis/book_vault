@@ -59,7 +59,7 @@ enum DownloadUrlResult {
 
 /// API client for Book Vault backend
 /// Uses generated models from OpenAPI specification
-class APIClient: APIClientProtocol {
+final class APIClient: APIClientProtocol {
     static let shared = APIClient()
 
     /// Shorter timeout for auth endpoints (login/refresh) so a degraded network
@@ -75,19 +75,40 @@ class APIClient: APIClientProtocol {
     // No need for custom flag anymore
 
     // Token storage (will be managed by AuthManager)
-    var accessToken: String?
+    //
+    // Lock-backed rather than a plain `var`: AuthManager writes this from the
+    // main actor while request paths read it from arbitrary tasks, so it is a
+    // real cross-actor race, not merely something the Swift 6 checker dislikes.
+    // Same NSLock + @unchecked Sendable approach as `DebugLogger`'s
+    // verbose flag and `FileExtensionStorage` in DownloadManager.
+    var accessToken: String? {
+        get { tokenStorage.value }
+        set { tokenStorage.value = newValue }
+    }
+
+    private let tokenStorage = Locked<String?>(nil)
 
     // Force logout callback (enables DI for testing)
-    var forceLogoutHandler: () -> Void = {
+    var forceLogoutHandler: @Sendable () -> Void {
+        get { forceLogoutStorage.value }
+        set { forceLogoutStorage.value = newValue }
+    }
+
+    private let forceLogoutStorage = Locked<@Sendable () -> Void>({
         Task { @MainActor in
             AuthManager.shared.forceLogout()
         }
-    }
+    })
 
     // Token refresh callback (enables DI for testing)
-    var tokenRefreshHandler: () async -> Bool = {
-        await AuthManager.shared.refreshAccessToken()
+    var tokenRefreshHandler: @Sendable () async -> Bool {
+        get { tokenRefreshStorage.value }
+        set { tokenRefreshStorage.value = newValue }
     }
+
+    private let tokenRefreshStorage = Locked<@Sendable () async -> Bool>({
+        await AuthManager.shared.refreshAccessToken()
+    })
 
     /// Single-flight refresh coordination. Shared with the AVPlayer streaming
     /// path (see `AudioPlayerManager`) so both 401 paths join one refresh

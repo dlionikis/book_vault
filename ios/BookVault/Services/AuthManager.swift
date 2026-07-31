@@ -26,7 +26,16 @@ class AuthManager: ObservableObject, AuthManaging {
     private var refreshTokenValue: UUID?
 
     // Keychain keys
-    private let accessTokenKey = "com.bookvault.accessToken"
+    //
+    // The access-token key is `static` and internal because the AVPlayer
+    // streaming path reads the token straight from the keychain: that call site
+    // is synchronous and off the main actor, so it cannot reach this
+    // `@MainActor` type. Sharing the constant keeps the two readers from
+    // drifting apart. See `AudioPlayerManager.authTokenProvider`.
+    // `nonisolated` so the off-main-actor streaming path can read it; it is an
+    // immutable `String`, so there is nothing to isolate.
+    nonisolated static let accessTokenKeychainKey = "com.bookvault.accessToken"
+    private let accessTokenKey = AuthManager.accessTokenKeychainKey
     private let refreshTokenKey = "com.bookvault.refreshToken"
     private let userDataKey = "com.bookvault.userData"
 

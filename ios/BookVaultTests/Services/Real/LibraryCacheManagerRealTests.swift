@@ -42,9 +42,11 @@ final class LibraryCacheManagerRealTests: XCTestCase {
 
     // MARK: - Setup & Teardown
 
+    // `@MainActor` because the type under test has a main-actor isolated
+    // init. Legal on the async form of setUp, unlike the synchronous one.
     @MainActor
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         // Create a unique temporary directory for each test
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("LibraryCacheManagerTests-\(UUID().uuidString)")
@@ -60,14 +62,13 @@ final class LibraryCacheManagerRealTests: XCTestCase {
         )
     }
 
-    @MainActor
-    override func tearDown() {
+    override func tearDown() async throws {
         // Clean up temp directory
         try? FileManager.default.removeItem(at: tempDirectory)
         cacheManager = nil
         tempDirectory = nil
         testUserId = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Initialization Tests

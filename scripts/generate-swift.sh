@@ -131,7 +131,7 @@ rm -f "$OUTPUT_DIR/git_push.sh" "$OUTPUT_DIR/BookVault.podspec" "$OUTPUT_DIR/Car
 # Format generated code (if swiftformat is available)
 if command -v swiftformat &> /dev/null; then
   echo "✨ Formatting generated code..."
-  swiftformat "$OUTPUT_DIR" --swiftversion 5.9
+  swiftformat "$OUTPUT_DIR" --swiftversion 6.0
 fi
 
 echo "✅ Swift models generated successfully at $OUTPUT_DIR"

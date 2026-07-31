@@ -1,6 +1,6 @@
 # iOS Modernization — Sequencing Decision
 
-> **Status**: Recommendation
+> **Status**: ✅ **Complete.** All of Plan A (A0–A6) shipped, plus Plan B (#140) and Plan C (#142).
 > **Created**: July 28, 2026
 > **Companions**: [ios-view-architecture-review.md](ios-view-architecture-review.md) ·
 > [ios-mini-player-bottom-bar-plan.md](../archive/completed-plans/ios-mini-player-bottom-bar-plan.md)
@@ -128,15 +128,15 @@ non-uniformity in the build.
 
 Ordered so each step is independently revertible:
 
-| Step      | Work                                                                                                                                                  | Size                            | Risk                                   |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | -------------------------------------- |
-| ✅ **A0** | Drop iPad: `TARGETED_DEVICE_FAMILY: '1'` — **done**                                                                                                   | 1 line                          | Very low                               |
-| ✅ **A1** | `@StateObject` → `@ObservedObject` on the singleton sites — **done** (32 sites)                                                                       | 32 one-line edits               | Very low                               |
-| ✅ **A2** | `@MainActor` on the 4 unannotated services (`AppIconManager`, `PlaybackSettings`, `ProgressManager`, `ThemeManager`) — **done**                       | Small                           | Low                                    |
-| ✅ **A3** | `Sendable` validation rules via generator template override — **done**                                                                                | Small but fiddly                | Medium — build tooling                 |
-| ✅ **A5** | Convert the 10 production `NavigationView` → `NavigationStack` — **done** (+25 preview sites)                                                         | 10 sites                        | Medium — the real work                 |
-| ✅ **A6** | Legacy `PreviewProvider` → `#Preview` in 10 files; dropped all 10 `periphery:ignore` workarounds — **done**                                           | Small                           | Very low                               |
-| **A4**    | Flip `SWIFT_VERSION: '6.0'` + `SWIFT_STRICT_CONCURRENCY: complete` — **last step**. Plan C landed; now gated on making `APIClientProtocol` `Sendable` | 2 lines + `APIClient` isolation | Medium — touches the auth/refresh path |
+| Step      | Work                                                                                                                            | Size                                                     | Risk                                   |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------- |
+| ✅ **A0** | Drop iPad: `TARGETED_DEVICE_FAMILY: '1'` — **done**                                                                             | 1 line                                                   | Very low                               |
+| ✅ **A1** | `@StateObject` → `@ObservedObject` on the singleton sites — **done** (32 sites)                                                 | 32 one-line edits                                        | Very low                               |
+| ✅ **A2** | `@MainActor` on the 4 unannotated services (`AppIconManager`, `PlaybackSettings`, `ProgressManager`, `ThemeManager`) — **done** | Small                                                    | Low                                    |
+| ✅ **A3** | `Sendable` validation rules via generator template override — **done**                                                          | Small but fiddly                                         | Medium — build tooling                 |
+| ✅ **A5** | Convert the 10 production `NavigationView` → `NavigationStack` — **done** (+25 preview sites)                                   | 10 sites                                                 | Medium — the real work                 |
+| ✅ **A6** | Legacy `PreviewProvider` → `#Preview` in 10 files; dropped all 10 `periphery:ignore` workarounds — **done**                     | Small                                                    | Very low                               |
+| ✅ **A4** | Flip `SWIFT_VERSION: '6.0'` + `SWIFT_STRICT_CONCURRENCY: complete` on all 3 targets — **done** (July 31, 2026)                  | 3 protocols + `APIClient` isolation + 40 test-file fixes | Medium — touched the auth/refresh path |
 
 **A4 moved to the end.** It was originally "2 lines, low risk, gated on A3." A3 landed and A4 was
 still blocked — on generated **URLSession** code, a materially bigger problem than the validation
@@ -483,16 +483,29 @@ deferring the bug fix to avoid duplicate work is not.
 
 **Done:** A0, A1, A2 (#133) · A3 (#134) · A5 (#135) · A6 (#136) · Plan B (#140) · Plan C (July 30, 2026).
 
-**Ready now:** **A4** — no longer blocked on anything external. Its content, in order:
+**Ready now:** nothing — **Plan A is complete.**
 
-1. `Sendable` on three DI protocols: `APIClientProtocol`, `CoverCaching`, `NotificationAuthorizing`.
-2. Isolate `APIClient`'s `accessToken` + the two handler closures, so its conformance is honest.
-3. The `Task.detached` closure capture at `LibraryManager.swift:159`.
-4. Then the flip: `SWIFT_VERSION: '6.0'` + `SWIFT_STRICT_CONCURRENCY: complete` on all **three**
-   targets (app, unit tests, UI tests), plus `--swiftversion 6.0` in both `ios/.swiftformat` and
+A4 shipped July 31, 2026. What it actually took:
+
+1. `Sendable` on two DI protocols (`APIClientProtocol`, `NotificationAuthorizing`). `CoverCaching`
+   needed nothing — it was already `@MainActor`.
+2. `APIClient` made `final` and its three mutable properties (`accessToken`,
+   `forceLogoutHandler`, `tokenRefreshHandler`) moved behind a new lock-backed `Locked<Value>` box.
+3. `Task.detached` → plain `Task` at `LibraryManager.swift:159`. The detached task hopped straight
+   back to the main actor anyway, so it bought no concurrency while creating a real race.
+4. `AppDelegate` → `@MainActor` with `nonisolated` UN delegate methods; the notification `userInfo`
+   is flattened to `[String: String]` before crossing into the Task.
+5. `AuthenticatedResourceLoader` → `@unchecked Sendable` (all `let`s plus a lock-guarded dictionary),
+   and `ResourceLoadingRequesting` → `Sendable`.
+6. **~40 fixes across 13 test files** — far more than the app changes. Mostly mechanical:
+   `@MainActor` async `setUp`, `@unchecked Sendable` on XCTestCase subclasses and mocks, and
+   captured `var`s boxed in `Locked`.
+7. The flip itself on all three targets, plus `--swiftversion 6.0` in `ios/.swiftformat` and
    `generate-swift.sh`.
 
-Re-measure after each step rather than trusting the first build's count — see §4.
+**The error count was never trustworthy from one build.** It went 11 → 4 → 5 → 2 → 1 → 0 for the app
+target, then 43 → 53 → 23 → 48 → 24 → 22 → 9 → 7 → 3 → 1 → 0 for the tests: each fix let the compiler
+reach further. Always re-measure; never treat a single build's count as the remaining work.
 
 ### Settled
 

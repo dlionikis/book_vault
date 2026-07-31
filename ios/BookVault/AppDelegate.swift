@@ -18,6 +18,11 @@ import UserNotifications
 ///
 /// Push: we receive the APNs device token here and hand it to the
 /// NotificationRegistrar; notification taps are routed to the DeepLinkManager.
+/// `@MainActor` because both `UIApplicationDelegate` and
+/// `UNUserNotificationCenterDelegate` callbacks are delivered on the main
+/// thread. Every method below already hopped to the main actor by hand, so this
+/// states the existing contract rather than changing behavior.
+@MainActor
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
         _: UIApplication,
@@ -80,9 +85,14 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 // MARK: - UNUserNotificationCenterDelegate
 
+// These are `nonisolated` because `UNUserNotificationCenterDelegate` is not
+// itself `@MainActor`-annotated, so a `@MainActor` class cannot satisfy it
+// directly. Both bodies already hop to the main actor explicitly for the work
+// that needs it, so this is the same behavior stated precisely — not a
+// loosening.
 extension AppDelegate: UNUserNotificationCenterDelegate {
     /// Show the banner/sound even when the app is in the foreground.
-    func userNotificationCenter(
+    nonisolated func userNotificationCenter(
         _: UNUserNotificationCenter,
         willPresent _: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
@@ -91,14 +101,26 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     }
 
     /// The user tapped a notification — route to the deep link it carries.
-    func userNotificationCenter(
+    nonisolated func userNotificationCenter(
         _: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
-        withCompletionHandler completionHandler: @escaping () -> Void
+        withCompletionHandler completionHandler: @escaping @Sendable () -> Void
     ) {
+        // `userInfo` is `[AnyHashable: Any]`, which is not `Sendable`, so it
+        // cannot cross into the Task as-is. Flatten it to `[String: String]`
+        // here — synchronously, before the hop.
+        //
+        // No information is lost for this use: `DeepLinkManager.deepLink(from:)`
+        // reads exactly one key, `bookId`, and only as a `String`. Nested values
+        // like the APNs `aps` payload were never consulted.
         let userInfo = response.notification.request.content.userInfo
+        let payload = userInfo.reduce(into: [String: String]()) { result, entry in
+            if let key = entry.key as? String, let value = entry.value as? String {
+                result[key] = value
+            }
+        }
         Task { @MainActor in
-            DeepLinkManager.shared.handleNotification(userInfo: userInfo)
+            DeepLinkManager.shared.handleNotification(userInfo: payload)
             completionHandler()
         }
     }

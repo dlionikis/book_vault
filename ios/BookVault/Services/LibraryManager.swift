@@ -155,8 +155,15 @@ class LibraryManager: ObservableObject, LibraryManaging {
         // Save to disk cache for offline access
         libraryCacheManager.saveLibrary(books: response.books)
 
-        // Cache cover images in background (don't block return)
-        Task.detached(priority: .background) { [coverCacheManager] in
+        // Cache cover images without blocking the return.
+        //
+        // A plain `Task`, not `Task.detached`. Both `cacheCoversForBooks` and
+        // `CoverCaching` are `@MainActor`, so a detached task hopped straight
+        // back to the main actor anyway — it bought no concurrency, and passing
+        // the main-actor-isolated cache across that boundary was a genuine data
+        // race (which is what the Swift 6 checker flagged). This still does not
+        // block the caller: the task is not awaited.
+        Task { [coverCacheManager] in
             await self.cacheCoversForBooks(response.books, using: coverCacheManager)
         }
 

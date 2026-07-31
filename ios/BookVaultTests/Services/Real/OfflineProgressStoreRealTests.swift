@@ -18,9 +18,12 @@ final class OfflineProgressStoreRealTests: XCTestCase {
 
     // MARK: - Setup & Teardown
 
+    // `@MainActor` because `OfflineProgressStore.init` is main-actor isolated.
+    // Legal on the async form of setUp (it was not on the synchronous one,
+    // which is what forced the conversion).
     @MainActor
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         // Create a unique temporary directory for each test
         tempDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("OfflineProgressStoreTests-\(UUID().uuidString)")
@@ -36,14 +39,13 @@ final class OfflineProgressStoreRealTests: XCTestCase {
         )
     }
 
-    @MainActor
-    override func tearDown() {
+    override func tearDown() async throws {
         // Clean up temp directory
         try? FileManager.default.removeItem(at: tempDirectory)
         store = nil
         tempDirectory = nil
         testUserId = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Initialization Tests

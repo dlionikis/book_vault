@@ -9,7 +9,11 @@ import XCTest
 @testable import BookVault
 
 @MainActor
-final class ChapterManagerTests: XCTestCase {
+/// `@unchecked Sendable` so test bodies can capture `self` inside the
+/// `@Sendable` closures these tests hand to URLProtocol / refresh handlers.
+/// XCTest drives one instance per test method and never concurrently, so
+/// there is no cross-test sharing to race on.
+final class ChapterManagerTests: XCTestCase, @unchecked Sendable {
     var sut: ChapterManager!
     var mockAPIClient: MockAPIClient!
 

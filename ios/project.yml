@@ -68,13 +68,8 @@ targets:
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
-        # Still Swift 5. The generated-code blocker is now gone (Plan C trimmed
-        # the unused request layer), and the remaining blocker is app code:
-        # APIClientProtocol is not Sendable, so passing `apiClient` across an
-        # isolation boundary is rejected. Making it Sendable means isolating
-        # APIClient's accessToken + the two handler closures. That is A4's
-        # remaining work — see docs/plans/ios-modernization-sequencing.md (A4).
-        SWIFT_VERSION: '5.0'
+        SWIFT_VERSION: '6.0'
+        SWIFT_STRICT_CONCURRENCY: complete
         ENABLE_PREVIEWS: YES
         SWIFT_EMIT_LOC_STRINGS: YES
         # Xcode Recommendations (also set at project level)
@@ -124,7 +119,8 @@ targets:
         # Match the host app (iPhone only); xcodegen otherwise defaults to '1,2'.
         TARGETED_DEVICE_FAMILY: '1'
         # Keep the test target in the same language mode as the code it exercises.
-        SWIFT_VERSION: '5.0'
+        SWIFT_VERSION: '6.0'
+        SWIFT_STRICT_CONCURRENCY: complete
         GENERATE_INFOPLIST_FILE: YES
         TEST_HOST: '$(BUILT_PRODUCTS_DIR)/BookVault.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BookVault'
         BUNDLE_LOADER: '$(TEST_HOST)'
@@ -151,7 +147,8 @@ targets:
         # Match the host app (iPhone only); xcodegen otherwise defaults to '1,2'.
         TARGETED_DEVICE_FAMILY: '1'
         # Keep in step with the app; moves with A4.
-        SWIFT_VERSION: '5.0'
+        SWIFT_VERSION: '6.0'
+        SWIFT_STRICT_CONCURRENCY: complete
         GENERATE_INFOPLIST_FILE: YES
         TEST_TARGET_NAME: BookVault
 

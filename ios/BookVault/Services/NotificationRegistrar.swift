@@ -28,7 +28,7 @@ extension UIApplication: RemoteNotificationRegistering {}
 
 /// Abstraction over `UNUserNotificationCenter` authorization so tests can drive
 /// grant/deny outcomes deterministically.
-protocol NotificationAuthorizing {
+protocol NotificationAuthorizing: Sendable {
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool
 }
 

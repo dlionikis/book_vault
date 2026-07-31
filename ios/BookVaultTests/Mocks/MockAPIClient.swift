@@ -9,7 +9,14 @@ import Foundation
 @testable import BookVault
 
 /// Mock API client for testing - allows configuring responses and tracking calls
-class MockAPIClient: APIClientProtocol {
+///
+/// `@unchecked Sendable` because `APIClientProtocol` is `Sendable` (the real
+/// `APIClient` is lock-backed) while this double keeps plain mutable
+/// call-tracking arrays. That is safe here for the reason it is safe in most
+/// test doubles: each test owns its own instance and drives it from one place.
+/// Recording call sites without a lock keeps the assertions readable, which is
+/// the point of the double.
+final class MockAPIClient: APIClientProtocol, @unchecked Sendable {
     var accessToken: String?
     var baseURL: URL = .init(string: "http://localhost:3000")!
 

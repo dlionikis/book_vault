@@ -21,7 +21,10 @@ import XCTest
 /// what the loader delivered, and fulfills `completionExpectation` when the
 /// loader finishes (success or error), so async network/refresh flows can be
 /// awaited.
-final class MockResourceLoadingRequest: ResourceLoadingRequesting {
+/// `@unchecked Sendable` for the same reason as the protocol's production
+/// conformer: one request is driven from one place at a time. See
+/// `ResourceLoadingRequesting`.
+final class MockResourceLoadingRequest: ResourceLoadingRequesting, @unchecked Sendable {
     var requestURL: URL?
     var explicitRangeHeader: String?
     var requestedByteRange: (offset: Int64, length: Int)?
@@ -60,7 +63,10 @@ final class MockResourceLoadingRequest: ResourceLoadingRequesting {
 
 // MARK: - AuthenticatedResourceLoaderTests
 
-final class AuthenticatedResourceLoaderTests: XCTestCase {
+/// `@unchecked Sendable` so test bodies can capture `self` in the `@Sendable`
+/// URLProtocol / refresh closures. One XCTest instance per test method, never
+/// concurrent.
+final class AuthenticatedResourceLoaderTests: XCTestCase, @unchecked Sendable {
     private var mockSession: URLSession!
 
     override func setUp() {
@@ -81,8 +87,8 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
 
     private func makeLoader(
         token: String? = "test-token",
-        tokenProvider: (() -> String?)? = nil,
-        refresh: @escaping () async -> Bool = { false }
+        tokenProvider: (@Sendable () -> String?)? = nil,
+        refresh: @escaping @Sendable () async -> Bool = { false }
     ) -> AuthenticatedResourceLoader {
         AuthenticatedResourceLoader(
             tokenProvider: tokenProvider ?? { token },
@@ -134,16 +140,16 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
         let loader = makeLoader(token: "my-secret-token")
         let request = MockResourceLoadingRequest(url: URL(string: "bookvaults://example.com/a.m4b")!)
 
-        var capturedAuth: String?
+        let capturedAuth = Locked<String?>(nil)
         MockURLProtocol.requestHandler = { req in
-            capturedAuth = req.value(forHTTPHeaderField: "Authorization")
+            capturedAuth.value = req.value(forHTTPHeaderField: "Authorization")
             return (self.httpResponse(url: req.url!, status: 200), Data())
         }
 
         XCTAssertTrue(loader.startLoading(request))
         wait(for: [request.completionExpectation], timeout: 2.0)
 
-        XCTAssertEqual(capturedAuth, "Bearer my-secret-token")
+        XCTAssertEqual(capturedAuth.value, "Bearer my-secret-token")
     }
 
     func testMissingTokenFinishesWith401NoNetworkCall() {
@@ -171,16 +177,16 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
         let request = MockResourceLoadingRequest(url: URL(string: "bookvaults://example.com/a.m4b")!)
         request.explicitRangeHeader = "bytes=100-199"
 
-        var capturedRange: String?
+        let capturedRange = Locked<String?>(nil)
         MockURLProtocol.requestHandler = { req in
-            capturedRange = req.value(forHTTPHeaderField: "Range")
+            capturedRange.value = req.value(forHTTPHeaderField: "Range")
             return (self.httpResponse(url: req.url!, status: 206), Data())
         }
 
         loader.startLoading(request)
         wait(for: [request.completionExpectation], timeout: 2.0)
 
-        XCTAssertEqual(capturedRange, "bytes=100-199")
+        XCTAssertEqual(capturedRange.value, "bytes=100-199")
     }
 
     func testRangeDerivedFromDataRequestWhenNoExplicitHeader() {
@@ -189,16 +195,16 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
         // offset 1000, length 512 -> bytes=1000-1511
         request.requestedByteRange = (offset: 1000, length: 512)
 
-        var capturedRange: String?
+        let capturedRange = Locked<String?>(nil)
         MockURLProtocol.requestHandler = { req in
-            capturedRange = req.value(forHTTPHeaderField: "Range")
+            capturedRange.value = req.value(forHTTPHeaderField: "Range")
             return (self.httpResponse(url: req.url!, status: 206), Data())
         }
 
         loader.startLoading(request)
         wait(for: [request.completionExpectation], timeout: 2.0)
 
-        XCTAssertEqual(capturedRange, "bytes=1000-1511")
+        XCTAssertEqual(capturedRange.value, "bytes=1000-1511")
     }
 
     func testExplicitRangeHeaderTakesPrecedenceOverDataRequest() {
@@ -207,16 +213,16 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
         request.explicitRangeHeader = "bytes=5-10"
         request.requestedByteRange = (offset: 1000, length: 512)
 
-        var capturedRange: String?
+        let capturedRange = Locked<String?>(nil)
         MockURLProtocol.requestHandler = { req in
-            capturedRange = req.value(forHTTPHeaderField: "Range")
+            capturedRange.value = req.value(forHTTPHeaderField: "Range")
             return (self.httpResponse(url: req.url!, status: 206), Data())
         }
 
         loader.startLoading(request)
         wait(for: [request.completionExpectation], timeout: 2.0)
 
-        XCTAssertEqual(capturedRange, "bytes=5-10")
+        XCTAssertEqual(capturedRange.value, "bytes=5-10")
     }
 
     // MARK: - Success delivers data + content info
@@ -269,13 +275,13 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
     func testUnauthorizedRefreshesAndRetriesWithNewToken() {
         // tokenProvider returns the "old" token first, then a "new" token after
         // a successful refresh flips the flag.
-        var refreshed = false
+        let refreshed = Locked(false)
         let refreshExpectation = XCTestExpectation(description: "refresh called")
 
         let loader = AuthenticatedResourceLoader(
-            tokenProvider: { refreshed ? "new-token" : "old-token" },
+            tokenProvider: { refreshed.value ? "new-token" : "old-token" },
             tokenRefreshHandler: {
-                refreshed = true
+                refreshed.value = true
                 refreshExpectation.fulfill()
                 return true
             },
@@ -284,14 +290,16 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
 
         let request = MockResourceLoadingRequest(url: URL(string: "bookvaults://example.com/a.m4b")!)
 
-        var seenAuthHeaders: [String] = []
-        let headerLock = NSLock()
+        let seenAuthHeaders = Locked<[String]>([])
         MockURLProtocol.requestHandler = { req in
             let auth = req.value(forHTTPHeaderField: "Authorization") ?? ""
-            headerLock.lock()
-            seenAuthHeaders.append(auth)
-            let attempt = seenAuthHeaders.count
-            headerLock.unlock()
+            // Append and read the count in ONE lock acquisition. Splitting them
+            // would let a concurrent request land in between and mis-number the
+            // attempt, which is what selects the 401-vs-200 response below.
+            let attempt = seenAuthHeaders.withLock { headers -> Int in
+                headers.append(auth)
+                return headers.count
+            }
             // First attempt (old token) -> 401; retry (new token) -> 200.
             let status = attempt == 1 ? 401 : 200
             return (self.httpResponse(url: req.url!, status: status), Data())
@@ -302,10 +310,7 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
 
         XCTAssertTrue(request.didComplete, "Retry after refresh should succeed")
         XCTAssertNil(request.completionError)
-        headerLock.lock()
-        let headers = seenAuthHeaders
-        headerLock.unlock()
-        XCTAssertEqual(headers, ["Bearer old-token", "Bearer new-token"])
+        XCTAssertEqual(seenAuthHeaders.value, ["Bearer old-token", "Bearer new-token"])
     }
 
     // MARK: - 5. 401 -> refresh fails -> error (domain/code)
@@ -336,7 +341,7 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
         // under which the single-flight lock must suppress the second refresh.
         let refreshCount = AtomicCounter()
         let bothArrived = XCTestExpectation(description: "both requests hit 401")
-        var arrivedCount = 0
+        let arrivedCount = Locked(0)
         let arrivedLock = NSLock()
 
         let loader = AuthenticatedResourceLoader(
@@ -357,8 +362,8 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
             if attempt <= 2 {
                 // First hit for each of the two requests -> 401.
                 arrivedLock.lock()
-                arrivedCount += 1
-                if arrivedCount == 2 { bothArrived.fulfill() }
+                arrivedCount.withLock { $0 += 1 }
+                if arrivedCount.value == 2 { bothArrived.fulfill() }
                 arrivedLock.unlock()
                 return (self.httpResponse(url: req.url!, status: 401), Data())
             }
@@ -385,7 +390,8 @@ final class AuthenticatedResourceLoaderTests: XCTestCase {
 
 /// Minimal thread-safe counter for asserting invocation counts across the
 /// session's completion queue and the refresh `Task`.
-private final class AtomicCounter {
+/// `@unchecked Sendable`: every access is guarded by its own lock.
+private final class AtomicCounter: @unchecked Sendable {
     private var count = 0
     private let lock = NSLock()
 

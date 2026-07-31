@@ -66,12 +66,26 @@ class AudioPlayerManager: ObservableObject {
     private weak var concreteDownloadManager: DownloadManager?
 
     // Auth token provider (enables DI for testing)
-    var authTokenProvider: () -> String? = {
-        AuthManager.shared.token
+    //
+    // `@Sendable` because it is handed to
+    // `AuthenticatedAVAssetResourceLoaderDelegate`, which AVFoundation invokes
+    // **synchronously on its own queue**, not on the main actor.
+    //
+    // It reads the keychain directly rather than going through
+    // `AuthManager.shared.token`. `AuthManager` is `@MainActor`, so reaching it
+    // from here would need a main-actor hop that this synchronous call site
+    // cannot make. `AuthManager.token` is itself just this keychain read, and
+    // `SystemKeychain` is `Sendable`, so the value is identical — this removes
+    // an actor dependency the streaming path never actually needed.
+    var authTokenProvider: @Sendable () -> String? = {
+        SystemKeychain.shared.load(key: AuthManager.accessTokenKeychainKey)
     }
 
     // Token refresh handler for resource loader (enables DI for testing)
-    var tokenRefreshHandler: () async -> Bool = {
+    //
+    // Async, so it *can* hop to the main actor — and must, since
+    // `refreshAccessToken()` mutates `AuthManager` state.
+    var tokenRefreshHandler: @Sendable () async -> Bool = {
         await AuthManager.shared.refreshAccessToken()
     }
 

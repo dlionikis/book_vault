@@ -21,9 +21,11 @@ final class ProgressManagerRealTests: XCTestCase {
 
     // MARK: - Setup & Teardown
 
+    // `@MainActor` because the type under test has a main-actor isolated
+    // init. Legal on the async form of setUp, unlike the synchronous one.
     @MainActor
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         mockAPIClient = MockAPIClient()
         mockOfflineStore = MockOfflineProgressStore()
         mockNetworkMonitor = MockNetworkMonitor()
@@ -35,13 +37,12 @@ final class ProgressManagerRealTests: XCTestCase {
         )
     }
 
-    @MainActor
-    override func tearDown() {
+    override func tearDown() async throws {
         progressManager = nil
         mockAPIClient = nil
         mockOfflineStore = nil
         mockNetworkMonitor = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Fetch Progress Tests (Online)

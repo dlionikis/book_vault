@@ -39,7 +39,7 @@ final class MockKeychain: KeychainStoring {
 
 // MARK: - MockAPIClientForAuth
 
-final class MockAPIClientForAuth: APIClientProtocol {
+final class MockAPIClientForAuth: APIClientProtocol, @unchecked Sendable { // @unchecked: test double, single-threaded per test
     var accessToken: String?
     var baseURL: URL = .init(string: "http://localhost:3000")!
 

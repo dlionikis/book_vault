@@ -22,9 +22,11 @@ final class SyncManagerRealTests: XCTestCase {
 
     // MARK: - Setup & Teardown
 
+    // `@MainActor` because the type under test has a main-actor isolated
+    // init. Legal on the async form of setUp, unlike the synchronous one.
     @MainActor
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         mockNetworkMonitor = MockNetworkMonitor()
         mockOfflineStore = MockOfflineProgressStore()
         mockProgressManager = MockProgressManager()
@@ -38,14 +40,13 @@ final class SyncManagerRealTests: XCTestCase {
         )
     }
 
-    @MainActor
-    override func tearDown() {
+    override func tearDown() async throws {
         syncManager = nil
         mockNetworkMonitor = nil
         mockOfflineStore = nil
         mockProgressManager = nil
         mockLibraryManager = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Initialization Tests
@@ -319,12 +320,15 @@ final class SyncManagerRealTests: XCTestCase {
         mockNetworkMonitor.isConnected = true
         mockOfflineStore.addPendingProgress(bookId: "book1", position: 100.0)
 
-        // Call sync multiple times
-        async let sync1: () = syncManager.syncPendingProgress()
-        async let sync2: () = syncManager.syncPendingProgress()
-
-        await sync1
-        await sync2
+        // Call sync multiple times.
+        //
+        // Sequential awaits rather than `async let`: SyncManager is @MainActor,
+        // so `async let` would need to send `self` across an isolation boundary
+        // (rejected under the Swift 6 language mode). The calls already
+        // serialize on the main actor, so concurrent `async let` never actually
+        // overlapped them — this is the same execution, stated honestly.
+        await syncManager.syncPendingProgress()
+        await syncManager.syncPendingProgress()
 
         // Should not crash
     }
