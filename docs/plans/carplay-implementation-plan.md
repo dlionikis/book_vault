@@ -61,7 +61,7 @@ These are the findings that drive the task list:
 
 4. **`AuthManager` clears state on logout but nothing in a CarPlay scene would react.** There's a
    known `forceLogout()` path plus the open session-persistence bug
-   ([ios-audio-session-persistence-plan.md](ios-audio-session-persistence-plan.md)). The CarPlay
+   ([ios-audio-session-persistence-plan.md](../archive/completed-plans/ios-audio-session-persistence-plan.md)). The CarPlay
    scene must _observe_ `isAuthenticated` and swap its root template live, mid-drive. Also note
    `isRestoringSession` starts `true` — CarPlay can connect before the keychain restore finishes,
    so "not authenticated yet" ≠ "logged out". Rendering the sign-in message on a cold CarPlay
@@ -218,7 +218,7 @@ Starting A0 late is the single most likely cause of a slipped ship date.
 
 **On the session-persistence bug** (requirements Q6): C1 is written to handle logout mid-drive
 regardless, so CarPlay isn't strictly blocked. But shipping CarPlay _before_
-[ios-audio-session-persistence-plan.md](ios-audio-session-persistence-plan.md) is fixed means a
+[ios-audio-session-persistence-plan.md](../archive/completed-plans/ios-audio-session-persistence-plan.md) is fixed means a
 spurious logout becomes a spurious mid-drive playback stop with no in-car recovery. **Recommend
 fixing that bug before C5/ship**, though development can proceed in parallel.
 

@@ -80,6 +80,15 @@ class AudioPlayerManager: ObservableObject {
     private var player: AVPlayer?
     private var timeObserver: Any?
     private var cancellables = Set<AnyCancellable>()
+
+    /// KVO on the player's own `timeControlStatus`, so `isPlaying` reflects what
+    /// the player is actually doing rather than what we last asked it to do.
+    /// `resume()`/`pause()` still set `isPlaying` optimistically to keep the UI
+    /// responsive; this observer is what corrects the flag when a `play()` call
+    /// silently fails to take (a deactivated audio session after an
+    /// interruption, a stalled stream), which previously left the play/pause
+    /// button showing "playing" over silence.
+    private var timeControlObserver: AnyCancellable?
     private var resourceLoaderDelegate: AuthenticatedAVAssetResourceLoaderDelegate?
     private var progressSaveTimer: Timer?
     private var lastSavedPosition: TimeInterval = 0
@@ -418,6 +427,9 @@ class AudioPlayerManager: ObservableObject {
         // Set initial volume
         self.player?.volume = self.volume
 
+        // Keep isPlaying honest about the new player's real state
+        self.setupTimeControlObserver()
+
         // Mark as playing offline
         self.isPlayingOffline = true
 
@@ -568,6 +580,9 @@ class AudioPlayerManager: ObservableObject {
         // Set initial volume
         self.player?.volume = self.volume
 
+        // Keep isPlaying honest about the new player's real state
+        self.setupTimeControlObserver()
+
         // Mark as streaming (not offline)
         self.isPlayingOffline = false
 
@@ -591,6 +606,17 @@ class AudioPlayerManager: ObservableObject {
     /// Resume playback
 
     func resume() {
+        // Ensure the session is active. It may have been deactivated while
+        // another app held the audio (call, navigation), and play() is a silent
+        // no-op against an inactive session. Cheap and idempotent when already
+        // active, so it's safe on every resume path — including lock-screen and
+        // CarPlay play commands, which don't pass through handleInterruption.
+        do {
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            DebugLogger.error("Failed to activate audio session on resume", error: error)
+        }
+
         player?.play()
         player?.rate = playbackRate
         isPlaying = true
@@ -736,6 +762,8 @@ class AudioPlayerManager: ObservableObject {
         stopProgressSaveTimer()
         downloadObserver?.cancel() // Phase 7: Cancel download observer
         downloadObserver = nil
+        timeControlObserver?.cancel()
+        timeControlObserver = nil
         player?.pause()
         player?.replaceCurrentItem(with: nil)
         currentBook = nil
@@ -776,6 +804,31 @@ class AudioPlayerManager: ObservableObject {
                 }
             }
         }
+    }
+
+    /// Bind `isPlaying` to the player's real playback state.
+    ///
+    /// Note this deliberately does *not* run the pause-side effects (progress
+    /// save, timer teardown) that `pause()` does — `timeControlStatus` dips to
+    /// `.paused`/`.waitingToPlayAtSpecifiedRate` on transient buffering stalls,
+    /// and firing a progress save on every stall would be wasteful and could
+    /// persist a mid-seek position. Explicit user pauses keep owning that work.
+    private func setupTimeControlObserver() {
+        timeControlObserver = player?.publisher(for: \.timeControlStatus)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] status in
+                Task { @MainActor in
+                    guard let self else { return }
+                    let actuallyPlaying = (status == .playing)
+                    if self.isPlaying != actuallyPlaying {
+                        DebugLogger.audio(
+                            "timeControlStatus -> \(status.rawValue); correcting isPlaying to \(actuallyPlaying)"
+                        )
+                        self.isPlaying = actuallyPlaying
+                        self.updateNowPlayingInfo()
+                    }
+                }
+            }
     }
 
     private func setupDurationObserver(for playerItem: AVPlayerItem) {
@@ -849,7 +902,10 @@ class AudioPlayerManager: ObservableObject {
         // Could auto-advance to next book in series here
     }
 
-    @objc private func handleInterruption(notification: Notification) {
+    // Internal rather than private so unit tests can invoke it directly: tests
+    // construct the manager with `skipAudioSetup: true`, so the real
+    // NotificationCenter observer is never registered.
+    @objc func handleInterruption(notification: Notification) {
         guard let userInfo = notification.userInfo,
               let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: typeValue)
@@ -866,21 +922,31 @@ class AudioPlayerManager: ObservableObject {
             }
 
         case .ended:
-            // Interruption ended
+            // Interruption ended. iOS deactivates our audio session for the
+            // duration of the interruption, so the session must be reactivated
+            // before play() will produce any sound — without this, resume()
+            // silently no-ops and playback appears stuck.
             guard let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt else {
                 return
             }
 
             let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
 
-            if options.contains(.shouldResume) {
-                DebugLogger.audio("Audio interruption ended - resuming playback")
-                // Resume playback
-                Task { @MainActor in
-                    resume()
+            Task { @MainActor in
+                do {
+                    try AVAudioSession.sharedInstance().setActive(true)
+                } catch {
+                    DebugLogger.error("Failed to reactivate audio session after interruption", error: error)
+                    self.error = error
+                    return
                 }
-            } else {
-                DebugLogger.audio("Audio interruption ended - not resuming")
+
+                if options.contains(.shouldResume) {
+                    DebugLogger.audio("Audio interruption ended - resuming playback")
+                    resume()
+                } else {
+                    DebugLogger.audio("Audio interruption ended - not resuming")
+                }
             }
 
         @unknown default:

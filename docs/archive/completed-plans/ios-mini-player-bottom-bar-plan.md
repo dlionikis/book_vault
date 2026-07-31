@@ -1,6 +1,8 @@
 # iOS Mini Player → Bottom Bar Plan
 
-> **Status**: Phases 1–3 implemented July 30, 2026 (ordering changed — see §2). Manual matrix partly done.
+> **Status**: ✅ **Complete.** Phases 1–3 implemented and the manual matrix walked (July 30, 2026;
+> ordering changed — see §2). Open questions 2–4 remain as deliberate follow-ups, not blockers —
+> "dismiss mini-player" is tracked on the roadmap in [STATUS.md](../STATUS.md).
 > **Scope**: iOS app only (no API, DB, or web changes)
 > **Created**: July 28, 2026 · **Revised** July 30, 2026 after Plan A landed
 > **Prerequisites landed**: A5 `NavigationStack` migration (#135) · XCUITest harness (#137, #138)
@@ -291,9 +293,9 @@ Two of the table's rows are now covered by tests rather than eyeballing:
 - `testMiniPlayerSitsAboveTabBarFullWidth` asserts the bar's _controls_ clear the tab bar and that the
   bar spans the full window width.
 
-The remaining rows in the table below are still manual. Verified by screenshot on Catalog and Library;
-Search (keyboard, L7), Downloads, Restores, Settings and the offline tab swap are **not yet
-eyeballed**.
+The remaining rows in the table below are manual, and were **walked and confirmed on July 30, 2026** —
+Catalog and Library by screenshot, plus Search (keyboard, L7), Downloads, Restores, Settings and the
+offline tab swap. No occlusion found beyond the one the automated test already caught.
 
 Original table:
 

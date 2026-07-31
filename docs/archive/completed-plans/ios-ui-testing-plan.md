@@ -1,6 +1,8 @@
 # iOS UI Testing Plan (XCUITest)
 
-> **Status**: Phases 1–3 + 5 shipped · Phase 4 partially shipped (U1, U2, U4-partial, U5-partial) · **U3 and the rest of U5 blocked — see §6b**
+> **Status**: ✅ **Complete.** All phases shipped (#137–#139). The §6b hit-test blocker was diagnosed
+> (a "Save Password?" sheet, not the mini player) and fixed, un-deferring U3 and the rest of U5;
+> 15 UI tests are committed and green.
 > **Scope**: iOS test infrastructure. No app logic, no API, no DB, no web.
 > **Created**: July 30, 2026
 > **Related**: [ios-modernization-sequencing.md](ios-modernization-sequencing.md) ·
@@ -255,6 +257,11 @@ of `validate:ios` was the right call.
 
 **6 of 6 committed UI tests pass.** U1 (3 tests), U2, U4-partial and U5-partial are green.
 **U3 and three U5 tests are written but not committed** — they fail on a blocker described below.
+
+> **Resolved (July 30, 2026).** The blocker below was diagnosed and fixed later in this same section
+> (see "Result: 12 of 13 UI tests pass"), which un-deferred U3 and the rest of U5. The suite has since
+> grown to **15 committed UI tests**, all green under `validate:full`. This paragraph is kept as the
+> point-in-time record of the investigation.
 
 ### Two real app bugs, found only because UI tests exist
 

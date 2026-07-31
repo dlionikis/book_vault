@@ -3,7 +3,7 @@
 > **Status**: Recommendation
 > **Created**: July 28, 2026
 > **Companions**: [ios-view-architecture-review.md](ios-view-architecture-review.md) ·
-> [ios-mini-player-bottom-bar-plan.md](ios-mini-player-bottom-bar-plan.md)
+> [ios-mini-player-bottom-bar-plan.md](../archive/completed-plans/ios-mini-player-bottom-bar-plan.md)
 
 ---
 
@@ -261,7 +261,7 @@ detail → back on each of the 9 tab screens, and safe-area propagation into pus
 is the entire reason A5 precedes Plan B. Simulator tap automation was unavailable (no `idb`), so
 **this needs the manual pass in §5 of the mini-player plan before Plan B relies on it.**
 
-**Remedy proposed:** [ios-ui-testing-plan.md](ios-ui-testing-plan.md) — an XCUITest target covering
+**Remedy proposed:** [ios-ui-testing-plan.md](../archive/completed-plans/ios-ui-testing-plan.md) — an XCUITest target covering
 five smoke flows, including the push → detail → back flow this gap describes. Recommended **before**
 Plan B so the mini-player change ships with automated verification rather than manual passes.
 
@@ -398,7 +398,7 @@ propagate into pushed destinations**.
 
 ### Plan B — Mini-player bottom bar _(follow-up)_
 
-[ios-mini-player-bottom-bar-plan.md](ios-mini-player-bottom-bar-plan.md), with two amendments once
+[ios-mini-player-bottom-bar-plan.md](../archive/completed-plans/ios-mini-player-bottom-bar-plan.md), with two amendments once
 Plan A lands:
 
 - **Phase 4 is deleted.** The conditional `NavigationStack` migration is absorbed by A5.
