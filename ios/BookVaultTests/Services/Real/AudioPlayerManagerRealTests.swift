@@ -6,6 +6,7 @@
 //  Tests actual playback logic with mock dependencies.
 //
 
+import AVFoundation
 import XCTest
 @testable import BookVault
 
@@ -515,6 +516,78 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         XCTAssertNil(sut.error)
         XCTAssertFalse(sut.isLoading)
         XCTAssertFalse(sut.isPlaying)
+    }
+
+    // MARK: - Interruption Tests
+
+    /// An interruption beginning (call, alarm, another app taking the session)
+    /// must pause playback.
+    func testInterruptionBeganPausesPlayback() async throws {
+        // Given
+        sut.isPlaying = true
+
+        // When
+        sut.handleInterruption(notification: Self.interruptionNotification(type: .began))
+
+        // Then — handleInterruption hops to the main actor via a Task
+        try await waitUntil { !self.sut.isPlaying }
+        XCTAssertFalse(sut.isPlaying)
+    }
+
+    /// Regression: an interruption ending with `.shouldResume` must reactivate
+    /// the audio session *before* resuming. iOS deactivates the session for the
+    /// duration of the interruption, so resuming without reactivating leaves
+    /// playback silently stuck while the UI still reads as "playing".
+    func testInterruptionEndedWithShouldResumeActivatesSessionAndResumes() async throws {
+        // Given — paused by the interruption, session left inactive
+        sut.isPlaying = false
+        try? AVAudioSession.sharedInstance().setActive(false)
+
+        // When
+        sut.handleInterruption(
+            notification: Self.interruptionNotification(type: .ended, options: .shouldResume)
+        )
+
+        // Then — resumed, and the session was reactivated to make it audible
+        try await waitUntil { self.sut.isPlaying }
+        XCTAssertTrue(sut.isPlaying)
+    }
+
+    /// Without `.shouldResume` (common for phone calls) we must stay paused.
+    func testInterruptionEndedWithoutShouldResumeStaysPaused() async throws {
+        // Given
+        sut.isPlaying = false
+
+        // When
+        sut.handleInterruption(notification: Self.interruptionNotification(type: .ended))
+
+        // Then — give the handler's Task a beat, then confirm still paused
+        try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+        XCTAssertFalse(sut.isPlaying)
+    }
+
+    /// Build an `AVAudioSession.interruptionNotification`-shaped notification.
+    /// Unit tests construct these directly because `skipAudioSetup: true` means
+    /// the real observer is never registered.
+    private static func interruptionNotification(
+        type: AVAudioSession.InterruptionType,
+        options: AVAudioSession.InterruptionOptions? = nil
+    ) -> Notification {
+        var userInfo: [AnyHashable: Any] = [
+            AVAudioSessionInterruptionTypeKey: type.rawValue
+        ]
+        if let options {
+            userInfo[AVAudioSessionInterruptionOptionKey] = options.rawValue
+        } else if type == .ended {
+            // A real .ended notification always carries options; absent
+            // .shouldResume means "do not resume".
+            userInfo[AVAudioSessionInterruptionOptionKey] = UInt(0)
+        }
+        return Notification(
+            name: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance(),
+            userInfo: userInfo
+        )
     }
 
     /// Poll a condition on the main actor until it holds or a short timeout
