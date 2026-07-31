@@ -21,6 +21,10 @@ final class CarPlayCoordinator {
     private let authManager: any AuthManaging
     private let onPlay: (Book) -> Void
 
+    /// Configures the Now Playing template. Injected so tests can observe it
+    /// without touching the shared CarPlay singleton.
+    private let configureNowPlaying: () -> Void
+
     /// Fires when auth state may have changed.
     ///
     /// Injected as a plain publisher rather than read off `authManager`: an
@@ -55,8 +59,10 @@ final class CarPlayCoordinator {
         onAuthChange: AnyPublisher<Void, Never> = AuthManager.shared.objectWillChange
             .map { _ in () }
             .eraseToAnyPublisher(),
-        onPlay: @escaping (Book) -> Void = { AudioPlayerManager.shared.play(book: $0) }
+        onPlay: @escaping (Book) -> Void = { AudioPlayerManager.shared.play(book: $0) },
+        configureNowPlaying: @escaping () -> Void = { CarPlayNowPlaying.configure() }
     ) {
+        self.configureNowPlaying = configureNowPlaying
         self.provider = provider
         self.imageProvider = imageProvider
         self.authManager = authManager
@@ -185,6 +191,7 @@ final class CarPlayCoordinator {
                 // Push the system Now Playing screen so the driver lands
                 // somewhere useful. It binds to MPNowPlayingInfoCenter, which
                 // AudioPlayerManager already populates — no new playback logic.
+                configureNowPlaying()
                 interfaceController?.pushTemplate(
                     CPNowPlayingTemplate.shared,
                     animated: true,

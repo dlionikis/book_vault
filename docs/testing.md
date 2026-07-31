@@ -288,6 +288,47 @@ ios/BookVaultTests/
 
 ---
 
+## CarPlay Testing
+
+CarPlay has two layers, and only one is automated.
+
+### Automated (part of the normal gate)
+
+Unit tests in `ios/BookVaultTests/CarPlay/` cover the row mapping, empty/error/
+offline states, auth-state template switching, and the chapter-step logic. They
+run with `npm run validate:ios` like any other iOS test — no CarPlay required,
+which is exactly why the logic lives in `CarPlayLibraryProvider`,
+`CarPlayCoordinator` and `CarPlayNowPlaying` rather than in the scene delegate.
+
+### Manual (CarPlay Simulator)
+
+**The CarPlay UI itself cannot be tested automatically.** There is no XCUITest
+equivalent for CarPlay templates.
+
+```
+1. Run the app on a simulator from Xcode
+2. Xcode ▸ I/O ▸ External Displays ▸ CarPlay
+3. A CarPlay head-unit window opens alongside the phone simulator
+```
+
+The manual matrix lives in §5 of
+[plans/carplay-implementation-plan.md](plans/carplay-implementation-plan.md).
+The cases most worth running, because unit tests structurally cannot reach them:
+
+- Cold launch **mid session-restore** — must show a neutral state, not a false
+  "signed out" flash.
+- Phone and CarPlay both visible — play/pause/seek must stay in sync in both
+  directions.
+- Logout on the phone while CarPlay is open — the root template must swap.
+- Airplane mode with and without downloads.
+- Disconnect/reconnect — the scene must rebuild without duplicating templates.
+
+### Hardware
+
+One pass on a real head unit or dock before shipping. The Simulator does not
+reproduce head-unit scroll throttling, image scaling at real trait collections,
+or Siri interactions. Requires the approved CarPlay entitlement.
+
 ## CI/CD Workflows
 
 ### Workflow Summary

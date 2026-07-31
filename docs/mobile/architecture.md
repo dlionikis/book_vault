@@ -507,6 +507,61 @@ try session.setActive(true)
 
 ---
 
+## CarPlay
+
+CarPlay runs as a **second scene** alongside the SwiftUI phone window. Both talk
+to the same singletons, which is what keeps phone and car in sync for free — no
+playback logic is duplicated.
+
+```
+BookVaultApp (@main, SwiftUI App)
+├── WindowGroup ──────────────► ContentView            (phone UI)
+└── CPTemplateApplicationScene ► CarPlaySceneDelegate  (lifecycle only)
+                                      │
+                                      └─ CarPlayCoordinator
+                                            ├─ restoring ──► CPInformationTemplate ("Loading…")
+                                            ├─ logged out ─► CPInformationTemplate ("Sign in on your phone")
+                                            └─ signed in ──► CPTabBarTemplate
+                                                              ├── Library     (CPListTemplate)
+                                                              ├── Series      (→ books in series)
+                                                              └── Downloaded  (CPListTemplate)
+
+                                CPNowPlayingTemplate (system UI)
+                                      └── binds to MPNowPlayingInfoCenter
+```
+
+### Files
+
+| File                           | Role                                                           |
+| ------------------------------ | -------------------------------------------------------------- |
+| `CarPlaySceneDelegate.swift`   | Scene lifecycle only. Not unit-testable (needs a head unit).   |
+| `CarPlayCoordinator.swift`     | Template stack, auth switching, selection → playback.          |
+| `CarPlayLibraryProvider.swift` | Data → `CarPlayRow` values. Protocol-injected, unit-tested.    |
+| `CarPlayImageProvider.swift`   | Cover art: sync cache hit, async fill, downsample to row size. |
+| `CarPlayNowPlaying.swift`      | Now Playing buttons + chapter-step logic.                      |
+
+### Three things worth knowing before changing this
+
+1. **The scene manifest lives in `project.yml`, never `Info.plist`.** XcodeGen
+   regenerates the plist on every `xcodegen generate`. The window-scene entry
+   deliberately declares **no** `UISceneDelegateClassName` — SwiftUI installs its
+   own, and naming one launches the phone app to a black screen.
+
+2. **`isRestoringSession` is checked before `isAuthenticated`.** It starts `true`
+   while the keychain session is read, and CarPlay can connect before that
+   finishes. Checking auth first flashes a false sign-in screen on every cold
+   start.
+
+3. **Logic goes in the provider/coordinator, not the scene delegate.** That split
+   is the only reason any of this is testable — CarPlay UI itself requires the
+   Simulator or hardware.
+
+### Testing
+
+Unit tests cover the provider, coordinator and Now Playing logic
+(`ios/BookVaultTests/CarPlay/`). CarPlay UI itself is verified manually via
+**Xcode ▸ I/O ▸ External Displays ▸ CarPlay**; see `docs/testing.md`.
+
 ## Offline Storage (Phase 8)
 
 **Download Manager**:

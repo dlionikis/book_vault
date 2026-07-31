@@ -2,7 +2,10 @@
 
 > **Created**: July 27, 2026
 > **Reviewed**: July 31, 2026 — every §1 finding re-verified against current code; see §0
-> **Status**: Scoped — ready to start (Track A can begin immediately)
+> **Status**: ⏸️ **All buildable work is done — blocked on the Apple entitlement (A0).**
+> Tracks A (except A0/A4), B and C1–C3/C6 are complete. What remains cannot be
+> done from the codebase: A0 is a request to Apple, A4 wires the approval it
+> returns, and C4/C5 need a CarPlay Simulator / head-unit pass.
 > **Priority**: TBD
 > **Platform**: iOS only
 > **Requirements doc**: [carplay-app-plan.md](carplay-app-plan.md)
@@ -209,6 +212,61 @@ between two people if desired. Sizes are relative (S/M/L), not calendar estimate
 | ✅ **A3** | Chapter loading in the player — **done** (July 31, 2026) | M     | —       | **Refactor, not CarPlay code.** Move chapter fetching into `AudioPlayerManager.play(book:)` (or a small `loadChapters(for:)` it calls) using `ChapterManager`, so chapters populate regardless of which UI started playback. Prefer `getCachedChapters` first, then async fetch. Remove/keep the view-level calls as thin pass-throughs. Fixes finding #3 and improves lock-screen chapter behavior on the phone too. **Independently valuable — can merge before any CarPlay work.**                                                                                                                                 |
 | **A4**    | Entitlement wiring                                       | S     | A0, A1  | Once Apple approves: add `com.apple.developer.carplay-audio` to `BookVault.entitlements`, update the provisioning profile. Note the existing comment in `project.yml` — entitlements are a committed file, _not_ XcodeGen-generated; don't let `xcodegen` clobber it.                                                                                                                                                                                                                                                                                                                                                 |
 
+### Implementation notes — B7 (shipped July 31, 2026)
+
+`CPNowPlayingTemplate.shared` is now configured rather than merely pushed.
+
+**The chapter-step decision is a pure function**, `CarPlayNowPlaying.chapter(for:chapters:currentTime:)`,
+deliberately separate from the CarPlay wiring so its edge cases are testable
+without a head unit, a player, or an audio session.
+
+It also had to be **written**, not just wired: `AudioPlayerManager` had
+`skipToChapter(_:)` but no notion of previous/next. The rules encoded here:
+
+- **Previous restarts the current chapter** when more than 3s in, and only jumps
+  back a chapter near the start. This is the convention every audio player uses,
+  and it is what makes one "back" press feel right while driving.
+- **Next returns `nil` on the last chapter** so the button no-ops rather than
+  seeking to the end.
+- Stepping sorts by `startTime` first, so it does not depend on array order.
+
+**Q4's graceful degradation is `shouldShowChapterButtons`**: no buttons for zero
+chapters, and none for a single chapter either — one chapter is the whole book,
+so navigation would be a no-op. A3 is what makes this reliable for
+CarPlay-initiated playback; before it, every CarPlay book would have looked
+chapter-less.
+
+The playback-rate button uses the system `CPNowPlayingPlaybackRateButton`;
+CarPlay renders and labels it, and we only apply the cycled value through the
+existing `setPlaybackRate`. `isUpNextButtonEnabled` and
+`isAlbumArtistButtonEnabled` are explicitly **off** — neither concept exists in
+this app, and CarPlay renders dead buttons if they are left on.
+
+13 tests, all on the pure logic.
+
+---
+
+### ⏸️ Remaining work is blocked on Apple (as of July 31, 2026)
+
+Everything buildable is done. The four open tasks all need something outside the
+codebase:
+
+| Task   | Needs                                                                           |
+| ------ | ------------------------------------------------------------------------------- |
+| **A0** | A request to Apple for `com.apple.developer.carplay-audio`. Weeks of lead time. |
+| **A4** | The approval from A0, then entitlement + provisioning wiring.                   |
+| **C4** | A CarPlay Simulator pass (Xcode ▸ I/O ▸ External Displays ▸ CarPlay).           |
+| **C5** | A real head unit or dock, plus A4.                                              |
+
+**Nothing in Tracks A–C has ever run against a live CarPlay connection.** The
+templates compile and the logic is unit-tested, but C4 is where the manual
+matrix in §5 finds what compile-and-test cannot: whether the scene connects,
+whether rows and artwork render at a real trait collection, and whether the
+phone↔CarPlay sync in AC4 actually holds.
+
+**A0 is the critical path and has not been submitted.** It gates shipping only —
+C4 can be done today without it.
+
 ### Implementation notes — Track B + C1–C3 (shipped July 31, 2026)
 
 Browse templates, the tab bar, auth switching and provider tests, in one PR.
@@ -343,7 +401,7 @@ it was strengthened to assert both fetches actually fired.
 | ✅ **B4** | Series browse templates     | M    | B3         | Series `CPListTemplate` → drill into `SeriesDetailView`-equivalent book list → select to play. Mirrors the phone hierarchy that landed in #126–#129.                                                                                                                                                                                                   |
 | ✅ **B5** | Downloaded + Continue tabs  | S    | B3         | Two extra `CPListTemplate`s: downloaded books (`StorageManager.isBookDownloaded`) and continue-listening (progress-sorted, same logic as `ContentView`'s most-recent load). Cheap, high value in a car.                                                                                                                                                |
 | ✅ **B6** | `CPTabBarTemplate` assembly | S    | B3, B4, B5 | Compose the tabs into the root template. Enforce the 5-tab cap.                                                                                                                                                                                                                                                                                        |
-| **B7**    | Now Playing template        | M    | A3, B3     | `CPNowPlayingTemplate.shared`: enable `isUpNextButtonEnabled`/album-artist button as appropriate, add chapter prev/next as `CPNowPlayingButton`s **only when `chapters` is non-empty** (Q4 graceful degradation). Verify `updateNowPlayingInfo()` output renders correctly. Playback rate button is a nice-to-have — `setPlaybackRate` already exists. |
+| ✅ **B7** | Now Playing template        | M    | A3, B3     | `CPNowPlayingTemplate.shared`: enable `isUpNextButtonEnabled`/album-artist button as appropriate, add chapter prev/next as `CPNowPlayingButton`s **only when `chapters` is non-empty** (Q4 graceful degradation). Verify `updateNowPlayingInfo()` output renders correctly. Playback rate button is a nice-to-have — `setPlaybackRate` already exists. |
 
 ### Track C — Auth, Hardening, Ship
 
@@ -354,7 +412,7 @@ it was strengthened to assert both fetches actually fired.
 | ✅ **C3** | Unit tests                  | M    | B2, C1    | Cover `CarPlayLibraryProvider` (mapping, empty, error, paging) and coordinator auth transitions, using existing `MockAPIClient`/`BookVaultTests/Mocks` patterns. Respects the coverage-ratchet invariant.                                                                                                                   |
 | **C4**    | CarPlay Simulator test pass | M    | all above | Full manual matrix (see §5). This is the primary QA loop.                                                                                                                                                                                                                                                                   |
 | **C5**    | Real head-unit pass         | S    | C4, A4    | Requires the approved entitlement + a real car/dock. Cannot be faked; schedule it.                                                                                                                                                                                                                                          |
-| **C6**    | Docs                        | S    | C4        | Update `docs/mobile/architecture.md` with the scene topology, and `docs/STATUS.md`. Note the CarPlay testing loop in `docs/testing.md`.                                                                                                                                                                                     |
+| ✅ **C6** | Docs                        | S    | C4        | Update `docs/mobile/architecture.md` with the scene topology, and `docs/STATUS.md`. Note the CarPlay testing loop in `docs/testing.md`.                                                                                                                                                                                     |
 
 ### Dependency graph (critical path in bold)
 

@@ -1,7 +1,9 @@
 # CarPlay App — Requirements
 
 > **Created**: July 25, 2026
-> **Status**: Scoped — see [carplay-implementation-plan.md](carplay-implementation-plan.md)
+> **Status**: ⏸️ **Implemented, blocked on the Apple entitlement.** Browse, playback
+> and Now Playing all ship; see [carplay-implementation-plan.md](carplay-implementation-plan.md)
+> for what remains (A0 entitlement request, A4 wiring, C4/C5 device passes).
 > **Priority**: TBD
 > **Platform**: iOS only
 
@@ -71,11 +73,14 @@ Per discussion, v1 is intentionally constrained to match Apple's CarPlay audio a
 - Download/offline management from CarPlay.
 - Account settings / login form inside CarPlay.
 
-## Acceptance Criteria (draft — refine once open questions are resolved)
+## Acceptance Criteria
 
-- [ ] Apple CarPlay entitlement obtained and provisioning updated.
-- [ ] CarPlay scene launches and shows a browsable list (library and/or series, pending Q2).
-- [ ] Selecting a book starts playback via existing `AudioPlayerManager`, with Now Playing template showing correct metadata/artwork.
-- [ ] Transport controls (play/pause/skip, chapter nav if in scope) work from the CarPlay UI and stay in sync with the phone UI if both are visible simultaneously.
-- [ ] Logged-out state in CarPlay shows a clear message rather than a broken/empty screen.
-- [ ] Manual test pass on CarPlay Simulator at minimum; real hardware test if available.
+Superseded by §7 of the [implementation plan](carplay-implementation-plan.md),
+which tracks these against actual tasks. Status as of July 31, 2026:
+
+- [ ] Apple CarPlay entitlement obtained and provisioning updated — **not submitted (A0)**.
+- [x] CarPlay scene launches and shows a browsable list — tab bar with Library, Series, Downloaded (A2, B3–B6).
+- [x] Selecting a book starts playback via existing `AudioPlayerManager` (B3, B7).
+- [x] Transport controls work from the CarPlay UI, including chapter navigation when chapters exist (B7). **Phone↔CarPlay sync is by construction** — both drive the same singletons — but is unverified without a live connection.
+- [x] Logged-out state shows a clear message, and session restore does not flash a false logged-out state (C1).
+- [ ] Manual pass on CarPlay Simulator — **not done (C4)**; nothing here has run against a live CarPlay connection.
