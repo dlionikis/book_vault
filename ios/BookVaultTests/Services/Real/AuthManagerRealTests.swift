@@ -18,6 +18,11 @@ final class MockKeychain: KeychainStoring {
     var deleteCallCount = 0
     var shouldThrowOnSave = false
 
+    /// Simulates a locked device: reads report `.locked` while the stored
+    /// values stay intact, exactly as the real keychain behaves for an
+    /// `AfterFirstUnlock` item before the first unlock.
+    var isLocked = false
+
     func save(key: String, value: String) throws {
         saveCallCount += 1
         if shouldThrowOnSave {
@@ -26,9 +31,11 @@ final class MockKeychain: KeychainStoring {
         storage[key] = value
     }
 
-    func load(key: String) -> String? {
+    func read(key: String) -> KeychainReadResult {
         loadCallCount += 1
-        return storage[key]
+        if isLocked { return .locked }
+        guard let value = storage[key] else { return .notFound }
+        return .found(value)
     }
 
     func delete(key: String) {
@@ -683,5 +690,106 @@ final class AuthManagerRealTests: XCTestCase {
         // Then
         XCTAssertTrue(sut.isAuthenticated)
         XCTAssertFalse(sut.isOfflineMode)
+    }
+
+    // MARK: - Locked Keychain Tests
+    //
+    // Regression coverage for background playback stopping and the app
+    // demanding a fresh login after a locked-screen listening session. The
+    // tokens were written without an accessibility attribute, so they defaulted
+    // to `WhenUnlocked` and became unreadable the moment the phone locked. A
+    // locked read looked identical to a missing one, so the session was torn
+    // down. These tests pin the "locked ≠ logged out" distinction.
+
+    /// A locked keychain must not be mistaken for an absent session.
+    func testRestoreSessionWithLockedKeychainDoesNotClearSession() async throws {
+        // Given - a complete session in the keychain, but the device is locked
+        let user = TestFixtures.makeUser(username: "lockeduser")
+        let data = try JSONEncoder().encode(user)
+        mockKeychain.storage["com.bookvault.accessToken"] = "stored-token"
+        mockKeychain.storage["com.bookvault.refreshToken"] = UUID().uuidString
+        mockKeychain.storage["com.bookvault.userData"] = String(data: data, encoding: .utf8)!
+        mockKeychain.isLocked = true
+
+        // When
+        await sut.restoreSessionForTesting()
+
+        // Then - restoration is deferred, and crucially the stored session
+        // survives so the later unlocked retry can find it.
+        XCTAssertFalse(sut.isAuthenticated, "Cannot authenticate without reading the token")
+        XCTAssertTrue(sut.wasBlockedByLockedKeychain, "Must record that the block was a lock, not an empty keychain")
+        XCTAssertNotNil(mockKeychain.storage["com.bookvault.refreshToken"], "A locked read must never delete tokens")
+        XCTAssertNotNil(mockKeychain.storage["com.bookvault.userData"])
+        XCTAssertEqual(mockKeychain.deleteCallCount, 0, "Locked keychain must not trigger a session clear")
+    }
+
+    /// Once the device unlocks, the deferred restoration succeeds.
+    func testRetryAfterUnlockRestoresSession() async throws {
+        // Given - restoration blocked by a locked device
+        let user = TestFixtures.makeUser(username: "lockeduser")
+        let data = try JSONEncoder().encode(user)
+        mockKeychain.storage["com.bookvault.accessToken"] = "stored-token"
+        mockKeychain.storage["com.bookvault.refreshToken"] = UUID().uuidString
+        mockKeychain.storage["com.bookvault.userData"] = String(data: data, encoding: .utf8)!
+        mockKeychain.isLocked = true
+        await sut.restoreSessionForTesting()
+        XCTAssertFalse(sut.isAuthenticated)
+
+        // When - the device unlocks and the app foregrounds
+        mockKeychain.isLocked = false
+        await sut.retryRestoreIfLockedOut()
+
+        // Then - the session comes back with no re-login
+        XCTAssertTrue(sut.isAuthenticated, "Session must restore once the keychain is readable")
+        XCTAssertEqual(sut.currentUser?.username, "lockeduser")
+        XCTAssertEqual(mockAPIClient.accessToken, "stored-token")
+        XCTAssertFalse(sut.wasBlockedByLockedKeychain)
+    }
+
+    /// The retry must stay inert when restoration genuinely found no session,
+    /// so it is safe to call on every foreground.
+    func testRetryIsNoOpWhenKeychainWasSimplyEmpty() async {
+        // Given - an empty, unlocked keychain
+        await sut.restoreSessionForTesting()
+        XCTAssertFalse(sut.wasBlockedByLockedKeychain)
+
+        // When
+        await sut.retryRestoreIfLockedOut()
+
+        // Then
+        XCTAssertFalse(sut.isAuthenticated)
+    }
+
+    /// A refresh triggered while the in-memory token is missing (process
+    /// relaunched into a locked device) recovers it from the keychain once
+    /// readable, instead of failing and forcing a logout.
+    func testRefreshRecoversRefreshTokenFromKeychainAfterUnlock() async {
+        // Given - no in-memory refresh token, but one is in the keychain
+        let storedRefresh = UUID()
+        mockKeychain.storage["com.bookvault.refreshToken"] = storedRefresh.uuidString
+        mockAPIClient.refreshResult = .success(TestFixtures.makeRefreshTokenResponse(accessToken: "recovered"))
+
+        // When
+        let result = await sut.refreshAccessToken()
+
+        // Then
+        XCTAssertTrue(result, "Refresh must use the keychain token rather than giving up")
+        XCTAssertEqual(mockAPIClient.accessToken, "recovered")
+    }
+
+    /// While the device is still locked there is no token to recover, and the
+    /// failure must stay soft — no session teardown.
+    func testRefreshWithLockedKeychainPreservesSession() async {
+        // Given - a session whose tokens are locked away
+        mockKeychain.storage["com.bookvault.refreshToken"] = UUID().uuidString
+        mockKeychain.isLocked = true
+
+        // When
+        let result = await sut.refreshAccessToken()
+
+        // Then
+        XCTAssertFalse(result)
+        XCTAssertEqual(mockKeychain.deleteCallCount, 0, "A locked refresh must not clear the session")
+        XCTAssertNotNil(mockKeychain.storage["com.bookvault.refreshToken"])
     }
 }

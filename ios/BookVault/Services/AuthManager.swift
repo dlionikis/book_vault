@@ -25,6 +25,10 @@ class AuthManager: ObservableObject, AuthManaging {
     private let networkMonitor: any NetworkMonitoring
     private var refreshTokenValue: UUID?
 
+    /// Set when session restoration found the keychain locked rather than
+    /// empty. The app retries restoration on foreground while this is true.
+    private(set) var wasBlockedByLockedKeychain = false
+
     // Keychain keys
     //
     // The access-token key is `static` and internal because the AVPlayer
@@ -153,7 +157,7 @@ class AuthManager: ObservableObject, AuthManaging {
 
     /// Refresh the access token using the refresh token
     func refreshAccessToken() async -> Bool {
-        guard let refreshToken = refreshTokenValue else {
+        guard let refreshToken = refreshTokenValue ?? keychainRefreshToken() else {
             DebugLogger.error("REFRESH FAILED: No refresh token in memory (refreshTokenValue is nil)")
             return false
         }
@@ -221,6 +225,26 @@ class AuthManager: ObservableObject, AuthManaging {
         }
     }
 
+    /// Test seam: drive session restoration directly. The production path runs
+    /// it from the singleton initializer, which tests cannot reach.
+    /// Not used in production code.
+    func restoreSessionForTesting() async {
+        await restoreSession()
+    }
+
+    /// Re-run session restoration if the previous attempt was blocked by a
+    /// locked keychain. Call on foreground: the app can be launched or resumed
+    /// into a locked state (background audio, a push, a widget), and the tokens
+    /// only become readable once the device is unlocked.
+    ///
+    /// No-op when a session is already live or when restoration genuinely found
+    /// nothing, so it is safe to call on every foreground.
+    func retryRestoreIfLockedOut() async {
+        guard wasBlockedByLockedKeychain, !isAuthenticated else { return }
+        DebugLogger.auth("Foreground: retrying session restoration blocked by locked keychain")
+        await restoreSession()
+    }
+
     // MARK: - Offline Mode (Phase 8b)
 
     /// True when a prior online session's user data still lives in the keychain,
@@ -278,6 +302,16 @@ class AuthManager: ObservableObject, AuthManaging {
 
     // MARK: - Private Methods
 
+    /// The refresh token as stored in the keychain.
+    ///
+    /// A fallback for the case where the process was launched into a locked
+    /// device, so `restoreSession` could not populate `refreshTokenValue`, and
+    /// the device has since unlocked. Returns `nil` while still locked.
+    private func keychainRefreshToken() -> UUID? {
+        guard let stored = keychain.read(key: refreshTokenKey).value else { return nil }
+        return UUID(uuidString: stored)
+    }
+
     /// Restore session from keychain
     private func restoreSession() async {
         DebugLogger.auth("Session restoration starting...")
@@ -299,20 +333,35 @@ class AuthManager: ObservableObject, AuthManaging {
         }
 
         // Check what's in keychain
-        let hasAccessToken = keychain.load(key: accessTokenKey) != nil
-        let hasRefreshToken = keychain.load(key: refreshTokenKey) != nil
-        let hasUserData = keychain.load(key: userDataKey) != nil
-        DebugLogger.auth("Keychain state - accessToken: \(hasAccessToken), refreshToken: \(hasRefreshToken), userData: \(hasUserData)")
+        let accessTokenRead = keychain.read(key: accessTokenKey)
+        let refreshTokenRead = keychain.read(key: refreshTokenKey)
+        let userDataRead = keychain.read(key: userDataKey)
+        DebugLogger.auth(
+            "Keychain state - accessToken: \(accessTokenRead.value != nil), " +
+                "refreshToken: \(refreshTokenRead.value != nil), userData: \(userDataRead.value != nil)"
+        )
 
-        guard let accessToken = keychain.load(key: accessTokenKey),
-              let refreshTokenString = keychain.load(key: refreshTokenKey),
+        // A locked device makes the tokens unreadable without meaning they are
+        // gone. Restoration is retried on the next foreground (see
+        // `retryRestoreIfLockedOut`), so bail out *without* touching session
+        // state rather than falling through to the "missing data" path.
+        if accessTokenRead.isLocked || refreshTokenRead.isLocked || userDataRead.isLocked {
+            DebugLogger.auth("Session restoration deferred - keychain locked; will retry when device unlocks")
+            wasBlockedByLockedKeychain = true
+            return
+        }
+
+        guard let accessToken = accessTokenRead.value,
+              let refreshTokenString = refreshTokenRead.value,
               let refreshToken = UUID(uuidString: refreshTokenString),
-              let userDataString = keychain.load(key: userDataKey),
+              let userDataString = userDataRead.value,
               let userData = userDataString.data(using: .utf8)
         else {
             DebugLogger.auth("Session restoration: Missing or invalid session data in keychain")
             return
         }
+
+        wasBlockedByLockedKeychain = false
 
         DebugLogger.auth("Found refresh token in keychain: \(String(refreshTokenString.prefix(8)))...")
 

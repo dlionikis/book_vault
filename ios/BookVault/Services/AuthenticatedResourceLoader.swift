@@ -89,9 +89,31 @@ struct ResourceContentInformation {
 /// race on. `@unchecked` is needed only because the compiler cannot verify the
 /// lock discipline itself.
 final class AuthenticatedResourceLoader: @unchecked Sendable {
+    /// How many times to re-read the token when the keychain reports the device
+    /// is locked, and how long to wait between attempts.
+    ///
+    /// The keychain is briefly unreadable around lock/unlock transitions even
+    /// for `AfterFirstUnlock` items (notably before the first unlock after a
+    /// reboot). Failing the byte-range request immediately turns that blip into
+    /// stopped playback, so a short bounded retry is worth more than failing
+    /// fast here. Bounded, because if the device is genuinely locked pre-first-
+    /// unlock, no amount of waiting helps and the request should surface an
+    /// error rather than hang AVFoundation's loader queue.
+    static let lockedTokenRetryLimit = 3
+    static let lockedTokenRetryDelay: TimeInterval = 0.5
+
     private let tokenProvider: @Sendable () -> String?
     private let tokenRefreshHandler: @Sendable () async -> Bool
     private let session: URLSession
+
+    /// Reports whether the last token read failed because the device was
+    /// locked, so the loader can retry instead of failing the request. Defaults
+    /// to "never locked", which preserves the behavior of callers (and tests)
+    /// that only supply a `tokenProvider`.
+    private let tokenIsLocked: @Sendable () -> Bool
+
+    /// Sleep hook, injectable so tests do not pay the retry delay in real time.
+    private let sleep: @Sendable (TimeInterval) async -> Void
 
     /// Single-flight refresh coordination, shared with `APIClient` so a
     /// streaming 401 and an API 401 join the same refresh rather than each
@@ -109,12 +131,36 @@ final class AuthenticatedResourceLoader: @unchecked Sendable {
         tokenProvider: @escaping @Sendable () -> String?,
         tokenRefreshHandler: @escaping @Sendable () async -> Bool,
         session: URLSession,
-        refreshCoordinator: TokenRefreshCoordinator = TokenRefreshCoordinator()
+        refreshCoordinator: TokenRefreshCoordinator = TokenRefreshCoordinator(),
+        tokenIsLocked: @escaping @Sendable () -> Bool = { false },
+        sleep: @escaping @Sendable (TimeInterval) async -> Void = { seconds in
+            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+        }
     ) {
         self.tokenProvider = tokenProvider
         self.tokenRefreshHandler = tokenRefreshHandler
         self.session = session
         self.refreshCoordinator = refreshCoordinator
+        self.tokenIsLocked = tokenIsLocked
+        self.sleep = sleep
+    }
+
+    /// Read the access token, retrying briefly if the keychain is locked.
+    ///
+    /// Async so the retry can suspend rather than block AVFoundation's loader
+    /// queue.
+    private func currentTokenAwaitingUnlock() async -> String? {
+        for attempt in 0 ..< Self.lockedTokenRetryLimit {
+            if let token = tokenProvider() { return token }
+            guard tokenIsLocked() else { return nil }
+
+            DebugLogger.auth(
+                "Resource loader: token unreadable (device locked) - " +
+                    "retry \(attempt + 1)/\(Self.lockedTokenRetryLimit)"
+            )
+            await sleep(Self.lockedTokenRetryDelay)
+        }
+        return tokenProvider()
     }
 
     // MARK: - Entry point
@@ -144,12 +190,35 @@ final class AuthenticatedResourceLoader: @unchecked Sendable {
         // stay synchronous for AVFoundation, so the capture happens in a Task.
         Task {
             let generation = await refreshCoordinator.currentGeneration()
+
+            // Wait out a locked keychain before issuing the request. Without
+            // this, locking the screen mid-playback makes the token read return
+            // nil and the next byte-range request fails instantly — which is
+            // what stopped playback on lock.
+            //
+            // The resolved token is passed down rather than re-read: re-reading
+            // would both waste a keychain round-trip and reintroduce the bug,
+            // since the value could go unreadable again between the two reads.
+            guard let token = await currentTokenAwaitingUnlock() else {
+                // Genuinely unavailable — either absent (logged out) or still
+                // locked after the bounded retry. Fail here rather than passing
+                // `nil` down, which would trigger a redundant re-read.
+                DebugLogger.error("Resource loader: No authentication token available")
+                request.complete(with: NSError(
+                    domain: Self.errorDomain,
+                    code: 401,
+                    userInfo: [NSLocalizedDescriptionKey: "No authentication token"]
+                ))
+                return
+            }
+
             executeRequest(
                 actualURL: actualURL,
                 loadingRequest: request,
                 originalURL: url,
                 isRetry: false,
-                observedGeneration: generation
+                observedGeneration: generation,
+                token: token
             )
         }
         return true
@@ -186,8 +255,15 @@ final class AuthenticatedResourceLoader: @unchecked Sendable {
     /// Build an authenticated `URLRequest`, carrying the auth token and a Range
     /// header (explicit if present, otherwise derived from the data request).
     /// Returns `nil` when no token is available.
-    func makeAuthenticatedRequest(url: URL, for loadingRequest: ResourceLoadingRequesting) -> URLRequest? {
-        guard let token = tokenProvider() else {
+    /// - Parameter token: an already-resolved token. Pass `nil` to read one now
+    ///   (the retry path, which runs after a refresh has just stored a fresh
+    ///   token).
+    func makeAuthenticatedRequest(
+        url: URL,
+        for loadingRequest: ResourceLoadingRequesting,
+        token: String? = nil
+    ) -> URLRequest? {
+        guard let token = token ?? tokenProvider() else {
             DebugLogger.error("Resource loader: No authentication token available")
             return nil
         }
@@ -211,14 +287,17 @@ final class AuthenticatedResourceLoader: @unchecked Sendable {
     ///   request was issued, or `nil` if not yet known (the first attempt, which
     ///   reads it lazily on 401). Used to detect a 401 that is stale because a
     ///   refresh completed while the request was in flight.
+    /// - Parameter token: a token already resolved by the caller, or `nil` to
+    ///   read one here.
     private func executeRequest(
         actualURL: URL,
         loadingRequest: ResourceLoadingRequesting,
         originalURL: URL,
         isRetry: Bool,
-        observedGeneration: UInt64? = nil
+        observedGeneration: UInt64? = nil,
+        token: String? = nil
     ) {
-        guard let request = makeAuthenticatedRequest(url: actualURL, for: loadingRequest) else {
+        guard let request = makeAuthenticatedRequest(url: actualURL, for: loadingRequest, token: token) else {
             loadingRequest.complete(with: NSError(
                 domain: Self.errorDomain,
                 code: 401,

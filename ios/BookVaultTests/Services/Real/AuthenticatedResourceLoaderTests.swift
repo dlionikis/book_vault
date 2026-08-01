@@ -86,12 +86,17 @@ final class AuthenticatedResourceLoaderTests: XCTestCase, @unchecked Sendable {
     private func makeLoader(
         token: String? = "test-token",
         tokenProvider: (@Sendable () -> String?)? = nil,
-        refresh: @escaping @Sendable () async -> Bool = { false }
+        refresh: @escaping @Sendable () async -> Bool = { false },
+        tokenIsLocked: @escaping @Sendable () -> Bool = { false },
+        sleep: (@Sendable (TimeInterval) async -> Void)? = nil
     ) -> AuthenticatedResourceLoader {
         AuthenticatedResourceLoader(
             tokenProvider: tokenProvider ?? { token },
             tokenRefreshHandler: refresh,
-            session: mockSession
+            session: mockSession,
+            tokenIsLocked: tokenIsLocked,
+            // Skip the real retry delay unless a test supplies its own hook.
+            sleep: sleep ?? { _ in }
         )
     }
 
@@ -166,6 +171,93 @@ final class AuthenticatedResourceLoaderTests: XCTestCase, @unchecked Sendable {
         XCTAssertEqual(error?.domain, AuthenticatedResourceLoader.errorDomain)
         XCTAssertEqual(error?.code, 401)
         XCTAssertFalse(request.didComplete)
+    }
+
+    // MARK: - 2b. Locked keychain (background playback)
+    //
+    // Regression coverage for playback stopping when the phone locks. The
+    // access token was unreadable while locked, so the token read returned nil
+    // and the byte-range request failed instantly — silence. A locked read is
+    // transient and must be retried, unlike a genuinely absent token.
+
+    /// A token that is briefly unreadable because the device is locked must be
+    /// waited out, not treated as "logged out".
+    func testLockedTokenIsRetriedAndPlaybackContinues() {
+        // Given - the first read is blocked by the lock, then it becomes readable
+        let reads = AtomicCounter()
+        let loader = makeLoader(
+            tokenProvider: {
+                // Unreadable on the first attempt only.
+                reads.increment() == 1 ? nil : "unlocked-token"
+            },
+            tokenIsLocked: { true }
+        )
+        let request = MockResourceLoadingRequest(url: URL(string: "bookvaults://example.com/a.m4b")!)
+
+        let capturedAuth = Locked<String?>(nil)
+        MockURLProtocol.requestHandler = { req in
+            capturedAuth.value = req.value(forHTTPHeaderField: "Authorization")
+            return (self.httpResponse(url: req.url!, status: 200), Data())
+        }
+
+        XCTAssertTrue(loader.startLoading(request))
+        wait(for: [request.completionExpectation], timeout: 2.0)
+
+        // Then - the request went out with the recovered token; no 401, no stop
+        XCTAssertEqual(capturedAuth.value, "Bearer unlocked-token")
+        XCTAssertTrue(request.didComplete)
+        XCTAssertNil(request.completionError, "A transient lock must not fail the request")
+    }
+
+    /// The retry is bounded: a device that stays locked surfaces an error rather
+    /// than hanging AVFoundation's loader queue forever.
+    func testPermanentlyLockedTokenGivesUpAfterRetryLimit() {
+        let reads = AtomicCounter()
+        let loader = makeLoader(
+            tokenProvider: {
+                reads.increment()
+                return nil
+            },
+            tokenIsLocked: { true }
+        )
+        let request = MockResourceLoadingRequest(url: URL(string: "bookvaults://example.com/a.m4b")!)
+
+        MockURLProtocol.requestHandler = { req in
+            XCTFail("No network request should be made without a token")
+            return (self.httpResponse(url: req.url!, status: 200), Data())
+        }
+
+        XCTAssertTrue(loader.startLoading(request))
+        wait(for: [request.completionExpectation], timeout: 2.0)
+
+        let error = try? XCTUnwrap(request.completionError as NSError?)
+        XCTAssertEqual(error?.code, 401)
+        XCTAssertGreaterThan(reads.value, 1, "A locked read must be retried before giving up")
+        XCTAssertLessThanOrEqual(
+            reads.value,
+            AuthenticatedResourceLoader.lockedTokenRetryLimit + 1,
+            "Retries must stay bounded"
+        )
+    }
+
+    /// A genuinely absent token (logged out) must still fail immediately — the
+    /// retry path is only for locked devices.
+    func testAbsentTokenIsNotRetried() {
+        let reads = AtomicCounter()
+        let loader = makeLoader(
+            tokenProvider: {
+                reads.increment()
+                return nil
+            },
+            tokenIsLocked: { false }
+        )
+        let request = MockResourceLoadingRequest(url: URL(string: "bookvaults://example.com/a.m4b")!)
+
+        XCTAssertTrue(loader.startLoading(request))
+        wait(for: [request.completionExpectation], timeout: 2.0)
+
+        XCTAssertEqual(reads.value, 1, "An absent token must fail fast, without retrying")
+        XCTAssertEqual((request.completionError as? NSError)?.code, 401)
     }
 
     // MARK: - 3. Range header propagation

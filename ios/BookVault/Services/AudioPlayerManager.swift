@@ -85,6 +85,15 @@ class AudioPlayerManager: ObservableObject {
         SystemKeychain.shared.load(key: AuthManager.accessTokenKeychainKey)
     }
 
+    // Reports whether the token read failed only because the device is locked.
+    //
+    // Lets the resource loader distinguish "logged out" from "screen is
+    // locked": the latter is transient, and failing the request on it is what
+    // stopped background playback when the phone locked.
+    var authTokenIsLocked: @Sendable () -> Bool = {
+        SystemKeychain.shared.read(key: AuthManager.accessTokenKeychainKey).isLocked
+    }
+
     // Token refresh handler for resource loader (enables DI for testing)
     //
     // Async, so it *can* hop to the main actor — and must, since
@@ -624,8 +633,12 @@ class AudioPlayerManager: ObservableObject {
             let asset = AVURLAsset(url: url)
             playerItem = AVPlayerItem(asset: asset)
         } else {
-            // Backend API URL - needs auth header via resource loader
-            guard authTokenProvider() != nil else {
+            // Backend API URL - needs auth header via resource loader.
+            //
+            // A locked keychain is not "no token": playback can be started from
+            // CarPlay or a remote command while the phone is locked. Let the
+            // resource loader's retry handle it rather than refusing to start.
+            guard authTokenProvider() != nil || authTokenIsLocked() else {
                 DebugLogger.error("AudioPlayerManager: No authentication token")
                 self.error = NSError(
                     domain: "AudioPlayerManager",
@@ -662,7 +675,8 @@ class AudioPlayerManager: ObservableObject {
             self.resourceLoaderDelegate = AuthenticatedAVAssetResourceLoaderDelegate(
                 tokenProvider: authTokenProvider,
                 tokenRefreshHandler: tokenRefreshHandler,
-                refreshCoordinator: .shared
+                refreshCoordinator: .shared,
+                tokenIsLocked: authTokenIsLocked
             )
 
             // Create AVAsset with resource loader

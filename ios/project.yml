@@ -87,6 +87,11 @@ targets:
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
+        # Declared here rather than only in the generated project: it was
+        # previously set in Xcode and committed to project.pbxproj, so every
+        # `xcodegen generate` silently dropped it and broke device/signed builds
+        # until someone re-added it by hand.
+        DEVELOPMENT_TEAM: N2EH33DR7Z
         SWIFT_VERSION: '6.0'
         SWIFT_STRICT_CONCURRENCY: complete
         ENABLE_PREVIEWS: YES

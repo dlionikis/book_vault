@@ -27,10 +27,14 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
     ///   than created per-instance — otherwise the streaming path would refresh
     ///   independently of the JSON API path, which is the bug this shares state
     ///   to avoid.
+    /// - Parameter tokenIsLocked: reports whether the token is unreadable only
+    ///   because the device is locked, so the loader retries rather than
+    ///   failing the request and stopping background playback.
     init(
         tokenProvider: @escaping @Sendable () -> String?,
         tokenRefreshHandler: @escaping @Sendable () async -> Bool,
-        refreshCoordinator: TokenRefreshCoordinator
+        refreshCoordinator: TokenRefreshCoordinator,
+        tokenIsLocked: @escaping @Sendable () -> Bool = { false }
     ) {
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 30
@@ -41,7 +45,8 @@ class AuthenticatedAVAssetResourceLoaderDelegate: NSObject, AVAssetResourceLoade
             tokenProvider: tokenProvider,
             tokenRefreshHandler: tokenRefreshHandler,
             session: session,
-            refreshCoordinator: refreshCoordinator
+            refreshCoordinator: refreshCoordinator,
+            tokenIsLocked: tokenIsLocked
         )
 
         super.init()
