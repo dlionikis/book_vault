@@ -1,15 +1,31 @@
 # Dependency Major-Version Upgrade Plan
 
+> **📦 ARCHIVED — August 1, 2026.** Every phase in this plan landed (1–5, 5b, 6-partial, Node
+> 20→24, the arm64/Graviton move, and the August audit cleanup). Kept for the migration
+> write-ups: each phase records what actually broke and why, which is the useful part on the next
+> framework major.
+>
+> **Still-open items were carried forward** to
+> [plans/dependency-deferrals.md](../../plans/dependency-deferrals.md) — Tailwind 4, TypeScript 7,
+> ESLint 10 and `sharp`. Track them there, not here.
+>
+> Two things in here are worth re-reading before the next upgrade: the **CI rule** in the Phase 5b
+> follow-up (any job that type-checks, lints, builds or tests must run `db:generate` right after
+> `npm ci` — Prisma 7's client is gitignored with no postinstall), and the **`sharp` entry**, which
+> corrects a wrong diagnosis from the original plan.
+
 > **Created**: July 19, 2026
 > **Status**: Phases 1 ✅, 2 ✅, 3 ✅, 4 ✅, 5 ✅, **5b ✅ (Prisma 7 + ESM, August 1, 2026)** done;
 > Node 20→24 ✅; Phase 6 ⚙️ partial (node-fetch removed, undici 8, zod 4; TS 7 / Tailwind 4 /
 > eslint 10 / sharp deferred) — the rest July 19, 2026. All planned phases are now landed except
-> the Phase 6 deferrals. **`npm audit`: 15 (6 low, 9 high)** — new advisories against pre-existing
-> deps, not a regression from any phase; `main` reports the same. See the Phase 5b audit note.
+> the Phase 6 deferrals. **`npm audit`: 9 (6 low, 3 high)** as of the Aug 1, 2026 cleanup pass
+> (was 15/6/9 — see "Audit cleanup" below). The 3 remaining highs are **not fixable here**:
+> `next` + `postcss` would "fix" only by downgrading to `next@9.3.3`, and `sharp` is gated on
+> Next widening its optional-dep range (details in the Phase 6 `sharp` entry).
 > **Context**: The safe, in-semver dependency updates + `npm audit fix` already landed
 > (26 → residual vulnerabilities, all remaining ones require the breaking upgrades below).
 > This plan covers the **major-version** jumps deliberately deferred from that pass.
-> **Related**: [development-process.md](../development-process.md) (run `validate:full` after each phase), the residual `npm audit` items.
+> **Related**: [development-process.md](../../development-process.md) (run `validate:full` after each phase), the residual `npm audit` items.
 
 ---
 
@@ -25,7 +41,7 @@ Everything here is currently **mitigated or non-exploitable in production**:
 
 - The one prod-facing high (Next.js Image Optimizer DoS, GHSA-9g9p-9gw9-jx7f) is
   **mitigated** by tightening `images.remotePatterns` off `**` to the S3 hosts
-  ([next.config.js](../../next.config.js)). The full fix ships in Next 16 (Phase 2).
+  ([next.config.mjs](../../../next.config.mjs)). The full fix ships in Next 16 (Phase 2).
 - The rest are dev/test/build tooling (Storybook, jest-openapi/axios, redocly,
   eslint, openapi-typescript) — real advisories, but not attacker-reachable at runtime.
 
@@ -39,12 +55,15 @@ Everything here is currently **mitigated or non-exploitable in production**:
 | `postcss` XSS in stringify (moderate)     | NOT cleared by Next 16 — fires on postcss **bundled inside** next (`<8.5.10`); our top-level postcss is 8.5.19. Awaits a Next patch.                                                                                               | build      |
 | `axios` CSRF / `openapi-validator` (high) | **npm `overrides`** (openapi-validator → axios ^1.12) — ✅ CLEARED (Phase 4). `jest-openapi` 0.14.2 is the latest and still pins `openapi-validator` → `axios@0.21`, so a version bump alone did NOT clear it.                     | test       |
 | `undici` decompression DoS (high)         | `undici` **7** — ✅ CLEARED (Phase 4). Direct devDep bump 5→7 (NOT 8 — undici 8 requires Node ≥22.19 and crashes on the Node 20 CI/prod runtime; 7 feature-detects `markAsUncloneable`). Needed a jest.setup Web-Streams polyfill. | build/test |
-| `elliptic`/`crypto-browserify` (low)      | `@storybook/*` 10.5                                                                                                                                                                                                                | dev        |
+| `elliptic`/`crypto-browserify` (low)      | `@storybook/*` 10.5 — ⚠️ **re-opened**: a later advisory (GHSA-848j-6mx2-7j84) hits `elliptic@*`, so no forward version clears it. npm's only "fix" is a downgrade to Storybook 7.0.14. Dev-only; accepted.                        | dev        |
 | `uuid` bounds check (moderate)            | `next-auth` (via Next 16 stack)                                                                                                                                                                                                    | prod (low) |
 | OpenTelemetry baggage (moderate)          | `@redocly/cli` 2                                                                                                                                                                                                                   | dev (docs) |
 
 Re-run `npm audit` after each phase; the goal is **zero high/critical**, moderates as low
-as the toolchain allows.
+as the toolchain allows. **As of Aug 1, 2026 the achievable floor is 3 highs**, all of them
+blocked upstream (Next-internal, or gated on Next widening its `sharp` range) — see the
+"Audit cleanup pass" section. Expect the count to drift upward over time as new advisories
+publish against existing deps; that is not a regression from these phases.
 
 ---
 
@@ -289,6 +308,25 @@ the source tree, which `COPY . .` would clobber. The `node_modules/.prisma` + `@
 gone — verified that Next's standalone tracer bundles the generated client, `@prisma/client`'s
 runtime, and `pg` on its own. `prisma.config.ts` is copied in for ECS-Exec migrations.
 
+> **⚠️ Follow-up (Aug 1, 2026): this broke CI, and the fix is a rule worth remembering.**
+>
+> **Any job that type-checks, lints, builds, or tests must run `npm run db:generate` immediately
+> after `npm ci`.** Prisma 7's client is **gitignored** and has **no postinstall hook**, so on a
+> fresh checkout nothing resolves `@/lib/generated/prisma/client` until an explicit generate. Under
+> Prisma 6 the client landed in `node_modules/.prisma` during install, so ordering never mattered.
+>
+> `main.yml` had `prisma generate` buried in its "Setup test database" step, which runs **after**
+> lint and type-check — so `main` went red on the Phase 5b merge with **64 `TS7006` errors**. They
+> look like dozens of unrelated "implicitly has an 'any' type" failures, but there is a single root
+> cause near the top of the list: `TS2307: Cannot find module '@/lib/generated/prisma/client'`.
+> Without the client every Prisma type degrades to `any`. **Read past the noise to the TS2307.**
+>
+> `storybook.yml` had the same gap (stories reach the client via
+> `ContinueListening.stories` → `ContinueListening` → `@/lib/db`) and was passing only by luck.
+> Both fixed by adding an explicit generate step right after `npm ci`; `api.yml` and `e2e.yml`
+> already generated before their Prisma-dependent steps. Verified by reproducing the failure in a
+> clean clone (64 errors → 0 after the generate).
+
 Verified: `prisma migrate status` clean (4 migrations); `validate:full` green — unit **525**,
 integration **18/18** (real Postgres via the adapter, exercising `$transaction` both forms and
 `mode:'insensitive'`), contract **286/286**, E2E smoke, iOS **756** tests + build + SwiftLint 0;
@@ -331,21 +369,81 @@ Landed the low-risk subset in `deps/phase-6-ecosystem`; deferred the rest with r
   stable programmatic API**, so **typescript-eslint is incompatible** (issue closed "not
   planned"; waiting on TS 7.1, ~Oct 2026). Our lint gate uses `eslint-config-next/typescript`
   (typescript-eslint under the hood), so TS 7 would **break `npm run lint`**. Revisit after 7.1.
+  **Still blocked (re-verified Aug 1, 2026)**: TS is now 7.0.2, but the latest
+  `typescript-eslint` (8.65.0) still declares `"typescript": ">=4.8.4 <6.1.0"` — the ceiling
+  hasn't moved. Unchanged.
 - ⏸️ **`tailwindcss` 3 → 4** — CSS-first config overhaul; notable UI-regression risk. Its own
-  plan when we choose to take the risk (we use `tailwind.config.ts`).
+  plan when we choose to take the risk (we use `tailwind.config.ts`). **Note (Aug 1, 2026)**:
+  this is the only deferral with **no external blocker** — nothing gates it but our appetite for
+  the UI-regression risk. Tailwind is at 4.3.3. It needs visual review, not just a green gate,
+  which is why it stays its own piece of work.
 - ⏸️ **`eslint` 9 → 10** — deferred alongside TS 7 (plugin/typescript-eslint churn); no
-  advisory pressure.
-- ⏸️ **`sharp` 0.34 → 0.35** — evaluated and **intentionally NOT bumped**. We declare `sharp`
-  but **never import it directly**; Next's image optimizer uses its **own internal copy**
-  (`next/node_modules/sharp`, pinned by Next), which our `package.json` doesn't control. A
-  top-level bump changes an effectively-unused dep — and in the standalone Docker output Next's
-  tracer doesn't even copy the unused top-level `sharp`'s `dist/`. Left at `^0.34.5` to match
-  Next's internal copy and avoid an orphan. (Verified: image serving works via Next's bundled
-  sharp; E2E cover-loading passes.) **Revisit (Aug 1, 2026)**: `sharp <0.35.0` now carries a
-  **high** advisory (GHSA-f88m-g3jw-g9cj, inherited libvips CVEs). That changes the calculus — the
-  bump is no longer cosmetic. Note the exposure is still via **Next's own internal copy**, which a
-  top-level bump doesn't control, so check what Next 16 pins before assuming 0.35 clears it.
+  advisory pressure. **Re-verified Aug 1, 2026**: eslint 10.8.0 is out and `typescript-eslint`
+  8.65 _does_ accept `^10.0.0`, so the peer story has improved — but this stays coupled to the
+  TS 7 work rather than being taken on its own for no benefit.
+- ⏸️ **`sharp` 0.34 → 0.35** — still **NOT bumped**, but the July reasoning was **wrong** and is
+  corrected here (re-verified Aug 1, 2026).
+
+  The July note claimed Next uses a separate internal copy at `next/node_modules/sharp` that our
+  `package.json` doesn't control. That is **not** what the tree looks like: Next 16 declares sharp
+  as an **optional dependency** (`^0.34.5`) and npm **dedupes it to our top-level copy**. There is
+  exactly one `sharp` installed (`npm ls sharp` → `next@16.2.11 -> sharp@0.34.5 deduped`), and it
+  is the one Next's optimizer loads. So our top-level version _is_ the effective version.
+
+  The bump is still blocked, for a different reason: **`sharp@0.35.3` does not satisfy Next's
+  `^0.34.5`**, so bumping un-dedupes rather than upgrading. Verified empirically against a real
+  `--package-lock-only` resolve — the result is **two** copies:
+
+  ```
+  node_modules/sharp                  => 0.35.3   (ours, unused)
+  node_modules/next/node_modules/sharp => 0.34.5  (what Next actually uses — still vulnerable)
+  ```
+
+  So the bump would leave the advisory **uncleared** and add an orphan. `sharp <0.35.0` does now
+  carry a **high** advisory (GHSA-f88m-g3jw-g9cj, inherited libvips CVEs), so this is a real
+  exposure in the image optimizer, not a cosmetic gap — but **clearing it is gated on Next
+  widening its optional-dep range**, not on anything we can do in `package.json`. Latest Next
+  (16.2.12) still pins `^0.34.5`. Re-check on each Next bump; a top-level `sharp` override forcing
+  0.35 into Next is possible but unvalidated against Next's optimizer and not worth the risk yet.
+
 - ~~`undici`~~ — ✅ done here (7 → 8).
+
+---
+
+## Audit cleanup pass — ✅ DONE (August 1, 2026)
+
+Landed in `deps/audit-highs-aug-2026`. **High advisories 9 → 3**, with **no manifest ranges
+changed** — the work was lockfile-only plus one scoped override.
+
+Context: Phase 4 (July) legitimately reached "0 high/critical". The count drifted back up to 9
+purely from **newly published advisories against dependencies we already had** — nothing any phase
+introduced. (Confirmed during Phase 5b by auditing a clean `main` worktree, which reported the
+identical 15/6/9.)
+
+- **Five cleared by a plain `npm audit fix`** — `fast-uri`, `js-yaml`, `shell-quote`,
+  `@redocly/openapi-core`, `concurrently`. All in-semver; `package.json` untouched.
+- **`brace-expansion` needed an override.** `audit fix` updated five of the six copies in the tree
+  but left the **hoisted root** at 1.1.16 (the advisory needs `>=1.1.17`). It has a single source
+  — `@eslint/eslintrc` → `minimatch@3` — and that `^1.1.7` range _already_ permits the patched
+  1.1.18; npm simply would not re-resolve the locked entry. Nested overrides
+  (`@eslint/eslintrc` → `minimatch` → …) do **not** reach a hoisted package; the working form is
+  the **version-selector** override `"brace-expansion@1": "^1.1.18"`, which pins the v1 line
+  without disturbing the v2 / v5 copies elsewhere in the tree.
+
+Verified: **no major version changed anywhere in the lockfile** (30 entries moved, all in-semver —
+checked programmatically, not by eye); `validate:full` green — unit 525, integration 18/18,
+contract 286/286, E2E smoke, iOS 756 + build + SwiftLint 0.
+
+**The 3 remaining highs are not actionable from this repo:**
+
+| Advisory  | Why it stays                                                                                                                         |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `next`    | npm's only "fix" is a downgrade to **`next@9.3.3`** — seven majors back. Awaits a Next patch.                                        |
+| `postcss` | Same: fires on the copy **bundled inside** Next, and npm's fix is the same `next@9.3.3` downgrade. Our top-level postcss is current. |
+| `sharp`   | Bumping to 0.35 **un-dedupes** and leaves Next's vulnerable 0.34.5 in place — see the Phase 6 `sharp` entry for the proof.           |
+
+The 6 lows are the `@storybook/nextjs` → `elliptic`/`crypto-browserify` cluster, whose "fix" is a
+downgrade to Storybook **7.0.14** (we're on 10.5). Not worth it; dev-only and not runtime-reachable.
 
 ---
 
@@ -369,7 +467,7 @@ mis-executes the SWC binary. (Verified: reproduced the segfault after a full
 
 **Fix.** Build **natively arm64** (no emulation) and run ECS on **Graviton**:
 
-- [scripts/deploy.sh](../../scripts/deploy.sh) `run_deploy()`: `docker buildx build
+- [scripts/deploy.sh](../../../scripts/deploy.sh) `run_deploy()`: `docker buildx build
 --platform linux/amd64` → plain `docker build` (native arm64), with an arch guard
   that aborts if the built image isn't arm64.
 - ECS task definition **`book-vault:5`** registered from `:4` with
@@ -409,7 +507,7 @@ this same deploy-affecting migration within ~9 months. Node **24 is the Active L
 Current, not LTS until Oct 2026 — too bleeding-edge for the prod runtime; it's also the local
 dev version that masked the qemu + undici-8 Node-mismatch bugs.)
 
-- All three `FROM node:20-alpine` → `node:24-alpine` ([Dockerfile](../../Dockerfile)).
+- All three `FROM node:20-alpine` → `node:24-alpine` ([Dockerfile](../../../Dockerfile)).
 - CI `node-version: '20'` → `'24'` across all four workflows (api, e2e, storybook, main) — 9 lines.
 - `@types/node` `^22` → `^24` (24.13.3), kept in step with the runtime.
 - **Unblocks undici 8** (needs ≥22.19) and **Prisma 7** (needs ≥20.19) for their own phases.

@@ -42,6 +42,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Must precede lint/type-check/test. Prisma 7 generates the client into
+      # lib/generated/prisma (gitignored) and has no postinstall hook, so on a
+      # fresh checkout nothing resolves `@/lib/generated/prisma/client` until
+      # this runs. Under Prisma 6 the client landed in node_modules/.prisma
+      # during `npm ci`, which is why this used to work further down the job.
+      - name: Generate Prisma client
+        run: npm run db:generate
+
       - name: Check formatting
         run: npm run format:check
 
@@ -52,9 +60,7 @@ jobs:
         run: npm run type-check
 
       - name: Setup test database
-        run: |
-          npx prisma migrate deploy
-          npx prisma generate
+        run: npx prisma migrate deploy
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/book_vault_test?schema=public
 
