@@ -78,12 +78,17 @@ fi
 if [ "$ENV" == "local" ]; then
     echo -e "${YELLOW}[INFO]${NC} Deleting user from local database..."
 
-    # Use Prisma via Node.js with local DATABASE_URL
-    RESULT=$(node -e "
-const { PrismaClient } = require('@prisma/client');
+    # Prisma 7 generates a TypeScript client (lib/generated/prisma), so this runs
+    # under tsx rather than plain node, and needs the pg driver adapter.
+    RESULT=$(npx tsx -e "
+import 'dotenv/config';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from './lib/generated/prisma/client';
 
 (async () => {
-    const prisma = new PrismaClient();
+    const prisma = new PrismaClient({
+        adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+    });
     try {
         const user = await prisma.user.delete({
             where: { username: '$USERNAME' }
@@ -124,8 +129,14 @@ else
 
     echo -e "${YELLOW}[INFO]${NC} Deleting user from production database..."
 
-    # Build the Node.js command (minified for shell safety)
-    DELETE_CMD="const{PrismaClient}=require('@prisma/client');(async()=>{const p=new PrismaClient();try{const u=await p.user.delete({where:{username:'$USERNAME'}});console.log('SUCCESS:'+u.id)}catch(e){if(e.code==='P2025'){console.log('ERROR:User not found')}else{console.log('ERROR:'+e.message)}}finally{await p.\$disconnect()}})();"
+    # Build the Node.js command (minified for shell safety).
+    #
+    # Uses the `pg` driver directly — see the note in create-user.sh: the Prisma 7
+    # client is TypeScript and the production image has no TS loader. Every
+    # user-owned table cascades at the DB level (ON DELETE CASCADE), so this is
+    # equivalent to prisma.user.delete. An empty rowCount means "not found"
+    # (Prisma's P2025).
+    DELETE_CMD="const{Client}=require('pg');(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();try{const r=await c.query('DELETE FROM users WHERE username = \$1 RETURNING id',['$USERNAME']);if(r.rowCount===0){console.log('ERROR:User not found')}else{console.log('SUCCESS:'+r.rows[0].id)}}catch(e){console.log('ERROR:'+e.message)}finally{await c.end()}})();"
 
     # Execute via ECS Exec
     RESULT=$(aws ecs execute-command \

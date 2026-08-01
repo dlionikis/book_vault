@@ -31,11 +31,13 @@ CLUSTER="book-vault"
 SERVICE="book-vault-spot"
 CONTAINER="book-vault"
 
-# The production runtime image ships only @prisma/client, not the `prisma` CLI,
-# so `npx prisma ...` in the container downloads the LATEST CLI — which is a
-# different major (Prisma 7 rejects `url` in the schema; this project is on 6).
-# Pin the CLI to the project's own prisma version so migrate runs on-version.
-PRISMA_VERSION=$(node -p "require('./package.json').devDependencies.prisma.replace(/^[^0-9]*/, '')" 2>/dev/null)
+# The production runtime image ships only the Prisma client runtime, not the
+# `prisma` CLI, so `npx prisma ...` in the container downloads the LATEST CLI —
+# which may be a different major than the one this project's migrations were
+# authored against. Pin the CLI to the project's own prisma version.
+#
+# `package.json` is ESM now, so read it with fs rather than require().
+PRISMA_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('./package.json','utf8')).devDependencies.prisma.replace(/^[^0-9]*/, '')" 2>/dev/null)
 if [ -z "$PRISMA_VERSION" ]; then
     log_error "Could not read prisma version from package.json"
     exit 1
@@ -160,22 +162,27 @@ run_production_migration() {
         # Read the SQL file and escape it for shell
         SQL_CONTENT=$(cat "$MIGRATION_FILE")
 
-        # Execute via node/prisma's $executeRawUnsafe
+        # Execute via the `pg` driver. As of Prisma 7 the generated client is
+        # TypeScript (lib/generated/prisma) and the production image has no TS
+        # loader, so raw SQL goes through pg directly.
         aws ecs execute-command \
             --cluster "$CLUSTER" \
             --task "$TASK_ARN" \
             --container "$CONTAINER" \
             --command "node -e \"
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const { Client } = require('pg');
+const client = new Client({ connectionString: process.env.DATABASE_URL });
 const sql = \\\`$(echo "$SQL_CONTENT" | sed 's/`/\\\\\\`/g' | sed 's/\$/\\\\$/g')\\\`;
-prisma.\\\$executeRawUnsafe(sql).then(r => {
-    console.log('Rows affected:', r);
-    process.exit(0);
-}).catch(e => {
-    console.error('Error:', e.message);
-    process.exit(1);
-});
+client.connect()
+    .then(() => client.query(sql))
+    .then(r => {
+        console.log('Rows affected:', r.rowCount);
+        return client.end().then(() => process.exit(0));
+    })
+    .catch(e => {
+        console.error('Error:', e.message);
+        process.exit(1);
+    });
 \"" \
             --interactive
     else

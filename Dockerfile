@@ -16,9 +16,6 @@ COPY prisma ./prisma/
 # Install dependencies
 RUN npm ci
 
-# Generate Prisma Client
-RUN npx prisma generate
-
 # ============================================
 # Stage 2: Builder
 # ============================================
@@ -35,6 +32,11 @@ COPY . .
 # Set environment for build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+
+# Generate the Prisma client. This runs in the builder (not deps) because
+# Prisma 7 emits into the app source tree (lib/generated/prisma), which the
+# `COPY . .` above would otherwise clobber.
+RUN npx prisma generate
 
 # Build the application
 RUN npm run build
@@ -60,10 +62,11 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma schema and generated client (needed at runtime)
-COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
+# Copy the Prisma schema (used by `prisma migrate deploy` via ECS Exec).
+# The generated client is NOT copied here: Prisma 7 emits it into the app source
+# tree (lib/generated/prisma), so Next's standalone tracer bundles it already.
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
 USER nextjs
 

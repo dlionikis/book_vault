@@ -13,6 +13,9 @@ const createJestConfig = nextJest({
 // means "do NOT ignore — transform it".
 const ESM_ALLOWLIST_PACKAGES = [
   '(.*/)?jose($|/)',
+  // Prisma 7's query compiler is loaded as .mjs from @prisma/client/runtime
+  // (integration tests drive the real client against Postgres).
+  '@prisma/client/',
   '@aws-sdk/',
   '@smithy/',
   'react-markdown',

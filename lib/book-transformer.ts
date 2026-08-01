@@ -17,7 +17,7 @@
  * ```
  */
 
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/lib/generated/prisma/client';
 import { getCoverUrl, getAudioUrl } from './media';
 import { htmlToMarkdown } from './html-to-markdown';
 

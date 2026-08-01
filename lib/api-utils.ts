@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/lib/generated/prisma/client';
 
 /**
  * Parse comma-separated fields parameter into Prisma select object

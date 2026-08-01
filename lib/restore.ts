@@ -20,7 +20,7 @@ import { HeadObjectCommand, RestoreObjectCommand } from '@aws-sdk/client-s3';
 import { getS3Client, getS3Bucket } from './s3';
 import { prisma } from './db';
 import { logger } from './logger';
-import type { MediaRestoreRequest } from '@prisma/client';
+import type { MediaRestoreRequest } from '@/lib/generated/prisma/client';
 
 /** Standard-tier IT restores complete in 3-5 hours; use the upper bound for ETAs. */
 export const RESTORE_ETA_HOURS = 5;

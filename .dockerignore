@@ -33,7 +33,7 @@ test-results
 *.test.tsx
 *.spec.ts
 *.spec.tsx
-jest.config.js
+jest.config.cjs
 jest.setup.js
 
 # iOS app (not needed for web deployment)

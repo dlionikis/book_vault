@@ -96,12 +96,17 @@ echo -e "${GREEN}[OK]${NC} Password hash generated"
 if [ "$ENV" == "local" ]; then
     echo -e "${YELLOW}[INFO]${NC} Updating password in local database..."
 
-    # Use Prisma via Node.js with local DATABASE_URL
-    RESULT=$(node -e "
-const { PrismaClient } = require('@prisma/client');
+    # Prisma 7 generates a TypeScript client (lib/generated/prisma), so this runs
+    # under tsx rather than plain node, and needs the pg driver adapter.
+    RESULT=$(npx tsx -e "
+import 'dotenv/config';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from './lib/generated/prisma/client';
 
 (async () => {
-    const prisma = new PrismaClient();
+    const prisma = new PrismaClient({
+        adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+    });
     try {
         const user = await prisma.user.update({
             where: { username: '$USERNAME' },
@@ -147,7 +152,10 @@ else
     ESCAPED_HASH=$(printf '%s' "$HASH" | sed 's/\$/\\$/g')
 
     # Build the Node.js command (minified for shell safety)
-    UPDATE_CMD="const{PrismaClient}=require('@prisma/client');(async()=>{const p=new PrismaClient();try{const u=await p.user.update({where:{username:'$USERNAME'},data:{passwordHash:'$ESCAPED_HASH'}});console.log('SUCCESS:'+u.id)}catch(e){if(e.code==='P2025'){console.log('ERROR:User not found')}else{console.log('ERROR:'+e.message)}}finally{await p.\$disconnect()}})();"
+    # Uses the `pg` driver directly — see the note in create-user.sh: the Prisma 7
+    # client is TypeScript and the production image has no TS loader. An empty
+    # rowCount means "not found" (Prisma's P2025).
+    UPDATE_CMD="const{Client}=require('pg');(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();try{const r=await c.query('UPDATE users SET password_hash = \$1, updated_at = NOW() WHERE username = \$2 RETURNING id',['$ESCAPED_HASH','$USERNAME']);if(r.rowCount===0){console.log('ERROR:User not found')}else{console.log('SUCCESS:'+r.rows[0].id)}}catch(e){console.log('ERROR:'+e.message)}finally{await c.end()}})();"
 
     # Execute via ECS Exec
     RESULT=$(aws ecs execute-command \

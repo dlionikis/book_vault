@@ -87,15 +87,20 @@ main() {
             --task "$TASK_ARN" \
             --container "$CONTAINER" \
             --command "node -e \"
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-prisma.\$queryRawUnsafe(\\\`$SQL_COMMAND\\\`).then(r => {
-    console.log(JSON.stringify(r, null, 2));
-    process.exit(0);
-}).catch(e => {
-    console.error(e.message);
-    process.exit(1);
-});
+// Uses the \`pg\` driver directly: as of Prisma 7 the generated client is
+// TypeScript (lib/generated/prisma) and the production image has no TS loader.
+const { Client } = require('pg');
+const client = new Client({ connectionString: process.env.DATABASE_URL });
+client.connect()
+    .then(() => client.query(\\\`$SQL_COMMAND\\\`))
+    .then(r => {
+        console.log(JSON.stringify(r.rows, null, 2));
+        return client.end().then(() => process.exit(0));
+    })
+    .catch(e => {
+        console.error(e.message);
+        process.exit(1);
+    });
 \"" \
             --interactive
     else

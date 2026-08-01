@@ -1,14 +1,20 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// Prisma 7 replaced `prisma-client-js` with `prisma-client`, which requires an
+// explicit `output` — the client no longer lands in node_modules/.prisma. It is
+// generated into the repo so Next's standalone build tracer picks it up (see
+// lib/generated/prisma, gitignored). `binaryTargets` is gone with the query
+// engine: v7 uses the query compiler, so there is no per-platform binary.
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
 }
 
+// The connection URL now lives in prisma.config.ts (CLI) and is passed to the
+// driver adapter at runtime (lib/db.ts) — v7 datasources no longer take `url`.
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {

@@ -95,12 +95,17 @@ echo -e "${GREEN}[OK]${NC} Password hash generated"
 if [ "$ENV" == "local" ]; then
     echo -e "${YELLOW}[INFO]${NC} Creating user in local database..."
 
-    # Use Prisma via Node.js with local DATABASE_URL
-    RESULT=$(node -e "
-const { PrismaClient } = require('@prisma/client');
+    # Prisma 7 generates a TypeScript client (lib/generated/prisma), so this runs
+    # under tsx rather than plain node, and needs the pg driver adapter.
+    RESULT=$(npx tsx -e "
+import 'dotenv/config';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from './lib/generated/prisma/client';
 
 (async () => {
-    const prisma = new PrismaClient();
+    const prisma = new PrismaClient({
+        adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+    });
     try {
         const user = await prisma.user.create({
             data: {
@@ -147,8 +152,14 @@ else
     # Escape special characters in hash for shell
     ESCAPED_HASH=$(printf '%s' "$HASH" | sed 's/\$/\\$/g')
 
-    # Build the Node.js command (minified for shell safety)
-    CREATE_CMD="const{PrismaClient}=require('@prisma/client');(async()=>{const p=new PrismaClient();try{const u=await p.user.create({data:{username:'$USERNAME',passwordHash:'$ESCAPED_HASH'}});console.log('SUCCESS:'+u.id)}catch(e){if(e.code==='P2002'){console.log('ERROR:User already exists')}else{console.log('ERROR:'+e.message)}}finally{await p.\$disconnect()}})();"
+    # Build the Node.js command (minified for shell safety).
+    #
+    # This uses the `pg` driver directly rather than Prisma: as of Prisma 7 the
+    # generated client is TypeScript (lib/generated/prisma), and the production
+    # image has no TS loader — only Next's own compiled bundle can import it.
+    # `pg` is a real dependency and is present in the standalone output.
+    # Postgres error 23505 (unique_violation) is the equivalent of Prisma P2002.
+    CREATE_CMD="const{Client}=require('pg');(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();try{const r=await c.query('INSERT INTO users (id, username, password_hash, created_at, updated_at) VALUES (gen_random_uuid(), \$1, \$2, NOW(), NOW()) RETURNING id',['$USERNAME','$ESCAPED_HASH']);console.log('SUCCESS:'+r.rows[0].id)}catch(e){if(e.code==='23505'){console.log('ERROR:User already exists')}else{console.log('ERROR:'+e.message)}}finally{await c.end()}})();"
 
     # Execute via ECS Exec
     RESULT=$(aws ecs execute-command \
