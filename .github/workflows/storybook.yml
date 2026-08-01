@@ -19,4 +19,8 @@ jobs:
         with:
           node-version: '24'
       - run: npm ci
+      # Stories reach the Prisma client transitively (ContinueListening.stories
+      # -> ContinueListening -> @/lib/db), and Prisma 7's client is gitignored
+      # with no postinstall, so it must be generated before the build.
+      - run: npm run db:generate
       - run: npm run build-storybook

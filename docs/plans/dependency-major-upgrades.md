@@ -294,6 +294,25 @@ the source tree, which `COPY . .` would clobber. The `node_modules/.prisma` + `@
 gone — verified that Next's standalone tracer bundles the generated client, `@prisma/client`'s
 runtime, and `pg` on its own. `prisma.config.ts` is copied in for ECS-Exec migrations.
 
+> **⚠️ Follow-up (Aug 1, 2026): this broke CI, and the fix is a rule worth remembering.**
+>
+> **Any job that type-checks, lints, builds, or tests must run `npm run db:generate` immediately
+> after `npm ci`.** Prisma 7's client is **gitignored** and has **no postinstall hook**, so on a
+> fresh checkout nothing resolves `@/lib/generated/prisma/client` until an explicit generate. Under
+> Prisma 6 the client landed in `node_modules/.prisma` during install, so ordering never mattered.
+>
+> `main.yml` had `prisma generate` buried in its "Setup test database" step, which runs **after**
+> lint and type-check — so `main` went red on the Phase 5b merge with **64 `TS7006` errors**. They
+> look like dozens of unrelated "implicitly has an 'any' type" failures, but there is a single root
+> cause near the top of the list: `TS2307: Cannot find module '@/lib/generated/prisma/client'`.
+> Without the client every Prisma type degrades to `any`. **Read past the noise to the TS2307.**
+>
+> `storybook.yml` had the same gap (stories reach the client via
+> `ContinueListening.stories` → `ContinueListening` → `@/lib/db`) and was passing only by luck.
+> Both fixed by adding an explicit generate step right after `npm ci`; `api.yml` and `e2e.yml`
+> already generated before their Prisma-dependent steps. Verified by reproducing the failure in a
+> clean clone (64 errors → 0 after the generate).
+
 Verified: `prisma migrate status` clean (4 migrations); `validate:full` green — unit **525**,
 integration **18/18** (real Postgres via the adapter, exercising `$transaction` both forms and
 `mode:'insensitive'`), contract **286/286**, E2E smoke, iOS **756** tests + build + SwiftLint 0;
