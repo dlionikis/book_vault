@@ -13,6 +13,9 @@ const eslintConfig = [
       'storybook-static/**',
       'coverage/**',
       'lib/api-types.ts',
+      // Prisma 7 generates a TypeScript client (see prisma.config.ts). It ships
+      // its own eslint-disable headers, which then report as unused directives.
+      'lib/generated/**',
       'ios/**',
     ],
   },

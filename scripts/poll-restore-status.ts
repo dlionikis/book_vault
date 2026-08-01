@@ -6,7 +6,12 @@
 import { pollRestoreStatus } from '../lib/poll-restore-status';
 import { prisma } from '../lib/db';
 
-if (require.main === module) {
+import { fileURLToPath } from 'url';
+
+// ESM equivalent of `require.main === module` (the package is "type": "module").
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+
+if (isMain) {
   pollRestoreStatus()
     .then(async (r) => {
       console.log('✅ poll-restore-status:', JSON.stringify(r));

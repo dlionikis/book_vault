@@ -2,6 +2,11 @@ import 'dotenv/config';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
+import { fileURLToPath } from 'url';
+
+// ESM equivalent of `require.main === module` (the package is "type": "module").
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+
 const TEST_USER_USERNAME = process.env.TEST_USER_USERNAME || 'testuser';
 const TEST_USER_PASSWORD = process.env.TEST_USER_PASSWORD || 'password123';
 
@@ -44,7 +49,7 @@ async function seedTestUser() {
 }
 
 // Run if called directly
-if (require.main === module) {
+if (isMain) {
   seedTestUser()
     .then(() => {
       console.log('✨ Done!');

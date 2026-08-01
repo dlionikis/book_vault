@@ -16,7 +16,11 @@
 
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import yaml from 'yaml';
+
+// The package is ESM ("type": "module"), so __dirname isn't defined.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 interface EndpointInfo {
   path: string;

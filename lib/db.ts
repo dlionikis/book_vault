@@ -33,11 +33,37 @@ function createPrismaClient(): PrismaClient {
   });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
+/**
+ * The client is constructed on first property access, not at import time.
+ *
+ * `next build` imports these modules to collect page data with no DATABASE_URL
+ * set (the Docker build has no database), so constructing eagerly would fail
+ * the image build. Deferring keeps the "missing DATABASE_URL" error where it
+ * belongs — on the first actual query — while callers still see a plain
+ * `prisma.<model>` API.
+ *
+ * The instance is cached on globalThis in every environment (pre-v7 this was
+ * dev-only). The pg pool now lives in the adapter, so re-creating the client —
+ * e.g. across hot reloads or module-graph duplicates — would leak connections.
+ */
+function getClient(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = createPrismaClient();
+  }
+  return globalForPrisma.prisma;
 }
+
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    return Reflect.get(getClient(), prop, receiver);
+  },
+  has(_target, prop) {
+    return Reflect.has(getClient(), prop);
+  },
+  set(_target, prop, value) {
+    return Reflect.set(getClient(), prop, value);
+  },
+});
 
 /**
  * Best Practices:

@@ -2,6 +2,11 @@ import 'dotenv/config';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
+import { fileURLToPath } from 'url';
+
+// ESM equivalent of `require.main === module` (the package is "type": "module").
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+
 /**
  * Seed the deterministic fixtures the Playwright web smoke (Phase 6) depends on:
  *   1. A test user (same credentials as scripts/seed-test-user.ts).
@@ -126,7 +131,7 @@ export async function seedE2E(): Promise<void> {
   console.log('\n✨ E2E seed complete.');
 }
 
-if (require.main === module) {
+if (isMain) {
   seedE2E()
     .then(async () => {
       await prisma.$disconnect();

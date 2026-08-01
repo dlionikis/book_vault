@@ -3,6 +3,11 @@ import fs from 'fs/promises';
 import path from 'path';
 import { prisma } from '@/lib/db';
 import { seedTestUser } from './seed-test-user';
+
+import { fileURLToPath } from 'url';
+
+// ESM equivalent of `require.main === module` (the package is "type": "module").
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 import {
   extractChapters,
   findCueFile,
@@ -332,7 +337,7 @@ export async function importBook(
 }
 
 // Run the import only if this file is executed directly (not imported)
-if (require.main === module) {
+if (isMain) {
   (async () => {
     try {
       // First, seed the test user

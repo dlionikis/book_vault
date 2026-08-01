@@ -8,7 +8,12 @@
 import { syncAvailability } from '../lib/sync-availability';
 import { prisma } from '../lib/db';
 
-if (require.main === module) {
+import { fileURLToPath } from 'url';
+
+// ESM equivalent of `require.main === module` (the package is "type": "module").
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+
+if (isMain) {
   syncAvailability()
     .then(async (r) => {
       console.log('✅ sync-availability:', JSON.stringify(r));
