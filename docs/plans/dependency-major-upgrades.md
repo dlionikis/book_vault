@@ -1,9 +1,11 @@
 # Dependency Major-Version Upgrade Plan
 
 > **Created**: July 19, 2026
-> **Status**: In progress — Phases 1 ✅, 2 ✅, 3 ✅, 4 ✅, 5 ✅ done; Node 20→24 ✅; Phase 6 ⚙️
-> partial (node-fetch removed, undici 8, zod 4; TS 7 / Tailwind 4 / eslint 10 / sharp deferred)
-> — all July 19, 2026. Phase 5b (Prisma 7) remaining. **`npm audit`: 0 high/critical** as of Phase 4.
+> **Status**: Phases 1 ✅, 2 ✅, 3 ✅, 4 ✅, 5 ✅, **5b ✅ (Prisma 7 + ESM, August 1, 2026)** done;
+> Node 20→24 ✅; Phase 6 ⚙️ partial (node-fetch removed, undici 8, zod 4; TS 7 / Tailwind 4 /
+> eslint 10 / sharp deferred) — the rest July 19, 2026. All planned phases are now landed except
+> the Phase 6 deferrals. **`npm audit`: 15 (6 low, 9 high)** — new advisories against pre-existing
+> deps, not a regression from any phase; `main` reports the same. See the Phase 5b audit note.
 > **Context**: The safe, in-semver dependency updates + `npm audit fix` already landed
 > (26 → residual vulnerabilities, all remaining ones require the breaking upgrades below).
 > This plan covers the **major-version** jumps deliberately deferred from that pass.
@@ -222,27 +224,87 @@ isolation — unrelated to Prisma/the browse change.)
 **Acceptance**: ✅ `prisma migrate status` clean; integration + contract green; browse-page Prisma
 errors gone from the build log.
 
-### Phase 5b — Prisma 6 → 7 (own plan; do with / after Node 22) — planned
+### Phase 5b — Prisma 6 → 7 — ✅ DONE (August 1, 2026)
 
-Not a routine bump. Required before/with this work:
+Landed in `deps/phase-5b-prisma-7`, as **two commits**: the ESM conversion on its own (so the
+module-system change can be bisected independently), then Prisma 7.
 
-- **Node 20 → 22** first (v7 needs Node ≥20.19; pairs naturally with the base-image move below).
-- **ESM**: `"type": "module"` + `tsconfig` (`module: ESNext`, `moduleResolution: bundler`).
-  Verify Next 16 build + jest (`next/jest`) still work — this is the biggest unknown.
-- **New `prisma-client` generator** with a **required `output`** path (client leaves
-  `node_modules/.prisma`). Update: the two type-import sites, `lib/db.ts`, the Dockerfile COPYs
-  (`node_modules/.prisma` + `@prisma`), `.dockerignore`, and the inline `require('@prisma/client')`
-  shell scripts (`db-migrate.sh`, `create-user.sh`, `delete-user.sh`, `reset-password.sh`,
-  `db-connect.sh`).
-- **`prisma.config.ts`** at project root; **explicit env loading** (`import 'dotenv/config'`).
-- **Driver adapter** required in the `PrismaClient` constructor → rewrite `lib/db.ts`.
-- **CLI**: `generate` no longer auto-runs with `migrate`; seeding is manual — update
-  `db:migrate`/`db:seed`, `scripts/db-migrate.sh`, and the CI/Docker `prisma generate` steps.
-- The one deep-mock test (`__tests__/scripts/import-libation.test.ts`, `mockDeep<PrismaClient>()`)
-  is the most likely type-shape casualty.
+**The ESM prerequisite was cheaper than feared.** It was spiked first — flip `"type": "module"`
+with no Prisma change and run the gates — precisely because it was the plan's "biggest unknown".
+It passed `tsc`, `next build`, jest (525), `lint`, and `build-storybook` on the first try. Two
+reasons: `tsconfig` was _already_ on `module: esnext` + `moduleResolution: bundler` (Next 16 set
+that in Phase 2), and the repo only has ~7 real CJS files. What it took:
 
-**Acceptance**: `prisma migrate` clean on a fresh DB; integration + contract green; Docker build +
-a real deploy; the new generated-client path resolves in the standalone runtime.
+- `next.config.js` → `.mjs` (`export default`); `jest.config.js` → `.cjs` (`next/jest` is CJS);
+  `postcss.config.js` → `.cjs`; `server.js` + `scripts/check-port.js` → `import` (+ a
+  `fileURLToPath` `__dirname` shim).
+- **`jest.setup.js` must keep its polyfill loads lazy.** It was mixed ESM/CJS; converting the
+  `require`s to hoisted `import`s breaks it, because undici reads `TextDecoder` and the Web
+  Streams globals at _module-load_ time and the imports would run before the globals are
+  assigned. `createRequire(import.meta.url)` preserves the ordering.
+- `require.main === module` (5 tsx scripts) → `process.argv[1] === fileURLToPath(import.meta.url)`;
+  `__dirname` in `check-endpoint-coverage.ts` → `fileURLToPath`.
+
+**Prisma 7 itself**, as the plan predicted:
+
+- Generator `prisma-client-js` → **`prisma-client`** with a required `output`. The client
+  generates into **`lib/generated/prisma`** (gitignored, regenerated in CI/Docker) as **TypeScript
+  source**, not compiled JS — that detail drives most of what follows. `binaryTargets` is gone:
+  v7 uses the query compiler, so there's no per-platform engine binary.
+- **Driver adapter**: added `pg` + `@prisma/adapter-pg` as real runtime deps; `lib/db.ts` builds a
+  `PrismaPg` adapter. The datasource block no longer carries `url`.
+- **`prisma.config.ts`** at the root (schema, migrations path, seed command, datasource url).
+- **CLI**: `db:migrate` chains an explicit `prisma generate`; `db:seed` → `prisma db seed`.
+- The deep-mock test (`mockDeep<PrismaClient>()`) — flagged as "the most likely type-shape
+  casualty" — needed **no change** beyond repointing its import. `tsc` was clean.
+
+**Four things the plan didn't anticipate** (each caught by a gate, not by inspection):
+
+1. **`prisma/config`'s `env()` helper throws at config-load time.** `prisma generate` needs no
+   database but runs during the Docker build where `DATABASE_URL` is absent — so `env()` failed
+   the image build. Read `process.env.DATABASE_URL` directly instead. Likewise `dotenv` is
+   imported defensively: production runs `migrate deploy` in a container that has no dotenv and
+   gets the URL from the task definition.
+2. **`lib/db.ts` cannot construct the client at import time.** `next build` imports these modules
+   to collect page data with no `DATABASE_URL`, so an eager `new PrismaClient()` (or an eager
+   throw) fails the build. The client is now built lazily behind a `Proxy`; a genuinely missing
+   URL surfaces on the first real query. It also caches on `globalThis` in **all** environments
+   now (was dev-only) — the pg pool lives in the adapter, so re-creating the client leaks
+   connections.
+3. **The production shell scripts can't use Prisma at all.** The generated client is TypeScript
+   and the runtime image has no TS loader (`scripts/` is `.dockerignore`d, so a shared helper
+   can't be shipped either). The **local** paths of `create-user.sh` / `delete-user.sh` /
+   `reset-password.sh` run under `tsx` against the generated client; the **production** paths
+   (plus `db-connect.sh` and `db-migrate.sh`'s raw-SQL branch) use **`pg` directly**, which is a
+   real dependency and is present in the standalone output. Semantics preserved: Postgres `23505`
+   ↔ Prisma `P2002`, empty `rowCount` ↔ `P2025`, and every user-owned table cascades at the DB
+   level so the raw `DELETE` matches `prisma.user.delete`.
+4. **Two gate-only fixes**: jest needs `@prisma/client/` in the ESM transform allowlist (v7 loads
+   its query compiler as `.mjs`, which broke all 18 integration tests), and eslint must ignore
+   `lib/generated/**` (the generated files carry their own `eslint-disable` headers, which report
+   as _unused directives_ and trip `--max-warnings 0`).
+
+The Dockerfile's `prisma generate` moved from the **deps** stage to the **builder**: v7 emits into
+the source tree, which `COPY . .` would clobber. The `node_modules/.prisma` + `@prisma` COPYs are
+gone — verified that Next's standalone tracer bundles the generated client, `@prisma/client`'s
+runtime, and `pg` on its own. `prisma.config.ts` is copied in for ECS-Exec migrations.
+
+Verified: `prisma migrate status` clean (4 migrations); `validate:full` green — unit **525**,
+integration **18/18** (real Postgres via the adapter, exercising `$transaction` both forms and
+`mode:'insensitive'`), contract **286/286**, E2E smoke, iOS **756** tests + build + SwiftLint 0;
+`prisma db seed` works end-to-end; native-arm64 Docker build clean, and **the built image was run
+against the real database** — login wrote a refresh token and `/api/books` returned joined data,
+with zero errors in the container log.
+
+**Deploy-affecting** — this changes how the app connects to Postgres. Do a real canary/staging
+deploy and watch `book-vault-fallback` come healthy before trusting Spot.
+
+**`npm audit` note**: now **15 vulnerabilities (6 low, 9 high)** — but this is **not** a Prisma-7
+regression. `main` reports the identical 15/6/9 (verified on a clean worktree). These are
+advisories published against pre-existing deps since Phase 4's July audit (`brace-expansion`,
+`fast-uri`, `js-yaml`, `postcss`, `sharp`, `shell-quote`); the Phase 4 "0 high/critical" line was
+accurate when written. Worth its own pass — `sharp` 0.35 is now a real advisory fix rather than
+the orphan bump Phase 6 declined, which changes that call.
 
 ### Phase 6 — Remaining ecosystem majors (evaluate individually) — ⚙️ PARTIAL (July 19, 2026)
 
@@ -279,7 +341,10 @@ Landed the low-risk subset in `deps/phase-6-ecosystem`; deferred the rest with r
   top-level bump changes an effectively-unused dep — and in the standalone Docker output Next's
   tracer doesn't even copy the unused top-level `sharp`'s `dist/`. Left at `^0.34.5` to match
   Next's internal copy and avoid an orphan. (Verified: image serving works via Next's bundled
-  sharp; E2E cover-loading passes.)
+  sharp; E2E cover-loading passes.) **Revisit (Aug 1, 2026)**: `sharp <0.35.0` now carries a
+  **high** advisory (GHSA-f88m-g3jw-g9cj, inherited libvips CVEs). That changes the calculus — the
+  bump is no longer cosmetic. Note the exposure is still via **Next's own internal copy**, which a
+  top-level bump doesn't control, so check what Next 16 pins before assuming 0.35 clears it.
 - ~~`undici`~~ — ✅ done here (7 → 8).
 
 ---
