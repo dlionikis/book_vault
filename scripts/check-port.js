@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const net = require('net');
+import net from 'net';
 
 const port = process.argv[2] || 3000;
 

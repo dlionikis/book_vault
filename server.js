@@ -1,8 +1,11 @@
-const { createServer } = require('https');
-const { parse } = require('url');
-const next = require('next');
-const fs = require('fs');
-const path = require('path');
+import { createServer } from 'https';
+import { parse } from 'url';
+import next from 'next';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0';

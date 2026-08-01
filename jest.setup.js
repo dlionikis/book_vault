@@ -5,6 +5,14 @@ import '@testing-library/jest-dom';
 // (lib/jwt.ts throws without NEXTAUTH_SECRET; don't depend on developer .env files)
 process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'jest-test-secret-do-not-use-in-prod';
 
+// The polyfills below must be applied in order: undici reads TextDecoder and the
+// Web Streams globals at *module-load* time, so it can only be pulled in after
+// they exist on `global`. ESM `import` is hoisted and would load undici first, so
+// use createRequire to keep these loads lazy (the package is `type: module`).
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+
 // Polyfill TextEncoder/TextDecoder for undici (required by @fastify/busboy)
 const { TextEncoder, TextDecoder } = require('util');
 global.TextEncoder = TextEncoder;
