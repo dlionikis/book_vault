@@ -15,5 +15,15 @@
 	<array>
 		<string>$(AppIdentifierPrefix)com.bookvault.BookVault</string>
 	</array>
+	<!--
+	CarPlay audio (task A4). Granted by Apple against the developer account; the
+	App ID must also have the CarPlay Audio capability enabled or signing fails
+	with a provisioning-profile mismatch. The simulator cannot satisfy this
+	entitlement — it only proves out on a real device.
+
+	The CarPlay scene manifest itself lives in `project.yml`, not here.
+	-->
+	<key>com.apple.developer.carplay-audio</key>
+	<true/>
 </dict>
 </plist>
