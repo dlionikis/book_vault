@@ -2,10 +2,10 @@
 
 > **Created**: July 27, 2026
 > **Reviewed**: July 31, 2026 — every §1 finding re-verified against current code; see §0
-> **Status**: ⏸️ **All buildable work is done — blocked on the Apple entitlement (A0).**
-> Tracks A (except A0/A4), B and C1–C3/C6 are complete. What remains cannot be
-> done from the codebase: A0 is a request to Apple, A4 wires the approval it
-> returns, and C4/C5 need a CarPlay Simulator / head-unit pass.
+> **Status**: 🧪 **All code is done — remaining work is manual QA (C4, C5).**
+> Tracks A, B and C1–C3/C6 are complete. Apple granted the entitlement and A4
+> wired it (August 1, 2026). What remains cannot be done from the codebase:
+> C4 and C5 need a CarPlay Simulator / head-unit pass.
 > **Priority**: TBD
 > **Platform**: iOS only
 > **Requirements doc**: [carplay-app-plan.md](carplay-app-plan.md)
@@ -206,11 +206,11 @@ between two people if desired. Sizes are relative (S/M/L), not calendar estimate
 
 | ID        | Task                                                     | Size  | Depends | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | --------- | -------------------------------------------------------- | ----- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **A0**    | Request CarPlay audio entitlement                        | S     | —       | Submit the request to Apple for `com.apple.developer.carplay-audio`. **Do this first, today.** It's a business-process bottleneck with unpredictable lead time (weeks), and every other task can proceed without it. Track the request ID.                                                                                                                                                                                                                                                                                                                                                                            |
+| ✅ **A0** | Request CarPlay audio entitlement — **granted**          | S     | —       | Apple granted `com.apple.developer.carplay-audio` against the developer account (August 1, 2026). This was the critical path; it gated shipping only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ✅ **A1** | Scene manifest + multi-scene — **done**                  | **L** | —       | In `project.yml`: set `UIApplicationSupportsMultipleScenes: true`, add a full `UIApplicationSceneManifest` with `UISceneConfigurations` for both `UIWindowSceneSessionRoleApplication` (SwiftUI default) and `CPTemplateApplicationSceneSessionRoleApplication`. Run `xcodegen generate`. **Highest-risk task** — verify the _phone_ app still launches, backgrounds, and handles push deep links before moving on. Run **`npm run ios:test:ui`** (15 XCUITest flows) as part of this task: launch, navigation and mini-player are exactly the blast radius, and that suite did not exist when this plan was written. |
 | ✅ **A2** | `CarPlaySceneDelegate` skeleton — **done**               | M     | A1      | Implement `CPTemplateApplicationSceneDelegate` (`didConnect`/`didDisconnect` interface controller). Ship a hardcoded one-item `CPListTemplate` to prove the scene connects in the CarPlay Simulator. Merge this as a walking skeleton before building real UI.                                                                                                                                                                                                                                                                                                                                                        |
 | ✅ **A3** | Chapter loading in the player — **done** (July 31, 2026) | M     | —       | **Refactor, not CarPlay code.** Move chapter fetching into `AudioPlayerManager.play(book:)` (or a small `loadChapters(for:)` it calls) using `ChapterManager`, so chapters populate regardless of which UI started playback. Prefer `getCachedChapters` first, then async fetch. Remove/keep the view-level calls as thin pass-throughs. Fixes finding #3 and improves lock-screen chapter behavior on the phone too. **Independently valuable — can merge before any CarPlay work.**                                                                                                                                 |
-| **A4**    | Entitlement wiring                                       | S     | A0, A1  | Once Apple approves: add `com.apple.developer.carplay-audio` to `BookVault.entitlements`, update the provisioning profile. Note the existing comment in `project.yml` — entitlements are a committed file, _not_ XcodeGen-generated; don't let `xcodegen` clobber it.                                                                                                                                                                                                                                                                                                                                                 |
+| ✅ **A4** | Entitlement wiring — **done** (August 1, 2026)           | S     | A0, A1  | `com.apple.developer.carplay-audio` added to `BookVault.entitlements`. Verified `xcodegen generate` leaves the file byte-identical — `project.yml` points `CODE_SIGN_ENTITLEMENTS` at the committed file rather than using XcodeGen's `entitlements:` block. **Provisioning is not code**: the App ID must have the CarPlay Audio capability enabled in the developer portal, and the profile re-fetched, or signing fails. Only a real-device build proves this — the simulator cannot satisfy the entitlement.                                                                                                      |
 
 ### Implementation notes — B7 (shipped July 31, 2026)
 
@@ -246,17 +246,19 @@ this app, and CarPlay renders dead buttons if they are left on.
 
 ---
 
-### ⏸️ Remaining work is blocked on Apple (as of July 31, 2026)
+### 🧪 Remaining work is manual QA (as of August 1, 2026)
 
-Everything buildable is done. The four open tasks all need something outside the
-codebase:
+All code is done, including the entitlement wiring. The two open tasks both need
+hardware or a live CarPlay connection:
 
-| Task   | Needs                                                                           |
-| ------ | ------------------------------------------------------------------------------- |
-| **A0** | A request to Apple for `com.apple.developer.carplay-audio`. Weeks of lead time. |
-| **A4** | The approval from A0, then entitlement + provisioning wiring.                   |
-| **C4** | A CarPlay Simulator pass (Xcode ▸ I/O ▸ External Displays ▸ CarPlay).           |
-| **C5** | A real head unit or dock, plus A4.                                              |
+| Task   | Needs                                                                 |
+| ------ | --------------------------------------------------------------------- |
+| **C4** | A CarPlay Simulator pass (Xcode ▸ I/O ▸ External Displays ▸ CarPlay). |
+| **C5** | A real head unit or dock.                                             |
+
+Also outstanding but not a codebase task: the App ID's **CarPlay Audio
+capability** must be enabled in the developer portal and the provisioning
+profile re-fetched. The entitlement key alone does not sign — see A4.
 
 **Nothing in Tracks A–C has ever run against a live CarPlay connection.** The
 templates compile and the logic is unit-tested, but C4 is where the manual
@@ -264,8 +266,8 @@ matrix in §5 finds what compile-and-test cannot: whether the scene connects,
 whether rows and artwork render at a real trait collection, and whether the
 phone↔CarPlay sync in AC4 actually holds.
 
-**A0 is the critical path and has not been submitted.** It gates shipping only —
-C4 can be done today without it.
+**C4 is now the critical path.** It needs no entitlement and can be done
+immediately; C5 follows once a real device build signs.
 
 ### Implementation notes — Track B + C1–C3 (shipped July 31, 2026)
 
@@ -507,7 +509,8 @@ throttling, image scaling at real trait collections, or Siri/voice interactions.
 
 ## 7. Acceptance Criteria (refined from the requirements doc)
 
-- [ ] Apple CarPlay audio entitlement obtained; `BookVault.entitlements` and provisioning updated (A0, A4).
+- [x] Apple CarPlay audio entitlement obtained and added to `BookVault.entitlements` (A0, A4).
+- [ ] App ID capability enabled + provisioning profile refreshed; a real-device build signs successfully (A4).
 - [ ] CarPlay scene launches and shows a browsable tab bar: Library, Series, Downloaded, Continue (A2, B3–B6).
 - [ ] Selecting a book starts playback via existing `AudioPlayerManager.shared`, with Now Playing showing correct metadata and artwork (B7).
 - [ ] Transport controls work from CarPlay and stay in sync with the phone UI when both are visible (B7, AC4).
