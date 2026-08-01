@@ -1,5 +1,19 @@
 # Dependency Major-Version Upgrade Plan
 
+> **📦 ARCHIVED — August 1, 2026.** Every phase in this plan landed (1–5, 5b, 6-partial, Node
+> 20→24, the arm64/Graviton move, and the August audit cleanup). Kept for the migration
+> write-ups: each phase records what actually broke and why, which is the useful part on the next
+> framework major.
+>
+> **Still-open items were carried forward** to
+> [plans/dependency-deferrals.md](../../plans/dependency-deferrals.md) — Tailwind 4, TypeScript 7,
+> ESLint 10 and `sharp`. Track them there, not here.
+>
+> Two things in here are worth re-reading before the next upgrade: the **CI rule** in the Phase 5b
+> follow-up (any job that type-checks, lints, builds or tests must run `db:generate` right after
+> `npm ci` — Prisma 7's client is gitignored with no postinstall), and the **`sharp` entry**, which
+> corrects a wrong diagnosis from the original plan.
+
 > **Created**: July 19, 2026
 > **Status**: Phases 1 ✅, 2 ✅, 3 ✅, 4 ✅, 5 ✅, **5b ✅ (Prisma 7 + ESM, August 1, 2026)** done;
 > Node 20→24 ✅; Phase 6 ⚙️ partial (node-fetch removed, undici 8, zod 4; TS 7 / Tailwind 4 /
@@ -11,7 +25,7 @@
 > **Context**: The safe, in-semver dependency updates + `npm audit fix` already landed
 > (26 → residual vulnerabilities, all remaining ones require the breaking upgrades below).
 > This plan covers the **major-version** jumps deliberately deferred from that pass.
-> **Related**: [development-process.md](../development-process.md) (run `validate:full` after each phase), the residual `npm audit` items.
+> **Related**: [development-process.md](../../development-process.md) (run `validate:full` after each phase), the residual `npm audit` items.
 
 ---
 
@@ -27,7 +41,7 @@ Everything here is currently **mitigated or non-exploitable in production**:
 
 - The one prod-facing high (Next.js Image Optimizer DoS, GHSA-9g9p-9gw9-jx7f) is
   **mitigated** by tightening `images.remotePatterns` off `**` to the S3 hosts
-  ([next.config.js](../../next.config.js)). The full fix ships in Next 16 (Phase 2).
+  ([next.config.mjs](../../../next.config.mjs)). The full fix ships in Next 16 (Phase 2).
 - The rest are dev/test/build tooling (Storybook, jest-openapi/axios, redocly,
   eslint, openapi-typescript) — real advisories, but not attacker-reachable at runtime.
 
@@ -453,7 +467,7 @@ mis-executes the SWC binary. (Verified: reproduced the segfault after a full
 
 **Fix.** Build **natively arm64** (no emulation) and run ECS on **Graviton**:
 
-- [scripts/deploy.sh](../../scripts/deploy.sh) `run_deploy()`: `docker buildx build
+- [scripts/deploy.sh](../../../scripts/deploy.sh) `run_deploy()`: `docker buildx build
 --platform linux/amd64` → plain `docker build` (native arm64), with an arch guard
   that aborts if the built image isn't arm64.
 - ECS task definition **`book-vault:5`** registered from `:4` with
@@ -493,7 +507,7 @@ this same deploy-affecting migration within ~9 months. Node **24 is the Active L
 Current, not LTS until Oct 2026 — too bleeding-edge for the prod runtime; it's also the local
 dev version that masked the qemu + undici-8 Node-mismatch bugs.)
 
-- All three `FROM node:20-alpine` → `node:24-alpine` ([Dockerfile](../../Dockerfile)).
+- All three `FROM node:20-alpine` → `node:24-alpine` ([Dockerfile](../../../Dockerfile)).
 - CI `node-version: '20'` → `'24'` across all four workflows (api, e2e, storybook, main) — 9 lines.
 - `@types/node` `^22` → `^24` (24.13.3), kept in step with the runtime.
 - **Unblocks undici 8** (needs ≥22.19) and **Prisma 7** (needs ≥20.19) for their own phases.

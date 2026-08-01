@@ -2,7 +2,7 @@
 
 > Quick navigation for Book Vault documentation
 
-**Last Updated**: July 21, 2026
+**Last Updated**: August 1, 2026
 
 ---
 
@@ -111,10 +111,10 @@
 
 ## Plans (Active)
 
-| File                                                                     | Purpose                                          |
-| ------------------------------------------------------------------------ | ------------------------------------------------ |
-| [plans/dependency-major-upgrades.md](plans/dependency-major-upgrades.md) | Phased major dep upgrades (Prisma 6→7 remaining) |
-| [plans/audible-download-plan.md](plans/audible-download-plan.md)         | Audible download integration plan (planned)      |
+| File                                                             | Purpose                                                                             |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| [plans/dependency-deferrals.md](plans/dependency-deferrals.md)   | Held-back dep majors (Tailwind 4, TS 7, ESLint 10, sharp) + accepted audit findings |
+| [plans/audible-download-plan.md](plans/audible-download-plan.md) | Audible download integration plan (planned)                                         |
 
-Completed plans (S3 restore, hardening, testing, App Store review) live in
+Completed plans (S3 restore, hardening, testing, dependency majors, App Store review) live in
 `archive/completed-plans/` — see below.

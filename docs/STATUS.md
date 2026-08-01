@@ -57,7 +57,7 @@
 - [ ] **Dismiss mini-player** - Add ability to close the recent playback mini-player
 - [ ] **Add sleep functionality** - Add ability to select a duration for listening where the app will fade-out and pause the audio.
 - [x] **Cold storage retrieval warning** - Warn users when audiobooks are in S3 cold storage and will take time to become available — ✅ shipped as part of the restore workflow ([archive/completed-plans/s3-archive-restore-workflow-v2.md](archive/completed-plans/s3-archive-restore-workflow-v2.md))
-- [ ] **Dependency major upgrades** - Phased Next 16 / React 19 / Prisma 7 / Storybook / ESLint bumps; clears residual advisories ([docs/plans/dependency-major-upgrades.md](plans/dependency-major-upgrades.md)) — safe in-semver updates already done
+- [x] **Dependency major upgrades** - Next 16, React 19, Prisma 7 (+ ESM), Storybook, Node 24, native arm64/Graviton — ✅ all phases landed ([archive/completed-plans/dependency-major-upgrades.md](archive/completed-plans/dependency-major-upgrades.md)). Four majors deliberately held back (Tailwind 4, TS 7, ESLint 10, sharp) — tracked in [plans/dependency-deferrals.md](plans/dependency-deferrals.md)
 
 ### ⏸️ Blocked
 

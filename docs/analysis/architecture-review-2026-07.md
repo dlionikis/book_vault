@@ -11,7 +11,7 @@
 Two large bodies of work landed after the original review and substantially closed its gaps:
 
 1. **Pre-restore hardening (PRs #75–#79)** — fixed the P0 security holes and the test-infrastructure defects.
-2. **Dependency major-upgrade ladder (PRs #88–#101)** — see [plans/dependency-major-upgrades.md](../plans/dependency-major-upgrades.md). Net result:
+2. **Dependency major-upgrade ladder (PRs #88–#101)** — see [archive/completed-plans/dependency-major-upgrades.md](../archive/completed-plans/dependency-major-upgrades.md). Net result:
    - **Next 14 → 16**, **React 18 → 19**, **Prisma 5 → 6**, **Storybook → 10.5**, **zod 3 → 4**, **undici → 8**; **`node-fetch` removed** (was unused).
    - **Runtime Node 20 → 24 (Active LTS)** across Docker + CI; the AWS SDK `NodeVersionSupportWarning` is gone.
    - **Deploy build fixed**: cross-arch amd64 (qemu segfault on the Next 16 SWC binary) → **native arm64 / Graviton** (`book-vault:5` task def, healthy in prod).
