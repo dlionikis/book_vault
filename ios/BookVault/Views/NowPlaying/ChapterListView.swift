@@ -68,20 +68,37 @@ struct ChapterListView: View {
     }
 
     private var chapterList: some View {
-        List {
-            ForEach(chapters, id: \.id) { chapter in
-                ChapterRow(
-                    chapter: chapter,
-                    isCurrentChapter: chapter.id == currentChapterId,
-                    onTap: {
-                        onChapterTap(chapter)
-                    }
-                )
-                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                .listRowSeparator(.hidden)
+        ScrollViewReader { proxy in
+            List {
+                ForEach(chapters, id: \.id) { chapter in
+                    ChapterRow(
+                        chapter: chapter,
+                        isCurrentChapter: chapter.id == currentChapterId,
+                        onTap: {
+                            onChapterTap(chapter)
+                        }
+                    )
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .listRowSeparator(.hidden)
+                }
+            }
+            .listStyle(.plain)
+            // Open with the current chapter at the top rather than at the
+            // start of the book — 40 chapters in, the useful rows are
+            // otherwise well off screen.
+            //
+            // Near the end of the list there isn't enough content left to
+            // put the row at the very top; SwiftUI clamps to the maximum
+            // offset, which is the wanted "scroll as far as it goes"
+            // behaviour, so no special case is needed here.
+            //
+            // Not animated: this is the sheet's opening state, and animating
+            // from the top on every present reads as a glitch.
+            .onAppear {
+                guard let currentChapterId else { return }
+                proxy.scrollTo(currentChapterId, anchor: .top)
             }
         }
-        .listStyle(.plain)
     }
 }
 
@@ -211,10 +228,23 @@ private struct ChapterRow: View {
     )
 }
 
+/// Long enough that the current chapter starts off screen, so the
+/// scroll-to-current behaviour is actually visible here.
 #Preview("Many Chapters") {
-    ChapterListView(
-        chapters: Array(repeating: Chapter.mockChapters, count: 4).flatMap { $0 },
-        currentChapterId: Chapter.mockChapter3.id,
+    // Each repeat is given a fresh id: duplicate ids in the ForEach would make
+    // both the row identity and scrollTo's target ambiguous.
+    let many: [Chapter] = (0 ..< 4).flatMap { block in
+        Chapter.mockChapters.map { chapter in
+            var copy = chapter
+            copy.id = UUID()
+            copy.index = block * Chapter.mockChapters.count + chapter.index
+            return copy
+        }
+    }
+
+    return ChapterListView(
+        chapters: many,
+        currentChapterId: many[many.count - 4].id,
         onChapterTap: { _ in }
     )
 }

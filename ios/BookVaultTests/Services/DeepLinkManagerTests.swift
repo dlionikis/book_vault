@@ -69,4 +69,35 @@ final class DeepLinkManagerTests: XCTestCase {
 
         XCTAssertNil(sut.pendingDeepLink)
     }
+
+    // MARK: - In-app routing
+
+    /// Used by the Now Playing sheet's title button, which can't use a
+    /// NavigationLink because it is presented modally.
+    func testOpenBookPublishesPendingLink() {
+        let sut = DeepLinkManager()
+
+        sut.openBook(id: "550e8400-e29b-41d4-a716-446655440000")
+
+        XCTAssertEqual(sut.pendingDeepLink, .book(id: "550e8400-e29b-41d4-a716-446655440000"))
+    }
+
+    func testOpenBookIgnoresEmptyId() {
+        let sut = DeepLinkManager()
+
+        sut.openBook(id: "")
+
+        XCTAssertNil(sut.pendingDeepLink)
+    }
+
+    /// Routing to a second book while one is pending must retarget, not be
+    /// dropped — the player can be reopened for a different book.
+    func testOpenBookReplacesPendingLink() {
+        let sut = DeepLinkManager()
+        sut.openBook(id: "first")
+
+        sut.openBook(id: "second")
+
+        XCTAssertEqual(sut.pendingDeepLink, .book(id: "second"))
+    }
 }
