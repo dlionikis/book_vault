@@ -12,6 +12,29 @@ try {
 }
 
 /**
+ * The CLI takes a URL string, not the driver options object the app uses, so
+ * TLS has to be expressed as an `sslmode` parameter here.
+ *
+ * `verify-full` is the goal, but it can only verify with Amazon's CA in the
+ * trust store — which `NODE_EXTRA_CA_CERTS` (set in the Dockerfile) supplies
+ * for the container where `migrate deploy` actually runs. Local and CI
+ * databases have no TLS listener, so they are left untouched.
+ */
+function withRdsSslMode(url: string): string {
+  if (!url) return url;
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.endsWith('.rds.amazonaws.com')) return url;
+    if (!parsed.searchParams.has('sslmode')) {
+      parsed.searchParams.set('sslmode', 'verify-full');
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+/**
  * Prisma CLI configuration (Prisma 7+).
  *
  * In v7 the CLI no longer reads `url` from the datasource block in
@@ -35,6 +58,6 @@ export default defineConfig({
     seed: 'tsx scripts/seed-test-user.ts',
   },
   datasource: {
-    url: process.env.DATABASE_URL ?? '',
+    url: withRdsSslMode(process.env.DATABASE_URL ?? ''),
   },
 });
