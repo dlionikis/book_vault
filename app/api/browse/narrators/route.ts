@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
-import { prisma } from '@/lib/db';
-import { parsePagination } from '@/lib/api-utils';
-import { VISIBLE_BOOK_WHERE } from '@/lib/book-transformer';
+import { parsePagination, buildPagination } from '@/lib/api-utils';
+import { getBrowseEntities } from '@/lib/queries/browse-entities';
 
 export async function GET(request: NextRequest) {
   // Check both auth methods
@@ -17,45 +16,20 @@ export async function GET(request: NextRequest) {
       searchParams.get('limit')
     );
 
-    // Listed only while the narrator still has a visible book, with a matching
-    // count — see the note in browse/authors.
-    const visibleBooksWhere = { some: { book: VISIBLE_BOOK_WHERE } };
+    // Shared with the /browse/narrators page — visibility filtering and the
+    // matching bookCount live in one place.
+    const { entities, total } = await getBrowseEntities('narrator', { skip, limit });
 
-    const [narrators, total] = await Promise.all([
-      prisma.narrator.findMany({
-        where: { books: visibleBooksWhere },
-        skip,
-        take: limit,
-        include: {
-          _count: {
-            select: {
-              books: { where: { book: VISIBLE_BOOK_WHERE } },
-            },
-          },
-        },
-        orderBy: {
-          name: 'asc',
-        },
-      }),
-      prisma.narrator.count({ where: { books: visibleBooksWhere } }),
-    ]);
-
-    // Transform to include book count
-    const transformedNarrators = narrators.map((narrator) => ({
-      id: narrator.id,
-      name: narrator.name,
-      asin: narrator.asin,
-      bookCount: narrator._count.books,
+    const results = entities.map((entity) => ({
+      id: entity.id,
+      name: entity.label,
+      asin: entity.asin,
+      bookCount: entity.bookCount,
     }));
 
     return NextResponse.json({
-      results: transformedNarrators,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      results,
+      pagination: buildPagination(page, limit, total),
     });
   } catch (error) {
     logger.error('Error fetching narrators', { error: String(error) });

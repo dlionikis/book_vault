@@ -82,7 +82,28 @@ The filter is one shared constant, `VISIBLE_BOOK_WHERE` in
 query's `where`. Adding a new endpoint that lists books means adding it there
 too.
 
-Two patterns, depending on whether the query starts from books:
+### Go through `lib/queries/`, not Prisma directly
+
+Book list queries live in `lib/queries/` and are shared by the API route **and**
+the page that show the same data:
+
+| Module                           | Used by                                                                     |
+| -------------------------------- | --------------------------------------------------------------------------- |
+| `lib/queries/search-books.ts`    | `/api/search`, `/search`                                                    |
+| `lib/queries/catalog-books.ts`   | `/api/books`, `/`; `/api/library`, `/library`                               |
+| `lib/queries/entity-books.ts`    | `/api/{authors,narrators,series,categories}/{id}` and all four detail pages |
+| `lib/queries/browse-entities.ts` | `/api/browse/*` and all four `/browse/*` pages                              |
+| `lib/catalog-series-view.ts`     | `/api/browse/catalog-series-view`, `/`                                      |
+
+This matters more than it looks. The web pages are **server components that query
+Prisma directly** — they do not call the API. When the filter was added to the
+routes only, every route test passed while the whole web UI still listed hidden
+books, because each page had its own hand-rolled copy of the query.
+
+**If you add a book list surface, add it to a `lib/queries/` module.** A new
+`prisma.book.findMany` in a page is how this regresses.
+
+If you do write a query by hand, there are two patterns:
 
 ```typescript
 // Direct book query
@@ -100,5 +121,10 @@ Watch for two traps:
 2. **`_count` aggregates need their own filter.** An unfiltered `_count` reports
    "12 books" next to a page that lists 11.
 
-Covered by [`__tests__/integration/hidden-books.test.ts`](../__tests__/integration/hidden-books.test.ts),
-which runs against a real database.
+Covered against a real database by two suites — keep both in mind, since the API
+passing tells you nothing about the pages:
+
+- [`__tests__/integration/hidden-books.test.ts`](../__tests__/integration/hidden-books.test.ts)
+  — the `/api` routes.
+- [`__tests__/integration/hidden-books-pages.test.ts`](../__tests__/integration/hidden-books-pages.test.ts)
+  — the shared query modules the **pages** render from.

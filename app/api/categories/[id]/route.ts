@@ -6,8 +6,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
   const params = await props.params;
   return handleEntityDetailWithBooks(request, params, {
     entityModel: prisma.category,
-    joinTableModel: prisma.bookCategory,
-    idFieldName: 'categoryId',
+    entityKind: 'category',
     entityName: 'Category',
     getResponseFields: (category: any) => ({
       id: category.id,

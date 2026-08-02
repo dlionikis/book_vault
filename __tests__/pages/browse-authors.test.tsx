@@ -7,6 +7,7 @@ jest.mock('@/lib/db', () => ({
   prisma: {
     author: {
       findMany: jest.fn(),
+      count: jest.fn(),
     },
     $disconnect: jest.fn(),
   },
@@ -38,18 +39,14 @@ describe('Browse Authors Page', () => {
         name: 'Brandon Sanderson',
         asin: 'AUTH001',
         createdAt: new Date(),
-        books: [
-          { book: { id: 'b1', title: 'Book 1' } },
-          { book: { id: 'b2', title: 'Book 2' } },
-          { book: { id: 'b3', title: 'Book 3' } },
-        ],
+        _count: { books: 3 },
       },
       {
         id: 'author-2',
         name: 'V.E. Schwab',
         asin: 'AUTH002',
         createdAt: new Date(),
-        books: [{ book: { id: 'b4', title: 'Book 4' } }, { book: { id: 'b5', title: 'Book 5' } }],
+        _count: { books: 2 },
       },
     ];
 
@@ -58,19 +55,16 @@ describe('Browse Authors Page', () => {
     const page = await BrowseAuthorsPage();
     render(page);
 
-    // Check Prisma query
-    expect(prisma.author.findMany).toHaveBeenCalledWith({
-      include: {
-        books: {
-          include: {
-            book: true,
-          },
-        },
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
+    // The page must go through the shared query, which filters hidden books out
+    // of both the listing and the bookCount. Asserting the filter rather than
+    // the full call shape keeps this from breaking on unrelated query tweaks.
+    expect(prisma.author.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { books: { some: { book: { hiddenAt: null } } } },
+        include: { _count: { select: { books: { where: { book: { hiddenAt: null } } } } } },
+        orderBy: { name: 'asc' },
+      })
+    );
 
     // Check rendered content
     expect(screen.getByText('Brandon Sanderson')).toBeInTheDocument();
@@ -86,7 +80,7 @@ describe('Browse Authors Page', () => {
         name: 'Single Book Author',
         asin: 'AUTH001',
         createdAt: new Date(),
-        books: [{ book: { id: 'b1', title: 'Book 1' } }],
+        _count: { books: 1 },
       },
     ];
 
@@ -105,21 +99,21 @@ describe('Browse Authors Page', () => {
         name: 'Author 1',
         asin: 'AUTH001',
         createdAt: new Date(),
-        books: [],
+        _count: { books: 0 },
       },
       {
         id: 'author-2',
         name: 'Author 2',
         asin: 'AUTH002',
         createdAt: new Date(),
-        books: [],
+        _count: { books: 0 },
       },
       {
         id: 'author-3',
         name: 'Author 3',
         asin: 'AUTH003',
         createdAt: new Date(),
-        books: [],
+        _count: { books: 0 },
       },
     ];
 
@@ -138,7 +132,7 @@ describe('Browse Authors Page', () => {
         name: 'Only Author',
         asin: 'AUTH001',
         createdAt: new Date(),
-        books: [],
+        _count: { books: 0 },
       },
     ];
 
@@ -157,7 +151,7 @@ describe('Browse Authors Page', () => {
         name: 'Test Author',
         asin: 'AUTH001',
         createdAt: new Date(),
-        books: [{ book: { id: 'b1', title: 'Book 1' } }],
+        _count: { books: 1 },
       },
     ];
 
@@ -187,21 +181,21 @@ describe('Browse Authors Page', () => {
         name: 'Alice Author',
         asin: 'AUTH001',
         createdAt: new Date(),
-        books: [],
+        _count: { books: 0 },
       },
       {
         id: 'author-2',
         name: 'Bob Author',
         asin: 'AUTH002',
         createdAt: new Date(),
-        books: [],
+        _count: { books: 0 },
       },
       {
         id: 'author-3',
         name: 'Charlie Author',
         asin: 'AUTH003',
         createdAt: new Date(),
-        books: [],
+        _count: { books: 0 },
       },
     ];
 

@@ -13,7 +13,21 @@ jest.mock('@/lib/db', () => ({
     author: {
       findUnique: jest.fn(),
     },
+    // The join table is resolved by entityKind inside lib/queries/entity-books,
+    // so every kind the specs can reach needs a delegate here.
     bookAuthor: {
+      findMany: jest.fn(),
+      count: jest.fn(),
+    },
+    bookNarrator: {
+      findMany: jest.fn(),
+      count: jest.fn(),
+    },
+    bookSeries: {
+      findMany: jest.fn(),
+      count: jest.fn(),
+    },
+    bookCategory: {
       findMany: jest.fn(),
       count: jest.fn(),
     },
@@ -67,8 +81,7 @@ describe('handleEntityDetailWithBooks', () => {
 
   const baseConfig = {
     entityModel: prisma.author,
-    joinTableModel: prisma.bookAuthor,
-    idFieldName: 'authorId',
+    entityKind: 'author' as const,
     entityName: 'Author',
     getResponseFields: (author: any) => ({
       id: author.id,
@@ -329,25 +342,27 @@ describe('handleEntityDetailWithBooks', () => {
       (prisma.bookAuthor.count as jest.Mock).mockResolvedValue(1);
     });
 
-    it('should use custom orderBy when provided', async () => {
-      const customConfig = {
+    it('orders series books by in-series sequence', async () => {
+      (prisma.bookSeries.findMany as jest.Mock).mockResolvedValue([{ book: mockBook }]);
+      (prisma.bookSeries.count as jest.Mock).mockResolvedValue(1);
+
+      const request = new NextRequest('http://localhost:3000/api/series/series-123');
+      const params = { id: 'series-123' };
+
+      await handleEntityDetailWithBooks(request, params, {
         ...baseConfig,
-        orderBy: [{ sequence: 'asc' }],
-      };
+        entityKind: 'series' as const,
+        entityName: 'Series',
+      });
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
-
-      await handleEntityDetailWithBooks(request, params, customConfig);
-
-      expect(prisma.bookAuthor.findMany).toHaveBeenCalledWith(
+      expect(prisma.bookSeries.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          orderBy: [{ sequence: 'asc' }],
+          orderBy: { sequence: 'asc' },
         })
       );
     });
 
-    it('should use default orderBy (book.title) when not provided', async () => {
+    it('orders non-series books by title', async () => {
       const request = new NextRequest('http://localhost:3000/api/authors/author-123');
       const params = { id: 'author-123' };
 

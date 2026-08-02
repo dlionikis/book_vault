@@ -4,7 +4,7 @@ import BookGrid from '@/components/BookGrid';
 import BackButton from '@/components/BackButton';
 import Pagination from '@/components/Pagination';
 import { prisma } from '@/lib/db';
-import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
+import { getEntityBooksPage } from '@/lib/queries/entity-books';
 
 interface NarratorWithBooks extends Narrator {
   books: Book[];
@@ -30,29 +30,9 @@ async function getNarrator(id: string, page?: string): Promise<NarratorWithBooks
       return null;
     }
 
-    const [bookNarratorEntries, total] = await Promise.all([
-      prisma.bookNarrator.findMany({
-        where: { narratorId: id },
-        skip,
-        take: limit,
-        include: {
-          book: {
-            include: BOOK_INCLUDE,
-          },
-        },
-        orderBy: {
-          book: {
-            title: 'asc',
-          },
-        },
-      }),
-      prisma.bookNarrator.count({
-        where: { narratorId: id },
-      }),
-    ]);
-
-    // Transform books using centralized transformer
-    const books = await Promise.all(bookNarratorEntries.map((entry) => transformBook(entry.book)));
+    // Shared with /api/narrators/[id] — hidden books drop out of the page and the
+    // total together.
+    const { books, total } = await getEntityBooksPage('narrator', id, { skip, limit });
 
     return {
       ...narrator,

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
-import { prisma } from '@/lib/db';
+import { getBrowseEntities } from '@/lib/queries/browse-entities';
 
 // DB-backed page: render per-request instead of static prerender at build time
 // (where DATABASE_URL is unset and the Prisma query would throw). Keeps the
@@ -16,24 +16,16 @@ interface SeriesWithCount {
 
 async function getSeries(): Promise<SeriesWithCount[]> {
   try {
-    const seriesList = await prisma.series.findMany({
-      include: {
-        books: {
-          include: {
-            book: true,
-          },
-        },
-      },
-      orderBy: {
-        title: 'asc',
-      },
-    });
+    // Shared with /api/browse/series: only entities that still have a visible
+    // book, with a bookCount that matches. Also counts in SQL rather than
+    // loading every joined book row to take .length.
+    const { entities } = await getBrowseEntities('series', { limit: null });
 
-    return seriesList.map((series) => ({
-      id: series.id,
-      title: series.title,
-      asin: series.asin,
-      bookCount: series.books.length,
+    return entities.map((entity) => ({
+      id: entity.id,
+      title: entity.label,
+      asin: entity.asin,
+      bookCount: entity.bookCount,
     }));
   } catch (error) {
     console.error('Error fetching series:', error);

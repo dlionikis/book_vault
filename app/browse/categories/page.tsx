@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
-import { prisma } from '@/lib/db';
-import { VISIBLE_BOOK_WHERE } from '@/lib/book-transformer';
+import { getBrowseEntities, getCategoryParentPaths } from '@/lib/queries/browse-entities';
 
 // This page is DB-backed and must render per-request. Without this, Next tries
 // to statically prerender it during `next build` (where DATABASE_URL is unset),
@@ -20,56 +19,19 @@ interface CategoryWithCount {
 
 async function getCategories(): Promise<CategoryWithCount[]> {
   try {
-    // Only categories that still have a visible book, with a matching count —
-    // mirrors /api/browse/categories. Audible ladders create intermediate nodes
-    // that never get linked to a book (the importer links leaves only), so
-    // without this filter the grid fills with 0-book dead entries.
-    const visibleBooksWhere = { some: { book: VISIBLE_BOOK_WHERE } };
-
-    const [categories, ancestry] = await Promise.all([
-      prisma.category.findMany({
-        where: { books: visibleBooksWhere },
-        include: {
-          _count: {
-            select: {
-              books: { where: { book: VISIBLE_BOOK_WHERE } },
-            },
-          },
-        },
-        orderBy: {
-          name: 'asc',
-        },
-      }),
-      // Category names are unique only per-parent, so the same name appears under
-      // multiple ancestries. The immediate parent alone doesn't always tell them
-      // apart, so resolve the full chain from this small (~150 row) table.
-      prisma.category.findMany({ select: { id: true, name: true, parentId: true } }),
+    // Shared with /api/browse/categories, including the ancestry resolution —
+    // both surfaces disambiguate repeated category names the same way.
+    const [{ entities }, parentPaths] = await Promise.all([
+      getBrowseEntities('category', { limit: null }),
+      getCategoryParentPaths(),
     ]);
 
-    const byId = new Map(ancestry.map((c) => [c.id, c]));
-
-    const parentPathOf = (categoryId: string): string[] => {
-      const path: string[] = [];
-      const seen = new Set<string>([categoryId]);
-      let current = byId.get(categoryId)?.parentId ?? null;
-
-      while (current && !seen.has(current)) {
-        seen.add(current);
-        const node = byId.get(current);
-        if (!node) break;
-        path.unshift(node.name);
-        current = node.parentId;
-      }
-
-      return path;
-    };
-
-    return categories.map((category) => ({
-      id: category.id,
-      name: category.name,
-      level: category.level,
-      parentPath: parentPathOf(category.id),
-      bookCount: category._count.books,
+    return entities.map((entity) => ({
+      id: entity.id,
+      name: entity.label,
+      level: entity.level ?? 0,
+      parentPath: parentPaths.get(entity.id) ?? [],
+      bookCount: entity.bookCount,
     }));
   } catch (error) {
     console.error('Error fetching categories:', error);

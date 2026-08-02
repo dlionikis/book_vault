@@ -11,6 +11,19 @@
 ### Core API Utilities
 
 - **api-helpers.ts** - Reusable API route handlers and entity detail endpoints. Includes `handleEntityDetailWithBooks()` for authors/narrators/series pages with pagination. Used by: browse API routes.
+
+### Shared Query Modules (`lib/queries/`)
+
+Book list queries shared by an API route **and** the page rendering the same
+data. The pages are server components that query Prisma directly rather than
+calling the API, so a query duplicated between the two will silently diverge —
+which is exactly how hidden books kept appearing on the web UI after the API was
+fixed. Add new list surfaces here, not as a fresh `prisma.book.findMany` in a page.
+
+- **queries/search-books.ts** - Book search (`buildSearchWhere`, `searchBooks`). Used by: `/api/search`, `/search`.
+- **queries/catalog-books.ts** - Catalog and personal-library listings (`getCatalogBooks`, `getLibraryListBooks`). Used by: `/api/books`, `/`, `/api/library`, `/library`.
+- **queries/entity-books.ts** - One page of an entity's books by kind (`getEntityBooksPage`). Used by: `api-helpers.ts` and the author/narrator/series/category detail pages.
+- **queries/browse-entities.ts** - Browse-by-entity listings with visible book counts (`getBrowseEntities`, `getCategoryParentPaths`). Used by: `/api/browse/*`, `/browse/*`.
 - **api-types.ts** - TypeScript interfaces for API contracts. Matches OpenAPI specification. Used by: components, API routes, transformers.
 - **api-utils.ts** - API utility functions including pagination builder, UUID normalization, and field parsing. Used by: API routes.
 
