@@ -13,16 +13,26 @@ import AnyCodable
 public struct GetCategory200Response: Sendable, Codable, JSONEncodable, Hashable {
 
     public static let levelRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
+    public static let totalBookCountRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public var id: UUID
     public var name: String
     public var level: Int?
+    /** Ancestor categories from root to immediate parent, excluding this one. Empty at the root. Each entry is navigable, so clients can render a breadcrumb.  */
+    public var ancestors: [CategoryRef]?
+    /** Immediate child categories that have visible books somewhere beneath them. Present so a client can drill down; empty at a leaf.  */
+    public var subcategories: [CategorySummary]?
+    /** Distinct visible books in this category or any descendant. `pagination.total` counts only the books listed here — those tagged with this category directly.  */
+    public var totalBookCount: Int?
     public var books: [Book]
     public var pagination: Pagination
 
-    public init(id: UUID, name: String, level: Int? = nil, books: [Book], pagination: Pagination) {
+    public init(id: UUID, name: String, level: Int? = nil, ancestors: [CategoryRef]? = nil, subcategories: [CategorySummary]? = nil, totalBookCount: Int? = nil, books: [Book], pagination: Pagination) {
         self.id = id
         self.name = name
         self.level = level
+        self.ancestors = ancestors
+        self.subcategories = subcategories
+        self.totalBookCount = totalBookCount
         self.books = books
         self.pagination = pagination
     }
@@ -31,6 +41,9 @@ public struct GetCategory200Response: Sendable, Codable, JSONEncodable, Hashable
         case id
         case name
         case level
+        case ancestors
+        case subcategories
+        case totalBookCount
         case books
         case pagination
     }
@@ -42,6 +55,9 @@ public struct GetCategory200Response: Sendable, Codable, JSONEncodable, Hashable
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encodeIfPresent(level, forKey: .level)
+        try container.encodeIfPresent(ancestors, forKey: .ancestors)
+        try container.encodeIfPresent(subcategories, forKey: .subcategories)
+        try container.encodeIfPresent(totalBookCount, forKey: .totalBookCount)
         try container.encode(books, forKey: .books)
         try container.encode(pagination, forKey: .pagination)
     }

@@ -89,7 +89,7 @@ extension BrowseListConfiguration where Item == CategoryWithBookCount, Response 
             emptyMessage: "There are no categories in your library",
             rowIcon: "tag.fill",
             useCircleIcon: false,
-            accessibilityHint: "Tap to view books in this category",
+            accessibilityHint: "Tap to view books and subcategories",
             fetch: { manager, page, limit in
                 try await manager.fetchCategories(page: page, limit: limit)
             },

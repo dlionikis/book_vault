@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
 import { parsePagination } from '@/lib/api-utils';
-import { getBrowseEntities, getCategoryParentPaths } from '@/lib/queries/browse-entities';
+import {
+  getBrowseEntities,
+  getCategoryParentPaths,
+  getCategoryTree,
+} from '@/lib/queries/browse-entities';
 
 export async function GET(request: NextRequest) {
   // Check both auth methods
@@ -15,6 +19,33 @@ export async function GET(request: NextRequest) {
       searchParams.get('page'),
       searchParams.get('limit')
     );
+
+    // `roots=true` returns the top of the hierarchy for drill-down browsing. The
+    // flat default is kept for existing clients: dropping it would silently make
+    // most categories unreachable for anything that doesn't drill down yet.
+    if (searchParams.get('roots') === 'true') {
+      const roots = await getCategoryTree();
+
+      return NextResponse.json({
+        results: roots.map((root) => ({
+          id: root.id,
+          name: root.name,
+          level: root.level,
+          parentPath: [],
+          bookCount: root.bookCount,
+          totalBookCount: root.totalBookCount,
+          hasChildren: root.children.length > 0,
+        })),
+        // The root list is short and returned whole, so pagination describes a
+        // single page rather than slicing.
+        pagination: {
+          page: 1,
+          limit: roots.length,
+          total: roots.length,
+          pages: 1,
+        },
+      });
+    }
 
     // Shared with the /browse/categories page — visibility filtering, the
     // matching bookCount, and ancestry resolution all live in one place.

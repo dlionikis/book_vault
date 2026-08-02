@@ -560,6 +560,47 @@ components:
           minimum: 0
           example: 25
 
+    CategoryRef:
+      type: object
+      required: [id, name]
+      description: A navigable reference to a category, used for breadcrumbs.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: 'Fantasy'
+
+    CategorySummary:
+      type: object
+      required: [id, name, bookCount, totalBookCount, hasChildren]
+      description: >
+        A child category in a drill-down list. Carries both counts because a
+        category's own book count and its subtree total differ sharply in Audible's
+        ladders — container categories have no books of their own.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: 'Epic'
+        bookCount:
+          type: integer
+          minimum: 0
+          description: Books tagged with this category directly.
+          example: 466
+        totalBookCount:
+          type: integer
+          minimum: 0
+          description: Distinct visible books in this category or any descendant.
+          example: 491
+        hasChildren:
+          type: boolean
+          description: Whether drilling into this category reveals further subcategories.
+          example: true
+
     CategoryWithBookCount:
       type: object
       required: [id, name, bookCount]
@@ -589,7 +630,21 @@ components:
         bookCount:
           type: integer
           minimum: 0
+          description: Books tagged with this category directly.
           example: 150
+        totalBookCount:
+          type: integer
+          minimum: 0
+          description: >
+            Distinct visible books in this category or any descendant. Only returned
+            when `roots=true`; equals `bookCount` for a leaf.
+          example: 483
+        hasChildren:
+          type: boolean
+          description: >
+            Whether this category has subcategories to drill into. Only returned when
+            `roots=true`.
+          example: true
 
 # Security applied to all endpoints by default (session-based auth for web)
 security:
@@ -1787,8 +1842,22 @@ paths:
     get:
       operationId: listCategories
       tags: [Browse]
-      summary: List all categories with book counts
+      summary: List categories with book counts
+      description: >
+        Flat list of every category with visible books by default. Because Audible
+        ships each book's genre as a full ladder, that list repeats names under
+        different ancestries (`parentPath` disambiguates them) — pass `roots=true`
+        for the top level of the hierarchy instead and drill down via
+        GET /api/categories/{id}.
       parameters:
+        - name: roots
+          in: query
+          description: >
+            Return only top-level categories, with `totalBookCount` rolled up over
+            each subtree. Pagination does not apply; the root list is short.
+          schema:
+            type: boolean
+            default: false
         - name: page
           in: query
           schema:
@@ -2124,6 +2193,29 @@ paths:
                   level:
                     type: integer
                     minimum: 0
+                  ancestors:
+                    type: array
+                    description: >
+                      Ancestor categories from root to immediate parent, excluding this
+                      one. Empty at the root. Each entry is navigable, so clients can
+                      render a breadcrumb.
+                    items:
+                      $ref: '#/components/schemas/CategoryRef'
+                  subcategories:
+                    type: array
+                    description: >
+                      Immediate child categories that have visible books somewhere
+                      beneath them. Present so a client can drill down; empty at a leaf.
+                    items:
+                      $ref: '#/components/schemas/CategorySummary'
+                  totalBookCount:
+                    type: integer
+                    minimum: 0
+                    description: >
+                      Distinct visible books in this category or any descendant.
+                      `pagination.total` counts only the books listed here — those
+                      tagged with this category directly.
+                    example: 483
                   books:
                     type: array
                     items:

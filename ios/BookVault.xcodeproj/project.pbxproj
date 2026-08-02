@@ -163,6 +163,7 @@
 		A5DB67327C963199B08F7DE4 /* GetAdminCosts200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 523EEBD6A04F5BFD8239FD57 /* GetAdminCosts200Response.swift */; };
 		A69F1C2C0D5EEF5850EF9E17 /* NarratorListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED0906D1D9C6A5EC51E73D37 /* NarratorListView.swift */; };
 		A6F2FB52EF8236AACAA9B94E /* BatchUpdateProgress200ResponseDetailsInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F44A639BC865B1287EEF1BA6 /* BatchUpdateProgress200ResponseDetailsInner.swift */; };
+		A77B6B5926F9B8E33B0D04CF /* CategoryRef.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2560679E084B50A07C22382D /* CategoryRef.swift */; };
 		A8DE888C2E23F7A65944E91D /* MockStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03536BD5D80212A82F008FD1 /* MockStorageManager.swift */; };
 		A97036017310FD74C244B89C /* UITestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E2FFD6383BFB483783D5BA4 /* UITestCase.swift */; };
 		A99DE001CE19F8B1114D6921 /* DownloadSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E25B43EA88C22C6F78454B49 /* DownloadSettingsView.swift */; };
@@ -225,6 +226,7 @@
 		D666B63B6C872873EA9250AA /* GetAdminRestores200ResponseSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23B26FEFED8D4497C895EFB2 /* GetAdminRestores200ResponseSummary.swift */; };
 		D87F6B1D3E53AB9BE6190CDE /* SearchAll200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFD79F799C012860F9795B2 /* SearchAll200Response.swift */; };
 		DAB866C629A15E78D2674F03 /* ChapterFetching.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0A9085EFF439CA3498C5D3F /* ChapterFetching.swift */; };
+		DAEA00BF1AE4F4C05736FCEE /* CategorySummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2E3F74AE7C22D15874B1185 /* CategorySummary.swift */; };
 		DB3C1016C5AC00F490B72DF7 /* AuthManagerRealTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F5104F762AF9B3A1CEB8447 /* AuthManagerRealTests.swift */; };
 		DD9D1D03BADB7139C127E7A4 /* DownloadManagerRealTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FA26D0447C892A0DC0D15E3 /* DownloadManagerRealTests.swift */; };
 		DDDD60C4A3A4762A11C25057 /* BookDetailLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D631995ACACE90A072FEDE5 /* BookDetailLoader.swift */; };
@@ -330,6 +332,7 @@
 		23B26FEFED8D4497C895EFB2 /* GetAdminRestores200ResponseSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetAdminRestores200ResponseSummary.swift; sourceTree = "<group>"; };
 		2410CA8DD90ADA200E3EFD62 /* CheckDownloadEligibility200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckDownloadEligibility200Response.swift; sourceTree = "<group>"; };
 		255ABE20652EA7C49D4319DB /* LibraryCacheManagerRealTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryCacheManagerRealTests.swift; sourceTree = "<group>"; };
+		2560679E084B50A07C22382D /* CategoryRef.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryRef.swift; sourceTree = "<group>"; };
 		25CF782C7941A830B3E5CFB2 /* GetSearchSuggestions200ResponseBooksInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetSearchSuggestions200ResponseBooksInner.swift; sourceTree = "<group>"; };
 		27AFCF681EA09136DEEA923A /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		2876B8BDD97832560A1CB92A /* RestoreStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestoreStatus.swift; sourceTree = "<group>"; };
@@ -486,6 +489,7 @@
 		BFFEE5014DD48F10276BCAB9 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
 		C0A9085EFF439CA3498C5D3F /* ChapterFetching.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterFetching.swift; sourceTree = "<group>"; };
 		C158AA1980D4F36E08846107 /* RegisterDeviceTokenRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterDeviceTokenRequest.swift; sourceTree = "<group>"; };
+		C2E3F74AE7C22D15874B1185 /* CategorySummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorySummary.swift; sourceTree = "<group>"; };
 		C390D6703147CD203E1B7A96 /* NetworkMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitorTests.swift; sourceTree = "<group>"; };
 		C5DA846B1EB6F15D57933802 /* NetworkMonitoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitoring.swift; sourceTree = "<group>"; };
 		C5F3752383E6C37AE7F437C4 /* ProgressManagerRealTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressManagerRealTests.swift; sourceTree = "<group>"; };
@@ -1019,6 +1023,8 @@
 				BC1456D071AF0F36CD0761B0 /* BookStreamResponse.swift */,
 				FE1DA153975546017961DD4B /* CatalogSeriesViewItem.swift */,
 				1F81E9584E20CF16F786CBC5 /* Category.swift */,
+				2560679E084B50A07C22382D /* CategoryRef.swift */,
+				C2E3F74AE7C22D15874B1185 /* CategorySummary.swift */,
 				EE124ECDE4162E1DCA86A304 /* CategoryWithBookCount.swift */,
 				587BBF1432034EF20D6F0978 /* Chapter.swift */,
 				2410CA8DD90ADA200E3EFD62 /* CheckDownloadEligibility200Response.swift */,
@@ -1351,6 +1357,8 @@
 				DFE63B52B26C132AD9B366CA /* Category.swift in Sources */,
 				F07617771BDF120D38CA3471 /* CategoryDetailView.swift in Sources */,
 				9A806F8C1E29F5FB63701623 /* CategoryListView.swift in Sources */,
+				A77B6B5926F9B8E33B0D04CF /* CategoryRef.swift in Sources */,
+				DAEA00BF1AE4F4C05736FCEE /* CategorySummary.swift in Sources */,
 				D3BE9FC12436B1FACE542BD0 /* CategoryWithBookCount.swift in Sources */,
 				AF6E0E42E388EEEEAE2FC088 /* Chapter.swift in Sources */,
 				DAB866C629A15E78D2674F03 /* ChapterFetching.swift in Sources */,

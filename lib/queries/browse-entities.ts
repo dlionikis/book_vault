@@ -130,3 +130,212 @@ export async function getCategoryParentPaths(): Promise<Map<string, string[]>> {
 
   return new Map(all.map((c) => [c.id, pathOf(c.id)]));
 }
+
+// ---------------------------------------------------------------------------
+// Category tree
+// ---------------------------------------------------------------------------
+
+/**
+ * A node in the browsable category tree.
+ *
+ * Two counts, because they answer different questions and the difference is the
+ * whole reason the tree is navigable:
+ *
+ *   - `bookCount` — books tagged with THIS category. What its own page lists.
+ *   - `totalBookCount` — distinct books anywhere in its subtree. What the card
+ *     advertises.
+ *
+ * 15 of 16 root categories in production have `bookCount: 0` — Audible's ladders
+ * make them pure containers — so a card showing the direct count would read "0
+ * books" on nearly every top-level entry point and look broken.
+ */
+export interface CategoryNode {
+  id: string;
+  name: string;
+  level: number;
+  parentId: string | null;
+  /** Books tagged with this exact category. */
+  bookCount: number;
+  /** Distinct visible books in this category or any descendant. */
+  totalBookCount: number;
+  /** Immediate children that have visible books somewhere beneath them. */
+  children: CategoryNode[];
+}
+
+/** A category plus the ancestors needed to render a breadcrumb. */
+export interface CategoryTreeNode extends CategoryNode {
+  /** Root-to-immediate-parent, for breadcrumbs. Empty at the root. */
+  ancestors: Array<{ id: string; name: string }>;
+}
+
+interface RawCategory {
+  id: string;
+  name: string;
+  level: number;
+  parentId: string | null;
+}
+
+/**
+ * Every category, plus which visible books each one is directly tagged with.
+ *
+ * Two flat queries regardless of tree depth: the category table (~150 rows) and
+ * the visible book_categories links (~1.9k rows). Both are small enough to shape
+ * in memory, which avoids either a recursive CTE (unavailable through Prisma's
+ * typed API) or a per-node query walking down the tree.
+ */
+async function loadCategoryGraph(): Promise<{
+  categories: RawCategory[];
+  directBookIds: Map<string, string[]>;
+}> {
+  const [categories, links] = await Promise.all([
+    prisma.category.findMany({
+      select: { id: true, name: true, level: true, parentId: true },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.bookCategory.findMany({
+      where: { book: VISIBLE_BOOK_WHERE },
+      select: { categoryId: true, bookId: true },
+    }),
+  ]);
+
+  const directBookIds = new Map<string, string[]>();
+  for (const link of links) {
+    const existing = directBookIds.get(link.categoryId);
+    if (existing) existing.push(link.bookId);
+    else directBookIds.set(link.categoryId, [link.bookId]);
+  }
+
+  return { categories, directBookIds };
+}
+
+/**
+ * Children of each category, and the ids of the roots.
+ *
+ * A `parentId` pointing at a row that no longer exists would otherwise orphan a
+ * whole subtree out of the UI, so those are treated as roots.
+ */
+function indexByParent(categories: RawCategory[]) {
+  const ids = new Set(categories.map((c) => c.id));
+  const childrenOf = new Map<string | null, RawCategory[]>();
+
+  for (const category of categories) {
+    const parentId = category.parentId && ids.has(category.parentId) ? category.parentId : null;
+    const siblings = childrenOf.get(parentId);
+    if (siblings) siblings.push(category);
+    else childrenOf.set(parentId, [category]);
+  }
+
+  return childrenOf;
+}
+
+/**
+ * Build the subtree rooted at `category`, pruning branches with no visible books.
+ *
+ * Returns null when nothing in the subtree is visible, which is what removes the
+ * dead ladder nodes (the importer links only leaf categories, so intermediate
+ * rows have no books of their own and are worth showing only as containers for
+ * something that does).
+ *
+ * Rollups union book *ids* rather than summing counts: a book tagged both
+ * "Fantasy" and "Fantasy > Epic" must count once under Fantasy, and summing
+ * would double it. The returned set is the caller's to consume — it is reused as
+ * the accumulator up the tree to avoid copying at every level.
+ */
+function buildSubtree(
+  category: RawCategory,
+  childrenOf: Map<string | null, RawCategory[]>,
+  directBookIds: Map<string, string[]>,
+  visiting: Set<string>
+): { node: CategoryNode; bookIds: Set<string> } | null {
+  // A parent_id cycle would otherwise recurse until the stack blows.
+  if (visiting.has(category.id)) return null;
+  visiting.add(category.id);
+
+  const direct = directBookIds.get(category.id) ?? [];
+  const subtreeBookIds = new Set(direct);
+  const children: CategoryNode[] = [];
+
+  for (const child of childrenOf.get(category.id) ?? []) {
+    const built = buildSubtree(child, childrenOf, directBookIds, visiting);
+    if (!built) continue;
+    children.push(built.node);
+    for (const bookId of built.bookIds) subtreeBookIds.add(bookId);
+  }
+
+  visiting.delete(category.id);
+
+  if (subtreeBookIds.size === 0) return null;
+
+  // Sort siblings here rather than leaning on the query's `orderBy`: that only
+  // orders the flat row set, and nothing guarantees it survives the grouping
+  // above. Sorting explicitly keeps sibling order stable at every depth.
+  children.sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    node: {
+      id: category.id,
+      name: category.name,
+      level: category.level,
+      parentId: category.parentId,
+      bookCount: direct.length,
+      totalBookCount: subtreeBookIds.size,
+      children,
+    },
+    bookIds: subtreeBookIds,
+  };
+}
+
+/**
+ * The top level of the browsable category tree: roots and their descendants,
+ * with empty branches pruned.
+ */
+export async function getCategoryTree(): Promise<CategoryNode[]> {
+  const { categories, directBookIds } = await loadCategoryGraph();
+  const childrenOf = indexByParent(categories);
+
+  return (childrenOf.get(null) ?? [])
+    .map((root) => buildSubtree(root, childrenOf, directBookIds, new Set())?.node)
+    .filter((node): node is CategoryNode => node !== undefined)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * One category's immediate children (pruned) plus its ancestor breadcrumb.
+ *
+ * Returns null if the category doesn't exist. A category that exists but has no
+ * visible books anywhere is still returned — its own page should render an empty
+ * state rather than a 404, since the row is real.
+ */
+export async function getCategoryTreeNode(categoryId: string): Promise<CategoryTreeNode | null> {
+  const { categories, directBookIds } = await loadCategoryGraph();
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const category = byId.get(categoryId);
+  if (!category) return null;
+
+  const childrenOf = indexByParent(categories);
+  const built = buildSubtree(category, childrenOf, directBookIds, new Set());
+
+  const ancestors: Array<{ id: string; name: string }> = [];
+  const seen = new Set<string>([categoryId]);
+  let current = category.parentId;
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    const node = byId.get(current);
+    if (!node) break;
+    ancestors.unshift({ id: node.id, name: node.name });
+    current = node.parentId;
+  }
+
+  const direct = directBookIds.get(categoryId) ?? [];
+
+  return {
+    id: category.id,
+    name: category.name,
+    level: category.level,
+    parentId: category.parentId,
+    bookCount: direct.length,
+    totalBookCount: built?.node.totalBookCount ?? 0,
+    children: built?.node.children ?? [],
+    ancestors,
+  };
+}
