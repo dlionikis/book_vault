@@ -133,14 +133,32 @@ struct BrowseListView<Item: BrowseListItem, Response: BrowseListResponse>: View 
                     .font(.body)
                     .fontWeight(.medium)
 
+                if let subtitle = item.displaySubtitle {
+                    Text("in \(subtitle)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.head)
+                }
+
                 Text("\(item.bookCount) \(item.bookCount == 1 ? "book" : "books")")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
         }
         .padding(.vertical, 4)
-        .accessibilityLabel("\(item.displayName), \(item.bookCount) books")
+        .accessibilityLabel(accessibilityLabel(for: item))
         .accessibilityHint(configuration.accessibilityHint)
+    }
+
+    /// Includes the disambiguating path so VoiceOver users can tell repeated
+    /// names apart, exactly as sighted users do from the subtitle.
+    private func accessibilityLabel(for item: Item) -> String {
+        let books = "\(item.bookCount) books"
+        if let subtitle = item.displaySubtitle {
+            return "\(item.displayName), in \(subtitle), \(books)"
+        }
+        return "\(item.displayName), \(books)"
     }
 
     @ViewBuilder
@@ -173,7 +191,12 @@ struct BrowseListView<Item: BrowseListItem, Response: BrowseListResponse>: View 
         if searchText.isEmpty {
             items
         } else {
-            items.filter { $0.displayName.localizedCaseInsensitiveContains(searchText) }
+            // Match the ancestor path too, so filtering "fantasy" also surfaces
+            // nested rows like "Epic" under "SF&F › Fantasy".
+            items.filter {
+                $0.displayName.localizedCaseInsensitiveContains(searchText)
+                    || ($0.displaySubtitle?.localizedCaseInsensitiveContains(searchText) ?? false)
+            }
         }
     }
 

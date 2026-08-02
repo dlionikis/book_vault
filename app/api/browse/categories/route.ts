@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     // count — see the note in browse/authors.
     const visibleBooksWhere = { some: { book: VISIBLE_BOOK_WHERE } };
 
-    const [categories, total] = await Promise.all([
+    const [categories, total, ancestry] = await Promise.all([
       prisma.category.findMany({
         where: { books: visibleBooksWhere },
         skip,
@@ -32,24 +32,47 @@ export async function GET(request: NextRequest) {
               books: { where: { book: VISIBLE_BOOK_WHERE } },
             },
           },
-          parent: {
-            select: {
-              name: true,
-            },
-          },
         },
         orderBy: {
           name: 'asc',
         },
       }),
       prisma.category.count({ where: { books: visibleBooksWhere } }),
+      // Category names are unique only per-parent, so the same name legitimately
+      // appears under several ancestries (e.g. "Action & Adventure" under both
+      // "Literature & Fiction" and "SF&F > Fantasy"). The immediate parent alone
+      // doesn't always disambiguate them, so we resolve the full chain. The table
+      // is small (~150 rows) and parents may sit outside the current page, so we
+      // pull the whole id->parent map rather than issuing per-row lookups.
+      prisma.category.findMany({ select: { id: true, name: true, parentId: true } }),
     ]);
 
-    // Transform to include book count and level (OpenAPI compliant)
+    const byId = new Map(ancestry.map((c) => [c.id, c]));
+
+    // Root-to-immediate-parent names. Guards against a cycle in parent_id, which
+    // would otherwise spin forever.
+    const parentPathOf = (categoryId: string): string[] => {
+      const path: string[] = [];
+      const seen = new Set<string>([categoryId]);
+      let current = byId.get(categoryId)?.parentId ?? null;
+
+      while (current && !seen.has(current)) {
+        seen.add(current);
+        const node = byId.get(current);
+        if (!node) break;
+        path.unshift(node.name);
+        current = node.parentId;
+      }
+
+      return path;
+    };
+
+    // Transform to include book count, level and ancestry (OpenAPI compliant)
     const transformedCategories = categories.map((category) => ({
       id: category.id,
       name: category.name,
       level: category.level,
+      parentPath: parentPathOf(category.id),
       bookCount: category._count.books,
     }));
 

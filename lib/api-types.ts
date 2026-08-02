@@ -1285,10 +1285,18 @@ export interface components {
         CategoryWithBookCount: {
             /** Format: uuid */
             id: string;
-            /** @example Fantasy */
+            /** @example Action & Adventure */
             name: string;
             /** @example 1 */
             level?: number;
+            /**
+             * @description Ancestor category names from root to immediate parent, excluding this category's own name. Empty for top-level categories. Category names are only unique per-parent (Audible ships each book's genre as a full ladder), so the same name can appear under several different ancestries — clients must render this path to disambiguate them.
+             * @example [
+             *       "Science Fiction & Fantasy",
+             *       "Fantasy"
+             *     ]
+             */
+            parentPath?: string[] | null;
             /** @example 150 */
             bookCount: number;
         };

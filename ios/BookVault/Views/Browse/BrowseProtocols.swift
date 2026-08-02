@@ -15,6 +15,14 @@ protocol BrowseListItem: Identifiable, Hashable, Sendable {
     var id: UUID { get }
     var displayName: String { get }
     var bookCount: Int { get }
+
+    /// Optional disambiguating line shown under the name (e.g. a category's
+    /// ancestor path). Nil for types where the name alone is unambiguous.
+    var displaySubtitle: String? { get }
+}
+
+extension BrowseListItem {
+    var displaySubtitle: String? { nil }
 }
 
 // MARK: - BrowseDetailResponse
@@ -53,6 +61,14 @@ extension SeriesWithBookCount: BrowseListItem {
 
 extension CategoryWithBookCount: BrowseListItem {
     var displayName: String { name }
+
+    /// Category names are unique only per-parent, so the same name can appear
+    /// several times in this list under different ancestries. Without the path
+    /// those rows are indistinguishable.
+    var displaySubtitle: String? {
+        guard let parentPath, !parentPath.isEmpty else { return nil }
+        return parentPath.joined(separator: " › ")
+    }
 }
 
 // MARK: - Detail Response Conformances

@@ -172,6 +172,7 @@ const SCHEMA_DEFINITIONS: Record<string, SchemaDefinition> = {
     id: { required: true, type: 'string' },
     name: { required: true, type: 'string' },
     level: { required: false, type: 'number' },
+    parentPath: { required: false, type: 'array' },
     bookCount: { required: true, type: 'number' },
   },
   AuthorDetail: {
