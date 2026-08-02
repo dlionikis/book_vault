@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
 import { prisma } from '@/lib/db';
+import { VISIBLE_BOOK_WHERE } from '@/lib/book-transformer';
 
 // This page is DB-backed and must render per-request. Without this, Next tries
 // to statically prerender it during `next build` (where DATABASE_URL is unset),
@@ -13,32 +14,62 @@ interface CategoryWithCount {
   id: string;
   name: string;
   level: number;
-  parentName?: string | null;
+  parentPath: string[];
   bookCount: number;
 }
 
 async function getCategories(): Promise<CategoryWithCount[]> {
   try {
-    const categories = await prisma.category.findMany({
-      include: {
-        books: {
-          include: {
-            book: true,
+    // Only categories that still have a visible book, with a matching count —
+    // mirrors /api/browse/categories. Audible ladders create intermediate nodes
+    // that never get linked to a book (the importer links leaves only), so
+    // without this filter the grid fills with 0-book dead entries.
+    const visibleBooksWhere = { some: { book: VISIBLE_BOOK_WHERE } };
+
+    const [categories, ancestry] = await Promise.all([
+      prisma.category.findMany({
+        where: { books: visibleBooksWhere },
+        include: {
+          _count: {
+            select: {
+              books: { where: { book: VISIBLE_BOOK_WHERE } },
+            },
           },
         },
-        parent: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
+        orderBy: {
+          name: 'asc',
+        },
+      }),
+      // Category names are unique only per-parent, so the same name appears under
+      // multiple ancestries. The immediate parent alone doesn't always tell them
+      // apart, so resolve the full chain from this small (~150 row) table.
+      prisma.category.findMany({ select: { id: true, name: true, parentId: true } }),
+    ]);
+
+    const byId = new Map(ancestry.map((c) => [c.id, c]));
+
+    const parentPathOf = (categoryId: string): string[] => {
+      const path: string[] = [];
+      const seen = new Set<string>([categoryId]);
+      let current = byId.get(categoryId)?.parentId ?? null;
+
+      while (current && !seen.has(current)) {
+        seen.add(current);
+        const node = byId.get(current);
+        if (!node) break;
+        path.unshift(node.name);
+        current = node.parentId;
+      }
+
+      return path;
+    };
 
     return categories.map((category) => ({
       id: category.id,
       name: category.name,
       level: category.level,
-      parentName: category.parent?.name || null,
-      bookCount: category.books.length,
+      parentPath: parentPathOf(category.id),
+      bookCount: category._count.books,
     }));
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -76,9 +107,9 @@ export default async function BrowseCategoriesPage() {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 hover:text-blue-600 dark:hover:text-blue-400">
                   {category.name}
                 </h3>
-                {category.parentName && (
+                {category.parentPath.length > 0 && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    in {category.parentName}
+                    in {category.parentPath.join(' › ')}
                   </p>
                 )}
                 <p className="text-sm text-gray-600 dark:text-gray-400">

@@ -17,12 +17,15 @@ public struct CategoryWithBookCount: Sendable, Codable, JSONEncodable, Hashable 
     public var id: UUID
     public var name: String
     public var level: Int?
+    /** Ancestor category names from root to immediate parent, excluding this category's own name. Empty for top-level categories. Category names are only unique per-parent (Audible ships each book's genre as a full ladder), so the same name can appear under several different ancestries — clients must render this path to disambiguate them.  */
+    public var parentPath: [String]?
     public var bookCount: Int
 
-    public init(id: UUID, name: String, level: Int? = nil, bookCount: Int) {
+    public init(id: UUID, name: String, level: Int? = nil, parentPath: [String]? = nil, bookCount: Int) {
         self.id = id
         self.name = name
         self.level = level
+        self.parentPath = parentPath
         self.bookCount = bookCount
     }
 
@@ -30,6 +33,7 @@ public struct CategoryWithBookCount: Sendable, Codable, JSONEncodable, Hashable 
         case id
         case name
         case level
+        case parentPath
         case bookCount
     }
 
@@ -40,6 +44,7 @@ public struct CategoryWithBookCount: Sendable, Codable, JSONEncodable, Hashable 
         try container.encode(id, forKey: .id)
         try container.encode(name, forKey: .name)
         try container.encodeIfPresent(level, forKey: .level)
+        try container.encodeIfPresent(parentPath, forKey: .parentPath)
         try container.encode(bookCount, forKey: .bookCount)
     }
 }
