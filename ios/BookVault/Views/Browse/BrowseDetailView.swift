@@ -72,6 +72,25 @@ struct BrowseDetailView<Detail: BrowseDetailResponse, Accessory: View>: View {
         return !hierarchy.childCategories.isEmpty
     }
 
+    /// The count under the title.
+    ///
+    /// For a category whose books live in descendants, `books` is empty — printing its
+    /// count gives "0 books" above a list of subcategories holding hundreds. Those
+    /// report the subtree instead, and name the split when both numbers are non-zero.
+    private func headerCount(for detail: Detail) -> String {
+        let direct = detail.books.count
+
+        guard let hierarchy = detail as? any BrowseHierarchyDetail,
+              hierarchy.subtreeBookCount > direct
+        else {
+            return "\(direct) \(direct == 1 ? "book" : "books")"
+        }
+
+        let total = hierarchy.subtreeBookCount
+        let books = "\(total) \(total == 1 ? "book" : "books") in total"
+        return direct == 0 ? books : "\(books) · \(direct) tagged directly"
+    }
+
     // MARK: - Error State
 
     private func errorStateView(_ error: String) -> some View {
@@ -117,9 +136,10 @@ struct BrowseDetailView<Detail: BrowseDetailResponse, Accessory: View>: View {
                             .fontWeight(.bold)
                             .multilineTextAlignment(.center)
 
-                        Text("\(detail.books.count) \(detail.books.count == 1 ? "book" : "books")")
+                        Text(headerCount(for: detail))
                             .font(.subheadline)
                             .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                     }
                 }
                 .frame(maxWidth: .infinity)
