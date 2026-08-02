@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { getCoverUrl } from '@/lib/media';
+import { VISIBLE_BOOK_WHERE } from '@/lib/book-transformer';
 
 export async function GET(request: NextRequest) {
   // Check both auth methods
@@ -22,6 +23,9 @@ export async function GET(request: NextRequest) {
       // Top 5 books
       prisma.book.findMany({
         where: {
+          // Beside OR, not inside it: as a branch this would match hidden
+          // books instead of excluding them.
+          ...VISIBLE_BOOK_WHERE,
           OR: [
             {
               title: {
@@ -53,13 +57,15 @@ export async function GET(request: NextRequest) {
           title: 'asc',
         },
       }),
-      // Top 3 authors
+      // Top 3 authors. Requires at least one visible book, so an author whose
+      // whole catalogue is hidden is not suggested into an empty detail page.
       prisma.author.findMany({
         where: {
           name: {
             contains: query,
             mode: 'insensitive',
           },
+          books: { some: { book: VISIBLE_BOOK_WHERE } },
         },
         select: {
           id: true,
@@ -77,6 +83,7 @@ export async function GET(request: NextRequest) {
             contains: query,
             mode: 'insensitive',
           },
+          books: { some: { book: VISIBLE_BOOK_WHERE } },
         },
         select: {
           id: true,

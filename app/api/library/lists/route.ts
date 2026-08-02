@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
+import { VISIBLE_BOOK_WHERE } from '@/lib/book-transformer';
 
 // GET /api/library/lists - Get all user lists with book counts
 export async function GET(request: NextRequest) {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     const lists = await prisma.userList.findMany({
       where: { userId: user.id },
       include: {
-        _count: { select: { books: true } },
+        _count: { select: { books: { where: { book: VISIBLE_BOOK_WHERE } } } },
       },
       orderBy: { createdAt: 'desc' },
     });

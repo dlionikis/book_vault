@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { normalizeUuid, isValidUuid } from '@/lib/api-utils';
+import { VISIBLE_BOOK_WHERE } from '@/lib/book-transformer';
 
 // POST /api/library/series/[seriesId] - Add all books in series to library
 export async function POST(request: NextRequest, props: { params: Promise<{ seriesId: string }> }) {
@@ -18,10 +19,12 @@ export async function POST(request: NextRequest, props: { params: Promise<{ seri
       return NextResponse.json({ error: 'Invalid series ID format' }, { status: 400 });
     }
 
-    // Get all books in the series
+    // Get all books in the series. Hidden books are skipped so "add series to
+    // library" cannot pull in titles the user can't see anywhere else.
     const seriesBooks = await prisma.bookSeries.findMany({
       where: {
         seriesId,
+        book: VISIBLE_BOOK_WHERE,
       },
       select: {
         bookId: true,

@@ -9,7 +9,12 @@
  */
 
 import { prisma } from '@/lib/db';
-import { BOOK_INCLUDE, transformBook, transformLibraryBook } from '@/lib/book-transformer';
+import {
+  BOOK_INCLUDE,
+  VISIBLE_BOOK_WHERE,
+  transformBook,
+  transformLibraryBook,
+} from '@/lib/book-transformer';
 import { getCoverUrl } from '@/lib/media';
 import { buildPagination, type PaginationResult } from '@/lib/api-utils';
 
@@ -66,11 +71,15 @@ export async function getCatalogSeriesView(
     pageSeriesIds.length > 0
       ? prisma.series.findMany({
           where: { id: { in: pageSeriesIds } },
-          include: { _count: { select: { books: true } } },
+          // Counts only visible books, so the badge matches the series page.
+          include: { _count: { select: { books: { where: { book: VISIBLE_BOOK_WHERE } } } } },
         })
       : Promise.resolve([]),
     pageBookIds.length > 0
-      ? prisma.book.findMany({ where: { id: { in: pageBookIds } }, include: BOOK_INCLUDE })
+      ? prisma.book.findMany({
+          where: { id: { in: pageBookIds }, ...VISIBLE_BOOK_WHERE },
+          include: BOOK_INCLUDE,
+        })
       : Promise.resolve([]),
   ]);
 
@@ -123,9 +132,15 @@ export async function getCatalogSeriesView(
 
 async function getCatalogSortKeys(): Promise<[SortKeyRow[], SortKeyRow[]]> {
   const [series, books] = await Promise.all([
-    prisma.series.findMany({ select: { id: true, title: true }, orderBy: { title: 'asc' } }),
+    // Only series that still have a visible book: hiding every book in a
+    // series drops the whole series row from this view.
+    prisma.series.findMany({
+      where: { books: { some: { book: VISIBLE_BOOK_WHERE } } },
+      select: { id: true, title: true },
+      orderBy: { title: 'asc' },
+    }),
     prisma.book.findMany({
-      where: { series: { none: {} } },
+      where: { series: { none: {} }, ...VISIBLE_BOOK_WHERE },
       select: { id: true, title: true },
       orderBy: { title: 'asc' },
     }),
@@ -146,12 +161,17 @@ async function getLibrarySortKeys(userId: string): Promise<[SortKeyRow[], SortKe
 
   const [ownedSeriesIds, standaloneListBooks] = await Promise.all([
     prisma.bookSeries.findMany({
-      where: { book: { listBooks: { some: { listId: library.id } } } },
+      where: {
+        book: { listBooks: { some: { listId: library.id } }, ...VISIBLE_BOOK_WHERE },
+      },
       select: { seriesId: true },
       distinct: ['seriesId'],
     }),
     prisma.userListBook.findMany({
-      where: { listId: library.id, book: { series: { none: {} } } },
+      where: {
+        listId: library.id,
+        book: { series: { none: {} }, ...VISIBLE_BOOK_WHERE },
+      },
       select: { bookId: true, addedAt: true, book: { select: { title: true } } },
       orderBy: { book: { title: 'asc' } },
     }),
@@ -183,8 +203,10 @@ function mergeByTitle(seriesKeys: SortKeyRow[], bookKeys: SortKeyRow[]): SortKey
 }
 
 async function getSeriesCoverPaths(seriesIds: string[]): Promise<Map<string, string | null>> {
+  // A hidden book must not supply the series cover, or the shelf would still
+  // show the artwork of a book nobody can reach from here.
   const rows = await prisma.bookSeries.findMany({
-    where: { seriesId: { in: seriesIds } },
+    where: { seriesId: { in: seriesIds }, book: VISIBLE_BOOK_WHERE },
     orderBy: [{ sequence: 'asc' }],
     include: { book: { select: { coverUrl: true } } },
   });
@@ -208,7 +230,7 @@ async function getOwnedCounts(seriesIds: string[], userId: string): Promise<Map<
   const rows = await prisma.bookSeries.findMany({
     where: {
       seriesId: { in: seriesIds },
-      book: { listBooks: { some: { listId: library.id } } },
+      book: { listBooks: { some: { listId: library.id } }, ...VISIBLE_BOOK_WHERE },
     },
     select: { seriesId: true },
   });

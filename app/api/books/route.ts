@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
-import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
+import { BOOK_INCLUDE, VISIBLE_BOOK_WHERE, transformBook } from '@/lib/book-transformer';
 import { buildPagination, parsePagination } from '@/lib/api-utils';
 import { logger, withLogging } from '@/lib/logger';
 import type { components } from '@/lib/api-types';
@@ -46,12 +46,13 @@ export const GET = withLogging(async (request: NextRequest) => {
     // Fetch books with their relationships
     const [books, total] = await Promise.all([
       prisma.book.findMany({
+        where: { ...VISIBLE_BOOK_WHERE },
         skip,
         take: limit,
         include: BOOK_INCLUDE,
         orderBy: { title: 'asc' },
       }),
-      prisma.book.count(),
+      prisma.book.count({ where: { ...VISIBLE_BOOK_WHERE } }),
     ]);
 
     // Transform the response to match OpenAPI Book schema

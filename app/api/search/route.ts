@@ -3,7 +3,7 @@ import { requireUser } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
 import { parseBookFields, parsePagination, buildPagination } from '@/lib/api-utils';
-import { transformBook } from '@/lib/book-transformer';
+import { VISIBLE_BOOK_WHERE, transformBook } from '@/lib/book-transformer';
 import { logger, withLogging } from '@/lib/logger';
 
 export const GET = withLogging(async (request: NextRequest) => {
@@ -26,8 +26,11 @@ export const GET = withLogging(async (request: NextRequest) => {
     // Parse field filtering
     const select = parseBookFields(fieldsParam);
 
-    // Build where clause for search
+    // Build where clause for search.
+    // The visibility filter sits beside OR (implicitly AND-ed), not inside it —
+    // as an OR branch it would *match* hidden books rather than exclude them.
     const whereClause = {
+      ...VISIBLE_BOOK_WHERE,
       OR: [
         {
           title: {

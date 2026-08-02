@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { parsePagination } from '@/lib/api-utils';
+import { VISIBLE_BOOK_WHERE } from '@/lib/book-transformer';
 
 export async function GET(request: NextRequest) {
   // Check both auth methods
@@ -16,14 +17,20 @@ export async function GET(request: NextRequest) {
       searchParams.get('limit')
     );
 
+    // An author is listed only while they still have a visible book, and the
+    // count matches what the detail page will actually show — an unfiltered
+    // _count reads "12 books" next to a page listing 11.
+    const visibleBooksWhere = { some: { book: VISIBLE_BOOK_WHERE } };
+
     const [authors, total] = await Promise.all([
       prisma.author.findMany({
+        where: { books: visibleBooksWhere },
         skip,
         take: limit,
         include: {
           _count: {
             select: {
-              books: true,
+              books: { where: { book: VISIBLE_BOOK_WHERE } },
             },
           },
         },
@@ -31,7 +38,7 @@ export async function GET(request: NextRequest) {
           name: 'asc',
         },
       }),
-      prisma.author.count(),
+      prisma.author.count({ where: { books: visibleBooksWhere } }),
     ]);
 
     // Transform to include book count

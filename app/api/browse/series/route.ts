@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { parsePagination, buildPagination } from '@/lib/api-utils';
+import { VISIBLE_BOOK_WHERE } from '@/lib/book-transformer';
 
 export async function GET(request: NextRequest) {
   // Check both auth methods
@@ -16,14 +17,20 @@ export async function GET(request: NextRequest) {
       searchParams.get('limit')
     );
 
+    // A series is listed only while it still has a visible book — hiding every
+    // book in a series removes the series from Browse rather than leaving an
+    // empty "0 books" entry behind.
+    const visibleBooksWhere = { some: { book: VISIBLE_BOOK_WHERE } };
+
     const [series, total] = await Promise.all([
       prisma.series.findMany({
+        where: { books: visibleBooksWhere },
         skip,
         take: limit,
         include: {
           _count: {
             select: {
-              books: true,
+              books: { where: { book: VISIBLE_BOOK_WHERE } },
             },
           },
         },
@@ -31,7 +38,7 @@ export async function GET(request: NextRequest) {
           title: 'asc',
         },
       }),
-      prisma.series.count(),
+      prisma.series.count({ where: { books: visibleBooksWhere } }),
     ]);
 
     // Transform to include book count

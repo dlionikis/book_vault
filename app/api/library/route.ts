@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { normalizeUuid } from '@/lib/api-utils';
-import { BOOK_INCLUDE, transformLibraryBook } from '@/lib/book-transformer';
+import { BOOK_INCLUDE, VISIBLE_BOOK_WHERE, transformLibraryBook } from '@/lib/book-transformer';
 import { logger, withLogging } from '@/lib/logger';
 
 /**
@@ -41,9 +41,12 @@ export const GET = withLogging(async (request: NextRequest) => {
     }
 
     // Get books in library with full details
+    // A hidden book stays in the list row but is not returned — unhiding it
+    // puts it back in the user's library untouched.
     const libraryBooks = await prisma.userListBook.findMany({
       where: {
         listId: library.id,
+        book: VISIBLE_BOOK_WHERE,
       },
       include: {
         book: {
