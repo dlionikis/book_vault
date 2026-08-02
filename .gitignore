@@ -133,6 +133,10 @@ credentials
 # Local HTTPS certificates
 .certs/
 
+# Amazon's public RDS CA bundle is a trust anchor, not a secret: it must be
+# tracked so the Docker image can verify the RDS server certificate.
+!certs/rds-global-bundle.pem
+
 # Testing
 coverage/
 .nyc_output

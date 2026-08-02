@@ -68,6 +68,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
+# Amazon's public RDS CA bundle. Prisma 7 connects through the pg driver, which
+# verifies the RDS server certificate against this trust anchor (lib/db-ssl.ts).
+# NODE_EXTRA_CA_CERTS covers the Prisma CLI, which reads trust roots from the
+# environment rather than from our adapter options.
+COPY --from=builder /app/certs ./certs
+ENV NODE_EXTRA_CA_CERTS=/app/certs/rds-global-bundle.pem
+
 USER nextjs
 
 # Port 8080 - must match App Runner configuration
