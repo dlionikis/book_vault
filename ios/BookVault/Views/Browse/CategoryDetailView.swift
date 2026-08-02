@@ -30,21 +30,19 @@ struct CategoryDetailView: View {
 private struct CategoryHierarchySection: View {
     let detail: GetCategory200Response
 
-    private let columns = [
-        GridItem(.adaptive(minimum: 150, maximum: 260), spacing: 12, alignment: .top)
-    ]
-
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             if !detail.breadcrumb.isEmpty {
                 breadcrumbView
+                    .padding(.horizontal)
             }
 
             if !detail.childCategories.isEmpty {
+                // Padded internally: the rows are full-bleed within their card, so the
+                // inset belongs on the card and the heading, not on the whole section.
                 subcategoriesView
             }
         }
-        .padding(.horizontal)
     }
 
     /// Ancestors as tappable chips, so you can climb back up the ladder without
@@ -71,26 +69,44 @@ private struct CategoryHierarchySection: View {
         }
     }
 
+    /// Full-width rows rather than a grid, matching the Categories browse list —
+    /// these are the same kind of thing, and long genre names ("Relationships,
+    /// Parenting & Personal Development") truncate badly in a narrow column.
+    ///
+    /// Built from a `VStack` with explicit separators instead of a `List`: this sits
+    /// inside the detail screen's `ScrollView`, and a nested `List` gets its own
+    /// scroll view and collapses to zero height.
     private var subcategoriesView: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Subcategories")
                 .font(.headline)
+                .padding(.horizontal)
 
-            LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(detail.childCategories, id: \.id) { child in
+            VStack(spacing: 0) {
+                ForEach(Array(detail.childCategories.enumerated()), id: \.element.id) { index, child in
+                    if index > 0 {
+                        Divider()
+                            .padding(.leading, 50) // clears the icon, as in an inset list
+                    }
+
                     NavigationLink(destination: CategoryDetailView(categoryId: child.id.uuidString)) {
-                        CategorySummaryTile(category: child)
+                        CategorySummaryRow(category: child)
                     }
                     .buttonStyle(.plain)
                 }
             }
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .padding(.horizontal)
         }
     }
 }
 
-// MARK: - Subcategory Tile
+// MARK: - Subcategory Row
 
-private struct CategorySummaryTile: View {
+/// One subcategory as a full-width row, styled to match the Categories browse list
+/// (same icon treatment, name/count stack, and trailing chevron).
+private struct CategorySummaryRow: View {
     let category: CategorySummary
 
     /// A container category has no books of its own, so its own count would read
@@ -105,37 +121,37 @@ private struct CategorySummaryTile: View {
     }
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             Image(systemName: "tag.fill")
                 .foregroundColor(.accentColor)
-                .frame(width: 28, height: 28)
+                .frame(width: 32, height: 32)
                 .background(Color.accentColor.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(category.name)
-                    .font(.subheadline)
+                    .font(.body)
                     .fontWeight(.medium)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(countLabel)
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundColor(.secondary)
             }
 
             Spacer(minLength: 0)
 
-            if category.hasChildren {
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .accessibilityHidden(true)
-            }
+            // Always shown, unlike the grid tile: in a list every row is a push, and a
+            // chevron on only some rows reads as inconsistent rather than meaningful.
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundColor(Color(.tertiaryLabel))
+                .accessibilityHidden(true)
         }
-        .padding(10)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(category.name), \(countLabel)")
         .accessibilityHint(

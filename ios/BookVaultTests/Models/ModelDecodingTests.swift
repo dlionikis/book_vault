@@ -272,4 +272,109 @@ final class ModelDecodingTests: XCTestCase {
 
         XCTAssertThrowsError(try decoder.decode(Book.self, from: data))
     }
+
+    // MARK: - Category Hierarchy
+
+    /// Verbatim production response for "Comedy & Humor": a container category with
+    /// no books of its own whose single child holds all 7. It rendered as an empty
+    /// page on iOS, so this pins the decode and the protocol accessors the
+    /// drill-down UI reads.
+    private let containerCategoryJSON = """
+    {
+        "id": "ec55de66-4cdf-47ec-be3d-2da3e2ff28e8",
+        "name": "Comedy & Humor",
+        "level": 0,
+        "ancestors": [],
+        "subcategories": [
+            {
+                "id": "dcb5060c-5491-432f-a40b-64f9f0248c65",
+                "name": "Literature & Fiction",
+                "bookCount": 7,
+                "totalBookCount": 7,
+                "hasChildren": false
+            }
+        ],
+        "totalBookCount": 7,
+        "books": [],
+        "pagination": { "page": 1, "limit": 20, "total": 0, "pages": 0 }
+    }
+    """
+
+    func testDecodesContainerCategoryWithSubcategories() throws {
+        let data = containerCategoryJSON.data(using: .utf8)!
+
+        let detail = try decoder.decode(GetCategory200Response.self, from: data)
+
+        XCTAssertEqual(detail.name, "Comedy & Humor")
+        XCTAssertEqual(detail.totalBookCount, 7)
+        XCTAssertTrue(detail.books.isEmpty)
+        XCTAssertEqual(detail.subcategories?.count, 1)
+        XCTAssertEqual(detail.subcategories?.first?.name, "Literature & Fiction")
+        XCTAssertEqual(detail.subcategories?.first?.totalBookCount, 7)
+        XCTAssertEqual(detail.subcategories?.first?.hasChildren, false)
+    }
+
+    /// The hierarchy UI reads these accessors rather than the raw optionals, so an
+    /// empty drill-down here is what an empty page looks like.
+    func testContainerCategoryExposesHierarchyForDrillDown() throws {
+        let data = containerCategoryJSON.data(using: .utf8)!
+
+        let detail = try decoder.decode(GetCategory200Response.self, from: data)
+
+        XCTAssertEqual(detail.childCategories.count, 1, "drill-down would render empty")
+        XCTAssertTrue(detail.breadcrumb.isEmpty, "a root has no ancestors")
+        // Falls back to the page total only when the server omits the rollup; here it
+        // must report the subtree, not the 0 books tagged directly.
+        XCTAssertEqual(detail.subtreeBookCount, 7)
+    }
+
+    /// A category whose rollup exceeds its own page is what makes the detail header
+    /// print the subtree instead of `books.count` — otherwise it reads "0 books" above
+    /// a list of subcategories holding several hundred.
+    func testContainerCategoryRollupExceedsItsOwnBookPage() throws {
+        let data = containerCategoryJSON.data(using: .utf8)!
+
+        let detail = try decoder.decode(GetCategory200Response.self, from: data)
+
+        XCTAssertGreaterThan(detail.subtreeBookCount, detail.books.count)
+    }
+
+    /// A leaf reports the same number both ways, so the header stays a plain count.
+    func testLeafCategoryRollupMatchesItsBooks() throws {
+        let json = """
+        {
+            "id": "b482e990-5921-4dfb-8c1d-aa0b7db4de9d",
+            "name": "Epic",
+            "level": 2,
+            "ancestors": [
+                { "id": "40febea5-a364-4ef1-8325-37cc55d6b96d", "name": "Science Fiction & Fantasy" },
+                { "id": "5b42f1ed-91db-4958-a1d2-e1f188518563", "name": "Fantasy" }
+            ],
+            "subcategories": [],
+            "totalBookCount": 2,
+            "books": [
+                {
+                    "id": "1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+                    "asin": "B00ONE",
+                    "title": "One",
+                    "authors": []
+                },
+                {
+                    "id": "2b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+                    "asin": "B00TWO",
+                    "title": "Two",
+                    "authors": []
+                }
+            ],
+            "pagination": { "page": 1, "limit": 20, "total": 2, "pages": 1 }
+        }
+        """
+        let data = json.data(using: .utf8)!
+
+        let detail = try decoder.decode(GetCategory200Response.self, from: data)
+
+        XCTAssertTrue(detail.childCategories.isEmpty)
+        XCTAssertEqual(detail.breadcrumb.count, 2)
+        XCTAssertEqual(detail.subtreeBookCount, detail.books.count)
+    }
 }
