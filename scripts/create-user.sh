@@ -31,6 +31,10 @@ SERVICE="book-vault-spot"
 CONTAINER="book-vault"
 REGION="us-east-1"
 
+# Shared TLS/exec plumbing for talking to RDS from inside a task.
+# shellcheck source=scripts/lib/remote-pg.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/remote-pg.sh"
+
 # Change to project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
@@ -132,43 +136,37 @@ import { PrismaClient } from './lib/generated/prisma/client';
 else
     echo -e "${YELLOW}[INFO]${NC} Finding running ECS task..."
 
-    TASK_ARN=$(aws ecs list-tasks \
-        --cluster "$CLUSTER" \
-        --service-name "$SERVICE" \
-        --region "$REGION" \
-        --query 'taskArns[0]' \
-        --output text 2>/dev/null)
-
-    if [ -z "$TASK_ARN" ] || [ "$TASK_ARN" == "None" ]; then
-        echo -e "${RED}Error: No running tasks found in $SERVICE${NC}"
-        exit 1
-    fi
-
-    TASK_ID=$(echo "$TASK_ARN" | awk -F'/' '{print $NF}')
-    echo -e "${GREEN}[OK]${NC} Found task: $TASK_ID"
+    TASK_ARN=$(remote_pg_task_arn "$CLUSTER" "$SERVICE") || exit 1
+    echo -e "${GREEN}[OK]${NC} Found task: ${TASK_ARN##*/}"
 
     echo -e "${YELLOW}[INFO]${NC} Creating user in production database..."
 
-    # Escape special characters in hash for shell
-    ESCAPED_HASH=$(printf '%s' "$HASH" | sed 's/\$/\\$/g')
-
-    # Build the Node.js command (minified for shell safety).
-    #
-    # This uses the `pg` driver directly rather than Prisma: as of Prisma 7 the
+    # Uses the `pg` driver directly rather than Prisma: as of Prisma 7 the
     # generated client is TypeScript (lib/generated/prisma), and the production
     # image has no TS loader — only Next's own compiled bundle can import it.
     # `pg` is a real dependency and is present in the standalone output.
     # Postgres error 23505 (unique_violation) is the equivalent of Prisma P2002.
-    CREATE_CMD="const{Client}=require('pg');(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();try{const r=await c.query('INSERT INTO users (id, username, password_hash, created_at, updated_at) VALUES (gen_random_uuid(), \$1, \$2, NOW(), NOW()) RETURNING id',['$USERNAME','$ESCAPED_HASH']);console.log('SUCCESS:'+r.rows[0].id)}catch(e){if(e.code==='23505'){console.log('ERROR:User already exists')}else{console.log('ERROR:'+e.message)}}finally{await c.end()}})();"
-
-    # Execute via ECS Exec
-    RESULT=$(aws ecs execute-command \
-        --cluster "$CLUSTER" \
-        --task "$TASK_ID" \
-        --container "$CONTAINER" \
-        --command "node -e \"$CREATE_CMD\"" \
-        --interactive \
-        --region "$REGION" 2>&1)
+    #
+    # Username and hash travel as argv, not interpolated into the JS source.
+    # bcrypt hashes contain `$` and the old version sed-escaped them by hand,
+    # which is both fragile and how a crafted username could have injected code
+    # into the remote script.
+    RESULT=$(remote_pg_exec "$CLUSTER" "$SERVICE" "$CONTAINER" "
+    const [, , username, hash] = process.argv;
+    try {
+      const r = await client.query(
+        'INSERT INTO users (id, username, password_hash, created_at, updated_at) VALUES (gen_random_uuid(), \$1, \$2, NOW(), NOW()) RETURNING id',
+        [username, hash]
+      );
+      console.log('SUCCESS:' + r.rows[0].id);
+    } catch (e) {
+      if (e.code === '23505') {
+        console.log('ERROR:User already exists');
+      } else {
+        console.log('ERROR:' + e.message);
+      }
+    }
+" "$USERNAME" "$HASH" 2>&1)
 fi
 
 # ============================================================

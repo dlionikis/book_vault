@@ -31,10 +31,17 @@ CLUSTER="book-vault"
 SERVICE="book-vault-spot"
 CONTAINER="book-vault"
 
-# The production runtime image ships only the Prisma client runtime, not the
-# `prisma` CLI, so `npx prisma ...` in the container downloads the LATEST CLI —
-# which may be a different major than the one this project's migrations were
-# authored against. Pin the CLI to the project's own prisma version.
+# Shared TLS/exec plumbing for talking to RDS from inside a task.
+# shellcheck source=scripts/lib/remote-pg.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/remote-pg.sh"
+
+# Pin the CLI to the project's own prisma version for the *local* path, where a
+# bare `npx prisma` would fetch the latest — possibly a different major than the
+# one these migrations were authored against.
+#
+# Production does not use the CLI at all: the runtime image ships only the client
+# runtime, and installing the CLI in the 512MB task OOMs. See
+# run_production_migration.
 #
 # `package.json` is ESM now, so read it with fs rather than require().
 PRISMA_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('./package.json','utf8')).devDependencies.prisma.replace(/^[^0-9]*/, '')" 2>/dev/null)
@@ -75,24 +82,6 @@ if [ "$ENVIRONMENT" != "local" ] && [ "$ENVIRONMENT" != "production" ]; then
     log_error "Environment must be 'local' or 'production'"
     show_usage
 fi
-
-# Get a running task ARN
-get_task_arn() {
-    local task_arn
-    task_arn=$(aws ecs list-tasks \
-        --cluster "$CLUSTER" \
-        --service-name "$SERVICE" \
-        --desired-status RUNNING \
-        --query 'taskArns[0]' \
-        --output text 2>/dev/null)
-
-    if [[ -z "$task_arn" || "$task_arn" == "None" ]]; then
-        log_error "No running tasks found in service $SERVICE"
-        exit 1
-    fi
-
-    echo "$task_arn"
-}
 
 # Run migration on local database
 run_local_migration() {
@@ -146,7 +135,7 @@ run_production_migration() {
         exit 1
     fi
 
-    TASK_ARN=$(get_task_arn)
+    TASK_ARN=$(remote_pg_task_arn "$CLUSTER" "$SERVICE") || exit 1
     log_info "Using task: ${TASK_ARN##*/}"
 
     if [ -n "$MIGRATION_FILE" ]; then
@@ -159,62 +148,98 @@ run_production_migration() {
         log_info "Running SQL file: $MIGRATION_FILE"
         log_warn "Reading file locally and executing remotely..."
 
-        # Read the SQL file and escape it for shell
         SQL_CONTENT=$(cat "$MIGRATION_FILE")
 
-        # Execute via the `pg` driver. As of Prisma 7 the generated client is
-        # TypeScript (lib/generated/prisma) and the production image has no TS
-        # loader, so raw SQL goes through pg directly.
-        aws ecs execute-command \
-            --cluster "$CLUSTER" \
-            --task "$TASK_ARN" \
-            --container "$CONTAINER" \
-            --command "node -e \"
-const { Client } = require('pg');
-const client = new Client({ connectionString: process.env.DATABASE_URL });
-const sql = \\\`$(echo "$SQL_CONTENT" | sed 's/`/\\\\\\`/g' | sed 's/\$/\\\\$/g')\\\`;
-client.connect()
-    .then(() => client.query(sql))
-    .then(r => {
-        console.log('Rows affected:', r.rowCount);
-        return client.end().then(() => process.exit(0));
-    })
-    .catch(e => {
-        console.error('Error:', e.message);
-        process.exit(1);
-    });
-\"" \
-            --interactive
+        # Raw SQL goes through the `pg` driver: as of Prisma 7 the generated
+        # client is TypeScript (lib/generated/prisma) and the production image
+        # has no TS loader.
+        #
+        # The SQL is handed over as argv rather than pasted into a template
+        # literal. The previous version escaped backticks and `$` with sed,
+        # which still mangled any migration containing `${`, and silently
+        # dropped the transaction — a multi-statement file that failed halfway
+        # left the schema partly migrated.
+        remote_pg_exec "$CLUSTER" "$SERVICE" "$CONTAINER" "
+    const sql = process.argv[2];
+    await client.query('BEGIN');
+    try {
+      const r = await client.query(sql);
+      await client.query('COMMIT');
+      console.log('Rows affected:', r.rowCount);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    }
+" "$SQL_CONTENT"
     else
-        # Run prisma migrate deploy, pinned to the project's CLI version.
-        log_info "Running: npx prisma@${PRISMA_VERSION} migrate deploy"
+        # Apply pending migrations as raw SQL, recording each in
+        # _prisma_migrations exactly as `prisma migrate deploy` would.
+        #
+        # Why not the Prisma CLI: the runtime image ships only the client
+        # runtime, so the CLI has to be fetched at run time — and installing it
+        # inside the task OOMs. The task has 512MB total, shared with the
+        # running Next.js server, so an `npm install` of the CLI is killed and
+        # risks taking the serving process with it.
+        #
+        # The checksum is the sha256 of migration.sql, which is what Prisma
+        # stores, so a later `migrate deploy` run from anywhere with a real CLI
+        # sees these as applied rather than pending or drifted.
+        log_info "Applying pending migrations via SQL (no CLI in the runtime image)"
 
-        # ECS Exec's session exit code reflects the *session*, not the remote
-        # command — so a failed migration still exits 0 and would falsely print
-        # "completed". Capture the output (tee so it's still visible live) and
-        # verify Prisma's own success/failure markers before declaring success.
-        local exec_output
-        exec_output=$(aws ecs execute-command \
-            --cluster "$CLUSTER" \
-            --task "$TASK_ARN" \
-            --container "$CONTAINER" \
-            --command "npx --yes prisma@${PRISMA_VERSION} migrate deploy" \
-            --interactive 2>&1 | tee /dev/tty)
+        local applied_any=0
+        local migration_dir name checksum sql
+        for migration_dir in prisma/migrations/*/; do
+            [ -f "${migration_dir}migration.sql" ] || continue
+            name=$(basename "$migration_dir")
+            checksum=$(shasum -a 256 "${migration_dir}migration.sql" | awk '{print $1}')
+            sql=$(cat "${migration_dir}migration.sql")
 
-        # Prisma prints "Error" / "P1012" etc. on failure; on success it prints
-        # either "Applying migration" + "successfully applied" or, when nothing
-        # is pending, "No pending migrations to apply".
-        if echo "$exec_output" | grep -qiE "error|Validation Error|is no longer supported|P[0-9]{4}"; then
-            log_error "Migration FAILED (see Prisma output above)."
-            exit 1
+            log_info "Checking ${name}..."
+            local out
+            out=$(remote_pg_exec "$CLUSTER" "$SERVICE" "$CONTAINER" "
+    const [, , name, checksum, sql] = process.argv;
+    const seen = await client.query(
+      'SELECT finished_at FROM _prisma_migrations WHERE migration_name = \$1 AND rolled_back_at IS NULL',
+      [name]
+    );
+    if (seen.rowCount > 0) {
+      console.log('SKIP:already applied');
+    } else {
+      await client.query('BEGIN');
+      try {
+        await client.query(sql);
+        await client.query(
+          \`INSERT INTO _prisma_migrations
+             (id, checksum, migration_name, started_at, finished_at, applied_steps_count)
+           VALUES (gen_random_uuid()::text, \$1, \$2, now(), now(), 1)\`,
+          [checksum, name]
+        );
+        await client.query('COMMIT');
+        console.log('APPLIED:ok');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      }
+    }
+" "$name" "$checksum" "$sql" 2>&1)
+
+            if echo "$out" | grep -q "APPLIED:ok"; then
+                log_success "  applied ${name}"
+                applied_any=1
+            elif echo "$out" | grep -q "SKIP:already applied"; then
+                log_info "  already applied"
+            else
+                log_error "  FAILED: ${name}"
+                echo "$out" | grep -E "ERROR:|error" | head -5
+                exit 1
+            fi
+        done
+
+        if [ "$applied_any" -eq 0 ]; then
+            log_info "No pending migrations to apply."
         fi
-        if ! echo "$exec_output" | grep -qiE "successfully applied|No pending migrations to apply|Database schema is up to date"; then
-            log_error "Could not confirm migration success from Prisma output — treating as failure."
-            exit 1
-        fi
+        log_success "Migration completed!"
     fi
-
-    log_success "Migration completed!"
 }
 
 # Main

@@ -19,6 +19,10 @@ CLUSTER="book-vault"
 SERVICE="book-vault-spot"
 CONTAINER="book-vault"
 
+# Shared TLS/exec plumbing for talking to RDS from inside a task.
+# shellcheck source=scripts/lib/remote-pg.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/remote-pg.sh"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -51,58 +55,27 @@ check_prerequisites() {
     fi
 }
 
-# Get a running task ARN
-get_task_arn() {
-    local task_arn
-    task_arn=$(aws ecs list-tasks \
-        --cluster "$CLUSTER" \
-        --service-name "$SERVICE" \
-        --desired-status RUNNING \
-        --query 'taskArns[0]' \
-        --output text 2>/dev/null)
-
-    if [[ -z "$task_arn" || "$task_arn" == "None" ]]; then
-        log_error "No running tasks found in service $SERVICE"
-        exit 1
-    fi
-
-    echo "$task_arn"
-}
-
 # Main
 main() {
     check_prerequisites
 
     log_info "Finding running task in $SERVICE..."
-    TASK_ARN=$(get_task_arn)
+    TASK_ARN=$(remote_pg_task_arn "$CLUSTER" "$SERVICE") || exit 1
     log_info "Task: ${TASK_ARN##*/}"
 
     if [[ $# -gt 0 ]]; then
-        # Run a specific SQL command
+        # Run a specific SQL command.
+        #
+        # The SQL is passed to the remote script as an argv element rather than
+        # interpolated into the JS source, so backticks, $ and quotes in the
+        # query cannot break the template literal (or the shell layers under it).
         SQL_COMMAND="$1"
         log_info "Running SQL command..."
 
-        aws ecs execute-command \
-            --cluster "$CLUSTER" \
-            --task "$TASK_ARN" \
-            --container "$CONTAINER" \
-            --command "node -e \"
-// Uses the \`pg\` driver directly: as of Prisma 7 the generated client is
-// TypeScript (lib/generated/prisma) and the production image has no TS loader.
-const { Client } = require('pg');
-const client = new Client({ connectionString: process.env.DATABASE_URL });
-client.connect()
-    .then(() => client.query(\\\`$SQL_COMMAND\\\`))
-    .then(r => {
-        console.log(JSON.stringify(r.rows, null, 2));
-        return client.end().then(() => process.exit(0));
-    })
-    .catch(e => {
-        console.error(e.message);
-        process.exit(1);
-    });
-\"" \
-            --interactive
+        remote_pg_exec "$CLUSTER" "$SERVICE" "$CONTAINER" "
+    const r = await client.query(process.argv[2]);
+    console.log(JSON.stringify(r.rows, null, 2));
+" "$SQL_COMMAND"
     else
         # Interactive shell
         log_info "Starting interactive shell..."
