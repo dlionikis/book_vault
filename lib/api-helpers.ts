@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
-import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
+import { BOOK_INCLUDE, VISIBLE_BOOK_WHERE, transformBook } from '@/lib/book-transformer';
 import { normalizeUuid, buildPagination, parsePagination } from '@/lib/api-utils';
 
 /**
@@ -117,7 +117,10 @@ export async function handleEntityDetailWithBooks<TEntity>(
     // 5. Fetch related books via join table with pagination
     // Default orderBy to book.title asc unless custom orderBy provided
     const orderBy = config.orderBy || { book: { title: 'asc' } };
-    const whereClause = { [config.idFieldName]: entityId };
+    // Filters through the join table's `book` relation, so hidden books drop
+    // out of both the page and its total. Covers the author, narrator, series
+    // and category detail endpoints in one place.
+    const whereClause = { [config.idFieldName]: entityId, book: VISIBLE_BOOK_WHERE };
 
     const [joinEntries, total] = await Promise.all([
       config.joinTableModel.findMany({

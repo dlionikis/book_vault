@@ -58,6 +58,14 @@ model Book {
   audioAvailability     String    @default("AVAILABLE") @map("audio_availability")
   availabilityCheckedAt DateTime? @map("availability_checked_at")
 
+  // Soft hide: when set, the book is omitted from every list surface (catalog,
+  // search, browse + their book counts, library, entity detail pages) but stays
+  // fully playable and downloadable by direct link, so anyone mid-book is not
+  // cut off. Not a delete — clearing the column restores it everywhere.
+  // A timestamp rather than a boolean so we keep *when* it was hidden.
+  // See docs/hidden-books.md.
+  hiddenAt              DateTime? @map("hidden_at")
+
   authors           BookAuthor[]
   narrators         BookNarrator[]
   series            BookSeries[]
@@ -69,6 +77,9 @@ model Book {
   restoreRequests   MediaRestoreRequest[]
 
   @@index([title])
+  // Every list query filters on this, so it is worth an index even though the
+  // hidden set is expected to stay small.
+  @@index([hiddenAt])
   @@map("books")
 }
 

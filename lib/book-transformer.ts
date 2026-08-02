@@ -22,6 +22,28 @@ import { getCoverUrl, getAudioUrl } from './media';
 import { htmlToMarkdown } from './html-to-markdown';
 
 /**
+ * Standard visibility filter for book list queries.
+ *
+ * A book with `hiddenAt` set is shelved: omitted from every *list* surface
+ * (catalog, search, browse and their book counts, library, entity detail
+ * pages) while staying reachable by direct link — detail, stream and download
+ * deliberately do NOT apply this, so a hidden book keeps playing for anyone
+ * already mid-book or holding an offline copy.
+ *
+ * Spread into a `where` for direct book queries:
+ * ```typescript
+ * prisma.book.findMany({ where: { ...VISIBLE_BOOK_WHERE } })
+ * ```
+ * or nest under the relation when filtering through a join table:
+ * ```typescript
+ * prisma.bookSeries.findMany({ where: { book: VISIBLE_BOOK_WHERE } })
+ * ```
+ *
+ * See docs/hidden-books.md for the full surface list and how to hide/unhide.
+ */
+export const VISIBLE_BOOK_WHERE = { hiddenAt: null } as const;
+
+/**
  * Standard book include for Prisma queries
  * Use this in all queries that return books to ensure consistency
  */

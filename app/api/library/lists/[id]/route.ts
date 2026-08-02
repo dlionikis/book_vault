@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { normalizeUuid } from '@/lib/api-utils';
+import { VISIBLE_BOOK_WHERE } from '@/lib/book-transformer';
 
 // PUT /api/library/lists/[id] - Update list metadata
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
@@ -47,7 +48,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       where: { id },
       data: updateData,
       include: {
-        _count: { select: { books: true } },
+        _count: { select: { books: { where: { book: VISIBLE_BOOK_WHERE } } } },
       },
     });
 

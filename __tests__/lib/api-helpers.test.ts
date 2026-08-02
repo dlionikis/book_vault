@@ -210,9 +210,11 @@ describe('handleEntityDetailWithBooks', () => {
 
       await handleEntityDetailWithBooks(request, params, baseConfig);
 
+      // The `book` clause excludes soft-hidden books from entity detail pages;
+      // see docs/hidden-books.md.
       expect(prisma.bookAuthor.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { authorId: 'author-123' },
+          where: { authorId: 'author-123', book: { hiddenAt: null } },
         })
       );
     });
@@ -264,8 +266,10 @@ describe('handleEntityDetailWithBooks', () => {
       const data = await response.json();
 
       expect(data.pagination.total).toBe(42);
+      // Hidden books are excluded from the total too, so the count matches the
+      // page the user actually sees.
       expect(prisma.bookAuthor.count).toHaveBeenCalledWith({
-        where: { authorId: 'author-123' },
+        where: { authorId: 'author-123', book: { hiddenAt: null } },
       });
     });
   });

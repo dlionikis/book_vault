@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/db';
 import { parsePagination } from '@/lib/api-utils';
+import { VISIBLE_BOOK_WHERE } from '@/lib/book-transformer';
 
 export async function GET(request: NextRequest) {
   // Check both auth methods
@@ -16,14 +17,19 @@ export async function GET(request: NextRequest) {
       searchParams.get('limit')
     );
 
+    // Listed only while the category still has a visible book, with a matching
+    // count — see the note in browse/authors.
+    const visibleBooksWhere = { some: { book: VISIBLE_BOOK_WHERE } };
+
     const [categories, total] = await Promise.all([
       prisma.category.findMany({
+        where: { books: visibleBooksWhere },
         skip,
         take: limit,
         include: {
           _count: {
             select: {
-              books: true,
+              books: { where: { book: VISIBLE_BOOK_WHERE } },
             },
           },
           parent: {
@@ -36,7 +42,7 @@ export async function GET(request: NextRequest) {
           name: 'asc',
         },
       }),
-      prisma.category.count(),
+      prisma.category.count({ where: { books: visibleBooksWhere } }),
     ]);
 
     // Transform to include book count and level (OpenAPI compliant)
