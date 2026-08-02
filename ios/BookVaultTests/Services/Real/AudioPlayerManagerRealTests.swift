@@ -7,6 +7,7 @@
 //
 
 import AVFoundation
+import MediaPlayer
 import XCTest
 @testable import BookVault
 
@@ -112,6 +113,9 @@ final class AudioPlayerManagerRealTests: XCTestCase {
     var mockStorageManager: MockStorageManagerForDownloads!
     var mockAPIClient: MockAPIClient!
     var mockChapterFetcher: MockChapterFetcher!
+    var sleepTimer: SleepTimerManager!
+    private var sleepTimerSuiteName: String!
+    private var sleepTimerDefaults: UserDefaults!
 
     override func setUp() async throws {
         mockProgressManager = MockProgressManagerForAudio()
@@ -120,12 +124,21 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         mockAPIClient = MockAPIClient()
         mockChapterFetcher = MockChapterFetcher()
 
+        // Isolated sleep timer so tests don't leak state through the singleton.
+        sleepTimerSuiteName = "AudioPlayerSleepTimerTests-\(UUID().uuidString)"
+        sleepTimerDefaults = UserDefaults(suiteName: sleepTimerSuiteName)!
+        sleepTimerDefaults.removePersistentDomain(forName: sleepTimerSuiteName)
+        sleepTimer = SleepTimerManager(
+            settings: PlaybackSettings(userDefaults: sleepTimerDefaults)
+        )
+
         sut = AudioPlayerManager(
             progressManager: mockProgressManager,
             downloadManager: mockDownloadManager,
             storageManager: mockStorageManager,
             apiClient: mockAPIClient, // Avoid real network calls on the streaming path
             chapterFetcher: mockChapterFetcher,
+            sleepTimer: sleepTimer,
             skipAudioSetup: true // Skip AVAudioSession setup for unit tests
         )
 
@@ -134,6 +147,10 @@ final class AudioPlayerManagerRealTests: XCTestCase {
     }
 
     override func tearDown() async throws {
+        sleepTimerDefaults?.removePersistentDomain(forName: sleepTimerSuiteName)
+        sleepTimerDefaults = nil
+        sleepTimerSuiteName = nil
+        sleepTimer = nil
         sut = nil
         mockProgressManager = nil
         mockDownloadManager = nil
@@ -496,6 +513,179 @@ final class AudioPlayerManagerRealTests: XCTestCase {
         // Then - should start new playback setup (isLoading becomes true)
         // because there's no player item yet (loadForMiniPlayer scenario)
         XCTAssertTrue(sut.isLoading)
+    }
+
+    // MARK: - Sleep Timer Tests
+
+    /// A chapter running to `endTime`, for end-of-chapter tests.
+    private func makeSleepChapter(endTime: Double = 600) -> Chapter {
+        Chapter(
+            id: UUID(),
+            title: "Chapter 1",
+            startTime: 0,
+            endTime: endTime,
+            duration: endTime,
+            index: 1
+        )
+    }
+
+    func testSleepTimerFire_PausesPlayback() {
+        // Given — armed with a deadline already in the past
+        sut.currentBook = TestFixtures.makeBook()
+        sut.isPlaying = true
+        sleepTimer.arm(.duration(8 * 60), now: Date().addingTimeInterval(-40 * 60))
+
+        // When — one audio tick
+        sut.evaluateSleepTimer()
+
+        // Then
+        XCTAssertFalse(sut.isPlaying)
+        XCTAssertFalse(sleepTimer.isArmed)
+    }
+
+    /// A player left at volume 0 reads as "the app is broken" with no obvious
+    /// cause, so the restore path is asserted directly.
+    func testSleepTimerFire_RestoresPreFadeVolume() {
+        sut.currentBook = TestFixtures.makeBook()
+        sut.isPlaying = true
+
+        // Enter the fade window, then let it fire.
+        sleepTimer.arm(.duration(5), now: Date())
+        sut.evaluateSleepTimer()
+        XCTAssertTrue(sut.isFadingForSleepTimer, "Expected a fade to be in progress")
+
+        sleepTimer.arm(.duration(0), now: Date().addingTimeInterval(-1))
+        sut.evaluateSleepTimer()
+
+        XCTAssertFalse(sut.isFadingForSleepTimer, "Fade must be undone after firing")
+    }
+
+    func testSleepTimerCancel_RestoresPreFadeVolume() {
+        sut.currentBook = TestFixtures.makeBook()
+        sleepTimer.arm(.duration(5), now: Date())
+        sut.evaluateSleepTimer()
+        XCTAssertTrue(sut.isFadingForSleepTimer)
+
+        sut.cancelSleepTimer()
+
+        XCTAssertFalse(sut.isFadingForSleepTimer)
+        XCTAssertFalse(sleepTimer.isArmed)
+    }
+
+    func testSleepTimerExtendWhileFading_RestoresVolume() {
+        sut.currentBook = TestFixtures.makeBook()
+        sleepTimer.arm(.duration(5), now: Date())
+        sut.evaluateSleepTimer()
+        XCTAssertTrue(sut.isFadingForSleepTimer)
+
+        sut.extendSleepTimer(by: 15 * 60)
+
+        XCTAssertFalse(sut.isFadingForSleepTimer, "Extending must undo the fade")
+        XCTAssertTrue(sleepTimer.isArmed)
+    }
+
+    func testSleepTimerPlayDifferentBook_CancelsTimer() {
+        let first = TestFixtures.makeBook(title: "First")
+        sut.currentBook = first
+        sleepTimer.arm(.duration(30 * 60), now: Date())
+
+        sut.play(book: TestFixtures.makeBook(title: "Second"))
+
+        XCTAssertFalse(sleepTimer.isArmed, "A new book is a new listening session")
+    }
+
+    /// Audible behavior: pausing to answer a question shouldn't kill the timer.
+    func testSleepTimerManualPause_DoesNotCancelTimer() {
+        sut.currentBook = TestFixtures.makeBook()
+        sut.isPlaying = true
+        sleepTimer.arm(.duration(30 * 60), now: Date())
+
+        sut.pause()
+
+        XCTAssertTrue(sleepTimer.isArmed)
+    }
+
+    func testSleepTimerEndOfChapter_FiresAtBoundary() {
+        sut.currentBook = TestFixtures.makeBook()
+        sut.isPlaying = true
+        let chapter = makeSleepChapter(endTime: 600)
+        sut.updateChapters([chapter])
+        sleepTimer.armEndOfChapter(chapter: chapter)
+
+        // Before the boundary — keeps playing.
+        sut.currentTime = 100
+        sut.evaluateSleepTimer()
+        XCTAssertTrue(sut.isPlaying)
+        XCTAssertTrue(sleepTimer.isArmed)
+
+        // Inside the 10s fade window — begins fading, still playing.
+        sut.currentTime = 595
+        sut.evaluateSleepTimer()
+        XCTAssertTrue(sut.isFadingForSleepTimer, "Expected fade to start near the boundary")
+        XCTAssertTrue(sut.isPlaying, "Fade should not pause yet")
+
+        // At the boundary — fires and undoes the fade.
+        //
+        // Regression guard: `getCurrentChapter()` returns nil at exactly
+        // endTime, so a timer that re-resolved the chapter each tick would fade
+        // to silence here and never pause.
+        sut.currentTime = 600
+        sut.evaluateSleepTimer()
+
+        XCTAssertFalse(sut.isPlaying, "Expected playback to pause at the chapter boundary")
+        XCTAssertFalse(sleepTimer.isArmed)
+        XCTAssertFalse(sut.isFadingForSleepTimer, "Fade must be undone after firing")
+    }
+
+    // MARK: - Now Playing Sleep Timer Countdown
+
+    private var nowPlayingAlbum: String? {
+        MPNowPlayingInfoCenter.default().nowPlayingInfo?[MPMediaItemPropertyAlbumTitle] as? String
+    }
+
+    /// The countdown must be strictly additive — with the timer off, the album
+    /// line is exactly what it was before this feature existed.
+    func testNowPlaying_AlbumLineUnchangedWhenTimerOff() {
+        sut.currentBook = TestFixtures.makeBook(title: "Test Audiobook")
+        sut.updateNowPlayingInfoForTesting()
+
+        let album = nowPlayingAlbum
+        XCTAssertNotNil(album)
+        XCTAssertFalse(album?.contains("💤") ?? true, "No countdown should appear when off")
+    }
+
+    func testNowPlaying_AlbumLineContainsCountdownWhenArmed() {
+        sut.currentBook = TestFixtures.makeBook(title: "Test Audiobook")
+        sleepTimer.arm(.duration(15 * 60), now: Date())
+
+        sut.updateNowPlayingInfoForTesting()
+
+        XCTAssertTrue(nowPlayingAlbum?.contains("💤") ?? false, "Expected countdown, got \(nowPlayingAlbum ?? "nil")")
+    }
+
+    func testNowPlaying_AlbumLineCleanAfterFire() {
+        sut.currentBook = TestFixtures.makeBook(title: "Test Audiobook")
+        sut.isPlaying = true
+        sleepTimer.arm(.duration(8 * 60), now: Date().addingTimeInterval(-40 * 60))
+
+        sut.evaluateSleepTimer()
+
+        XCTAssertFalse(nowPlayingAlbum?.contains("💤") ?? true, "Countdown must be cleared after firing")
+    }
+
+    /// A full refresh (chapter change, seek) while armed must not drop the
+    /// countdown that the lightweight per-second update maintains.
+    func testNowPlaying_FullRefreshWhileArmedKeepsCountdown() {
+        sut.currentBook = TestFixtures.makeBook(title: "Test Audiobook")
+        sleepTimer.arm(.duration(15 * 60), now: Date())
+
+        sut.updateNowPlayingInfoForTesting()
+        XCTAssertTrue(nowPlayingAlbum?.contains("💤") ?? false)
+
+        // Simulate the full refresh that a chapter change triggers.
+        sut.updateNowPlayingInfoForTesting()
+
+        XCTAssertTrue(nowPlayingAlbum?.contains("💤") ?? false, "Full refresh dropped the countdown")
     }
 
     // MARK: - Archive / Restore Tests

@@ -121,6 +121,18 @@ class AudioPlayerManager: ObservableObject {
     private var lastSavedPosition: TimeInterval = 0
     private var downloadObserver: AnyCancellable?
 
+    /// Sleep timer. Decides; this class acts on the decision.
+    private let sleepTimer: SleepTimerManager
+
+    /// Volume captured before a sleep-timer fade began, restored on every exit
+    /// path. A player left at volume 0 reads as "the app is broken" with no
+    /// obvious cause, so this must never be dropped.
+    private var preFadeVolume: Float?
+
+    /// Last countdown string written to Now Playing. Rate-limits the
+    /// lock-screen update to 1Hz against the 0.5s observer tick.
+    private var lastRenderedCountdown: String?
+
     // MARK: - Computed Properties
 
     var progress: Double {
@@ -153,6 +165,7 @@ class AudioPlayerManager: ObservableObject {
         apiClient: any APIClientProtocol = APIClient.shared,
         concreteDownloadManager: DownloadManager? = nil,
         chapterFetcher: (any ChapterFetching)? = nil,
+        sleepTimer: SleepTimerManager = .shared,
         skipAudioSetup: Bool = false
     ) {
         self.chapterFetcher = chapterFetcher ?? ChapterManager(apiClient: apiClient)
@@ -161,6 +174,7 @@ class AudioPlayerManager: ObservableObject {
         self.storageManager = storageManager
         self.apiClient = apiClient
         self.concreteDownloadManager = concreteDownloadManager
+        self.sleepTimer = sleepTimer
 
         if !skipAudioSetup {
             setupAudioSession()
@@ -363,11 +377,12 @@ class AudioPlayerManager: ObservableObject {
         // Basic metadata - show chapter title when available
         if let chapter = currentChapter {
             nowPlayingInfo[MPMediaItemPropertyTitle] = chapter.title
-            nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = book.title
         } else {
             nowPlayingInfo[MPMediaItemPropertyTitle] = book.title
-            nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = book.series?.first?.title ?? "Audiobook"
         }
+        nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = albumTitle(
+            base: albumBaseTitle(for: book, chapter: currentChapter)
+        )
         nowPlayingInfo[MPMediaItemPropertyArtist] = book.authors.map(\.name).joined(separator: ", ")
 
         // Playback information - use chapter duration/position when available
@@ -411,6 +426,57 @@ class AudioPlayerManager: ObservableObject {
         DebugLogger.audio("Updated Now Playing info: \(book.title)")
     }
 
+    // MARK: - Now Playing: Sleep Timer Countdown
+
+    /// The album line without any sleep-timer decoration.
+    ///
+    /// Shared by the full refresh and the per-second countdown update so the
+    /// two can't drift apart.
+    private func albumBaseTitle(for book: Book, chapter: Chapter?) -> String {
+        chapter != nil ? book.title : (book.series?.first?.title ?? "Audiobook")
+    }
+
+    /// Album line with the sleep countdown appended when armed.
+    ///
+    /// `MPNowPlayingInfoCenter` has no field for auxiliary text — the lock
+    /// screen renders a fixed set of properties — so the countdown has to ride
+    /// along inside a field that already displays. Returns `base` untouched
+    /// when the timer is off, making this strictly additive.
+    private func albumTitle(base: String) -> String {
+        guard let countdown = SleepTimerManager.countdownText(
+            for: sleepTimer.state,
+            now: Date(),
+            currentTime: currentTime
+        ) else {
+            return base
+        }
+        return "\(base) · 💤 \(countdown)"
+    }
+
+    /// Refresh only the album line, for the ticking countdown.
+    ///
+    /// A full `updateNowPlayingInfo()` re-runs the artwork lookup and chapter
+    /// arithmetic — far too heavy to run once per second, so this mutates the
+    /// single key it needs on the existing dictionary.
+    private func updateNowPlayingSleepTimerIfNeeded() {
+        guard sleepTimer.isArmed, let book = currentBook else { return }
+        guard let countdown = SleepTimerManager.countdownText(
+            for: sleepTimer.state,
+            now: Date(),
+            currentTime: currentTime
+        ) else { return }
+
+        // The observer ticks at 2Hz but the countdown only changes at 1Hz;
+        // skipping unchanged values halves the writes.
+        guard countdown != lastRenderedCountdown else { return }
+        lastRenderedCountdown = countdown
+
+        let base = albumBaseTitle(for: book, chapter: getCurrentChapter())
+        var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
+        info[MPMediaItemPropertyAlbumTitle] = "\(base) · 💤 \(countdown)"
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    }
+
     // MARK: - Public Methods
 
     /// Load and play a book
@@ -429,6 +495,12 @@ class AudioPlayerManager: ObservableObject {
         // Clear any stale restore/error state from a previous attempt.
         restoreState = .idle
         error = nil
+
+        // A different book is a new listening session — the previous book's
+        // sleep timer shouldn't silently apply to it. Note this sits *after*
+        // the same-book early return above, so an ordinary resume keeps its
+        // timer running.
+        cancelSleepTimer()
 
         // Apply default playback rate from settings for new books
         playbackRate = PlaybackSettings.shared.defaultPlaybackRate
@@ -823,6 +895,92 @@ class AudioPlayerManager: ObservableObject {
         player?.volume = volume
     }
 
+    // MARK: - Sleep Timer
+
+    /// Cancel the sleep timer and undo any in-progress fade.
+    ///
+    /// Internal rather than private so the picker's "turn off" can restore
+    /// volume when cancelling mid-fade.
+    func cancelSleepTimer() {
+        sleepTimer.cancel()
+        restoreVolumeAfterFade()
+        lastRenderedCountdown = nil
+        updateNowPlayingInfo()
+    }
+
+    /// Push the sleep-timer deadline out and leave the fade window.
+    func extendSleepTimer(by interval: TimeInterval) {
+        sleepTimer.extend(by: interval)
+        // extend() drops .fading back to .armed, so the fade must be undone.
+        restoreVolumeAfterFade()
+        lastRenderedCountdown = nil
+        updateNowPlayingInfo()
+    }
+
+    /// Evaluate the sleep timer for this tick and act on the decision.
+    ///
+    /// Called from the periodic time observer rather than a `Timer`: that
+    /// observer is driven by `AVPlayer`, so it keeps ticking while the app is
+    /// backgrounded and the screen is locked — exactly when a sleep timer needs
+    /// to fire. See `SleepTimerManager` for the full rationale.
+    ///
+    /// Internal rather than private so unit tests can drive a tick directly;
+    /// tests use `skipAudioSetup: true` and so have no real time observer.
+    func evaluateSleepTimer() {
+        switch sleepTimer.decide(now: Date(), currentTime: currentTime) {
+        case .none:
+            break
+
+        case .beginFade:
+            sleepTimer.beginFading()
+            applyFade(progress: 0)
+
+        case let .continueFade(progress):
+            applyFade(progress: progress)
+
+        case .fire:
+            DebugLogger.audio("Sleep timer fired; pausing playback")
+            sleepTimer.cancel()
+            // Restore before pausing: a crash between the two must not leave a
+            // silent player behind.
+            restoreVolumeAfterFade()
+            pause()
+            lastRenderedCountdown = nil
+            updateNowPlayingInfo()
+        }
+    }
+
+    /// Ramp toward silence. `progress` runs 0.0 → 1.0.
+    ///
+    /// Deliberately drives `player.volume` and **not** the published `volume`
+    /// property: that one is bound to the volume slider, so fading it would
+    /// make the slider visibly crawl to zero and persist a bogus value.
+    private func applyFade(progress: Double) {
+        if preFadeVolume == nil {
+            preFadeVolume = player?.volume ?? volume
+        }
+        guard let base = preFadeVolume else { return }
+        player?.volume = base * Float(1.0 - progress)
+    }
+
+    /// Restore the pre-fade volume. Safe to call when no fade is in progress.
+    private func restoreVolumeAfterFade() {
+        guard let base = preFadeVolume else { return }
+        player?.volume = base
+        preFadeVolume = nil
+    }
+
+    /// Whether a sleep-timer fade is currently in progress.
+    ///
+    /// Exposed for tests: a fade that never gets undone leaves the player
+    /// silent, so the restore paths need to be directly assertable.
+    var isFadingForSleepTimer: Bool { preFadeVolume != nil }
+
+    /// Test seam for the private `updateNowPlayingInfo()`.
+    func updateNowPlayingInfoForTesting() {
+        updateNowPlayingInfo()
+    }
+
     // MARK: - Chapter Navigation (Phase 5)
 
     /// Get the current chapter based on playback position
@@ -879,6 +1037,9 @@ class AudioPlayerManager: ObservableObject {
         }
 
         stopProgressSaveTimer()
+        sleepTimer.cancel()
+        restoreVolumeAfterFade()
+        lastRenderedCountdown = nil
         downloadObserver?.cancel() // Phase 7: Cancel download observer
         downloadObserver = nil
         timeControlObserver?.cancel()
@@ -921,6 +1082,11 @@ class AudioPlayerManager: ObservableObject {
                         self.updateNowPlayingInfo()
                     }
                 }
+
+                // Sleep timer: checked here so it stays accurate while
+                // backgrounded and locked.
+                self.evaluateSleepTimer()
+                self.updateNowPlayingSleepTimerIfNeeded()
             }
         }
     }
@@ -1018,6 +1184,9 @@ class AudioPlayerManager: ObservableObject {
     @objc private func playerDidFinishPlaying() {
         isPlaying = false
         currentTime = 0
+        // The book ended on its own; there is nothing left for the timer to
+        // pause, and leaving it armed would apply it to whatever plays next.
+        cancelSleepTimer()
         // Could auto-advance to next book in series here
     }
 
