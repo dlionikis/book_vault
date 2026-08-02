@@ -53,5 +53,7 @@ enum A11yID {
 
     enum NowPlaying {
         static let root = "nowPlaying.root"
+        /// Opens the sleep-timer picker. Label doubles as the countdown.
+        static let sleepTimer = "nowPlaying.sleepTimer"
     }
 }

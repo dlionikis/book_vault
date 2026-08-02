@@ -12,12 +12,23 @@ import SwiftUI
 
 struct NowPlayingView: View {
     @ObservedObject private var audioPlayer = AudioPlayerManager.shared
+    @ObservedObject private var sleepTimer = SleepTimerManager.shared
+    @ObservedObject private var playbackSettings = PlaybackSettings.shared
 
     // State for showing speed picker
     @State private var showingSpeedPicker = false
 
     // Phase 5: State for showing chapter list
     @State private var showingChapterList = false
+
+    // Sleep timer picker + the 1Hz tick that refreshes the countdown label.
+    @State private var showingSleepTimerPicker = false
+    @State private var countdownTick = Date()
+
+    /// Display concern only. If this stalls the label goes stale, but the
+    /// actual pause is driven by the audio observer in AudioPlayerManager and
+    /// is unaffected.
+    private let countdownTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         GeometryReader { geometry in
@@ -39,9 +50,12 @@ struct NowPlayingView: View {
                         .frame(height: geometry.size.height * 0.05)
 
                     if let book = audioPlayer.currentBook {
-                        // Cover art - 40% of screen height (increased from 35%)
+                        // Cover art - 35% of screen height.
+                        // Reduced from 40% to fund the sleep timer row below;
+                        // the volume/speed row is already full and can't take a
+                        // third control without squeezing the slider.
                         CachedCoverImage(bookId: book.id, coverUrl: book.coverUrl)
-                            .frame(height: geometry.size.height * 0.40)
+                            .frame(height: geometry.size.height * 0.35)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                             .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
                             .padding(.horizontal, 40)
@@ -228,9 +242,50 @@ struct NowPlayingView: View {
                         .frame(height: geometry.size.height * 0.1)
                         .padding(.horizontal, 32)
 
-                        // Bottom spacer - 8% of screen height
+                        // Sleep timer row - 6% of screen height
+                        HStack {
+                            Button {
+                                showingSleepTimerPicker = true
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: sleepTimer.isArmed ? "moon.zzz.fill" : "moon.zzz")
+                                        .font(.body)
+                                    Text(sleepButtonLabel)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        // Without this the pill resizes as the
+                                        // countdown ticks.
+                                        .monospacedDigit()
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.blue.opacity(sleepTimer.isArmed ? 0.30 : 0.15))
+                                .cornerRadius(8)
+                            }
+                            .foregroundStyle(.primary)
+                            // Establish this as its own accessibility element
+                            // before labelling it; without .combine the button
+                            // inherits the container's identifier
+                            // (nowPlaying.root) and can't be queried in tests.
+                            .accessibilityElement(children: .combine)
+                            .accessibilityAddTraits(.isButton)
+                            // NOTE: this identifier does not survive to the
+                            // accessibility tree — the root container's
+                            // `A11y.NowPlaying.root` propagates to every
+                            // descendant, so all buttons here report
+                            // `nowPlaying.root`. UI tests must match on the
+                            // label below instead. Kept for intent.
+                            .accessibilityIdentifier(A11y.NowPlaying.sleepTimer)
+                            .accessibilityLabel(sleepAccessibilityLabel)
+
+                            Spacer()
+                        }
+                        .frame(height: geometry.size.height * 0.06)
+                        .padding(.horizontal, 32)
+
+                        // Bottom spacer - 7% of screen height
                         Spacer()
-                            .frame(height: geometry.size.height * 0.08)
+                            .frame(height: geometry.size.height * 0.07)
                     } else {
                         // No book loaded
                         VStack(spacing: 16) {
@@ -269,6 +324,71 @@ struct NowPlayingView: View {
             )
             .presentationDetents([.height(400)])
         }
+        .sheet(isPresented: $showingSleepTimerPicker) {
+            SleepTimerPicker(
+                currentState: sleepTimer.state,
+                hasChapters: !audioPlayer.chapters.isEmpty,
+                lastUsedDuration: playbackSettings.lastSleepTimerDuration,
+                currentTime: audioPlayer.currentTime,
+                onSelectDuration: { duration in
+                    sleepTimer.arm(.duration(duration))
+                    showingSleepTimerPicker = false
+                },
+                onSelectEndOfChapter: {
+                    sleepTimer.armEndOfChapter(chapter: audioPlayer.getCurrentChapter())
+                    showingSleepTimerPicker = false
+                },
+                onCancel: {
+                    // Goes through the player so an in-progress fade is undone.
+                    audioPlayer.cancelSleepTimer()
+                    showingSleepTimerPicker = false
+                },
+                onExtend: {
+                    audioPlayer.extendSleepTimer(by: 15 * 60)
+                }
+            )
+            .presentationDetents([.height(480)])
+        }
+        .onReceive(countdownTimer) { countdownTick = $0 }
+    }
+
+    // MARK: - Sleep Timer
+
+    private var sleepButtonLabel: String {
+        SleepTimerManager.countdownText(
+            for: sleepTimer.state,
+            now: countdownTick,
+            currentTime: audioPlayer.currentTime
+        ) ?? "Sleep"
+    }
+
+    /// Spelled out because VoiceOver reading "12:45" as digits is unhelpful.
+    private var sleepAccessibilityLabel: String {
+        guard sleepTimer.isArmed else { return "Sleep timer, off" }
+
+        if case .endOfChapter? = sleepTimer.mode {
+            return "Sleep timer, pausing at end of chapter"
+        }
+
+        guard let text = SleepTimerManager.countdownText(
+            for: sleepTimer.state,
+            now: countdownTick,
+            currentTime: audioPlayer.currentTime
+        ) else {
+            return "Sleep timer, on"
+        }
+
+        let parts = text.split(separator: ":").compactMap { Int($0) }
+        let spoken: String
+        switch parts.count {
+        case 3:
+            spoken = "\(parts[0]) hours \(parts[1]) minutes \(parts[2]) seconds"
+        case 2:
+            spoken = "\(parts[0]) minutes \(parts[1]) seconds"
+        default:
+            spoken = text
+        }
+        return "Sleep timer, \(spoken) remaining"
     }
 
     // MARK: - Helper Methods

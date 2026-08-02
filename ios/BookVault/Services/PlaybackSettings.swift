@@ -15,6 +15,10 @@ class PlaybackSettings: ObservableObject {
     // MARK: - Constants
 
     private static let defaultPlaybackRateKey = "defaultPlaybackRate"
+    static let lastSleepTimerDurationKey = "lastSleepTimerDuration"
+
+    /// Fallback when nothing has been chosen yet (30 minutes).
+    static let defaultSleepTimerDuration: TimeInterval = 30 * 60
 
     // MARK: - Properties
 
@@ -24,6 +28,13 @@ class PlaybackSettings: ObservableObject {
     @Published var defaultPlaybackRate: Float {
         didSet {
             userDefaults.set(defaultPlaybackRate, forKey: PlaybackSettings.defaultPlaybackRateKey)
+        }
+    }
+
+    /// Last sleep-timer duration the user picked, pre-selected in the picker.
+    @Published var lastSleepTimerDuration: TimeInterval {
+        didSet {
+            userDefaults.set(lastSleepTimerDuration, forKey: PlaybackSettings.lastSleepTimerDurationKey)
         }
     }
 
@@ -47,6 +58,18 @@ class PlaybackSettings: ObservableObject {
             self.defaultPlaybackRate = min(max(savedRate, 0.5), 3.0)
         } else {
             self.defaultPlaybackRate = 1.0
+        }
+
+        // Same existence check: 0.0 is a valid Double but not a valid duration.
+        if userDefaults.object(forKey: PlaybackSettings.lastSleepTimerDurationKey) != nil {
+            let saved = userDefaults.double(forKey: PlaybackSettings.lastSleepTimerDurationKey)
+            // Snap to a known preset — a value outside the set can't be
+            // represented in the picker.
+            self.lastSleepTimerDuration = SleepTimerManager.presets.contains(saved)
+                ? saved
+                : PlaybackSettings.defaultSleepTimerDuration
+        } else {
+            self.lastSleepTimerDuration = PlaybackSettings.defaultSleepTimerDuration
         }
     }
 }
