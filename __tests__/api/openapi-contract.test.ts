@@ -174,6 +174,9 @@ const SCHEMA_DEFINITIONS: Record<string, SchemaDefinition> = {
     level: { required: false, type: 'number' },
     parentPath: { required: false, type: 'array' },
     bookCount: { required: true, type: 'number' },
+    // Only present with ?roots=true.
+    totalBookCount: { required: false, type: 'number' },
+    hasChildren: { required: false, type: 'boolean' },
   },
   AuthorDetail: {
     id: { required: true, type: 'string' },
@@ -196,9 +199,25 @@ const SCHEMA_DEFINITIONS: Record<string, SchemaDefinition> = {
     books: { required: true, type: 'array' },
     pagination: { required: true, type: 'object' },
   },
+  CategoryRef: {
+    id: { required: true, type: 'string' },
+    name: { required: true, type: 'string' },
+  },
+  CategorySummary: {
+    id: { required: true, type: 'string' },
+    name: { required: true, type: 'string' },
+    bookCount: { required: true, type: 'number' },
+    totalBookCount: { required: true, type: 'number' },
+    hasChildren: { required: true, type: 'boolean' },
+  },
   CategoryDetail: {
     id: { required: true, type: 'string' },
     name: { required: true, type: 'string' },
+    level: { required: false, type: 'number' },
+    // Categories are a hierarchy; these carry the breadcrumb and drill-down.
+    ancestors: { required: false, type: 'array' },
+    subcategories: { required: false, type: 'array' },
+    totalBookCount: { required: false, type: 'number' },
     books: { required: true, type: 'array' },
     pagination: { required: true, type: 'object' },
   },
@@ -269,6 +288,8 @@ function getArrayItemSchema(fieldName: string): string | null {
     series: 'SeriesInfo',
     categories: 'Category',
     books: 'Book',
+    ancestors: 'CategoryRef',
+    subcategories: 'CategorySummary',
     results: 'unknown', // Depends on endpoint context
   };
   return mapping[fieldName] || null;

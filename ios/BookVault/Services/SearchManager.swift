@@ -310,16 +310,30 @@ class SearchManager: ObservableObject {
     }
 
     /// Fetches list of categories with book counts
+    ///
+    /// Categories are a hierarchy (Audible ships genres as full ladders), so a flat
+    /// list repeats the same name under different ancestries. `roots` asks for the
+    /// top level only, with counts rolled up over each subtree, which is what the
+    /// browse list shows — drill down via `GetCategory200Response.subcategories`.
+    ///
     /// - Parameters:
     ///   - page: Page number (default: 1)
     ///   - limit: Results per page (default: 20)
+    ///   - roots: Top-level categories only (default: true)
     /// - Returns: List of categories with pagination info
-    func fetchCategories(page: Int = 1, limit: Int = 20) async throws -> ListCategories200Response {
+    func fetchCategories(
+        page: Int = 1,
+        limit: Int = 20,
+        roots: Bool = true
+    ) async throws -> ListCategories200Response {
         try await fetchBrowseList(
             path: "/api/browse/categories",
             page: page,
             limit: limit,
-            cachePrefix: "categories"
+            // Distinct cache key: the two modes return different result sets for the
+            // same page/limit, so they must not share an entry.
+            cachePrefix: roots ? "categories_roots" : "categories",
+            extraQueryItems: roots ? [URLQueryItem(name: "roots", value: "true")] : []
         )
     }
 
@@ -328,7 +342,8 @@ class SearchManager: ObservableObject {
         path: String,
         page: Int,
         limit: Int,
-        cachePrefix: String
+        cachePrefix: String,
+        extraQueryItems: [URLQueryItem] = []
     ) async throws -> T {
         // Check cache first (include limit in key to avoid returning wrong page size)
         let cacheKey = "\(cachePrefix)_\(page)_\(limit)"
@@ -343,7 +358,7 @@ class SearchManager: ObservableObject {
         components.queryItems = [
             URLQueryItem(name: "page", value: String(page)),
             URLQueryItem(name: "limit", value: String(limit))
-        ]
+        ] + extraQueryItems
 
         guard let url = components.url(relativeTo: apiClient.baseURL) else {
             throw APIError.invalidURL

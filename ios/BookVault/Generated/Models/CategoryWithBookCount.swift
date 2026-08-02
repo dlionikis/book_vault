@@ -14,19 +14,27 @@ public struct CategoryWithBookCount: Sendable, Codable, JSONEncodable, Hashable 
 
     public static let levelRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public static let bookCountRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
+    public static let totalBookCountRule = NumericRule<Int>(minimum: 0, exclusiveMinimum: false, maximum: nil, exclusiveMaximum: false, multipleOf: nil)
     public var id: UUID
     public var name: String
     public var level: Int?
     /** Ancestor category names from root to immediate parent, excluding this category's own name. Empty for top-level categories. Category names are only unique per-parent (Audible ships each book's genre as a full ladder), so the same name can appear under several different ancestries — clients must render this path to disambiguate them.  */
     public var parentPath: [String]?
+    /** Books tagged with this category directly. */
     public var bookCount: Int
+    /** Distinct visible books in this category or any descendant. Only returned when `roots=true`; equals `bookCount` for a leaf.  */
+    public var totalBookCount: Int?
+    /** Whether this category has subcategories to drill into. Only returned when `roots=true`.  */
+    public var hasChildren: Bool?
 
-    public init(id: UUID, name: String, level: Int? = nil, parentPath: [String]? = nil, bookCount: Int) {
+    public init(id: UUID, name: String, level: Int? = nil, parentPath: [String]? = nil, bookCount: Int, totalBookCount: Int? = nil, hasChildren: Bool? = nil) {
         self.id = id
         self.name = name
         self.level = level
         self.parentPath = parentPath
         self.bookCount = bookCount
+        self.totalBookCount = totalBookCount
+        self.hasChildren = hasChildren
     }
 
     public enum CodingKeys: String, CodingKey, CaseIterable {
@@ -35,6 +43,8 @@ public struct CategoryWithBookCount: Sendable, Codable, JSONEncodable, Hashable 
         case level
         case parentPath
         case bookCount
+        case totalBookCount
+        case hasChildren
     }
 
     // Encodable protocol methods
@@ -46,6 +56,8 @@ public struct CategoryWithBookCount: Sendable, Codable, JSONEncodable, Hashable 
         try container.encodeIfPresent(level, forKey: .level)
         try container.encodeIfPresent(parentPath, forKey: .parentPath)
         try container.encode(bookCount, forKey: .bookCount)
+        try container.encodeIfPresent(totalBookCount, forKey: .totalBookCount)
+        try container.encodeIfPresent(hasChildren, forKey: .hasChildren)
     }
 }
 

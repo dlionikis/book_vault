@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import BackButton from '@/components/BackButton';
-import { getBrowseEntities, getCategoryParentPaths } from '@/lib/queries/browse-entities';
+import CategoryCard, { CategoryCardCategory } from '@/components/CategoryCard';
+import { getCategoryTree } from '@/lib/queries/browse-entities';
 
 // This page is DB-backed and must render per-request. Without this, Next tries
 // to statically prerender it during `next build` (where DATABASE_URL is unset),
@@ -9,29 +9,25 @@ import { getBrowseEntities, getCategoryParentPaths } from '@/lib/queries/browse-
 // at request time (as it already does in prod) and keeps the build log clean.
 export const dynamic = 'force-dynamic';
 
-interface CategoryWithCount {
-  id: string;
-  name: string;
-  level: number;
-  parentPath: string[];
-  bookCount: number;
-}
-
-async function getCategories(): Promise<CategoryWithCount[]> {
+/**
+ * Top level of the category hierarchy.
+ *
+ * Audible ships each book's genre as a full ladder ("SF&F > Fantasy > Epic") and
+ * the importer materializes every distinct path, so a flat list of every category
+ * repeats names under different ancestries — "Action & Adventure" appeared six
+ * times. This shows the roots instead and lets you drill down, which is both
+ * shorter and unambiguous.
+ */
+async function getRootCategories(): Promise<CategoryCardCategory[]> {
   try {
-    // Shared with /api/browse/categories, including the ancestry resolution —
-    // both surfaces disambiguate repeated category names the same way.
-    const [{ entities }, parentPaths] = await Promise.all([
-      getBrowseEntities('category', { limit: null }),
-      getCategoryParentPaths(),
-    ]);
+    const roots = await getCategoryTree();
 
-    return entities.map((entity) => ({
-      id: entity.id,
-      name: entity.label,
-      level: entity.level ?? 0,
-      parentPath: parentPaths.get(entity.id) ?? [],
-      bookCount: entity.bookCount,
+    return roots.map((root) => ({
+      id: root.id,
+      name: root.name,
+      bookCount: root.bookCount,
+      totalBookCount: root.totalBookCount,
+      hasChildren: root.children.length > 0,
     }));
   } catch (error) {
     console.error('Error fetching categories:', error);
@@ -40,7 +36,7 @@ async function getCategories(): Promise<CategoryWithCount[]> {
 }
 
 export default async function BrowseCategoriesPage() {
-  const categories = await getCategories();
+  const categories = await getRootCategories();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -61,23 +57,7 @@ export default async function BrowseCategoriesPage() {
         {categories.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={`/categories/${category.id}`}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow block"
-              >
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 hover:text-blue-600 dark:hover:text-blue-400">
-                  {category.name}
-                </h3>
-                {category.parentPath.length > 0 && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    in {category.parentPath.join(' › ')}
-                  </p>
-                )}
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {category.bookCount} {category.bookCount === 1 ? 'book' : 'books'}
-                </p>
-              </Link>
+              <CategoryCard key={category.id} category={category} />
             ))}
           </div>
         ) : (
@@ -95,8 +75,12 @@ export default async function BrowseCategoriesPage() {
                 d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
               />
             </svg>
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No categories found</h3>
-            <p className="mt-2 text-gray-500">Add some audiobooks to see categories here</p>
+            <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
+              No categories found
+            </h3>
+            <p className="mt-2 text-gray-500 dark:text-gray-400">
+              Add some audiobooks to see categories here
+            </p>
           </div>
         )}
       </main>

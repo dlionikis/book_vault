@@ -408,7 +408,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List all categories with book counts */
+        /**
+         * List categories with book counts
+         * @description Flat list of every category with visible books by default. Because Audible ships each book's genre as a full ladder, that list repeats names under different ancestries (`parentPath` disambiguates them) — pass `roots=true` for the top level of the hierarchy instead and drill down via GET /api/categories/{id}.
+         */
         get: operations["listCategories"];
         put?: never;
         post?: never;
@@ -1282,6 +1285,35 @@ export interface components {
             /** @example 25 */
             bookCount: number;
         };
+        /** @description A navigable reference to a category, used for breadcrumbs. */
+        CategoryRef: {
+            /** Format: uuid */
+            id: string;
+            /** @example Fantasy */
+            name: string;
+        };
+        /** @description A child category in a drill-down list. Carries both counts because a category's own book count and its subtree total differ sharply in Audible's ladders — container categories have no books of their own. */
+        CategorySummary: {
+            /** Format: uuid */
+            id: string;
+            /** @example Epic */
+            name: string;
+            /**
+             * @description Books tagged with this category directly.
+             * @example 466
+             */
+            bookCount: number;
+            /**
+             * @description Distinct visible books in this category or any descendant.
+             * @example 491
+             */
+            totalBookCount: number;
+            /**
+             * @description Whether drilling into this category reveals further subcategories.
+             * @example true
+             */
+            hasChildren: boolean;
+        };
         CategoryWithBookCount: {
             /** Format: uuid */
             id: string;
@@ -1297,8 +1329,21 @@ export interface components {
              *     ]
              */
             parentPath?: string[] | null;
-            /** @example 150 */
+            /**
+             * @description Books tagged with this category directly.
+             * @example 150
+             */
             bookCount: number;
+            /**
+             * @description Distinct visible books in this category or any descendant. Only returned when `roots=true`; equals `bookCount` for a leaf.
+             * @example 483
+             */
+            totalBookCount?: number;
+            /**
+             * @description Whether this category has subcategories to drill into. Only returned when `roots=true`.
+             * @example true
+             */
+            hasChildren?: boolean;
         };
     };
     responses: never;
@@ -2476,6 +2521,8 @@ export interface operations {
     listCategories: {
         parameters: {
             query?: {
+                /** @description Return only top-level categories, with `totalBookCount` rolled up over each subtree. Pagination does not apply; the root list is short. */
+                roots?: boolean;
                 page?: number;
                 limit?: number;
             };
@@ -2733,6 +2780,15 @@ export interface operations {
                         /** @example Fantasy */
                         name: string;
                         level?: number;
+                        /** @description Ancestor categories from root to immediate parent, excluding this one. Empty at the root. Each entry is navigable, so clients can render a breadcrumb. */
+                        ancestors?: components["schemas"]["CategoryRef"][];
+                        /** @description Immediate child categories that have visible books somewhere beneath them. Present so a client can drill down; empty at a leaf. */
+                        subcategories?: components["schemas"]["CategorySummary"][];
+                        /**
+                         * @description Distinct visible books in this category or any descendant. `pagination.total` counts only the books listed here — those tagged with this category directly.
+                         * @example 483
+                         */
+                        totalBookCount?: number;
                         books: components["schemas"]["Book"][];
                         pagination: components["schemas"]["Pagination"];
                     };

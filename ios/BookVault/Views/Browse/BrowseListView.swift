@@ -141,9 +141,20 @@ struct BrowseListView<Item: BrowseListItem, Response: BrowseListResponse>: View 
                         .truncationMode(.head)
                 }
 
-                Text("\(item.bookCount) \(item.bookCount == 1 ? "book" : "books")")
+                Text("\(item.displayBookCount) \(item.displayBookCount == 1 ? "book" : "books")")
                     .font(.caption)
                     .foregroundColor(.secondary)
+            }
+
+            if item.indicatesDrillDown {
+                Spacer(minLength: 0)
+
+                // Signals that the row subdivides further rather than listing books
+                // straight away. Decorative — the label already says "subcategories".
+                Image(systemName: "chevron.right.2")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .accessibilityHidden(true)
             }
         }
         .padding(.vertical, 4)
@@ -154,11 +165,19 @@ struct BrowseListView<Item: BrowseListItem, Response: BrowseListResponse>: View 
     /// Includes the disambiguating path so VoiceOver users can tell repeated
     /// names apart, exactly as sighted users do from the subtitle.
     private func accessibilityLabel(for item: Item) -> String {
-        let books = "\(item.bookCount) books"
+        var label = item.displayName
+
         if let subtitle = item.displaySubtitle {
-            return "\(item.displayName), in \(subtitle), \(books)"
+            label += ", in \(subtitle)"
         }
-        return "\(item.displayName), \(books)"
+
+        label += ", \(item.displayBookCount) books"
+
+        if item.indicatesDrillDown {
+            label += ", has subcategories"
+        }
+
+        return label
     }
 
     @ViewBuilder

@@ -21,6 +21,9 @@ jest.mock('@/lib/db', () => ({
       findMany: jest.fn(),
       count: jest.fn(),
     },
+    bookCategory: {
+      findMany: jest.fn(),
+    },
   },
 }));
 
@@ -33,6 +36,7 @@ const mockGetAuthUserFromRequest = getAuthUserFromRequest as jest.MockedFunction
 >;
 const mockFindMany = prisma.category.findMany as jest.Mock;
 const mockCount = prisma.category.count as jest.Mock;
+const mockBookCategoryFindMany = prisma.bookCategory.findMany as jest.Mock;
 
 function authenticate() {
   mockGetAuthUserFromRequest.mockResolvedValue({ id: 'user-123', username: 'testuser' });
@@ -172,5 +176,89 @@ describe('GET /api/browse/categories', () => {
     const pageCall = mockFindMany.mock.calls.find(([args]) => !args?.select)?.[0];
     expect(pageCall.skip).toBe(20);
     expect(pageCall.take).toBe(10);
+  });
+});
+
+describe('GET /api/browse/categories?roots=true', () => {
+  /** Tree mode reads the category table and the visible links, not the paged list. */
+  function mockTree(
+    categories: Array<{ id: string; name: string; level: number; parentId: string | null }>,
+    links: Array<[string, string]>
+  ) {
+    mockFindMany.mockResolvedValue(categories);
+    mockBookCategoryFindMany.mockResolvedValue(
+      links.map(([categoryId, bookId]) => ({ categoryId, bookId }))
+    );
+  }
+
+  it('returns only roots, with subtree rollups and a drill-down flag', async () => {
+    authenticate();
+    mockTree(
+      [
+        { id: 'sff', name: 'Science Fiction & Fantasy', level: 0, parentId: null },
+        { id: 'fantasy', name: 'Fantasy', level: 1, parentId: 'sff' },
+        { id: 'humor', name: 'Comedy & Humor', level: 0, parentId: null },
+      ],
+      [
+        ['sff', 'b1'],
+        ['fantasy', 'b2'],
+        ['humor', 'b3'],
+      ]
+    );
+
+    const body = await (await getCategoriesRoute(makeRequest('?roots=true'))).json();
+
+    expect(body.results).toEqual([
+      {
+        id: 'humor',
+        name: 'Comedy & Humor',
+        level: 0,
+        parentPath: [],
+        bookCount: 1,
+        totalBookCount: 1,
+        hasChildren: false,
+      },
+      {
+        id: 'sff',
+        name: 'Science Fiction & Fantasy',
+        level: 0,
+        parentPath: [],
+        // Rolls up the child's book; the root itself is tagged with only one.
+        bookCount: 1,
+        totalBookCount: 2,
+        hasChildren: true,
+      },
+    ]);
+  });
+
+  it('reports the whole root list as a single page', async () => {
+    authenticate();
+    mockTree([{ id: 'a', name: 'A', level: 0, parentId: null }], [['a', 'b1']]);
+
+    const body = await (await getCategoriesRoute(makeRequest('?roots=true'))).json();
+
+    // The root list is short and returned whole — a client paging through it must
+    // not be told there are further pages to fetch.
+    expect(body.pagination).toEqual({ page: 1, limit: 1, total: 1, pages: 1 });
+  });
+
+  it('still serves the flat list when roots is absent', async () => {
+    authenticate();
+    mockCategories(
+      [{ id: 'leaf', name: 'Leaf', level: 2, bookCount: 3 }],
+      [{ id: 'leaf', name: 'Leaf', parentId: null }]
+    );
+
+    const body = await (await getCategoriesRoute(makeRequest())).json();
+
+    // Existing clients (including shipped iOS builds) depend on the flat default.
+    expect(body.results[0]).toMatchObject({ id: 'leaf', bookCount: 3 });
+    expect(body.results[0].totalBookCount).toBeUndefined();
+  });
+
+  it('requires auth', async () => {
+    const response = await getCategoriesRoute(makeRequest('?roots=true'));
+    expect(response.status).toBe(401);
+    expect(mockBookCategoryFindMany).not.toHaveBeenCalled();
   });
 });

@@ -11,14 +11,37 @@ import SwiftUI
 
 /// A detail view that shows a header (icon + name + book count) and a book grid,
 /// driven by a configuration.
-struct BrowseDetailView<Detail: BrowseDetailResponse>: View {
+struct BrowseDetailView<Detail: BrowseDetailResponse, Accessory: View>: View {
     let itemId: String
     let configuration: BrowseDetailConfiguration<Detail>
+
+    /// Optional section rendered between the header and the books, used by
+    /// categories for their breadcrumb and drill-down strip. Authors, narrators and
+    /// series are flat and use the `EmptyView` initialiser below.
+    private let accessory: (Detail) -> Accessory
 
     @ObservedObject private var searchManager = SearchManager.shared
     @State private var detail: Detail?
     @State private var isLoading = true
     @State private var errorMessage: String?
+
+    init(
+        itemId: String,
+        configuration: BrowseDetailConfiguration<Detail>,
+        @ViewBuilder accessory: @escaping (Detail) -> Accessory
+    ) {
+        self.itemId = itemId
+        self.configuration = configuration
+        self.accessory = accessory
+    }
+
+    /// For flat entities (author, narrator, series) with no hierarchy to render.
+    init(
+        itemId: String,
+        configuration: BrowseDetailConfiguration<Detail>
+    ) where Accessory == EmptyView {
+        self.init(itemId: itemId, configuration: configuration) { _ in EmptyView() }
+    }
 
     private let columns = [
         GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 16, alignment: .top)
@@ -40,6 +63,13 @@ struct BrowseDetailView<Detail: BrowseDetailResponse>: View {
         .task {
             await loadDetail()
         }
+    }
+
+    /// Whether the loaded detail offers somewhere to drill into, in which case an
+    /// empty book grid is redundant. Only hierarchy responses can.
+    private var hasDrillDown: Bool {
+        guard let hierarchy = detail as? any BrowseHierarchyDetail else { return false }
+        return !hierarchy.childCategories.isEmpty
     }
 
     // MARK: - Error State
@@ -97,9 +127,15 @@ struct BrowseDetailView<Detail: BrowseDetailResponse>: View {
 
                 Divider()
 
-                // Books section
+                accessory(detail)
+
+                // Books section. The empty state is suppressed when the accessory has
+                // something to act on instead — at a container category with no books
+                // of its own, an empty grid under the subcategory strip is just noise.
                 if detail.books.isEmpty {
-                    emptyBooksView
+                    if !hasDrillDown {
+                        emptyBooksView
+                    }
                 } else {
                     booksGridView(detail)
                 }

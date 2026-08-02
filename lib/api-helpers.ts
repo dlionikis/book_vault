@@ -24,6 +24,14 @@ export interface EntityDetailConfig<TEntity> {
   /** Function to extract response fields from the entity */
   getResponseFields: (entity: TEntity) => Record<string, any>;
 
+  /**
+   * Optional: extra response fields requiring their own queries.
+   *
+   * Runs concurrently with the book page. Categories use this to attach their
+   * subcategories and breadcrumb; the other entities are flat and omit it.
+   */
+  getExtraFields?: (entityId: string) => Promise<Record<string, any>>;
+
   /** Optional: Additional include fields for entity fetch */
   entityInclude?: any;
 }
@@ -110,14 +118,18 @@ export async function handleEntityDetailWithBooks<TEntity>(
     // 5. Fetch one page of the entity's visible books.
     // Shared with the /authors, /narrators, /series and /categories pages, so
     // the visibility filter cannot apply to only one of the two surfaces.
-    const { books: booksWithUrls, total } = await getEntityBooksPage(config.entityKind, entityId, {
-      skip,
-      limit,
-    });
+    const [{ books: booksWithUrls, total }, extraFields] = await Promise.all([
+      getEntityBooksPage(config.entityKind, entityId, {
+        skip,
+        limit,
+      }),
+      config.getExtraFields?.(entityId) ?? Promise.resolve({}),
+    ]);
 
     // 7. Build and return response
     return NextResponse.json({
       ...config.getResponseFields(entity),
+      ...extraFields,
       books: booksWithUrls,
       pagination: buildPagination(page, limit, total),
     });
