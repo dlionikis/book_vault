@@ -11,9 +11,18 @@ import SwiftUI
 // MARK: - NowPlayingView
 
 struct NowPlayingView: View {
+    /// The book whose detail page is already on screen beneath this sheet, if
+    /// any. Tapping the title then just dismisses rather than routing to a
+    /// duplicate of the page the user is already on. `nil` from the mini
+    /// player, which can be presented over anything.
+    var presentedFromBookId: UUID?
+
     @ObservedObject private var audioPlayer = AudioPlayerManager.shared
     @ObservedObject private var sleepTimer = SleepTimerManager.shared
     @ObservedObject private var playbackSettings = PlaybackSettings.shared
+    @ObservedObject private var deepLinkManager = DeepLinkManager.shared
+
+    @Environment(\.dismiss) private var dismiss
 
     // State for showing speed picker
     @State private var showingSpeedPicker = false
@@ -51,23 +60,37 @@ struct NowPlayingView: View {
 
                     if let book = audioPlayer.currentBook {
                         // Cover art - 35% of screen height.
-                        // Reduced from 40% to fund the sleep timer row below;
-                        // the volume/speed row is already full and can't take a
-                        // third control without squeezing the slider.
                         CachedCoverImage(bookId: book.id, coverUrl: book.coverUrl)
-                            .frame(height: geometry.size.height * 0.35)
+                            .frame(height: geometry.size.height * 0.42)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                             .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
                             .padding(.horizontal, 40)
 
                         // Book title and author - 12% of screen height
                         VStack(spacing: 4) {
-                            Text(book.title)
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .multilineTextAlignment(.center)
-                                .lineLimit(2)
+                            Button {
+                                openBookDetail(book)
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text(book.title)
+                                        .font(.title3)
+                                        .fontWeight(.bold)
+                                        .multilineTextAlignment(.center)
+                                        .lineLimit(2)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                                 .padding(.horizontal)
+                            }
+                            .foregroundStyle(.primary)
+                            // Same propagation caveat as the sleep button
+                            // below: without .combine this inherits
+                            // nowPlaying.root and can't be queried by tests.
+                            .accessibilityElement(children: .combine)
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityLabel(book.title)
+                            .accessibilityHint("Opens the book details page")
 
                             if !book.authors.isEmpty {
                                 Text(book.authors.map(\.name).joined(separator: ", "))
@@ -77,11 +100,16 @@ struct NowPlayingView: View {
                                     .lineLimit(1)
                             }
                         }
-                        .frame(height: geometry.size.height * 0.12)
+                        .padding(.top, 16)
 
-                        // Spacer to push controls down
-                        Spacer()
-                            .frame(height: geometry.size.height * 0.03)
+                        // Flexible, so everything from the chapter row down sits
+                        // against the bottom of the sheet and the slack collects
+                        // here instead of pooling under the controls.
+                        //
+                        // This replaced a fixed-percentage budget that had drifted
+                        // to 103% and only survived because Spacer compressed;
+                        // removing a row then left a visible hole at the bottom.
+                        Spacer(minLength: geometry.size.height * 0.02)
 
                         // Progress bar and time labels - 10% of screen height
                         VStack(spacing: 8) {
@@ -98,10 +126,13 @@ struct NowPlayingView: View {
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                             .lineLimit(1)
-                                        Spacer()
+                                        // Keeps a longer chapter title off the
+                                        // index badge.
+                                        Spacer(minLength: 8)
                                         Text("Chapter \(currentChapter.index)")
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
+                                            .layoutPriority(1)
                                         Image(systemName: "chevron.down")
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
@@ -122,16 +153,10 @@ struct NowPlayingView: View {
                                 )
                                 .padding(.horizontal, 32)
 
-                                HStack {
-                                    Text(formatTime(audioPlayer.currentTime - currentChapter.startTime))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text(formatTime(currentChapter.duration))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                .padding(.horizontal, 32)
+                                timeRow(
+                                    leading: formatTime(audioPlayer.currentTime - currentChapter.startTime),
+                                    trailing: formatTime(currentChapter.duration)
+                                )
                             } else {
                                 // Fallback: Full book progress (no chapters)
                                 ProgressBarView(
@@ -143,21 +168,14 @@ struct NowPlayingView: View {
                                 )
                                 .padding(.horizontal, 32)
 
-                                HStack {
-                                    Text(formatTime(audioPlayer.currentTime))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text(formatTime(audioPlayer.duration))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                .padding(.horizontal, 32)
+                                timeRow(
+                                    leading: formatTime(audioPlayer.currentTime),
+                                    trailing: formatTime(audioPlayer.duration)
+                                )
                             }
                         }
-                        .frame(height: geometry.size.height * 0.1)
 
-                        // Playback controls - 15% of screen height
+                        // Playback controls
                         PlaybackControlsView(
                             isPlaying: audioPlayer.isPlaying,
                             chapters: audioPlayer.chapters,
@@ -204,45 +222,12 @@ struct NowPlayingView: View {
                         .frame(height: geometry.size.height * 0.15)
                         .padding(.horizontal, 32)
 
-                        // Volume and Speed controls - 10% of screen height
-                        HStack(spacing: 20) {
-                            // Volume control
-                            HStack(spacing: 12) {
-                                Image(systemName: volumeIcon(for: audioPlayer.volume))
-                                    .font(.body)
-                                    .frame(width: 24)
-                                Slider(
-                                    value: Binding(
-                                        get: { audioPlayer.volume },
-                                        set: { audioPlayer.setVolume($0) }
-                                    ),
-                                    in: 0 ... 1
-                                )
-                            }
-
-                            // Playback speed button (compact)
-                            Button {
-                                showingSpeedPicker = true
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "speedometer")
-                                        .font(.body)
-                                    Text(String(format: "%.2gx", audioPlayer.playbackRate))
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .frame(minWidth: 32)
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color.blue.opacity(0.15))
-                                .cornerRadius(8)
-                            }
-                            .foregroundStyle(.primary)
-                        }
-                        .frame(height: geometry.size.height * 0.1)
-                        .padding(.horizontal, 32)
-
-                        // Sleep timer row - 6% of screen height
+                        // Sleep timer (left) and playback speed (right) - 6% of
+                        // screen height. The volume slider that used to occupy
+                        // its own row was removed: AVPlayer.volume is app-local
+                        // gain multiplied against system volume, so dragging it
+                        // down silently capped max loudness in a way the
+                        // hardware buttons couldn't undo.
                         HStack {
                             Button {
                                 showingSleepTimerPicker = true
@@ -279,13 +264,37 @@ struct NowPlayingView: View {
                             .accessibilityLabel(sleepAccessibilityLabel)
 
                             Spacer()
-                        }
-                        .frame(height: geometry.size.height * 0.06)
-                        .padding(.horizontal, 32)
 
-                        // Bottom spacer - 7% of screen height
+                            // Playback speed button (compact)
+                            Button {
+                                showingSpeedPicker = true
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "speedometer")
+                                        .font(.body)
+                                    Text(String(format: "%.2gx", audioPlayer.playbackRate))
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .frame(minWidth: 32)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.blue.opacity(0.15))
+                                .cornerRadius(8)
+                            }
+                            .foregroundStyle(.primary)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityLabel("Playback speed, \(String(format: "%.2g", audioPlayer.playbackRate)) times")
+                        }
+                        .padding(.horizontal, 32)
+                        .padding(.top, 8)
+
+                        // Fixed bottom margin only. The slack lives in the
+                        // flexible spacer above the chapter row, so this block
+                        // stays anchored to the bottom of the sheet.
                         Spacer()
-                            .frame(height: geometry.size.height * 0.07)
+                            .frame(height: geometry.size.height * 0.04)
                     } else {
                         // No book loaded
                         VStack(spacing: 16) {
@@ -352,6 +361,30 @@ struct NowPlayingView: View {
         .onReceive(countdownTimer) { countdownTick = $0 }
     }
 
+    // MARK: - Navigation
+
+    /// Tapping the title leaves this sheet and shows the book's detail page.
+    ///
+    /// Routed through DeepLinkManager rather than a NavigationLink because this
+    /// view is presented modally with no navigation stack of its own, and the
+    /// destination has to appear above whatever tab the user was on.
+    ///
+    /// The two steps cannot be reversed or merged: ContentView presents the
+    /// destination as a sheet, and SwiftUI ignores the second presentation
+    /// while this one is still on screen. Setting the link on the next runloop
+    /// tick lets the dismissal commit first.
+    private func openBookDetail(_ book: Book) {
+        dismiss()
+
+        // Already looking at this book underneath — dismissing is the whole job.
+        guard book.id != presentedFromBookId else { return }
+
+        let id = book.id.uuidString
+        DispatchQueue.main.async {
+            deepLinkManager.openBook(id: id)
+        }
+    }
+
     // MARK: - Sleep Timer
 
     private var sleepButtonLabel: String {
@@ -405,16 +438,87 @@ struct NowPlayingView: View {
         }
     }
 
-    private func volumeIcon(for volume: Float) -> String {
-        if volume == 0 {
-            "speaker.fill"
-        } else if volume < 0.33 {
-            "speaker.wave.1.fill"
-        } else if volume < 0.66 {
-            "speaker.wave.2.fill"
-        } else {
-            "speaker.wave.3.fill"
+    /// Whole-book remaining time, shown centred under the scrubber between the
+    /// two chapter-scoped timestamps.
+    ///
+    /// Deliberately *not* rate-adjusted: it sits between two raw clock values,
+    /// and a rate-adjusted number would jump whenever the speed changed.
+    /// Phrased "8h 12m left" rather than "8:12:00" so it doesn't read as a
+    /// third timestamp alongside its neighbours.
+    /// Elapsed (left), whole-book remaining (centre), total (right).
+    ///
+    /// The outer columns share one width via `maxWidth: .infinity` rather than
+    /// being separated by `Spacer()`s, so the centre label is genuinely centred
+    /// on the screen instead of merely sitting between two gaps — with spacers
+    /// it drifts as the two outer strings change width.
+    private func timeRow(leading: String, trailing: String) -> some View {
+        HStack(spacing: 8) {
+            Text(leading)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            remainingInBookLabel
+                .fixedSize(horizontal: true, vertical: false)
+
+            Text(trailing)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
+        .padding(.horizontal, 32)
+    }
+
+    @ViewBuilder
+    private var remainingInBookLabel: some View {
+        if let remaining = remainingInBook {
+            Text(Self.formatRemaining(remaining))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+                .lineLimit(1)
+                // Spells out what's counting down. VoiceOver reads this
+                // between two chapter timestamps, where a bare "8h 12m left"
+                // doesn't say *what* is left.
+                .accessibilityLabel(Self.formatRemainingSpoken(remaining))
+        }
+    }
+
+    /// `nil` while duration is still unknown (the observer fills it in on
+    /// readyToPlay) so the row doesn't flash a bogus "0m left".
+    private var remainingInBook: TimeInterval? {
+        let remaining = audioPlayer.duration - audioPlayer.currentTime
+        guard audioPlayer.duration > 0, remaining >= 0 else { return nil }
+        return remaining
+    }
+
+    /// Rounds up so a book never reads "0m left" while audio is still playing.
+    static func formatRemaining(_ timeInterval: TimeInterval) -> String {
+        let (hours, minutes) = remainingParts(timeInterval)
+
+        if hours > 0 {
+            return "\(hours)h \(minutes)m left"
+        }
+        return "\(minutes)m left"
+    }
+
+    /// VoiceOver reading of the same value: "h"/"m" are read as letters, and
+    /// the on-screen text doesn't say what is being counted down.
+    static func formatRemainingSpoken(_ timeInterval: TimeInterval) -> String {
+        let (hours, minutes) = remainingParts(timeInterval)
+        let hourText = hours == 1 ? "1 hour" : "\(hours) hours"
+        let minuteText = minutes == 1 ? "1 minute" : "\(minutes) minutes"
+
+        if hours > 0 {
+            return "\(hourText) \(minuteText) left in the book"
+        }
+        return "\(minuteText) left in the book"
+    }
+
+    /// Rounds up, so a book still playing never reads "0m left".
+    private static func remainingParts(_ timeInterval: TimeInterval) -> (hours: Int, minutes: Int) {
+        let totalMinutes = Int((timeInterval / 60).rounded(.up))
+        return (totalMinutes / 60, totalMinutes % 60)
     }
 }
 

@@ -282,7 +282,9 @@ struct BookDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier(A11y.BookDetail.root)
         .sheet(isPresented: $showingNowPlaying) {
-            NowPlayingView()
+            // Tapping the player's title while this book's page is already
+            // underneath should just close the sheet, not stack a duplicate.
+            NowPlayingView(presentedFromBookId: book.id)
                 .presentationDragIndicator(.visible)
         }
         .onAppear {

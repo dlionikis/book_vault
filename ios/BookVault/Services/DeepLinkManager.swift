@@ -10,6 +10,11 @@
 //  that payload into a typed DeepLink and publishes it; ContentView observes
 //  `pendingDeepLink` and presents the target book.
 //
+//  Also used for in-app routing that has to cross a presentation boundary —
+//  e.g. the Now Playing sheet opening the playing book's detail page, which it
+//  cannot do with a NavigationLink because it is presented modally and has no
+//  navigation stack of its own.
+//
 
 import Foundation
 
@@ -53,6 +58,17 @@ final class DeepLinkManager: ObservableObject {
     /// Consume and clear the pending link (call after navigating).
     func consume() {
         pendingDeepLink = nil
+    }
+
+    /// Route to a book's detail page from inside the app.
+    ///
+    /// Callers presented modally (the Now Playing sheet) must dismiss
+    /// themselves *before* calling this: ContentView shows the destination as a
+    /// sheet, and SwiftUI drops the second presentation if the first is still
+    /// on screen.
+    func openBook(id: String) {
+        guard !id.isEmpty else { return }
+        pendingDeepLink = .book(id: id)
     }
 
     /// Pure mapping from an APNs payload to a DeepLink (nil if unrecognized).

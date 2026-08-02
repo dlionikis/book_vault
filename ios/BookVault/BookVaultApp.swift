@@ -28,8 +28,12 @@ struct BookVaultApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(authManager)
+            if UITestEnvironment.shouldShowNowPlayingHarness {
+                NowPlayingHarnessView()
+            } else {
+                ContentView()
+                    .environmentObject(authManager)
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             // The app can launch or resume while the device is locked (background
