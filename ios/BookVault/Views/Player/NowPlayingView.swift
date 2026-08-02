@@ -61,7 +61,7 @@ struct NowPlayingView: View {
                     if let book = audioPlayer.currentBook {
                         // Cover art - 35% of screen height.
                         CachedCoverImage(bookId: book.id, coverUrl: book.coverUrl)
-                            .frame(height: geometry.size.height * 0.35)
+                            .frame(height: geometry.size.height * 0.42)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                             .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
                             .padding(.horizontal, 40)
@@ -100,11 +100,16 @@ struct NowPlayingView: View {
                                     .lineLimit(1)
                             }
                         }
-                        .frame(height: geometry.size.height * 0.12)
+                        .padding(.top, 16)
 
-                        // Spacer to push controls down
-                        Spacer()
-                            .frame(height: geometry.size.height * 0.03)
+                        // Flexible, so everything from the chapter row down sits
+                        // against the bottom of the sheet and the slack collects
+                        // here instead of pooling under the controls.
+                        //
+                        // This replaced a fixed-percentage budget that had drifted
+                        // to 103% and only survived because Spacer compressed;
+                        // removing a row then left a visible hole at the bottom.
+                        Spacer(minLength: geometry.size.height * 0.02)
 
                         // Progress bar and time labels - 10% of screen height
                         VStack(spacing: 8) {
@@ -121,10 +126,13 @@ struct NowPlayingView: View {
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                             .lineLimit(1)
-                                        Spacer()
+                                        // Keeps a longer chapter title off the
+                                        // index badge.
+                                        Spacer(minLength: 8)
                                         Text("Chapter \(currentChapter.index)")
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
+                                            .layoutPriority(1)
                                         Image(systemName: "chevron.down")
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
@@ -145,18 +153,10 @@ struct NowPlayingView: View {
                                 )
                                 .padding(.horizontal, 32)
 
-                                HStack {
-                                    Text(formatTime(audioPlayer.currentTime - currentChapter.startTime))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    remainingInBookLabel
-                                    Spacer()
-                                    Text(formatTime(currentChapter.duration))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                .padding(.horizontal, 32)
+                                timeRow(
+                                    leading: formatTime(audioPlayer.currentTime - currentChapter.startTime),
+                                    trailing: formatTime(currentChapter.duration)
+                                )
                             } else {
                                 // Fallback: Full book progress (no chapters)
                                 ProgressBarView(
@@ -168,23 +168,14 @@ struct NowPlayingView: View {
                                 )
                                 .padding(.horizontal, 32)
 
-                                HStack {
-                                    Text(formatTime(audioPlayer.currentTime))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    remainingInBookLabel
-                                    Spacer()
-                                    Text(formatTime(audioPlayer.duration))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                .padding(.horizontal, 32)
+                                timeRow(
+                                    leading: formatTime(audioPlayer.currentTime),
+                                    trailing: formatTime(audioPlayer.duration)
+                                )
                             }
                         }
-                        .frame(height: geometry.size.height * 0.1)
 
-                        // Playback controls - 15% of screen height
+                        // Playback controls
                         PlaybackControlsView(
                             isPlaying: audioPlayer.isPlaying,
                             chapters: audioPlayer.chapters,
@@ -296,13 +287,14 @@ struct NowPlayingView: View {
                             .accessibilityAddTraits(.isButton)
                             .accessibilityLabel("Playback speed, \(String(format: "%.2g", audioPlayer.playbackRate)) times")
                         }
-                        .frame(height: geometry.size.height * 0.06)
                         .padding(.horizontal, 32)
+                        .padding(.top, 8)
 
-                        // Bottom spacer. Absorbs the 10% freed by the removed
-                        // volume row so the layout still sums to 100%.
+                        // Fixed bottom margin only. The slack lives in the
+                        // flexible spacer above the chapter row, so this block
+                        // stays anchored to the bottom of the sheet.
                         Spacer()
-                            .frame(height: geometry.size.height * 0.17)
+                            .frame(height: geometry.size.height * 0.04)
                     } else {
                         // No book loaded
                         VStack(spacing: 16) {
@@ -453,6 +445,30 @@ struct NowPlayingView: View {
     /// and a rate-adjusted number would jump whenever the speed changed.
     /// Phrased "8h 12m left" rather than "8:12:00" so it doesn't read as a
     /// third timestamp alongside its neighbours.
+    /// Elapsed (left), whole-book remaining (centre), total (right).
+    ///
+    /// The outer columns share one width via `maxWidth: .infinity` rather than
+    /// being separated by `Spacer()`s, so the centre label is genuinely centred
+    /// on the screen instead of merely sitting between two gaps — with spacers
+    /// it drifts as the two outer strings change width.
+    private func timeRow(leading: String, trailing: String) -> some View {
+        HStack(spacing: 8) {
+            Text(leading)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            remainingInBookLabel
+                .fixedSize(horizontal: true, vertical: false)
+
+            Text(trailing)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(.horizontal, 32)
+    }
+
     @ViewBuilder
     private var remainingInBookLabel: some View {
         if let remaining = remainingInBook {

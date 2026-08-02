@@ -43,4 +43,15 @@ enum UITestEnvironment {
     /// dismissed from the test process: tapping "Not Now" synthesizes an event but the
     /// sheet stays up. Suppressing the trigger is deterministic; dismissing it is not.
     static var shouldDisablePasswordAutofill: Bool { isActive }
+
+    /// Render `NowPlayingView` against mock data as the root view, bypassing
+    /// login and playback.
+    ///
+    /// The player's layout can only really be checked by looking at it, and
+    /// reaching it normally needs a backend, a session and an audio stream.
+    /// This puts the real view on screen with no network so a test can
+    /// screenshot it. Gated on the launch argument, so shipping is untouched.
+    static var shouldShowNowPlayingHarness: Bool {
+        isActive && ProcessInfo.processInfo.arguments.contains("--harness-now-playing")
+    }
 }
