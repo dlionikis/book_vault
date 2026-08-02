@@ -4,7 +4,7 @@ import BookGrid from '@/components/BookGrid';
 import BackButton from '@/components/BackButton';
 import Pagination from '@/components/Pagination';
 import { prisma } from '@/lib/db';
-import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
+import { getEntityBooksPage } from '@/lib/queries/entity-books';
 
 interface CategoryWithBooks {
   id: string;
@@ -37,29 +37,8 @@ async function getCategory(id: string, page?: string): Promise<CategoryWithBooks
       return null;
     }
 
-    const [bookCategoryEntries, total] = await Promise.all([
-      prisma.bookCategory.findMany({
-        where: { categoryId: id },
-        skip,
-        take: limit,
-        include: {
-          book: {
-            include: BOOK_INCLUDE,
-          },
-        },
-        orderBy: {
-          book: {
-            title: 'asc',
-          },
-        },
-      }),
-      prisma.bookCategory.count({
-        where: { categoryId: id },
-      }),
-    ]);
-
-    // Transform books using centralized transformer
-    const books = await Promise.all(bookCategoryEntries.map((entry) => transformBook(entry.book)));
+    // Shared with /api/categories/[id].
+    const { books, total } = await getEntityBooksPage('category', id, { skip, limit });
 
     return {
       id: category.id,

@@ -3,7 +3,7 @@ import { requireUser } from '@/lib/api-auth';
 import { prisma } from '@/lib/db';
 import { getCoverUrl, getAudioUrl } from '@/lib/media';
 import { parseBookFields, parsePagination, buildPagination } from '@/lib/api-utils';
-import { VISIBLE_BOOK_WHERE, transformBook } from '@/lib/book-transformer';
+import { buildSearchWhere, searchBooks } from '@/lib/queries/search-books';
 import { logger, withLogging } from '@/lib/logger';
 
 export const GET = withLogging(async (request: NextRequest) => {
@@ -26,137 +26,40 @@ export const GET = withLogging(async (request: NextRequest) => {
     // Parse field filtering
     const select = parseBookFields(fieldsParam);
 
-    // Build where clause for search.
-    // The visibility filter sits beside OR (implicitly AND-ed), not inside it —
-    // as an OR branch it would *match* hidden books rather than exclude them.
-    const whereClause = {
-      ...VISIBLE_BOOK_WHERE,
-      OR: [
-        {
-          title: {
-            contains: query,
-            mode: 'insensitive' as const,
-          },
-        },
-        {
-          description: {
-            contains: query,
-            mode: 'insensitive' as const,
-          },
-        },
-        {
-          publisherSummary: {
-            contains: query,
-            mode: 'insensitive' as const,
-          },
-        },
-        {
-          authors: {
-            some: {
-              author: {
-                name: {
-                  contains: query,
-                  mode: 'insensitive' as const,
-                },
-              },
-            },
-          },
-        },
-        {
-          narrators: {
-            some: {
-              narrator: {
-                name: {
-                  contains: query,
-                  mode: 'insensitive' as const,
-                },
-              },
-            },
-          },
-        },
-        {
-          series: {
-            some: {
-              series: {
-                title: {
-                  contains: query,
-                  mode: 'insensitive' as const,
-                },
-              },
-            },
-          },
-        },
-      ],
-    };
+    // Field-filtered responses (?fields=) need a bespoke `select`, so they run
+    // their own query — but off the SAME where builder as the shared path, so
+    // the visibility filter still applies.
+    const where = buildSearchWhere(query);
 
-    // Search across multiple fields
-    const [books, total] = await Promise.all([
-      select
-        ? prisma.book.findMany({
-            where: whereClause,
-            skip,
-            take: limit,
-            select,
-            orderBy: {
-              title: 'asc',
-            },
-          })
-        : prisma.book.findMany({
-            where: whereClause,
-            skip,
-            take: limit,
-            include: {
-              authors: {
-                include: {
-                  author: true,
-                },
-              },
-              narrators: {
-                include: {
-                  narrator: true,
-                },
-              },
-              series: {
-                include: {
-                  series: true,
-                },
-              },
-              categories: {
-                include: {
-                  category: true,
-                },
-              },
-            },
-            orderBy: {
-              title: 'asc',
-            },
-          }),
-      prisma.book.count({
-        where: whereClause,
-      }),
-    ]);
+    let transformedBooks: unknown[];
+    let total: number;
 
-    // Transform the response
-    // Note: transformBook and URL functions are async (generate presigned URLs in production)
-    const transformedBooks = select
-      ? // If using field filtering, return books as-is (with selected fields only)
-        await Promise.all(
-          books.map(async (book) => {
-            const result: Record<string, unknown> = {};
-            for (const [key, value] of Object.entries(book)) {
-              if (key === 'coverUrl') {
-                result[key] = await getCoverUrl(value as string | null);
-              } else if (key === 'audioUrl') {
-                result[key] = await getAudioUrl(value as string | null);
-              } else {
-                result[key] = value;
-              }
+    if (select) {
+      const [rows, count] = await Promise.all([
+        prisma.book.findMany({ where, skip, take: limit, select, orderBy: { title: 'asc' } }),
+        prisma.book.count({ where }),
+      ]);
+      total = count;
+      transformedBooks = await Promise.all(
+        rows.map(async (book) => {
+          const result: Record<string, unknown> = {};
+          for (const [key, value] of Object.entries(book)) {
+            if (key === 'coverUrl') {
+              result[key] = await getCoverUrl(value as string | null);
+            } else if (key === 'audioUrl') {
+              result[key] = await getAudioUrl(value as string | null);
+            } else {
+              result[key] = value;
             }
-            return result;
-          })
-        )
-      : // Otherwise, return full transformed books using centralized transformer
-        await Promise.all(books.map((book) => transformBook(book as any)));
+          }
+          return result;
+        })
+      );
+    } else {
+      const result = await searchBooks(query, { skip, limit });
+      transformedBooks = result.books;
+      total = result.total;
+    }
 
     return NextResponse.json({
       results: transformedBooks,

@@ -8,8 +8,7 @@ import ContinueListeningButton from '@/components/ContinueListeningButton';
 import SeriesModeSection from '@/components/SeriesModeSection';
 import { CATALOG_VIEW_MODE_KEY } from '@/components/ViewModeToggle';
 import Link from 'next/link';
-import { prisma } from '@/lib/db';
-import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
+import { getCatalogBooks } from '@/lib/queries/catalog-books';
 
 async function getBooks(page?: string, sort?: string): Promise<BooksResponse> {
   const pageNum = parseInt(page || '1');
@@ -17,25 +16,9 @@ async function getBooks(page?: string, sort?: string): Promise<BooksResponse> {
   const skip = (pageNum - 1) * limit;
   const sortBy = sort || 'title';
 
-  // Build orderBy based on sort parameter
-  let orderBy: object = { title: 'asc' };
-  if (sortBy === 'title') {
-    orderBy = { title: 'asc' };
-  }
-
-  // Fetch books with their relationships
-  const [books, total] = await Promise.all([
-    prisma.book.findMany({
-      skip,
-      take: limit,
-      include: BOOK_INCLUDE,
-      orderBy,
-    }),
-    prisma.book.count(),
-  ]);
-
-  // Transform books using centralized transformer
-  let transformedBooks = await Promise.all(books.map(transformBook));
+  // Shared with /api/books — hidden books stay off the catalog grid and out of
+  // the total, so the last page isn't short.
+  const { books: transformedBooks, total } = await getCatalogBooks({ skip, limit });
 
   // Apply client-side sorting for author/narrator/series
   if (sortBy === 'author') {

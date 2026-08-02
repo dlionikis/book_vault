@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
-import { prisma } from '@/lib/db';
-import { BOOK_INCLUDE, VISIBLE_BOOK_WHERE, transformBook } from '@/lib/book-transformer';
 import { normalizeUuid, buildPagination, parsePagination } from '@/lib/api-utils';
+import { EntityKind, getEntityBooksPage } from '@/lib/queries/entity-books';
 
 /**
  * Configuration for entity detail endpoints that return paginated books.
@@ -13,20 +12,17 @@ export interface EntityDetailConfig<TEntity> {
   /** The Prisma model for the main entity (e.g., prisma.author) */
   entityModel: any;
 
-  /** The Prisma model for the join table (e.g., prisma.bookAuthor) */
-  joinTableModel: any;
-
-  /** The name of the ID field in the where clause (e.g., 'authorId') */
-  idFieldName: string;
+  /**
+   * Which entity's books to page through. Selects the join table, its FK column
+   * and the default ordering inside lib/queries/entity-books.
+   */
+  entityKind: EntityKind;
 
   /** Entity name for error messages (e.g., 'Author') */
   entityName: string;
 
   /** Function to extract response fields from the entity */
   getResponseFields: (entity: TEntity) => Record<string, any>;
-
-  /** Optional: Custom orderBy for books (defaults to book.title asc) */
-  orderBy?: any;
 
   /** Optional: Additional include fields for entity fetch */
   entityInclude?: any;
@@ -46,8 +42,7 @@ export interface EntityDetailConfig<TEntity> {
  * // Authors endpoint
  * return handleEntityDetailWithBooks(request, params, {
  *   entityModel: prisma.author,
- *   joinTableModel: prisma.bookAuthor,
- *   idFieldName: 'authorId',
+ *   entityKind: 'author',
  *   entityName: 'Author',
  *   getResponseFields: (author) => ({
  *     id: author.id,
@@ -57,18 +52,16 @@ export interface EntityDetailConfig<TEntity> {
  * });
  *
  * @example
- * // Series endpoint with custom sort
+ * // Series endpoint (ordered by in-series sequence)
  * return handleEntityDetailWithBooks(request, params, {
  *   entityModel: prisma.series,
- *   joinTableModel: prisma.bookSeries,
- *   idFieldName: 'seriesId',
+ *   entityKind: 'series',
  *   entityName: 'Series',
  *   getResponseFields: (series) => ({
  *     id: series.id,
  *     title: series.title,
  *     asin: series.asin,
  *   }),
- *   orderBy: [{ sequence: 'asc' }], // Sort by series sequence instead of title
  * });
  *
  * @param request - Next.js request object
@@ -114,36 +107,13 @@ export async function handleEntityDetailWithBooks<TEntity>(
       return NextResponse.json({ error: `${config.entityName} not found` }, { status: 404 });
     }
 
-    // 5. Fetch related books via join table with pagination
-    // Default orderBy to book.title asc unless custom orderBy provided
-    const orderBy = config.orderBy || { book: { title: 'asc' } };
-    // Filters through the join table's `book` relation, so hidden books drop
-    // out of both the page and its total. Covers the author, narrator, series
-    // and category detail endpoints in one place.
-    const whereClause = { [config.idFieldName]: entityId, book: VISIBLE_BOOK_WHERE };
-
-    const [joinEntries, total] = await Promise.all([
-      config.joinTableModel.findMany({
-        where: whereClause,
-        skip,
-        take: limit,
-        include: {
-          book: {
-            include: BOOK_INCLUDE,
-          },
-        },
-        orderBy,
-      }),
-      config.joinTableModel.count({
-        where: whereClause,
-      }),
-    ]);
-
-    // 6. Transform book data to include full URLs and proper structure
-    // Note: transformBook is async (generates presigned URLs), so we must await all
-    const booksWithUrls = await Promise.all(
-      joinEntries.map((entry: any) => transformBook(entry.book))
-    );
+    // 5. Fetch one page of the entity's visible books.
+    // Shared with the /authors, /narrators, /series and /categories pages, so
+    // the visibility filter cannot apply to only one of the two surfaces.
+    const { books: booksWithUrls, total } = await getEntityBooksPage(config.entityKind, entityId, {
+      skip,
+      limit,
+    });
 
     // 7. Build and return response
     return NextResponse.json({

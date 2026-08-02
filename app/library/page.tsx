@@ -9,7 +9,8 @@ import ProgressStatus from '@/components/ProgressStatus';
 import BookGrid from '@/components/BookGrid';
 import SeriesModeSection from '@/components/SeriesModeSection';
 import { LIBRARY_VIEW_MODE_KEY } from '@/components/ViewModeToggle';
-import { BOOK_INCLUDE, transformLibraryBook } from '@/lib/book-transformer';
+import { transformLibraryBook } from '@/lib/book-transformer';
+import { getLibraryListBooks } from '@/lib/queries/catalog-books';
 
 interface LibraryBookProgress {
   positionSeconds: number;
@@ -18,35 +19,16 @@ interface LibraryBookProgress {
 
 async function getLibraryBooks(userId: string) {
   try {
-    // Get user's library
-    const library = await prisma.userList.findFirst({
-      where: {
-        userId,
-        name: 'My Library',
-      },
-    });
+    // Book selection is shared with /api/library (visible books only). The
+    // progress join below stays here — the page renders per-book progress the
+    // API returns in a different shape.
+    const { library, listBooks } = await getLibraryListBooks(userId);
 
     if (!library) {
-      return { books: [], progressByBookId: new Map() };
+      return { books: [], progressByBookId: new Map<string, LibraryBookProgress>() };
     }
 
-    // Get books in library with full details
-    const libraryBooks = await prisma.userListBook.findMany({
-      where: {
-        listId: library.id,
-      },
-      include: {
-        book: {
-          include: BOOK_INCLUDE,
-        },
-      },
-      orderBy: {
-        addedAt: 'desc',
-      },
-    });
-
-    // Get progress for all books
-    const bookIds = libraryBooks.map((lb) => lb.book.id);
+    const bookIds = listBooks.map((lb) => lb.book.id);
     const progressRecords = await prisma.userProgress.findMany({
       where: {
         userId,
@@ -56,19 +38,19 @@ async function getLibraryBooks(userId: string) {
       },
     });
 
-    const progressByBookId = new Map(
+    const progressByBookId = new Map<string, LibraryBookProgress>(
       progressRecords.map((p) => [
         p.bookId,
         { positionSeconds: p.positionSeconds, completed: p.completed },
       ])
     );
 
-    const books = await Promise.all(libraryBooks.map(transformLibraryBook));
+    const books = await Promise.all(listBooks.map(transformLibraryBook));
 
     return { books, progressByBookId };
   } catch (error) {
     console.error('Error fetching library:', error);
-    return { books: [], progressByBookId: new Map() };
+    return { books: [], progressByBookId: new Map<string, LibraryBookProgress>() };
   }
 }
 

@@ -3,103 +3,29 @@ import BookGrid from '@/components/BookGrid';
 import SearchBar from '@/components/SearchBar';
 import BackButton from '@/components/BackButton';
 import Pagination from '@/components/Pagination';
-import { prisma } from '@/lib/db';
-import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
+import { searchBooks } from '@/lib/queries/search-books';
 
-async function searchBooks(query: string, page?: string): Promise<SearchResponse | null> {
+const PAGE_SIZE = 20;
+
+async function getSearchResults(query: string, page?: string): Promise<SearchResponse | null> {
   if (!query) return null;
 
   try {
     const pageNum = parseInt(page || '1');
-    const limit = 20;
-    const skip = (pageNum - 1) * limit;
+    const skip = (pageNum - 1) * PAGE_SIZE;
 
-    const whereClause = {
-      OR: [
-        {
-          title: {
-            contains: query,
-            mode: 'insensitive' as const,
-          },
-        },
-        {
-          description: {
-            contains: query,
-            mode: 'insensitive' as const,
-          },
-        },
-        {
-          publisherSummary: {
-            contains: query,
-            mode: 'insensitive' as const,
-          },
-        },
-        {
-          authors: {
-            some: {
-              author: {
-                name: {
-                  contains: query,
-                  mode: 'insensitive' as const,
-                },
-              },
-            },
-          },
-        },
-        {
-          narrators: {
-            some: {
-              narrator: {
-                name: {
-                  contains: query,
-                  mode: 'insensitive' as const,
-                },
-              },
-            },
-          },
-        },
-        {
-          series: {
-            some: {
-              series: {
-                title: {
-                  contains: query,
-                  mode: 'insensitive' as const,
-                },
-              },
-            },
-          },
-        },
-      ],
-    };
-
-    // Search across multiple fields
-    const [books, total] = await Promise.all([
-      prisma.book.findMany({
-        where: whereClause,
-        skip,
-        take: limit,
-        include: BOOK_INCLUDE,
-        orderBy: {
-          title: 'asc',
-        },
-      }),
-      prisma.book.count({
-        where: whereClause,
-      }),
-    ]);
-
-    // Transform books using centralized transformer
-    const transformedBooks = await Promise.all(books.map(transformBook));
+    // Shared with /api/search, so the visibility filter can't diverge between
+    // the two the way it did in PR #157.
+    const { books, total } = await searchBooks(query, { skip, limit: PAGE_SIZE });
 
     return {
       query,
-      books: transformedBooks,
+      books,
       pagination: {
         page: pageNum,
-        limit,
+        limit: PAGE_SIZE,
         total,
-        pages: Math.ceil(total / limit),
+        pages: Math.ceil(total / PAGE_SIZE),
       },
     };
   } catch (error) {
@@ -115,7 +41,7 @@ export default async function SearchPage({
 }) {
   const params = await searchParams;
   const query = params.q || '';
-  const results = query ? await searchBooks(query, params.page) : null;
+  const results = query ? await getSearchResults(query, params.page) : null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">

@@ -5,7 +5,7 @@ import BackButton from '@/components/BackButton';
 import Pagination from '@/components/Pagination';
 import RestoreSeriesButton from '@/components/RestoreSeriesButton';
 import { prisma } from '@/lib/db';
-import { BOOK_INCLUDE, transformBook } from '@/lib/book-transformer';
+import { getEntityBooksPage } from '@/lib/queries/entity-books';
 import { AVAILABILITY } from '@/lib/restore';
 
 interface SeriesWithBooks extends Series {
@@ -34,37 +34,19 @@ async function getSeries(id: string, page?: string): Promise<SeriesWithBooks | n
       return null;
     }
 
-    const [bookSeriesEntries, total, archivedCount] = await Promise.all([
-      prisma.bookSeries.findMany({
-        where: { seriesId: id },
-        skip,
-        take: limit,
-        include: {
-          book: {
-            include: BOOK_INCLUDE,
-          },
-        },
-        orderBy: {
-          sequence: 'asc',
-        },
-      }),
-      prisma.bookSeries.count({
-        where: { seriesId: id },
-      }),
-      // Series-wide archived count (the button restores the whole series, not
-      // just the visible page, so the count must span all pages).
-      prisma.bookSeries.count({
-        where: { seriesId: id, book: { audioAvailability: AVAILABILITY.ARCHIVED } },
-      }),
-    ]);
-
-    // Transform books using centralized transformer
-    const books = await Promise.all(bookSeriesEntries.map((entry) => transformBook(entry.book)));
+    // Shared with /api/series/[id]. The archived count is series-wide (the
+    // restore button acts on the whole series, not just this page) and inherits
+    // the visibility filter, so it can't advertise books the user can't see.
+    const { books, total, extraCounts } = await getEntityBooksPage('series', id, {
+      skip,
+      limit,
+      extraCounts: { archived: { audioAvailability: AVAILABILITY.ARCHIVED } },
+    });
 
     return {
       ...series,
       books,
-      archivedCount,
+      archivedCount: extraCounts.archived,
       pagination: {
         page: pageNum,
         limit,

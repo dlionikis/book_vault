@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import BackButton from '@/components/BackButton';
-import { prisma } from '@/lib/db';
+import { getBrowseEntities } from '@/lib/queries/browse-entities';
 
 // DB-backed page: render per-request instead of static prerender at build time
 // (where DATABASE_URL is unset and the Prisma query would throw). Keeps the
@@ -16,24 +16,16 @@ interface AuthorWithCount {
 
 async function getAuthors(): Promise<AuthorWithCount[]> {
   try {
-    const authors = await prisma.author.findMany({
-      include: {
-        books: {
-          include: {
-            book: true,
-          },
-        },
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
+    // Shared with /api/browse/authors: only entities that still have a visible
+    // book, with a bookCount that matches. Also counts in SQL rather than
+    // loading every joined book row to take .length.
+    const { entities } = await getBrowseEntities('author', { limit: null });
 
-    return authors.map((author) => ({
-      id: author.id,
-      name: author.name,
-      asin: author.asin,
-      bookCount: author.books.length,
+    return entities.map((entity) => ({
+      id: entity.id,
+      name: entity.label,
+      asin: entity.asin,
+      bookCount: entity.bookCount,
     }));
   } catch (error) {
     console.error('Error fetching authors:', error);
