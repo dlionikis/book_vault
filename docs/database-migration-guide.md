@@ -18,26 +18,60 @@ This will:
 
 ### Production (RDS)
 
-For production, use the secure migration script that retrieves credentials from AWS Secrets Manager:
+Apply all pending migrations:
 
 ```bash
-./scripts/run-production-migration.sh prisma/migrations/<migration-name>/migration.sql
+./scripts/db-migrate.sh production
 ```
 
-**Example:**
+Or a single SQL file:
 
 ```bash
-./scripts/run-production-migration.sh prisma/migrations/20260102_change_sequence_to_int/migration.sql
+./scripts/db-migrate.sh production prisma/migrations/<migration-name>/migration.sql
 ```
 
 ### How It Works
 
-The script:
+The script connects through a running ECS task (`aws ecs execute-command`), so
+credentials never leave AWS — the task already has `DATABASE_URL` in its
+environment, and nothing is passed on the command line.
 
-1. ✅ Retrieves credentials from AWS Secrets Manager (auditable, secure)
-2. ✅ Parses the DATABASE_URL to extract connection details
-3. ✅ Applies the migration using `psql`
-4. ✅ Never exposes credentials in command history or logs
+Pending migrations are applied as raw SQL, each in its own transaction, and
+recorded in `_prisma_migrations` with the sha256 of `migration.sql` — the same
+checksum Prisma stores. A later `prisma migrate deploy` from anywhere with a
+real CLI therefore sees them as applied rather than pending or drifted.
+
+### Why not `prisma migrate deploy` in the container?
+
+Three constraints in the production environment rule it out, all worth knowing
+before "simplifying" this back to a CLI call:
+
+1. **No CLI in the image.** The runtime image ships only the Prisma client
+   runtime, so the CLI would have to be fetched at run time.
+2. **Fetching it OOMs the task.** The task has **512MB total**, shared with the
+   running Next.js server. An `npm install` of the Prisma CLI is killed by the
+   OOM reaper and risks taking the serving process down with it.
+3. **`npx prisma` cannot load the config.** `prisma.config.ts` imports
+   `defineConfig` from `prisma/config`, which is not resolvable from `/app`, so
+   it fails with `Cannot find module 'prisma/config'`. Prisma 7 requires the
+   config file (it no longer reads `url` from the datasource block), so
+   `--schema` does not get around it.
+
+`psql` is also not installed in the image.
+
+### TLS is mandatory and not automatic
+
+RDS refuses unencrypted connections, and since Prisma 7 handed connection
+handling to the `pg` driver, TLS has to be configured explicitly. `sslmode=require`
+does **not** work — as of pg 8.22 it verifies against the system trust store,
+while RDS serves an Amazon-signed certificate. Verification needs Amazon's CA
+explicitly (`certs/rds-global-bundle.pem`, shipped in the image).
+
+All of this is handled by [`scripts/lib/remote-pg.sh`](../scripts/lib/remote-pg.sh),
+which every production database script goes through. Two further traps it
+absorbs: `package.json` is ESM, so `node -e "...require(...)"` fails and remote
+snippets must be `.cjs` files; and those files must live under `/app` for
+`require('pg')` to resolve.
 
 ### Prerequisites
 
@@ -64,28 +98,18 @@ aws secretsmanager get-secret-value \
   --output text | jq '.'
 ```
 
-### Manual Migration (If Needed)
+### Manual Queries (If Needed)
 
-If you need to run SQL manually on production:
+Run ad-hoc SQL against production:
 
 ```bash
-# Retrieve DATABASE_URL
-DATABASE_URL=$(aws secretsmanager get-secret-value \
-  --secret-id book-vault/database \
-  --profile book_vault \
-  --region us-east-1 \
-  --query SecretString \
-  --output text | jq -r '.DATABASE_URL')
-
-# Connect to database
-psql "$DATABASE_URL"
-
-# Or parse and connect manually
-DB_PASS=$(echo "$DATABASE_URL" | sed -n 's|postgresql://[^:]*:\([^@]*\)@.*|\1|p')
-DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|postgresql://[^@]*@\([^:]*\):.*|\1|p')
-
-PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -U postgres -d book_vault
+./scripts/db-connect.sh "SELECT count(*) FROM books"
 ```
+
+Note there is **no direct psql route to production RDS**. The security group
+allows the ECS task security group, not individual IPs, so `psql "$DATABASE_URL"`
+from a laptop cannot connect — and `psql` is not installed in the container
+either. `db-connect.sh` goes through a running task, which is why it works.
 
 ### Security Best Practices
 
@@ -93,7 +117,8 @@ PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -U postgres -d book_vault
 2. ❌ **Never** commit credentials to git
 3. ❌ **Never** pass passwords as CLI arguments (appears in process list)
 4. ✅ **Always** use AWS Secrets Manager for production credentials
-5. ✅ **Always** use `PGPASSWORD` environment variable
+5. ✅ **Always** go through the scripts in `scripts/`, which read `DATABASE_URL`
+   from the task environment inside AWS rather than moving credentials around
 6. ✅ **Always** audit secret access via CloudTrail
 
 ### Verifying Migration
@@ -101,19 +126,15 @@ PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -U postgres -d book_vault
 After running a migration, verify it was applied:
 
 ```bash
-# Check table structure
-./scripts/run-production-migration.sh <(echo "\d book_series")
+# Which migrations have been applied?
+./scripts/db-connect.sh "SELECT migration_name, finished_at FROM _prisma_migrations ORDER BY finished_at DESC LIMIT 5"
 
-# Or use the script with psql directly
-DATABASE_URL=$(aws secretsmanager get-secret-value \
-  --secret-id book-vault/database \
-  --profile book_vault \
-  --region us-east-1 \
-  --query SecretString \
-  --output text | jq -r '.DATABASE_URL')
-
-psql "$DATABASE_URL" -c "\d book_series"
+# Does an expected column exist?
+./scripts/db-connect.sh "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'books'"
 ```
+
+`\d`-style psql meta-commands are not available (no psql in the image); query
+`information_schema` instead.
 
 ## Troubleshooting
 

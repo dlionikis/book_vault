@@ -31,6 +31,10 @@ SERVICE="book-vault-spot"
 CONTAINER="book-vault"
 REGION="us-east-1"
 
+# Shared TLS/exec plumbing for talking to RDS from inside a task.
+# shellcheck source=scripts/lib/remote-pg.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/remote-pg.sh"
+
 # Change to project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
@@ -112,40 +116,25 @@ import { PrismaClient } from './lib/generated/prisma/client';
 else
     echo -e "${YELLOW}[INFO]${NC} Finding running ECS task..."
 
-    TASK_ARN=$(aws ecs list-tasks \
-        --cluster "$CLUSTER" \
-        --service-name "$SERVICE" \
-        --region "$REGION" \
-        --query 'taskArns[0]' \
-        --output text 2>/dev/null)
-
-    if [ -z "$TASK_ARN" ] || [ "$TASK_ARN" == "None" ]; then
-        echo -e "${RED}Error: No running tasks found in $SERVICE${NC}"
-        exit 1
-    fi
-
-    TASK_ID=$(echo "$TASK_ARN" | awk -F'/' '{print $NF}')
-    echo -e "${GREEN}[OK]${NC} Found task: $TASK_ID"
+    TASK_ARN=$(remote_pg_task_arn "$CLUSTER" "$SERVICE") || exit 1
+    echo -e "${GREEN}[OK]${NC} Found task: ${TASK_ARN##*/}"
 
     echo -e "${YELLOW}[INFO]${NC} Deleting user from production database..."
 
-    # Build the Node.js command (minified for shell safety).
-    #
     # Uses the `pg` driver directly — see the note in create-user.sh: the Prisma 7
     # client is TypeScript and the production image has no TS loader. Every
     # user-owned table cascades at the DB level (ON DELETE CASCADE), so this is
     # equivalent to prisma.user.delete. An empty rowCount means "not found"
     # (Prisma's P2025).
-    DELETE_CMD="const{Client}=require('pg');(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();try{const r=await c.query('DELETE FROM users WHERE username = \$1 RETURNING id',['$USERNAME']);if(r.rowCount===0){console.log('ERROR:User not found')}else{console.log('SUCCESS:'+r.rows[0].id)}}catch(e){console.log('ERROR:'+e.message)}finally{await c.end()}})();"
-
-    # Execute via ECS Exec
-    RESULT=$(aws ecs execute-command \
-        --cluster "$CLUSTER" \
-        --task "$TASK_ID" \
-        --container "$CONTAINER" \
-        --command "node -e \"$DELETE_CMD\"" \
-        --interactive \
-        --region "$REGION" 2>&1)
+    RESULT=$(remote_pg_exec "$CLUSTER" "$SERVICE" "$CONTAINER" "
+    const [, , username] = process.argv;
+    const r = await client.query('DELETE FROM users WHERE username = \$1 RETURNING id', [username]);
+    if (r.rowCount === 0) {
+      console.log('ERROR:User not found');
+    } else {
+      console.log('SUCCESS:' + r.rows[0].id);
+    }
+" "$USERNAME" 2>&1)
 fi
 
 # ============================================================
