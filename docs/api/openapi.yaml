@@ -709,6 +709,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many login attempts from this IP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /api/auth/mobile/refresh:
     post:
@@ -759,6 +765,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '401':
           description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many refresh attempts from this IP
           content:
             application/json:
               schema:

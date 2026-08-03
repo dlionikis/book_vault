@@ -2,9 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { generateAccessToken, generateRefreshToken, getAccessTokenExpiry } from '@/lib/jwt';
 import { logger, withLogging } from '@/lib/logger';
+import { checkIpRateLimit } from '@/lib/rate-limit';
 
 export const POST = withLogging(async (request: NextRequest) => {
   try {
+    // Pre-auth endpoint: a refresh token is bearer-equivalent, so guessing is
+    // worth throttling. The ceiling is generous enough for the iOS app's own
+    // refresh traffic, including the shared coordinator retrying.
+    if (!checkIpRateLimit(request, 'refresh', 30)) {
+      return NextResponse.json(
+        { error: 'Too many refresh attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { refreshToken } = body;
 

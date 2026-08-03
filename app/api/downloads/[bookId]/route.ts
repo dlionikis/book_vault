@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 import { isS3Enabled, generatePresignedUrl, getS3ObjectMetadata } from '@/lib/s3';
 import { initiateRestore, estimatedCompletion } from '@/lib/restore';
 import { checkDownloadLimit } from '@/lib/rate-limit';
-import { normalizeUuid } from '@/lib/api-utils';
+import { normalizeUuid, isValidUuid } from '@/lib/api-utils';
 import { getAbsoluteMediaPath } from '@/lib/media';
 import { statSync } from 'fs';
 import { join } from 'path';
@@ -19,7 +19,12 @@ export async function POST(request: NextRequest, props: { params: Promise<{ book
     const user = auth.user;
 
     const { bookId } = params;
-    const normalizedBookId = normalizeUuid(bookId) as string;
+    // Validate rather than cast: normalizeUuid only lowercases, so the old
+    // `as string` let a malformed id through to Prisma (invariant 5.6).
+    const normalizedBookId = normalizeUuid(bookId);
+    if (!isValidUuid(normalizedBookId)) {
+      return NextResponse.json({ error: 'Invalid book ID format' }, { status: 400 });
+    }
 
     // Parse request body
     const body = await request.json();

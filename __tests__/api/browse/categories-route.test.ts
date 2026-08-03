@@ -17,6 +17,8 @@ jest.mock('next-auth');
 jest.mock('@/lib/auth');
 jest.mock('@/lib/db', () => ({
   prisma: {
+    // requireUser re-checks the account exists on the bearer path (SEC-2).
+    user: { findUnique: jest.fn() },
     category: {
       findMany: jest.fn(),
       count: jest.fn(),
@@ -40,6 +42,8 @@ const mockBookCategoryFindMany = prisma.bookCategory.findMany as jest.Mock;
 
 function authenticate() {
   mockGetAuthUserFromRequest.mockResolvedValue({ id: 'user-123', username: 'testuser' });
+  // requireUser then confirms the row still exists (SEC-2).
+  (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'user-123' });
 }
 
 const makeRequest = (query = '') =>

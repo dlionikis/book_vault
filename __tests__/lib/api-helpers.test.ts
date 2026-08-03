@@ -10,6 +10,8 @@ jest.mock('next-auth');
 jest.mock('@/lib/auth');
 jest.mock('@/lib/db', () => ({
   prisma: {
+    // requireUser re-checks the account exists on the bearer path (SEC-2).
+    user: { findUnique: jest.fn() },
     author: {
       findUnique: jest.fn(),
     },
@@ -34,25 +36,16 @@ jest.mock('@/lib/db', () => ({
   },
 }));
 jest.mock('@/lib/book-transformer');
-jest.mock('@/lib/api-utils', () => ({
-  normalizeUuid: jest.fn((id) => {
-    // Simple UUID validation for tests
-    if (!id || id === 'invalid-uuid') return null;
-    return id;
-  }),
-  buildPagination: jest.fn((page, limit, total) => ({
-    page,
-    limit,
-    total,
-    pages: Math.ceil(total / limit),
-  })),
-  // Mirrors the real parsePagination (caps limit at 100).
-  parsePagination: jest.fn((pageParam, limitParam) => {
-    const page = Math.max(1, parseInt(pageParam || '1'));
-    const limit = Math.min(100, Math.max(1, parseInt(limitParam || '20')));
-    return { page, limit, skip: (page - 1) * limit };
-  }),
-}));
+// `@/lib/api-utils` is deliberately NOT mocked. It is pure (uuid normalization,
+// pagination math) so the real implementation is both cheaper and more honest
+// than a stub.
+//
+// The previous mock reimplemented `normalizeUuid` as
+// `if (!id || id === 'invalid-uuid') return null` — inventing validation the
+// real function never had (it only lowercases). That made the
+// "returns 400 for invalid UUID format" test pass against a fiction: the real
+// helper let a malformed id through to Prisma. Mocking pure helpers hides the
+// bug the test claims to cover.
 
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>;
 const mockGetAuthUserFromRequest = getAuthUserFromRequest as jest.MockedFunction<
@@ -60,20 +53,26 @@ const mockGetAuthUserFromRequest = getAuthUserFromRequest as jest.MockedFunction
 >;
 const mockTransformBook = transformBook as jest.MockedFunction<typeof transformBook>;
 
+// Real UUIDs: handleEntityDetailWithBooks validates the format with isValidUuid
+// (invariant 5.6), so placeholder ids like 'author-123' now correctly 400.
+const AUTHOR_ID = '11111111-1111-4111-8111-111111111111';
+const BOOK_ID = '22222222-2222-4222-8222-222222222222';
+const SERIES_ID = '33333333-3333-4333-8333-333333333333';
+
 describe('handleEntityDetailWithBooks', () => {
   const mockUser = { id: 'user-123', username: 'testuser' };
   const mockAuthor = {
-    id: 'author-123',
+    id: AUTHOR_ID,
     name: 'Test Author',
     asin: 'B123456789',
   };
   const mockBook = {
-    id: 'book-123',
+    id: BOOK_ID,
     title: 'Test Book',
     asin: 'B987654321',
   };
   const mockTransformedBook = {
-    id: 'book-123',
+    id: BOOK_ID,
     title: 'Test Book',
     coverUrl: 'http://localhost:3000/api/images/test.jpg',
     audioUrl: 'http://localhost:3000/api/audio/test.mp3',
@@ -92,6 +91,9 @@ describe('handleEntityDetailWithBooks', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // requireUser looks the account up on the bearer path (SEC-2); default to
+    // "still exists" so these tests exercise their own concern.
+    (require('@/lib/db').prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u' });
     mockTransformBook.mockReturnValue(mockTransformedBook as any);
   });
 
@@ -100,8 +102,8 @@ describe('handleEntityDetailWithBooks', () => {
       mockGetServerSession.mockResolvedValue(null);
       mockGetAuthUserFromRequest.mockResolvedValue(null);
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, baseConfig);
       const data = await response.json();
@@ -117,8 +119,8 @@ describe('handleEntityDetailWithBooks', () => {
       (prisma.bookAuthor.findMany as jest.Mock).mockResolvedValue([{ book: mockBook }]);
       (prisma.bookAuthor.count as jest.Mock).mockResolvedValue(1);
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, baseConfig);
 
@@ -133,8 +135,8 @@ describe('handleEntityDetailWithBooks', () => {
       (prisma.bookAuthor.findMany as jest.Mock).mockResolvedValue([{ book: mockBook }]);
       (prisma.bookAuthor.count as jest.Mock).mockResolvedValue(1);
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, baseConfig);
 
@@ -164,8 +166,8 @@ describe('handleEntityDetailWithBooks', () => {
       (prisma.bookAuthor.findMany as jest.Mock).mockResolvedValue([{ book: mockBook }]);
       (prisma.bookAuthor.count as jest.Mock).mockResolvedValue(1);
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, baseConfig);
 
@@ -181,8 +183,8 @@ describe('handleEntityDetailWithBooks', () => {
     it('should return 404 when entity not found', async () => {
       (prisma.author.findUnique as jest.Mock).mockResolvedValue(null);
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, baseConfig);
       const data = await response.json();
@@ -196,14 +198,14 @@ describe('handleEntityDetailWithBooks', () => {
       (prisma.bookAuthor.findMany as jest.Mock).mockResolvedValue([{ book: mockBook }]);
       (prisma.bookAuthor.count as jest.Mock).mockResolvedValue(1);
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, baseConfig);
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.id).toBe('author-123');
+      expect(data.id).toBe(AUTHOR_ID);
       expect(data.name).toBe('Test Author');
     });
   });
@@ -218,8 +220,8 @@ describe('handleEntityDetailWithBooks', () => {
       (prisma.bookAuthor.findMany as jest.Mock).mockResolvedValue([{ book: mockBook }]);
       (prisma.bookAuthor.count as jest.Mock).mockResolvedValue(1);
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       await handleEntityDetailWithBooks(request, params, baseConfig);
 
@@ -227,7 +229,7 @@ describe('handleEntityDetailWithBooks', () => {
       // see docs/hidden-books.md.
       expect(prisma.bookAuthor.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { authorId: 'author-123', book: { hiddenAt: null } },
+          where: { authorId: AUTHOR_ID, book: { hiddenAt: null } },
         })
       );
     });
@@ -237,9 +239,9 @@ describe('handleEntityDetailWithBooks', () => {
       (prisma.bookAuthor.count as jest.Mock).mockResolvedValue(25);
 
       const request = new NextRequest(
-        'http://localhost:3000/api/authors/author-123?page=2&limit=10'
+        `http://localhost:3000/api/authors/${AUTHOR_ID}?page=2&limit=10`
       );
-      const params = { id: 'author-123' };
+      const params = { id: AUTHOR_ID };
 
       await handleEntityDetailWithBooks(request, params, baseConfig);
 
@@ -258,8 +260,8 @@ describe('handleEntityDetailWithBooks', () => {
       ]);
       (prisma.bookAuthor.count as jest.Mock).mockResolvedValue(2);
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, baseConfig);
       const data = await response.json();
@@ -272,8 +274,8 @@ describe('handleEntityDetailWithBooks', () => {
       (prisma.bookAuthor.findMany as jest.Mock).mockResolvedValue([{ book: mockBook }]);
       (prisma.bookAuthor.count as jest.Mock).mockResolvedValue(42);
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, baseConfig);
       const data = await response.json();
@@ -282,7 +284,7 @@ describe('handleEntityDetailWithBooks', () => {
       // Hidden books are excluded from the total too, so the count matches the
       // page the user actually sees.
       expect(prisma.bookAuthor.count).toHaveBeenCalledWith({
-        where: { authorId: 'author-123', book: { hiddenAt: null } },
+        where: { authorId: AUTHOR_ID, book: { hiddenAt: null } },
       });
     });
   });
@@ -297,8 +299,8 @@ describe('handleEntityDetailWithBooks', () => {
     it('should calculate pages correctly', async () => {
       (prisma.bookAuthor.count as jest.Mock).mockResolvedValue(25);
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123?limit=10');
-      const params = { id: 'author-123' };
+      const request = new NextRequest('http://localhost:3000/api/authors/${AUTHOR_ID}?limit=10');
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, baseConfig);
       const data = await response.json();
@@ -310,8 +312,8 @@ describe('handleEntityDetailWithBooks', () => {
       (prisma.bookAuthor.findMany as jest.Mock).mockResolvedValue([]);
       (prisma.bookAuthor.count as jest.Mock).mockResolvedValue(5);
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123?page=10');
-      const params = { id: 'author-123' };
+      const request = new NextRequest('http://localhost:3000/api/authors/${AUTHOR_ID}?page=10');
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, baseConfig);
       const data = await response.json();
@@ -323,8 +325,8 @@ describe('handleEntityDetailWithBooks', () => {
     it('should use custom limit from query params', async () => {
       (prisma.bookAuthor.count as jest.Mock).mockResolvedValue(100);
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123?limit=25');
-      const params = { id: 'author-123' };
+      const request = new NextRequest('http://localhost:3000/api/authors/${AUTHOR_ID}?limit=25');
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, baseConfig);
       const data = await response.json();
@@ -346,8 +348,8 @@ describe('handleEntityDetailWithBooks', () => {
       (prisma.bookSeries.findMany as jest.Mock).mockResolvedValue([{ book: mockBook }]);
       (prisma.bookSeries.count as jest.Mock).mockResolvedValue(1);
 
-      const request = new NextRequest('http://localhost:3000/api/series/series-123');
-      const params = { id: 'series-123' };
+      const request = new NextRequest(`http://localhost:3000/api/series/${SERIES_ID}`);
+      const params = { id: SERIES_ID };
 
       await handleEntityDetailWithBooks(request, params, {
         ...baseConfig,
@@ -363,8 +365,8 @@ describe('handleEntityDetailWithBooks', () => {
     });
 
     it('orders non-series books by title', async () => {
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       await handleEntityDetailWithBooks(request, params, baseConfig);
 
@@ -381,13 +383,13 @@ describe('handleEntityDetailWithBooks', () => {
         entityInclude: { parent: true },
       };
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       await handleEntityDetailWithBooks(request, params, customConfig);
 
       expect(prisma.author.findUnique).toHaveBeenCalledWith({
-        where: { id: 'author-123' },
+        where: { id: AUTHOR_ID },
         include: { parent: true },
       });
     });
@@ -402,8 +404,8 @@ describe('handleEntityDetailWithBooks', () => {
     });
 
     it('should return correct response shape', async () => {
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, baseConfig);
       const data = await response.json();
@@ -429,8 +431,8 @@ describe('handleEntityDetailWithBooks', () => {
         }),
       };
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, customConfig);
       const data = await response.json();
@@ -449,8 +451,8 @@ describe('handleEntityDetailWithBooks', () => {
     it('should return 500 on database error', async () => {
       (prisma.author.findUnique as jest.Mock).mockRejectedValue(new Error('Database error'));
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       const response = await handleEntityDetailWithBooks(request, params, baseConfig);
       const data = await response.json();
@@ -463,8 +465,8 @@ describe('handleEntityDetailWithBooks', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
       (prisma.author.findUnique as jest.Mock).mockRejectedValue(new Error('Database error'));
 
-      const request = new NextRequest('http://localhost:3000/api/authors/author-123');
-      const params = { id: 'author-123' };
+      const request = new NextRequest(`http://localhost:3000/api/authors/${AUTHOR_ID}`);
+      const params = { id: AUTHOR_ID };
 
       await handleEntityDetailWithBooks(request, params, baseConfig);
 

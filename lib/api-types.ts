@@ -1403,6 +1403,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Too many login attempts from this IP */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     refreshToken: {
@@ -1462,6 +1471,15 @@ export interface operations {
             };
             /** @description Invalid or expired refresh token */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Too many refresh attempts from this IP */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

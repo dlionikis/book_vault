@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { generateAccessToken, generateRefreshToken, getAccessTokenExpiry } from '@/lib/jwt';
 import { withLogging } from '@/lib/logger';
+import { checkIpRateLimit } from '@/lib/rate-limit';
 
 /**
  * POST /api/auth/mobile/login
@@ -26,6 +27,15 @@ import { withLogging } from '@/lib/logger';
  */
 export const POST = withLogging(async (request: NextRequest) => {
   try {
+    // Throttle by IP before touching the database. This runs pre-auth, so the
+    // user-keyed checkRateLimit cannot help here.
+    if (!checkIpRateLimit(request, 'login')) {
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { username, password } = body;
 
