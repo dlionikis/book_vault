@@ -1,208 +1,81 @@
 # Book Vault
 
+[![Main Validation](https://github.com/dlionikis/book_vault/actions/workflows/main.yml/badge.svg)](https://github.com/dlionikis/book_vault/actions/workflows/main.yml)
 [![API Contract](https://github.com/dlionikis/book_vault/actions/workflows/api.yml/badge.svg)](https://github.com/dlionikis/book_vault/actions/workflows/api.yml)
+[![iOS Tests](https://github.com/dlionikis/book_vault/actions/workflows/ios-tests.yml/badge.svg)](https://github.com/dlionikis/book_vault/actions/workflows/ios-tests.yml)
+[![E2E](https://github.com/dlionikis/book_vault/actions/workflows/e2e.yml/badge.svg)](https://github.com/dlionikis/book_vault/actions/workflows/e2e.yml)
 [![Storybook](https://github.com/dlionikis/book_vault/actions/workflows/storybook.yml/badge.svg)](https://github.com/dlionikis/book_vault/actions/workflows/storybook.yml)
 
-A personal audiobook library web application for hosting and managing audiobooks from Audible, processed through Libation.
+A personal audiobook library — web app and native iOS app — for hosting, organizing, and streaming audiobooks from Audible, processed through [Libation](https://github.com/rmcrackan/Libation).
 
-**API Status**:
+**Production**: https://bookvault.lionikis.com
 
-- ✅ OpenAPI spec valid (0 warnings)
-- ✅ TypeScript types auto-generated
-- ✅ 23 contract tests passing
-- 📱 Ready for iOS development
+## Status
+
+See **[docs/STATUS.md](docs/STATUS.md)** for current state, recent merges, and the roadmap. That file is the single source of truth — this README intentionally doesn't duplicate it.
 
 ## Overview
 
-Book Vault is a web-based application designed to organize, search, and stream personal audiobook collections. The application provides a rich browsing experience with support for viewing books by author, series, narrator, title, and category, with full-text search capabilities across book descriptions.
+Book Vault organizes, searches, and streams a personal audiobook collection. It provides a rich browsing experience across authors, series, narrators, titles, and categories, with full-text search over book descriptions — on the web, on iOS, and in CarPlay.
 
 ## Features
 
-- **Audio Playback**: Stream audiobooks directly in the browser with:
-  - Play/pause controls
-  - Seek bar for jumping to any position
-  - Skip backward (15s) and forward (30s)
-  - Adjustable playback speed (0.75x to 2x)
-  - Volume control with mute
-  - Time display
-  - Automatic position saving and resume
-- **Progress Tracking**: Track listening progress across all books
-  - Automatic position saving during playback
-  - Three states: not started, in progress, finished
-  - Manual controls to mark books as finished or reset progress
-  - Continue listening carousel on home page
-  - Visual progress indicators with percentages
-- **User Authentication**: Secure login with password protection
-- **Multi-faceted Browsing**: View books by:
-  - Author
-  - Series (with proper sequencing)
-  - Narrator
-  - Title
-  - Category
-- **Advanced Search**: Full-text search across:
-  - Authors
-  - Narrators
-  - Titles
-  - Categories
-  - Book descriptions
-- **Pagination**: Navigate large collections with smart pagination controls
-- **Rich Media**: Cover photo display for all books
-- **Series Detection**: Automatically detect and group related books in a series
-- **User Lists**: Create custom lists to organize books ("Want to Listen", "Favorites", etc.)
-- **AWS Deployment**: Designed for cloud deployment on AWS infrastructure
-- **Mobile Ready**: API-first design supports future iOS app development
+### Playback
 
-## Data Source
+- **Web player**: play/pause, seek bar, skip back 15s / forward 30s, playback speed (0.75x–2x), volume with mute, time display, automatic position saving and resume
+- **iOS player**: background audio, lock-screen and Control Center controls, audio-interruption resume, a persistent mini player, and chapter navigation
+- **CarPlay**: browse your library, series, and downloaded books; Now Playing with chapter navigation
+- **Chapter support**: chapters extracted from audio files and used for navigation
 
-The application reads audiobook data from a Libation export directory structure:
+### Library
 
-- **Structure**: Each folder represents one book and contains:
-  - Audio file(s) (`.mp3`)
-  - Metadata file (`.metadata.json`)
-  - Cover image (`.jpg`)
-  - Cue file (`.cue`)
+- **Progress tracking**: automatic position saving, three states (not started / in progress / finished), manual mark-finished and reset, "Continue Listening" carousel, visual progress indicators
+- **Multi-faceted browsing**: by author, series (properly sequenced), narrator, title, and hierarchical category
+- **Series view toggle**: switch between a Books and a Series view on Catalog and Library, with derived series covers and "N of M in your library" ownership
+- **Full-text search**: across authors, narrators, titles, categories, and descriptions
+- **User lists**: custom collections for organizing books
+- **Offline downloads (iOS)**: background downloads for listening without a connection
+- **Pagination**, **cover art**, and **dark mode** throughout
 
-### Metadata Structure
+### Platform
 
-Each book's `.metadata.json` file contains:
-
-- `title`: Book title
-- `asin`: Amazon Standard Identification Number
-- `authors`: Array of author objects with name and ASIN
-- `narrators`: Array of narrator objects with name and ASIN
-- `series`: Array of series information including sequence numbers
-- `publisher_summary`: HTML-formatted book description
-- `category_ladders`: Hierarchical category information
-- `runtime_length_min`: Duration in minutes
+- **Dual authentication**: NextAuth session for the web, JWT bearer tokens for mobile, with a shared token-refresh coordinator
+- **S3 archive restore**: books in the S3 Intelligent-Tiering Archive tier show a badge and auto-initiate a restore on play; a poller and nightly sync track state; APNs push notifies when a restore completes
+- **Admin dashboard**: AWS infrastructure health, cost/budget monitoring, ECS tasks, and a Restores tab
+- **OpenAPI-first API**: the spec drives generated TypeScript and Swift types, enforced by contract tests
 
 ## Technology Stack
 
-### Current Implementation
-
-- **Framework**: Next.js 14.2.35 (App Router)
-- **Language**: TypeScript 5.7.2
-- **Database**: PostgreSQL 15 (Docker)
-- **ORM**: Prisma 5.22.0
-- **Styling**: Tailwind CSS 3.4.15
-- **Authentication**: NextAuth.js 4.24.10 (configured, not yet implemented)
-- **Deployment**: Local development (AWS deployment planned)
+| Layer          | Technology                                                |
+| -------------- | --------------------------------------------------------- |
+| Framework      | Next.js 16 (App Router)                                   |
+| Language       | TypeScript 5.7 (strict mode)                              |
+| UI             | React 19, Tailwind CSS 3.4                                |
+| Database       | PostgreSQL — Docker locally, Amazon RDS in production     |
+| ORM            | Prisma 7                                                  |
+| Authentication | NextAuth.js 4 (web sessions) + JWT bearer tokens (mobile) |
+| Media storage  | Local filesystem in development, Amazon S3 in production  |
+| iOS            | Swift 6 (strict concurrency) + SwiftUI                    |
+| Runtime        | Node.js 24                                                |
+| Hosting        | AWS — ALB (HTTPS) → ECS Fargate (arm64/Graviton), RDS, S3 |
 
 ### Development Tools
 
-- **Linting**: ESLint 8.57.1 with Next.js config
-- **Formatting**: Prettier 3.4.2
-- **Git Hooks**: Husky + lint-staged
-- **Type Safety**: TypeScript with strict mode
-- **Security**: npm audit, pre-commit hooks
-
-## API Documentation
-
-Book Vault uses OpenAPI 3.0 for API documentation and code generation.
-
-**View API Docs**: Open `docs/api/api-reference.html` in your browser
-
-**Generate Docs**:
-
-```bash
-npm run docs:generate  # Generate types + documentation
-```
-
-**Available Commands**:
-
-- `npm run api:validate` - Validate OpenAPI spec
-- `npm run api:generate` - Generate TypeScript + Swift types
-- `npm run api:docs` - Generate HTML documentation
-- `npm run api:watch` - Auto-regenerate on changes
-
-See [docs/openapi-implementation-plan.md](docs/openapi-implementation-plan.md) for details.
-
-## iOS Mobile App
-
-Native iOS app for Book Vault (pre-development setup complete).
-
-**Status**: ✅ Pre-development complete, ready for Phase 1 implementation
-**Technology**: Swift + SwiftUI
-**Location**: `ios/BookVault/`
-
-**Getting Started**:
-
-```bash
-# Generate Swift models from OpenAPI spec
-npm run api:generate:swift
-
-# Open Xcode project
-open ios/BookVault.xcodeproj
-```
-
-See [docs/mobile-ios-plan.md](docs/mobile-ios-plan.md) for implementation plan and [docs/mobile/ios-development-setup.md](docs/mobile/ios-development-setup.md) for setup instructions.
-
-## Documentation
-
-Comprehensive documentation is available in the [`docs/`](docs/) directory:
-
-### Core Documentation
-
-- **[Architecture](docs/architecture.md)** - System design, data models, and technical architecture
-- **[Development Roadmap](docs/development-roadmap.md)** - Feature roadmap, TODO items, and next steps
-- **[Testing Guide](docs/testing.md)** - Testing strategy, running tests, and coverage reports
-- **[Contributing](CONTRIBUTING.md)** - Guidelines for contributing to the project
-
-### Setup & Configuration
-
-- **[Media Configuration](docs/media-configuration.md)** - Configuring media data paths and file locations
-- **[Testing](docs/testing.md)** - All testing commands, code quality tools, and CI/CD
-
-### Technical Details
-
-- **[API Security](docs/API_SECURITY.md)** - Authentication, endpoint protection, and security audit
-- **[Media Security Verification](docs/media-security.md)** - Analysis of file access patterns and security measures
-- **[Changelog](CHANGELOG.md)** - Version history and release notes
-
-## Development Approach
-
-This is an **AI-first development project**, meaning:
-
-1. AI agents will assist with all development phases
-2. Context and goals are documented for AI reference
-3. Architecture decisions are made collaboratively
-4. Code quality and best practices are maintained
-
-## Project Status
-
-🚀 **Status**: Active Development
-
-### ✅ Completed (Phase 1-3)
-
-- Database schema and data import from Libation
-- Full-featured web UI with browse and search
-- Book detail pages with metadata and customer reviews
-- Author, narrator, series, and category pages
-- Sort functionality (by title, author, narrator, series)
-- Pagination with smart page number display (20 items per page)
-- Responsive design with Tailwind CSS
-- API routes for all entities with pagination support
-- Code quality tools (ESLint, Prettier, Husky)
-- Comprehensive test suite (70 tests)
-
-### 🚧 In Progress
-
-- Audio player implementation
-- User authentication
-
-### 📋 Planned
-
-- User progress tracking
-- Custom book lists
-- AWS deployment
-- iOS mobile app (pre-development complete, ready for Phase 1)
+- **Testing**: Jest + React Testing Library (web), XCTest + XCUITest (iOS), Playwright (E2E), contract tests against the OpenAPI spec
+- **Linting**: ESLint 9 with Next.js config; SwiftLint for iOS
+- **Formatting**: Prettier 3
+- **Components**: Storybook 10 with the a11y addon
+- **Git hooks**: Husky + lint-staged
+- **Project generation**: XcodeGen for the iOS project
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 24+
 - Docker (for PostgreSQL)
-- Libation audiobook directory
+- A Libation audiobook directory (or use the bundled `test-data`)
+- Xcode (latest stable, matching CI) and XcodeGen — for iOS work only
 
 ### Installation
 
@@ -225,152 +98,265 @@ This is an **AI-first development project**, meaning:
    docker-compose up -d
    ```
 
-   This starts PostgreSQL on port 5433 (avoiding conflicts with local postgres on 5432).
-
-   To stop the database: `docker-compose down`
+   This starts PostgreSQL on port **5433** (avoiding conflicts with a local postgres on 5432). To stop it: `docker-compose down`.
 
 4. **Configure environment**
 
    ```bash
    cp .env.example .env.local
-   # Edit .env.local with your settings:
-   # - DATABASE_URL: Database connection string
-   # - MEDIA_DATA_PATH: Path to your audiobook files (default: test-data)
-   # - LIBATION_PATH: Source directory for import (optional)
    ```
 
-   **Media Path Options:**
+   Edit `.env.local` — at minimum `DATABASE_URL`, `NEXTAUTH_SECRET`, and `MEDIA_DATA_PATH`.
+
+   **Media path options:**
 
    ```bash
-   # Option 1: Use small test dataset (default)
-   MEDIA_DATA_PATH="test-data"
-
-   # Option 2: Point to your full Libation library
-   MEDIA_DATA_PATH="/Volumes/BeeDrive/Libation"
-
-   # Option 3: Use custom directory
-   MEDIA_DATA_PATH="/path/to/audiobooks"
+   MEDIA_DATA_PATH="test-data"                  # Small bundled test dataset (default)
+   MEDIA_DATA_PATH="/Volumes/BeeDrive/Libation" # Your full Libation library
+   MEDIA_DATA_PATH="/path/to/audiobooks"        # Any custom directory
    ```
 
    See [docs/media-configuration.md](docs/media-configuration.md) for details.
 
-5. **Set up database**
+5. **Set up the database**
 
    ```bash
    npm run db:migrate
-   npm run db:generate
    ```
 
-6. **Seed test user (optional but recommended for development)**
+   This runs migrations and generates the Prisma client.
 
-   ```bash
-   npm run db:seed
-   ```
-
-   This creates a test user with:
-   - Email: `test@example.com`
-   - Password: `password123`
-
-7. **Upload media files to S3 (production only)**
-
-   If deploying to AWS, copy your audiobook files to S3 before importing:
-
-   ```bash
-   aws s3 sync /Volumes/BeeDrive/Libation/ s3://book-vault-media/ \
-     --exclude "*.cue" \
-     --exclude "Icon*" \
-     --exclude "Icon?" \
-     --exclude ".DS_Store" \
-     --profile book_vault \
-     --region us-east-1
-   ```
-
-   The `sync` command preserves folder structure and is resumable — safe to interrupt and re-run.
-
-8. **Import audiobooks**
-
-   **Local development:**
+6. **Import audiobooks**
 
    ```bash
    npm run import
    ```
 
-   **Production (against RDS):**
+   The import script reads from `LIBATION_PATH` if set, otherwise `MEDIA_DATA_PATH`.
 
-   The production database is in a private VPC and not publicly accessible. To import:
-   1. Temporarily open the RDS security group for your IP:
+7. **Seed a test user**
 
-      ```bash
-      # Get your public IP
-      curl -s https://checkip.amazonaws.com
+   ```bash
+   npm run db:seed
+   ```
 
-      # Open port 5432 for your IP (replace <YOUR_IP>)
-      aws ec2 authorize-security-group-ingress \
-        --group-id <RDS_SECURITY_GROUP_ID> \
-        --protocol tcp --port 5432 \
-        --cidr <YOUR_IP>/32 \
-        --profile book_vault --region us-east-1
-      ```
+   Creates `testuser` / `password123` — override with `TEST_USER_USERNAME` and `TEST_USER_PASSWORD`. Book Vault authenticates by **username**, not email.
 
-   2. Run the import with the production DATABASE_URL:
+   For any other user, use `npm run user:create local <username> [password]` (a password is generated if you omit it).
 
-      ```bash
-      DATABASE_URL="<PRODUCTION_DATABASE_URL>" \
-        MEDIA_DATA_PATH=<AUDIO_BOOK_SOURCE_PATH> \
-        npm run import
-      ```
-
-      Get the production DATABASE_URL from AWS Secrets Manager (`book-vault/database`).
-
-   3. **Close the security group immediately after:**
-
-      ```bash
-      aws ec2 revoke-security-group-ingress \
-        --group-id <RDS_SECURITY_GROUP_ID> \
-        --security-group-rule-ids <RULE_ID_FROM_STEP_1> \
-        --profile book_vault --region us-east-1
-      ```
-
-   Note: The import script automatically creates the test user if it doesn't exist.
-
-9. **Start development server**
+8. **Start the development server**
 
    ```bash
    npm run dev
    ```
 
-10. **Open application**
-    Navigate to [http://localhost:3000](http://localhost:3000)
+   Then open [http://localhost:3000](http://localhost:3000).
 
-### Available Commands
+## Commands
+
+### Development
 
 ```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
-npm run lint         # Run ESLint
-npm run format       # Format code with Prettier
-npm run type-check   # Check TypeScript types
-npm run validate     # Run all checks (format, lint, types)
-npm run test         # Run test suite
-npm run import       # Import audiobooks from Libation
-npm run db:migrate   # Run database migrations
-npm run db:generate  # Generate Prisma client
+npm run dev            # Start dev server
+npm run dev:https      # Start dev server over HTTPS (for iOS device testing)
+npm run build          # Production build
+npm run start          # Start production server
+npm run storybook      # Component explorer on :6006
 ```
 
-### Database Management
-
-**Reset database and reimport:**
+### Validation
 
 ```bash
-# Reset the database (clears all data)
-npx prisma migrate reset --skip-seed --force
+npm run validate:full  # THE PR GATE — web + DB + iOS + E2E + drift + coverage
+npm run validate:web   # Web only (no Xcode required)
+npm run validate:ios   # iOS only
+npm run validate       # format:check + lint + type-check + unit tests
+npm test               # Unit tests only — NOT sufficient before a PR
+```
 
-# Reimport all books
+**Run `npm run validate:full` before every PR.** It requires Docker and Xcode. See [docs/development-process.md](docs/development-process.md) for the complete test inventory, what CI enforces, and the hardening invariants that must not regress.
+
+### Testing
+
+```bash
+npm test               # Unit tests
+npm run test:coverage  # With coverage report
+npm run test:integration  # Integration tests (needs Docker)
+npm run test:contract  # API contract tests against the OpenAPI spec
+npm run test:e2e       # Playwright web smoke tests
+npm run ios:test       # iOS unit tests
+npm run ios:test:ui    # iOS XCUITest UI tests
+```
+
+Full details in [docs/testing.md](docs/testing.md).
+
+### Database
+
+```bash
+npm run db:migrate        # Run migrations + generate client
+npm run db:migrate:deploy # Apply migrations to production
+npm run db:generate       # Generate the Prisma client
+npm run db:seed           # Seed the test user
+npm run db:studio         # Prisma Studio GUI
+npm run db:connect        # psql into local or production
+```
+
+**Reset and reimport:**
+
+```bash
+npx prisma migrate reset --force  # Drops data, reapplies migrations, reseeds the test user
 npm run import
 ```
 
-**Note:** The import script automatically uses the path configured in your `.env.local` file (`LIBATION_PATH` or `MEDIA_DATA_PATH`).
+See [docs/database-migration-guide.md](docs/database-migration-guide.md) and [docs/database-reset-procedure.md](docs/database-reset-procedure.md).
+
+### Users
+
+```bash
+npm run user:create <local|prod> <username> [password]
+npm run user:reset-password
+npm run user:delete
+```
+
+### API
+
+```bash
+npm run api:validate       # Lint the OpenAPI spec
+npm run api:generate       # Regenerate TypeScript + Swift types
+npm run api:generate:ts    # TypeScript types only
+npm run api:generate:swift # Swift models only
+npm run api:docs           # Build docs/api/api-reference.html
+npm run api:watch          # Auto-regenerate on spec changes
+npm run api:check-drift    # Fail if generated types are stale
+```
+
+### iOS
+
+```bash
+npm run api:generate:swift  # Regenerate Swift models from the spec
+cd ios && xcodegen generate # Rebuild the Xcode project (required for new files)
+open ios/BookVault.xcodeproj
+npm run ios:validate        # Lint + build + test
+```
+
+### Deployment
+
+```bash
+npm run deploy          # Full validation + deploy
+npm run deploy:dry-run  # Validate only
+npm run deploy:web      # Web only
+```
+
+Production import (the RDS instance sits in a private VPC — `import:prod` opens the firewall for your IP and closes it again on exit):
+
+```bash
+npm run import:prod
+
+# Manual firewall control, if you need it
+npm run db:firewall:open
+npm run db:firewall:list
+npm run db:firewall:close
+```
+
+See [docs/aws-deployment-reference.md](docs/aws-deployment-reference.md).
+
+## Data Source
+
+The application imports from a Libation export directory. Each folder is one book:
+
+- Audio file (`.m4b` or `.mp3`)
+- Metadata (`.metadata.json`)
+- Cover image (`.jpg`)
+- Cue sheet (`.cue`)
+
+### Metadata Structure
+
+Each book's `.metadata.json` provides:
+
+| Field                | Meaning                                |
+| -------------------- | -------------------------------------- |
+| `title`              | Book title                             |
+| `asin`               | Amazon Standard Identification Number  |
+| `authors`            | Author objects with name and ASIN      |
+| `narrators`          | Narrator objects with name and ASIN    |
+| `series`             | Series info including sequence numbers |
+| `publisher_summary`  | HTML-formatted description             |
+| `category_ladders`   | Hierarchical category information      |
+| `runtime_length_min` | Duration in minutes                    |
+
+## API Documentation
+
+Book Vault is OpenAPI-first: [docs/api/openapi.yaml](docs/api/openapi.yaml) is updated **before** endpoints are implemented, and it generates both the TypeScript types (`lib/api-types.ts`) and the iOS Swift models. Contract tests enforce that the implementation matches.
+
+Build and view the reference:
+
+```bash
+npm run api:docs   # writes docs/api/api-reference.html
+```
+
+For a quick endpoint cheat sheet, see [docs/api-quick-ref.md](docs/api-quick-ref.md).
+
+## iOS App
+
+A native Swift 6 / SwiftUI app lives in [ios/BookVault/](ios/BookVault/), with streaming and offline playback, background downloads, push notifications, and CarPlay support.
+
+```bash
+npm run api:generate:swift
+cd ios && xcodegen generate
+open ios/BookVault.xcodeproj
+```
+
+New Swift files require `xcodegen generate` before building, even when `project.yml` already globs the directory.
+
+See [docs/mobile/architecture.md](docs/mobile/architecture.md) for patterns and maintenance, [docs/mobile/ios-development-setup.md](docs/mobile/ios-development-setup.md) for setup, and [docs/mobile/xcodegen-guide.md](docs/mobile/xcodegen-guide.md) for adding files.
+
+## Documentation
+
+**Start with [docs/INDEX.md](docs/INDEX.md)** — the complete documentation map. Highlights:
+
+### Essential
+
+| File                                                       | Purpose                                         |
+| ---------------------------------------------------------- | ----------------------------------------------- |
+| [CLAUDE.md](CLAUDE.md)                                     | Project overview, commands, and coding patterns |
+| [docs/STATUS.md](docs/STATUS.md)                           | Current state, recent PRs, roadmap              |
+| [docs/development-process.md](docs/development-process.md) | The PR gate, all tests, hardening invariants    |
+| [docs/architecture.md](docs/architecture.md)               | System design and data models                   |
+
+### Reference
+
+| File                                               | Purpose                        |
+| -------------------------------------------------- | ------------------------------ |
+| [docs/component-guide.md](docs/component-guide.md) | Which component to use         |
+| [docs/data-flows.md](docs/data-flows.md)           | How data moves through the app |
+| [docs/api-quick-ref.md](docs/api-quick-ref.md)     | API endpoint cheat sheet       |
+| [docs/testing.md](docs/testing.md)                 | All testing commands           |
+| [docs/storybook.md](docs/storybook.md)             | Component stories              |
+| [docs/conventions.md](docs/conventions.md)         | Code conventions               |
+| [docs/decisions.md](docs/decisions.md)             | Architecture decision records  |
+
+### Operations & Security
+
+| File                                                                 | Purpose                              |
+| -------------------------------------------------------------------- | ------------------------------------ |
+| [docs/aws-deployment-reference.md](docs/aws-deployment-reference.md) | Deploy commands and AWS architecture |
+| [docs/database-migration-guide.md](docs/database-migration-guide.md) | Production DB migrations             |
+| [docs/media-configuration.md](docs/media-configuration.md)           | Media paths and file locations       |
+| [docs/API_SECURITY.md](docs/API_SECURITY.md)                         | Auth, endpoint protection, audit     |
+| [docs/media-security.md](docs/media-security.md)                     | File access patterns and safeguards  |
+
+Also: [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md).
+
+## Development Approach
+
+This is an **AI-first development project**:
+
+1. AI agents assist across all development phases
+2. Context and goals are documented for AI reference — see [CLAUDE.md](CLAUDE.md)
+3. Architecture decisions are made collaboratively and recorded in [docs/decisions.md](docs/decisions.md)
+4. Code quality is enforced by gates, not convention — see [docs/development-process.md](docs/development-process.md)
+
+**Project motto**: "Keep it simple, make it work, test thoroughly"
 
 ## License
 
@@ -378,4 +364,4 @@ Personal Use Only
 
 ## Contact
 
-Demetri - Personal Project
+Demetri — personal project

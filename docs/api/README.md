@@ -64,7 +64,7 @@ RUN_CONTRACT_TESTS=true npm test -- openapi-contract
 
 - `RUN_CONTRACT_TESTS=true` - Enable contract tests (default: skipped)
 - `TEST_API_URL` - API base URL (default: http://localhost:3000)
-- `TEST_USER_EMAIL` - Test user email (default: test@example.com)
+- `TEST_USER_USERNAME` - Test user username (default: testuser)
 - `TEST_USER_PASSWORD` - Test user password (default: password123)
 
 **Prerequisites**:
