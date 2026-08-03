@@ -3,7 +3,11 @@ import { NextRequest } from 'next/server';
 jest.mock('next-auth');
 jest.mock('@/lib/auth');
 jest.mock('@/lib/db', () => ({
-  prisma: { userDeviceToken: { upsert: jest.fn(), updateMany: jest.fn() } },
+  prisma: {
+    userDeviceToken: { upsert: jest.fn(), updateMany: jest.fn() },
+    // requireUser re-checks the account exists on the bearer path (SEC-2).
+    user: { findUnique: jest.fn() },
+  },
 }));
 jest.mock('@/lib/notification-service', () => ({
   NotificationService: { registerEndpoint: jest.fn() },
@@ -28,6 +32,9 @@ function req(method: string, body?: unknown) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // requireUser looks the account up on the bearer path (SEC-2); default to
+  // "still exists" so these tests exercise their own concern.
+  (require('@/lib/db').prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u' });
   mockSession.mockResolvedValue(null);
   mockBearer.mockResolvedValue({ id: 'user-1', username: 'u' });
   (prisma.userDeviceToken.upsert as jest.Mock).mockResolvedValue({});

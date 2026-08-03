@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/api-auth';
 import { logger } from '@/lib/logger';
-import { normalizeUuid, buildPagination, parsePagination } from '@/lib/api-utils';
+import { normalizeUuid, isValidUuid, buildPagination, parsePagination } from '@/lib/api-utils';
 import { EntityKind, getEntityBooksPage } from '@/lib/queries/entity-books';
 
 /**
@@ -87,8 +87,12 @@ export async function handleEntityDetailWithBooks<TEntity>(
   if (auth.error) return auth.error;
 
   // 2. Normalize and validate UUID
+  //
+  // `isValidUuid`, not a truthiness check: normalizeUuid only lowercases, so a
+  // malformed-but-non-empty id used to reach Prisma and surface as a 404 where
+  // the spec promises 400 (invariant 5.6 in docs/development-process.md).
   const entityId = normalizeUuid(params.id);
-  if (!entityId) {
+  if (!isValidUuid(entityId)) {
     return NextResponse.json(
       { error: `Invalid ${config.entityName.toLowerCase()} ID format` },
       { status: 400 }

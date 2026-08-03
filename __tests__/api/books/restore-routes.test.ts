@@ -18,6 +18,8 @@ jest.mock('next-auth');
 jest.mock('@/lib/auth');
 jest.mock('@/lib/db', () => ({
   prisma: {
+    // requireUser re-checks the account exists on the bearer path (SEC-2).
+    user: { findUnique: jest.fn() },
     book: {
       findUnique: jest.fn(),
     },
@@ -66,6 +68,9 @@ function authenticate() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // requireUser looks the account up on the bearer path (SEC-2); default to
+  // "still exists" so these tests exercise their own concern.
+  (require('@/lib/db').prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u' });
   mockGetServerSession.mockResolvedValue(null);
   mockGetAuthUserFromRequest.mockResolvedValue(null);
   mockIsS3Enabled.mockReturnValue(false);

@@ -10,6 +10,10 @@ import { getAuthUserFromRequest } from '@/lib/auth';
 
 jest.mock('next-auth');
 jest.mock('@/lib/auth');
+jest.mock('@/lib/db', () => ({
+  // requireUser re-checks the account exists on the bearer path (SEC-2).
+  prisma: { user: { findUnique: jest.fn() } },
+}));
 jest.mock('@/lib/catalog-series-view', () => ({
   getCatalogSeriesView: jest.fn(),
 }));
@@ -27,6 +31,8 @@ const mockGetCatalogSeriesView = getCatalogSeriesView as jest.MockedFunction<
 
 function authenticate() {
   mockGetAuthUserFromRequest.mockResolvedValue({ id: 'user-123', username: 'testuser' });
+  // requireUser then confirms the row still exists (SEC-2).
+  (require('@/lib/db').prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'user-123' });
 }
 
 const makeRequest = (query = '') =>

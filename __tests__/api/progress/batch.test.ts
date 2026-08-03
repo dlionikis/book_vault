@@ -9,6 +9,8 @@ jest.mock('next-auth');
 jest.mock('@/lib/auth');
 jest.mock('@/lib/db', () => ({
   prisma: {
+    // requireUser re-checks the account exists on the bearer path (SEC-2).
+    user: { findUnique: jest.fn() },
     userProgress: {
       findUnique: jest.fn(),
       upsert: jest.fn(),
@@ -36,6 +38,9 @@ describe('POST /api/progress/batch', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // requireUser looks the account up on the bearer path (SEC-2); default to
+    // "still exists" so these tests exercise their own concern.
+    (require('@/lib/db').prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'u' });
   });
 
   it('should return 401 if not authenticated', async () => {

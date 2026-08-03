@@ -1,6 +1,6 @@
 # AWS Deployment Reference
 
-> Quick reference for AWS deployment operations. For full deployment history and setup details, see [archive/aws-deployment-plan-full.md](archive/aws-deployment-plan-full.md).
+> Quick reference for AWS deployment operations. For full deployment history and setup details, see [archive/aws-deployment-plan-full.md](archive/completed-plans/aws-deployment-plan-full.md).
 
 **Live URL**: https://bookvault.lionikis.com
 **Status**: Production (deployed December 31, 2025)
@@ -200,4 +200,4 @@ aws s3 ls
 ## Full Documentation
 
 For complete setup history, infrastructure details, and cleanup procedures, see:
-[archive/aws-deployment-plan-full.md](archive/aws-deployment-plan-full.md)
+[archive/aws-deployment-plan-full.md](archive/completed-plans/aws-deployment-plan-full.md)

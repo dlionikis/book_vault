@@ -312,7 +312,7 @@ equivalent for CarPlay templates.
 ```
 
 The manual matrix lives in §5 of
-[plans/carplay-implementation-plan.md](plans/carplay-implementation-plan.md).
+[plans/carplay-implementation-plan.md](archive/ios-phases/carplay-implementation-plan.md).
 The cases most worth running, because unit tests structurally cannot reach them:
 
 - Cold launch **mid session-restore** — must show a neutral state, not a false

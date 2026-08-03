@@ -80,6 +80,9 @@ jobs:
           node-version: '24'
           cache: 'npm'
       - run: npm ci
-      - name: Run npm audit
-        run: npm audit --production --audit-level=high
-        continue-on-error: true
+      # Fails on NEW high/critical advisories; the handful we have analyzed and
+      # cannot fix from this repo are allowlisted by GHSA id in the script.
+      # Previously `npm audit ... || true` via continue-on-error, which meant a
+      # new critical CVE reported "pass" (audit finding S-4).
+      - name: Check for new high/critical advisories
+        run: npm run security:audit

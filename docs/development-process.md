@@ -184,8 +184,9 @@ do not reintroduce the anti-pattern; when you review, spot-check these.
 - **Invariant**: No API route reads `getServerSession` inline. All authenticated routes
   use `requireUser(request)` (dual session/bearer) or `requireAdmin(request)` from
   `lib/api-auth.ts` / `lib/admin-auth.ts`.
-- **Guard**: route tests assert 401 unauthenticated; `requireUser` unit tests pin the
-  four auth combinations.
+- **Guard**: route tests assert 401 unauthenticated; `requireUser` unit tests
+  ([`__tests__/lib/api-auth.test.ts`](../__tests__/lib/api-auth.test.ts)) pin the
+  four auth combinations plus the deleted-account case.
 - **Manual check**:
   ```bash
   grep -rln "getServerSession" app/api --include=route.ts | grep -v nextauth
@@ -193,6 +194,14 @@ do not reintroduce the anti-pattern; when you review, spot-check these.
   ```
 - **New route checklist**: start the handler with `requireUser`; validate the id with
   `isValidUuid` (see 5.6); add a 401 test.
+- **Bearer tokens are re-checked against the DB** (SEC-2, fixed Aug 2026).
+  `requireUser` looks up the account on the bearer path, so deleting a user
+  revokes access immediately instead of after their access token expires (up to
+  `JWT_ACCESS_TOKEN_EXPIRY`, default 1h). Web sessions are exempt — a NextAuth JWT
+  carries no DB identity to re-check, and is revoked by rotating
+  `NEXTAUTH_SECRET`. **Consequence for tests**: any suite that mocks `@/lib/db`
+  and exercises a `requireUser` route must include
+  `user: { findUnique: jest.fn() }` and resolve it to a row, or every request 401s.
 
 ### 5.2 Images route is authenticated (P0-1)
 
@@ -224,13 +233,13 @@ do not reintroduce the anti-pattern; when you review, spot-check these.
 
 ### 5.5 Real JWT/auth tests, no global crypto stub (P1-4)
 
-- **Invariant**: `jest.config.js` has **no `moduleNameMapper` stub for `jose`**. Auth
+- **Invariant**: `jest.config.cjs` has **no `moduleNameMapper` stub for `jose`**. Auth
   tests mock our boundary (`@/lib/jwt`), not the crypto library. Real jose round-trip
   tests live in `__tests__/lib/jwt.test.ts`.
 - **Note**: `jose` _does_ appear in `transformIgnorePatterns` (it's ESM-only and must be
   transformed) — that's correct and unrelated. The banned thing is a `moduleNameMapper`
   entry that force-stubs it.
-- **Manual check**: `grep -A2 "moduleNameMapper" jest.config.js` shows only the `@/` alias.
+- **Manual check**: `grep -A2 "moduleNameMapper" jest.config.cjs` shows only the `@/` alias.
 
 ### 5.6 UUID validation is real, not just normalization
 
@@ -252,7 +261,7 @@ do not reintroduce the anti-pattern; when you review, spot-check these.
 
 ### 5.8 Coverage ratchet (P0-3)
 
-- **Invariant**: `jest.config.js` `coverageThreshold.global` is a **ratchet** pinned just
+- **Invariant**: `jest.config.cjs` `coverageThreshold.global` is a **ratchet** pinned just
   below the measured floor (currently 37/36/38/37). It only moves **up**. Never lower it
   to make a PR pass — add tests instead.
 - **Manual check**: `npm run test:coverage` exits 0 with the table above the thresholds.
@@ -262,6 +271,35 @@ do not reintroduce the anti-pattern; when you review, spot-check these.
 - **Invariant**: the Zod validation suite lives at `__tests__/helpers/api-schemas.ts`,
   imported only by the type-validation test — not back in `lib/`.
 - **Manual check**: `ls lib/api-schemas.ts` → not found; `ls __tests__/helpers/api-schemas.ts` → found.
+
+### 5.10 Pre-auth endpoints are rate limited (S-2)
+
+- **Invariant**: every route reachable **without** credentials throttles by client
+  IP via `checkIpRateLimit` from `lib/rate-limit.ts`. `checkRateLimit` keys on a
+  user id and cannot protect these.
+- **Currently covered**: `POST /api/auth/mobile/login` (10/min),
+  `POST /api/auth/mobile/refresh` (30/min).
+- **Known limitation**: state is an in-process `Map`, so limits are **per ECS
+  task** and reset on deploy. It bounds credential stuffing; it is not a
+  guarantee. Shared state (Redis/DynamoDB) or an ALB WAF rule is the real fix.
+- **Manual check**: `grep -c checkIpRateLimit app/api/auth/mobile/login/route.ts` → ≥1.
+- **When adding a public route**: add `checkIpRateLimit`, return **429**, and
+  document the 429 in `openapi.yaml` or the contract test will fail.
+
+### 5.11 The security-audit gate can actually fail (S-4)
+
+- **Invariant**: CI's Security Audit job runs `npm run security:audit`
+  (`scripts/audit-check.mjs`) with **no `continue-on-error`**. It fails on any
+  high/critical advisory not explicitly allowlisted by GHSA id.
+- **Why**: the step used to be `npm audit … ` under `continue-on-error: true`, so
+  it reported pass with 3 highs outstanding and would have passed a brand-new
+  critical CVE too.
+- **Never** re-add `continue-on-error`, and never widen the allowlist to silence a
+  fixable advisory. Add an entry only when it genuinely cannot be fixed from this
+  repo, with a reason, and record it in
+  [plans/dependency-deferrals.md](plans/dependency-deferrals.md).
+- **Manual check**: `npm run security:audit:list` shows each finding as `accepted`
+  or `NEW`; `npm run security:audit` exits 0 only when nothing is `NEW`.
 
 ### Quick invariant sweep
 
@@ -274,6 +312,8 @@ grep -c "requireUser" "app/api/images/[...path]/route.ts"                     # 
 grep -c "requireAdmin" "app/api/books/[id]/chapters/route.ts"                 # >=1
 grep -c "URLSession.shared" ios/BookVault/Services/DownloadManager.swift      # 0
 test ! -f lib/api-schemas.ts && echo "api-schemas relocated: OK"              # OK
+grep -c "checkIpRateLimit" app/api/auth/mobile/login/route.ts                 # >=1
+grep -E "^\s+continue-on-error" .github/workflows/main.yml                    # empty
 ```
 
 ---
