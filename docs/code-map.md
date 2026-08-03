@@ -221,7 +221,7 @@
 **API Routes (Web)**:
 
 - GET/POST /api/auth/[...nextauth] → [app/api/auth/[...nextauth]/route.ts](../app/api/auth/[...nextauth]/route.ts) - NextAuth handlers
-- POST /api/auth/register → [app/api/auth/register/route.ts](../app/api/auth/register/route.ts) - New user registration
+  _(No registration route — accounts are created with `npm run user:create`.)_
 
 **API Routes (Mobile)**:
 

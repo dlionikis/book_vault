@@ -21,7 +21,10 @@
 
 ### User Registration
 
-- `POST /api/auth/register` - Register new user account. Public.
+There is **no registration endpoint**. Book Vault is a private library, and
+self-service signup was removed (it allowed anyone to create an account on the
+public production site). Accounts are created from the command line with
+`npm run user:create <local|prod> <username> [password]`.
 
 ---
 

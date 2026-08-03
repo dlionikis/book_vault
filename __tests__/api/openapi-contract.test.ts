@@ -34,6 +34,14 @@ const TEST_USER = {
   password: process.env.TEST_USER_PASSWORD || 'password123',
 };
 
+// Guaranteed non-admin, for asserting 403 on admin-gated routes. Seeded by
+// `npm run db:seed` — see scripts/seed-test-user.ts. Keep these defaults in
+// sync with that script.
+const NONADMIN_USER = {
+  username: process.env.TEST_NONADMIN_USERNAME || 'testuser-nonadmin',
+  password: process.env.TEST_NONADMIN_PASSWORD || 'password123',
+};
+
 // Helper to get auth token
 let authToken: string | null = null;
 
@@ -402,68 +410,6 @@ describe('OpenAPI Contract Tests', () => {
         );
 
         expect(response.status).toBe(401);
-        expect(response).toSatisfyApiSpec();
-        expect(response.data).toHaveProperty('error');
-      });
-    });
-
-    describe('POST /api/auth/register', () => {
-      testFn('should satisfy OpenAPI spec for missing required fields', async () => {
-        const response = await axios.post(
-          `${BASE_URL}/api/auth/register`,
-          { username: 'newuser' },
-          {
-            headers: { 'Content-Type': 'application/json' },
-            validateStatus: () => true,
-          }
-        );
-
-        expect(response.status).toBe(400);
-        expect(response).toSatisfyApiSpec();
-        expect(response.data).toHaveProperty('error');
-      });
-
-      testFn('should satisfy OpenAPI spec for invalid username format', async () => {
-        const response = await axios.post(
-          `${BASE_URL}/api/auth/register`,
-          { username: '', password: 'validpassword123' },
-          {
-            headers: { 'Content-Type': 'application/json' },
-            validateStatus: () => true,
-          }
-        );
-
-        expect(response.status).toBe(400);
-        expect(response).toSatisfyApiSpec();
-        expect(response.data).toHaveProperty('error');
-      });
-
-      testFn('should satisfy OpenAPI spec for weak password (< 8 chars)', async () => {
-        const response = await axios.post(
-          `${BASE_URL}/api/auth/register`,
-          { username: 'newuser', password: 'short' },
-          {
-            headers: { 'Content-Type': 'application/json' },
-            validateStatus: () => true,
-          }
-        );
-
-        expect(response.status).toBe(400);
-        expect(response).toSatisfyApiSpec();
-        expect(response.data).toHaveProperty('error');
-      });
-
-      testFn('should satisfy OpenAPI spec for duplicate username', async () => {
-        const response = await axios.post(
-          `${BASE_URL}/api/auth/register`,
-          { username: TEST_USER.username, password: 'validpassword123' },
-          {
-            headers: { 'Content-Type': 'application/json' },
-            validateStatus: () => true,
-          }
-        );
-
-        expect(response.status).toBe(409);
         expect(response).toSatisfyApiSpec();
         expect(response.data).toHaveProperty('error');
       });
@@ -2088,19 +2034,16 @@ describe('OpenAPI Contract Tests', () => {
 
       testFn('should return 403 for non-admin users', async () => {
         // Chapter re-extraction is admin-only (it rewrites shared chapter
-        // data). Register a fresh user for this test — guaranteed non-admin
-        // in every environment, unlike the seeded test user whose admin flag
-        // differs between CI and local databases.
-        const username = `contract-nonadmin-${Date.now()}`;
-        const password = 'validpassword123';
-        await axios.post(
-          `${BASE_URL}/api/auth/register`,
-          { username, password },
-          { headers: { 'Content-Type': 'application/json' }, validateStatus: () => true }
-        );
+        // data), so this needs a login that is reliably NOT an admin —
+        // `testuser`'s flag differs between CI and local databases.
+        //
+        // This used to POST /api/auth/register for a throwaway account, which
+        // leaked one row per run and depended on open registration. That
+        // endpoint has been removed; `npm run db:seed` now seeds a fixed
+        // non-admin instead.
         const login = await axios.post(
           `${BASE_URL}/api/auth/mobile/login`,
-          { username, password },
+          { username: NONADMIN_USER.username, password: NONADMIN_USER.password },
           { headers: { 'Content-Type': 'application/json' }, validateStatus: () => true }
         );
         expect(login.status).toBe(200);
