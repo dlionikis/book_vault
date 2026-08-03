@@ -213,10 +213,19 @@ See [docs/database-migration-guide.md](docs/database-migration-guide.md) and [do
 ### Users
 
 ```bash
+npm run user:list <local|prod>                        # All users: admin flag, last login, last active
 npm run user:create <local|prod> <username> [password]
 npm run user:reset-password
 npm run user:delete
+npm run user:cleanup:check                            # Read-only: test accounts lingering in prod?
+npm run user:cleanup <local|prod>                     # Remove them
 ```
+
+`testuser` / `password123` is published in this public repo, so it is **local
+only**. If a production test needs it, remove it afterward with
+`npm run user:cleanup prod` — see [docs/development-process.md](docs/development-process.md) §10.
+There is no soft-delete: deleting a user cascades to their progress, lists,
+downloads, and device tokens.
 
 ### API
 

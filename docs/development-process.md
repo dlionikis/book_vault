@@ -421,8 +421,62 @@ Full AWS architecture: [aws-deployment-reference.md](aws-deployment-reference.md
 ```bash
 docker-compose up -d                 # Postgres :5433 (local). CI uses :5432.
 npx prisma migrate deploy            # apply migrations
-npm run db:seed                      # seed testuser / password123
+npm run db:seed                      # seed testuser / password123 (LOCAL ONLY — see §10)
 ```
 
 Contract & E2E boot a real dev server and seed fixtures; they need the DB up first.
 `validate.sh` hard-stops with a clear message if :5433 is unreachable.
+
+---
+
+## 10. Test accounts in production — clean up when done
+
+`testuser` / `password123` is published in this repository (CLAUDE.md, README,
+`.env.example`, this file). **The repo is public**, so any internet-reachable
+environment still holding that account is accepting a credential anyone can
+read.
+
+This is fine locally. It is not fine in production, and it has happened: on
+**August 3, 2026** `testuser` was found live in prod — it authenticated against
+`/api/auth/mobile/login`, listed the full catalog, and obtained audio streaming
+URLs. It could not reach `/api/admin/*` (403), so there was no privilege
+escalation.
+
+`testuser` is legitimately useful in prod for short App Store review and
+smoke-test windows. The rule is that it must not outlive the test.
+
+### The process
+
+```bash
+npm run user:list prod          # who exists, with admin flag + last login/active
+npm run user:cleanup:check      # read-only: is a test account lingering? exit 2 if yes
+npm run user:cleanup prod       # delete it (prompts for confirmation)
+npm run user:cleanup prod --yes # same, no prompt (for automation)
+```
+
+Run `user:cleanup prod` **as the last step of any production test session** that
+created or used `testuser`. Verify with `npm run user:list prod`.
+
+`--check` changes nothing and exits **2** when an account is found, so it works
+as a CI or cron guard.
+
+### Notes
+
+- Deletion is a **hard delete** and cascades to every user-owned table:
+  progress, lists, downloads, device tokens, refresh tokens, restore requests.
+  There is **no soft-delete or disabled flag** on `users` — the only columns are
+  `id`, `username`, `passwordHash`, `isAdmin`, `createdAt`, `updatedAt`.
+- `scripts/cleanup-test-users.sh` targets an **explicit name array** (`testuser`)
+  plus one narrow prefix pattern, never a loose `test%` sweep.
+- The prefix pattern covers `contract-nonadmin-<digits>`: the contract suite
+  registers one such account per run to prove the admin gate returns 403
+  ([openapi-contract.test.ts](../__tests__/api/openapi-contract.test.ts)) and
+  never removes it, so **one row leaks per contract-test run** — 109 had piled up
+  locally by Aug 3, 2026. Run `npm run user:cleanup local` periodically. The
+  trailing-digits anchor is required, so an account named
+  `contract-nonadmin-realperson` is **not** matched.
+- `app-review-tester` is deliberately **excluded**: it is a real App Store review
+  account with its own password. Removing it is a judgement call, not cleanup.
+- If a long-lived prod test account is genuinely needed, give it a unique
+  generated password (`npm run user:create prod <name>` generates one) and keep
+  that password out of the repo. Do not reuse the documented dev password.

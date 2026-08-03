@@ -158,7 +158,10 @@ AWS_S3_BUCKET="book-vault-media"
 AWS_REGION="us-east-1"
 ```
 
-**Default dev credentials**: testuser / password123
+**Default dev credentials**: testuser / password123 — **local only**. This repo is
+public, so these are not a secret. If a production test needs `testuser`, delete
+it when finished: `npm run user:cleanup prod` (check with `npm run user:cleanup:check`).
+See [docs/development-process.md](docs/development-process.md) §10.
 
 ---
 
