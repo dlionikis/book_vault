@@ -32,10 +32,14 @@ const mockCheckDownloadLimit = rateLimit.checkDownloadLimit as jest.MockedFuncti
 >;
 
 describe('Download Endpoints', () => {
-  const mockUser = {
-    id: 'user-123',
-    username: 'testuser',
-  };
+  // A real row, not a literal. `requireUser` confirms the account still exists
+  // on the bearer path (SEC-2), so a fabricated id like 'user-123' now correctly
+  // 401s — which is the point of the check. This is an integration suite against
+  // a real database, so the fixture should be real too.
+  //
+  // Populated in beforeAll and mutated in place so the many
+  // `mockResolvedValue(mockUser)` call sites keep working.
+  const mockUser = { id: '', username: 'test-downloads-primary' };
 
   // Clean up leftover test data once before all tests
   beforeAll(async () => {
@@ -45,6 +49,7 @@ describe('Download Endpoints', () => {
           username: {
             in: [
               'test-downloads',
+              'test-downloads-primary',
               'test-limit',
               'test-download',
               'test-ratelimit',
@@ -61,6 +66,7 @@ describe('Download Endpoints', () => {
         username: {
           in: [
             'test-downloads',
+            'test-downloads-primary',
             'test-limit',
             'test-download',
             'test-ratelimit',
@@ -89,6 +95,17 @@ describe('Download Endpoints', () => {
         },
       },
     });
+
+    // Persist the shared fixture so requireUser's existence check passes.
+    const primary = await prisma.user.create({
+      data: { username: mockUser.username, passwordHash: 'not-used-by-these-tests' },
+    });
+    mockUser.id = primary.id;
+  });
+
+  afterAll(async () => {
+    await prisma.userDownload.deleteMany({ where: { userId: mockUser.id } });
+    await prisma.user.deleteMany({ where: { id: mockUser.id } });
   });
 
   beforeEach(() => {
