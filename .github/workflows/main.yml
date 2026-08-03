@@ -75,6 +75,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so the secret scan can diff against the base branch.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -86,3 +89,12 @@ jobs:
       # new critical CVE reported "pass" (audit finding S-4).
       - name: Check for new high/critical advisories
         run: npm run security:audit
+
+      # Second line behind GitHub push protection, which only fires on push and
+      # has no pattern for "a .env file with a real DATABASE_URL". Scans the PR's
+      # own diff so a secret cannot arrive via a branch pushed with --no-verify.
+      - name: Scan PR diff for committed secrets
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          ./scripts/check-staged-secrets.sh --range "origin/${{ github.base_ref }}...HEAD"

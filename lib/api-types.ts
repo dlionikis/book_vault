@@ -64,7 +64,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Logout and invalidate refresh token */
+        /**
+         * Logout and invalidate refresh token
+         * @description Deletes the supplied refresh token. Takes no access token: possession of
+         *     the refresh token in the body is the only authority required, and the
+         *     sole effect is revoking it. Declaring `bearerAuth` here would misdescribe
+         *     the handler, which never inspects the Authorization header.
+         */
         post: operations["logoutMobile"];
         delete?: never;
         options?: never;
@@ -800,7 +806,13 @@ export interface paths {
         /**
          * Stream image file (book covers)
          * @description Serves book cover images from S3 (production) or local filesystem (development).
-         *     Public endpoint (no authentication required for better caching).
+         *
+         *     **Requires authentication.** This route was briefly public "for better
+         *     caching", which made it possible to stream any object in the media store
+         *     — including audio — without credentials. It is now gated by `requireUser`,
+         *     restricted to an image-extension allowlist, and served with
+         *     `Cache-Control: private` so shared caches never retain gated content.
+         *     See invariant 5.2 in docs/development-process.md.
          */
         get: operations["streamImage"];
         put?: never;
@@ -820,7 +832,11 @@ export interface paths {
         };
         /**
          * API health check
-         * @description Returns 200 OK if server is running
+         * @description Returns 200 OK if the server is running. Unauthenticated by necessity —
+         *     the ALB target-group health check and CI both call it without
+         *     credentials. Returns only `{"status":"ok"}`: no version, dependency
+         *     status, or environment detail that would help an unauthenticated caller
+         *     fingerprint the deployment.
          */
         get: operations["healthCheck"];
         put?: never;
@@ -3776,7 +3792,25 @@ export interface operations {
                     "image/png": string;
                 };
             };
-            /** @description Image not found */
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Path traversal attempt rejected */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Image not found, or path is not an allowed image extension */
             404: {
                 headers: {
                     [name: string]: unknown;

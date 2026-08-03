@@ -89,6 +89,9 @@ module.exports = async () => {
         '<rootDir>/__tests__/api/**/*.[jt]s?(x)',
         '<rootDir>/__tests__/lib/**/*.[jt]s?(x)',
         '<rootDir>/__tests__/scripts/**/*.[jt]s?(x)',
+        // Repo-wide invariants asserted by inspecting source rather than by
+        // executing it (e.g. the public-route allowlist).
+        '<rootDir>/__tests__/security/**/*.[jt]s?(x)',
         '<rootDir>/app/**/*.test.[jt]s',
         '<rootDir>/lib/**/*.test.[jt]s',
         '<rootDir>/scripts/**/*.test.[jt]s',

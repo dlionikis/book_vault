@@ -301,6 +301,37 @@ do not reintroduce the anti-pattern; when you review, spot-check these.
 - **Manual check**: `npm run security:audit:list` shows each finding as `accepted`
   or `NEW`; `npm run security:audit` exits 0 only when nothing is `NEW`.
 
+### 5.12 The public surface is an explicit allowlist
+
+- **Invariant**: the set of API routes reachable **without authentication** equals
+  `PUBLIC_ROUTES` in
+  [`__tests__/security/public-surface.test.ts`](../__tests__/security/public-surface.test.ts),
+  and the OpenAPI spec's `security` declarations agree with what the handlers
+  actually do
+  ([`spec-auth-drift.test.ts`](../__tests__/security/spec-auth-drift.test.ts)).
+- **Why this exists**: invariants 5.1–5.9 all encode _"auth is present where
+  required."_ None encoded _"the set of intentionally-public routes is small and
+  justified"_ — so `POST /api/auth/register` shipped public on **2025-12-23** and
+  survived ~7 months. It passed review because the question asked was "is this
+  endpoint authenticated?", and registration is _supposed_ not to be. The question
+  that mattered — "should a private library have a public signup endpoint at
+  all?" — was never asked. `docs/API_SECURITY.md` even listed it with a green ✅.
+- **Guard**: the two tests above run in `npm test`. Adding a public route turns
+  them red; going green requires editing the allowlist, which surfaces in the diff
+  as a decision to defend.
+- **Manual check**: `npx jest __tests__/security/` → all green.
+- **When you add a route**: if it needs no auth, add it to `PUBLIC_ROUTES` **with a
+  reason that answers "could an anonymous caller abuse this?"** — not merely "it
+  has to work before login." If it accepts credentials, it also needs
+  `checkIpRateLimit` (5.10). Never widen the allowlist to make a test pass.
+- **Spec side**: `security: []` means public, absent means "inherit global
+  `sessionAuth`". Getting this wrong is not cosmetic — `openapi.yaml` generates the
+  TS and Swift clients and is what a reviewer reads to answer "what is exposed?".
+  `/api/images/{path}` declared `security: []` with the description "Public
+  endpoint (no authentication required for better caching)" for months **after**
+  PR #75 fixed that exact P0 hole; the spec was advertising the vulnerability's
+  own rationale.
+
 ### Quick invariant sweep
 
 Run this before a PR that touches auth, routes, or iOS services:
@@ -314,6 +345,7 @@ grep -c "URLSession.shared" ios/BookVault/Services/DownloadManager.swift      # 
 test ! -f lib/api-schemas.ts && echo "api-schemas relocated: OK"              # OK
 grep -c "checkIpRateLimit" app/api/auth/mobile/login/route.ts                 # >=1
 grep -E "^\s+continue-on-error" .github/workflows/main.yml                    # empty
+npx jest __tests__/security/                                                  # all green
 ```
 
 ---
