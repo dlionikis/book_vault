@@ -8,8 +8,6 @@
 
 A personal audiobook library — web app and native iOS app — for hosting, organizing, and streaming audiobooks from Audible, processed through [Libation](https://github.com/rmcrackan/Libation).
 
-**Production**: https://bookvault.lionikis.com
-
 ## Status
 
 See **[docs/STATUS.md](docs/STATUS.md)** for current state, recent merges, and the roadmap. That file is the single source of truth — this README intentionally doesn't duplicate it.
