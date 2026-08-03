@@ -421,8 +421,21 @@ Full AWS architecture: [aws-deployment-reference.md](aws-deployment-reference.md
 ```bash
 docker-compose up -d                 # Postgres :5433 (local). CI uses :5432.
 npx prisma migrate deploy            # apply migrations
-npm run db:seed                      # seed testuser / password123 (LOCAL ONLY — see §10)
+npm run db:seed                      # seed test fixtures (LOCAL ONLY — see §10)
 ```
+
+`db:seed` creates **two** accounts and pins their admin flags, because the
+contract suite asserts both sides of the admin gate on
+`POST /api/books/{id}/chapters`:
+
+| Account             | Password      | `isAdmin` | Used for                  |
+| ------------------- | ------------- | --------- | ------------------------- |
+| `testuser`          | `password123` | **true**  | the 200 case; general dev |
+| `testuser-nonadmin` | `password123` | **false** | the 403 case              |
+
+Both flags are rewritten on every run, so a database seeded before this mattered
+self-repairs. Overridable via `TEST_USER_USERNAME` / `TEST_USER_PASSWORD` and
+`TEST_NONADMIN_USERNAME` / `TEST_NONADMIN_PASSWORD`.
 
 Contract & E2E boot a real dev server and seed fixtures; they need the DB up first.
 `validate.sh` hard-stops with a clear message if :5433 is unreachable.
@@ -468,12 +481,13 @@ as a CI or cron guard.
   `id`, `username`, `passwordHash`, `isAdmin`, `createdAt`, `updatedAt`.
 - `scripts/cleanup-test-users.sh` targets an **explicit name array** (`testuser`)
   plus one narrow prefix pattern, never a loose `test%` sweep.
-- The prefix pattern covers `contract-nonadmin-<digits>`: the contract suite
-  registers one such account per run to prove the admin gate returns 403
-  ([openapi-contract.test.ts](../__tests__/api/openapi-contract.test.ts)) and
-  never removes it, so **one row leaks per contract-test run** — 109 had piled up
-  locally by Aug 3, 2026. Run `npm run user:cleanup local` periodically. The
-  trailing-digits anchor is required, so an account named
+- The prefix pattern covers `contract-nonadmin-<digits>`, which is now **legacy
+  cleanup only**. The contract suite used to `POST /api/auth/register` for a
+  throwaway non-admin on every run and never delete it, leaking one row per run
+  (109 had piled up locally by Aug 3, 2026). That endpoint has been removed and
+  the suite logs in as the seeded `testuser-nonadmin` instead, so nothing new
+  accumulates — the pattern stays only to sweep databases seeded before the fix.
+  The trailing-digits anchor is required, so an account named
   `contract-nonadmin-realperson` is **not** matched.
 - `app-review-tester` is deliberately **excluded**: it is a real App Store review
   account with its own password. Removing it is a judgement call, not cleanup.

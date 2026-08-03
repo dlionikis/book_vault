@@ -74,10 +74,13 @@ Book Vault implements a **private library model** where users must log in to acc
 
 ### 🌐 Public Endpoints (No Authentication Required)
 
-#### Authentication & Registration
+#### Authentication
 
 - `/api/auth/[...nextauth]` - NextAuth.js handlers (login/session management) ✅
-- `POST /api/auth/register` - User registration ✅
+- **No registration endpoint.** `POST /api/auth/register` was removed — it was
+  unauthenticated, unthrottled, and reachable on the public production site, so
+  anyone could create an account with full catalog and audio-stream access.
+  Accounts are created via `npm run user:create`.
 
 #### Public Assets
 

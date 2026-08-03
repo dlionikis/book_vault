@@ -295,27 +295,9 @@ This is a quick cheat sheet for common endpoints. For complete documentation wit
 
 ## Authentication
 
-### POST /api/auth/register
-
-**Body**:
-
-```typescript
-{
-  email: string,
-  password: string
-}
-```
-
-**Response** (201 Created):
-
-```typescript
-{
-  user: {
-    id: string,
-    email: string
-  }
-}
-```
+> **No registration endpoint.** Self-service signup was removed — it let anyone
+> create an account on the public production site. Create accounts with
+> `npm run user:create <local|prod> <username> [password]`.
 
 ### NextAuth Endpoints (handled by NextAuth.js)
 
