@@ -1,19 +1,38 @@
 # API Security
 
-**Last Updated**: December 2025
-**Status**: ✅ All critical endpoints properly secured
+**Last Updated**: August 3, 2026
+
+> **This document is not the source of truth.** The public surface is enforced by
+> [`__tests__/security/public-surface.test.ts`](../__tests__/security/public-surface.test.ts),
+> which fails when any route becomes reachable without authentication. Read that
+> allowlist first; this page is prose around it.
+>
+> The distinction matters. An earlier version of this file listed
+> `POST /api/auth/register` with a green ✅ under the heading "All critical
+> endpoints properly secured", while that endpoint let anyone create an account on
+> the public production site. It stayed that way for about seven months. A
+> hand-maintained checklist records what someone believed on the day they wrote
+> it; a test records what is true on every commit.
 
 ---
 
 ## Security Status Summary
 
-**The application is properly secured for a private audiobook library.**
+**Book Vault is a private library: nothing is readable without an account, and
+accounts cannot be self-created.**
 
-- All API endpoints require authentication (except auth/registration)
-- All pages require authentication (except login page)
-- Audio streaming requires authentication
-- Catalog browsing requires authentication
-- Unauthenticated requests return 401 Unauthorized
+- Every API endpoint requires authentication except the six on the
+  [enforced allowlist](../__tests__/security/public-surface.test.ts) (NextAuth's
+  own handler, mobile login/logout/refresh/verify, and the health probe)
+- All pages require authentication except the login page
+- Audio streaming and catalog browsing both require authentication
+- Unauthenticated requests return 401
+- **There is no registration endpoint.** Accounts are created out-of-band with
+  `npm run user:create` — see
+  [development-process.md §10](development-process.md)
+- Credential-accepting public routes are IP rate limited (invariant 5.10)
+- Bearer tokens are re-checked against the database, so deleting a user revokes
+  access immediately rather than at token expiry (invariant 5.1)
 
 ---
 

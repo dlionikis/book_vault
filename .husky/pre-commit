@@ -1,3 +1,8 @@
+# Secrets first: cheap, and there is no point formatting a commit that must not
+# happen. GitHub push protection is also enabled, but it only fires on push —
+# by then the value is already in local history.
+./scripts/check-staged-secrets.sh
+
 npx lint-staged
 
 # OpenAPI: Check if spec changed and regenerate types

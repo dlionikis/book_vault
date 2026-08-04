@@ -821,8 +821,12 @@ paths:
       operationId: logoutMobile
       tags: [Mobile Authentication]
       summary: Logout and invalidate refresh token
-      security:
-        - bearerAuth: []
+      description: |
+        Deletes the supplied refresh token. Takes no access token: possession of
+        the refresh token in the body is the only authority required, and the
+        sole effect is revoking it. Declaring `bearerAuth` here would misdescribe
+        the handler, which never inspects the Authorization header.
+      security: [] # Credential is the refresh token in the body
       requestBody:
         required: true
         content:
@@ -3257,8 +3261,13 @@ paths:
       summary: Stream image file (book covers)
       description: |
         Serves book cover images from S3 (production) or local filesystem (development).
-        Public endpoint (no authentication required for better caching).
-      security: [] # Public endpoint
+
+        **Requires authentication.** This route was briefly public "for better
+        caching", which made it possible to stream any object in the media store
+        — including audio — without credentials. It is now gated by `requireUser`,
+        restricted to an image-extension allowlist, and served with
+        `Cache-Control: private` so shared caches never retain gated content.
+        See invariant 5.2 in docs/development-process.md.
       parameters:
         - name: path
           in: path
@@ -3290,9 +3299,23 @@ paths:
             Cache-Control:
               schema:
                 type: string
-                example: 'public, max-age=31536000, immutable'
+                # `private`, never `public`: a shared cache must not retain
+                # authenticated content (invariant 5.2).
+                example: 'private, max-age=31536000, immutable'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Path traversal attempt rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
-          description: Image not found
+          description: Image not found, or path is not an allowed image extension
           content:
             application/json:
               schema:
@@ -3304,7 +3327,13 @@ paths:
       operationId: healthCheck
       tags: [Health]
       summary: API health check
-      description: Returns 200 OK if server is running
+      description: |
+        Returns 200 OK if the server is running. Unauthenticated by necessity —
+        the ALB target-group health check and CI both call it without
+        credentials. Returns only `{"status":"ok"}`: no version, dependency
+        status, or environment detail that would help an unauthenticated caller
+        fingerprint the deployment.
+      security: [] # Called by the ALB health check without credentials
       responses:
         '200':
           description: Server is healthy
